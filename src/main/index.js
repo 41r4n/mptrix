@@ -21,7 +21,9 @@ import {
   exportSong,
   stemsRoot,
   freeMemMB,
-  removeCachesForFile
+  removeCachesForFile,
+  repairSession,
+  specialistCatalog
 } from './studio.js'
 import {
   getYtDlpVersion,
@@ -923,6 +925,9 @@ app.whenReady().then(() => {
     Object.values(STUDIO_MODELS).map((m) => ({ id: m.id, name: m.name, stems: m.stems }))
   )
 
+  // Arsenal completo dos especialistas — pra busca manual na tela
+  ipcMain.handle('studio:catalog', () => specialistCatalog())
+
   ipcMain.handle('studio:open', (_e, { path: inputFile, model, title }) => {
     if (!inputFile || !existsSync(inputFile)) {
       return { error: 'Arquivo não encontrado no disco.' }
@@ -932,7 +937,14 @@ app.whenReady().then(() => {
     }
     const cached = getCachedSession(inputFile, model || 'htdemucs')
     if (cached) {
-      return { session: cached }
+      // Fiscal de abertura: se um trabalho antigo caiu antes do desconto,
+      // a faixa "outros" se conserta sozinha antes da sessão aparecer
+      return repairSession({ key: cached.key, ffmpegPath: FFMPEG_PATH })
+        .catch(() => false)
+        .then((repaired) => ({
+          session: repaired ? getCachedSession(inputFile, model || 'htdemucs') : cached,
+          repaired
+        }))
     }
     heavyJobStart()
     const { id, cancel } = startStudioJob({
@@ -1139,7 +1151,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('studio:extract', (_e, { key, instruments }) => {
     heavyJobStart()
-    const { id, cancel } = startExtractJob({
+    const job = startExtractJob({
       key,
       instruments,
       ffmpegPath: FFMPEG_PATH,
@@ -1152,8 +1164,14 @@ app.whenReady().then(() => {
         }
       }
     })
-    activeStudioJobs.set(id, cancel)
-    return { id }
+    if (job.twin) {
+      // Vacina anti-gêmeo: já existe extração nessa música — a tela adota a
+      // que está rodando em vez de criar uma concorrente
+      heavyJobEnd()
+      return { id: job.id }
+    }
+    activeStudioJobs.set(job.id, job.cancel)
+    return { id: job.id }
   })
 
   ipcMain.handle('studio:polish', (_e, { key, stem }) => {

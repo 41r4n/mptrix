@@ -20,6 +20,33 @@ const STEM_META = {
   brass: { label: 'Metais (trompete, trombone…)', icon: '🎺' },
   banjo: { label: 'Banjo', icon: '🪕' },
   mandolin: { label: 'Bandolim', icon: '🎸' },
+  woodwind: { label: 'Madeiras (grupo)', icon: '🪈' },
+  percussion: { label: 'Percussão', icon: '🥁' },
+  clarinet: { label: 'Clarinete', icon: '🪈' },
+  oboe: { label: 'Oboé', icon: '🪈' },
+  bassoon: { label: 'Fagote', icon: '🪈' },
+  trombone: { label: 'Trombone', icon: '🎺' },
+  'french-horn': { label: 'Trompa', icon: '📯' },
+  tuba: { label: 'Tuba', icon: '📯' },
+  viola: { label: 'Viola de orquestra', icon: '🎻' },
+  cello: { label: 'Violoncelo', icon: '🎻' },
+  'double-bass': { label: 'Contrabaixo acústico', icon: '🎻' },
+  harp: { label: 'Harpa', icon: '🎼' },
+  ukulele: { label: 'Ukulele', icon: '🪕' },
+  dobro: { label: 'Dobro (slide)', icon: '🎸' },
+  sitar: { label: 'Sitar', icon: '🪕' },
+  synth: { label: 'Sintetizador', icon: '🎹' },
+  keys: { label: 'Teclados (geral)', icon: '🎹' },
+  'digital-piano': { label: 'Piano digital', icon: '🎹' },
+  harpsichord: { label: 'Cravo', icon: '🎹' },
+  marimba: { label: 'Marimba/Xilofone', icon: '🎶' },
+  glockenspiel: { label: 'Glockenspiel', icon: '✨' },
+  timpani: { label: 'Tímpanos', icon: '🥁' },
+  bells: { label: 'Sinos', icon: '🔔' },
+  'wind-chimes': { label: 'Carrilhão de vento', icon: '🎐' },
+  tambourine: { label: 'Pandeirola', icon: '🪘' },
+  triangle: { label: 'Triângulo', icon: '🔺' },
+  congas: { label: 'Congas', icon: '🪘' },
   instrumental: { label: 'Resto da música', icon: '🎵' },
   song: { label: 'Música completa', icon: '🎵' }
 }
@@ -85,7 +112,14 @@ function useSmoothProgress(target, active) {
     }
     if (target == null) return
     const h = histRef.current
-    if (!h.length || target > h[h.length - 1].p) {
+    const lastP = h.length ? h[h.length - 1].p : null
+    if (lastP == null || target > lastP) {
+      // Salto grande = pedaço aproveitado de retomada, não velocidade real.
+      // Zera a história pra previsão nascer do ritmo verdadeiro dali em diante.
+      if (lastP != null && target - lastP > 8) {
+        h.length = 0
+        setEta(null)
+      }
       h.push({ t: Date.now(), p: target })
       if (h.length > 10) h.shift()
     }
@@ -110,7 +144,10 @@ function useSmoothProgress(target, active) {
         const goal = Math.max(d, Math.min(predicted, 99))
         return d + (goal - d) * Math.min(1, dt * 2)
       })
-      if (rate > 0.005 && tgt > 2 && tgt < 99) setEta((100 - tgt) / rate)
+      // Previsão honesta: só existe com ritmo real; parada há 45s+, se apaga
+      // em vez de ficar mentindo na tela
+      if (rate > 0.005 && tgt > 2 && tgt < 99 && sinceLast < 45) setEta((100 - tgt) / rate)
+      else if (sinceLast >= 45) setEta(null)
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -328,6 +365,8 @@ export default function StudioView({ source, onClose }) {
   const [exportMsg, setExportMsg] = useState(null)
   const [scout, setScout] = useState(null) // null | 'loading' | {detections:[...]}
   const [extractSel, setExtractSel] = useState(() => new Set())
+  const [arsenal, setArsenal] = useState([]) // catálogo completo de especialistas
+  const [showArsenal, setShowArsenal] = useState(false)
   const [extractJob, setExtractJob] = useState(null) // {id, label, stage, percent}
   const [exportingSong, setExportingSong] = useState(false)
   const [plan, setPlan] = useState(null) // catálogo da pré-análise
@@ -1236,6 +1275,47 @@ export default function StudioView({ source, onClose }) {
                     </label>
                   )
                 })}
+                <button
+                  className="btn-secondary btn-small"
+                  style={{ alignSelf: 'flex-start' }}
+                  onClick={async () => {
+                    if (!showArsenal && !arsenal.length) {
+                      try { setArsenal((await window.mptrix.studio.catalog()) || []) } catch {}
+                    }
+                    setShowArsenal((v) => !v)
+                  }}
+                >
+                  {showArsenal ? '▾' : '▸'} Arsenal completo — buscar qualquer instrumento
+                </button>
+                {showArsenal && (() => {
+                  const offered = new Set((plan.extras || []).map((e) => e.instrument))
+                  const rest = arsenal.filter((c) => !offered.has(c.id))
+                  if (!rest.length) return null
+                  return (
+                    <>
+                      <p className="muted studio-hint" style={{ margin: 0 }}>
+                        O faro não sentiu esses na música — mas dá pra pedir mesmo assim:
+                        a busca é às cegas, cobre a música inteira e custa o mesmo tempo.
+                      </p>
+                      {rest.map((c) => {
+                        const meta = STEM_META[c.id] || { label: c.label, icon: '🎚️' }
+                        return (
+                          <label key={c.id} className={`studio-plan-item ${planSel.has(c.id) ? 'on' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={planSel.has(c.id)}
+                              onChange={() => togglePlanSel(c.id)}
+                            />
+                            <span className="studio-plan-item-icon">{meta.icon}</span>
+                            <span className="studio-plan-item-name">{meta.label}</span>
+                            <span />
+                            <span className="studio-plan-min">+{itemMinutes(c.id)} min</span>
+                          </label>
+                        )
+                      })}
+                    </>
+                  )
+                })()}
               </div>
 
               <div className="studio-plan-footer2">
@@ -1309,7 +1389,8 @@ export default function StudioView({ source, onClose }) {
                 .filter((s) => !gpData || (gpData[s]?.score || 0) >= (s === 'guitar' ? 0.2 : 0.15))
                 .map((s) => ({ instrument: s, score: gpData?.[s]?.score ?? null, at: null }))
               const items = [...gpOffers, ...(scout.detections || [])]
-              if (!items.length) return null
+              // Edição rápida não tem faixas separadas — extração não se aplica
+              if (session.model === 'quick') return null
               const gpMin = Math.max(2, Math.ceil((session.duration / 60) * 1.2))
               const itemMinutes = (inst) =>
                 isGp(inst) ? gpMin : Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
@@ -1356,6 +1437,52 @@ export default function StudioView({ source, onClose }) {
                       </label>
                     )
                   })}
+                  <button
+                    className="btn-secondary btn-small"
+                    style={{ alignSelf: 'flex-start' }}
+                    onClick={async () => {
+                      if (!showArsenal && !arsenal.length) {
+                        try { setArsenal((await window.mptrix.studio.catalog()) || []) } catch {}
+                      }
+                      setShowArsenal((v) => !v)
+                    }}
+                  >
+                    {showArsenal ? '▾' : '▸'} Arsenal completo — buscar qualquer instrumento
+                  </button>
+                  {showArsenal && (() => {
+                    const offered = new Set(items.map((d) => d.instrument))
+                    const rest = arsenal.filter((c) => !offered.has(c.id) && !session.stems.includes(c.id))
+                    if (!rest.length) {
+                      return <p className="muted studio-hint">Tudo do arsenal já está na música ou na lista acima.</p>
+                    }
+                    return (
+                      <>
+                        <p className="muted studio-hint" style={{ margin: 0 }}>
+                          O faro não sentiu esses na música — mas dá pra pedir mesmo assim:
+                          a busca é às cegas, cobre a música inteira e custa o mesmo tempo.
+                        </p>
+                        {rest.map((c) => {
+                          const meta = STEM_META[c.id] || { label: c.label, icon: '🎚️' }
+                          return (
+                            <label
+                              key={c.id}
+                              className={`studio-plan-item ${extractSel.has(c.id) ? 'on' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={extractSel.has(c.id)}
+                                onChange={() => toggleExtractSel(c.id)}
+                              />
+                              <span className="studio-plan-item-icon">{meta.icon}</span>
+                              <span className="studio-plan-item-name">{meta.label}</span>
+                              <span />
+                              <span className="studio-plan-min">+{itemMinutes(c.id)} min</span>
+                            </label>
+                          )
+                        })}
+                      </>
+                    )
+                  })()}
                   <div className="studio-plan-footer2">
                     <div className="studio-plan-total">
                       <span className="studio-plan-total-value">
@@ -1391,9 +1518,13 @@ export default function StudioView({ source, onClose }) {
                 <div className="progress-bar alive">
                   <div className="progress-fill" style={{ width: `${extractMeter.display}%` }} />
                 </div>
-                {fmtEta(extractMeter.eta) && (
-                  <div className="muted studio-live-hint">{fmtEta(extractMeter.eta)}</div>
-                )}
+                <div className="muted studio-live-hint">
+                  {extractMeter.eta != null && extractMeter.eta > 0 && extractMeter.display > 1
+                    ? extractMeter.eta < 75
+                      ? '🎵 A música fica pronta em menos de 1 min'
+                      : `🎵 A música fica pronta em ~${Math.round(extractMeter.eta / 60)} min`
+                    : 'medindo a velocidade da máquina…'}
+                </div>
                 <p className="muted studio-hint">
                   Pode continuar tocando e usando o app — as faixas novas entram sozinhas quando ficarem prontas.
                 </p>

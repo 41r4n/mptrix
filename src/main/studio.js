@@ -492,17 +492,53 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
 
 // ---------- Busca profunda: olheiro + especialistas ----------
 
+// Arsenal completo dos 53 especialistas (doutrina do TODOS: nenhum instrumento
+// de fora). Cada modelo baixa sob demanda (~78MB) na primeira vez que é usado.
 const SPECIALISTS = {
+  // Grupos (seções)
   brass: { label: 'Metais', file: 'brass' },
+  strings: { label: 'Cordas (seção)', file: 'bowed_strings' },
+  woodwind: { label: 'Madeiras (grupo)', file: 'woodwind' },
+  percussion: { label: 'Percussão', file: 'percussion' },
+  // Sopros
   saxophone: { label: 'Sax', file: 'saxophone' },
-  strings: { label: 'Cordas', file: 'bowed_strings' },
-  organ: { label: 'Órgão', file: 'organ' },
-  accordion: { label: 'Acordeon', file: 'accordion' },
   flute: { label: 'Flauta', file: 'flute' },
+  clarinet: { label: 'Clarinete', file: 'clarinet' },
+  oboe: { label: 'Oboé', file: 'oboe' },
+  bassoon: { label: 'Fagote', file: 'bassoon' },
+  trumpet: { label: 'Trompete', file: 'trumpet' },
+  trombone: { label: 'Trombone', file: 'trombone' },
+  'french-horn': { label: 'Trompa', file: 'french-horn' },
+  tuba: { label: 'Tuba', file: 'tuba' },
   harmonica: { label: 'Gaita', file: 'harmonica' },
+  // Cordas
+  violin: { label: 'Violino', file: 'violin' },
+  viola: { label: 'Viola de orquestra', file: 'viola' },
+  cello: { label: 'Violoncelo', file: 'cello' },
+  'double-bass': { label: 'Contrabaixo acústico', file: 'double-bass' },
+  harp: { label: 'Harpa', file: 'harp' },
   'acoustic-guitar': { label: 'Violão', file: 'acoustic-guitar' },
   banjo: { label: 'Banjo', file: 'banjo' },
-  mandolin: { label: 'Bandolim', file: 'mandolin' }
+  mandolin: { label: 'Bandolim', file: 'mandolin' },
+  ukulele: { label: 'Ukulele', file: 'ukulele' },
+  dobro: { label: 'Dobro (slide)', file: 'dobro' },
+  sitar: { label: 'Sitar', file: 'sitar' },
+  // Teclas
+  organ: { label: 'Órgão', file: 'organ' },
+  accordion: { label: 'Acordeon', file: 'accordion' },
+  synth: { label: 'Sintetizador', file: 'synth' },
+  keys: { label: 'Teclados (geral)', file: 'keys' },
+  'digital-piano': { label: 'Piano digital', file: 'digital-piano' },
+  harpsichord: { label: 'Cravo', file: 'harpsichord' },
+  // Percussão melódica e efeitos
+  marimba: { label: 'Marimba/Xilofone', file: 'marimba' },
+  glockenspiel: { label: 'Glockenspiel', file: 'glockenspiel' },
+  timpani: { label: 'Tímpanos', file: 'timpani' },
+  bells: { label: 'Sinos', file: 'bells' },
+  'wind-chimes': { label: 'Carrilhão de vento', file: 'wind-chimes' },
+  tambourine: { label: 'Pandeirola', file: 'tambourine' },
+  triangle: { label: 'Triângulo', file: 'triangle' },
+  congas: { label: 'Congas', file: 'congas' }
 }
 
 // Minutos de processamento por minuto de música, medido nesta classe de máquina
@@ -839,10 +875,55 @@ async function ensureSpecialist(instId) {
   return { ckpt, cfg }
 }
 
+// Recalcula "outros" = original menos tudo que foi extraído e carimba a
+// consistência. É a lei que impede um instrumento de existir em dois lugares.
+async function rebuildOther(dir, ffmpegPath, state) {
+  const meta = readMeta(dir)
+  const extracted = (meta?.extracted || []).filter((i) => existsSync(join(dir, 'base', `${i}.flac`)))
+  if (!extracted.length) return
+  const orig = join(dir, 'base', 'other_orig.flac')
+  if (!existsSync(orig)) copyFileSync(join(dir, 'base', 'other.flac'), orig)
+  const args = ['-y', '-loglevel', 'error', '-i', orig]
+  const inverts = []
+  extracted.forEach((inst, i) => {
+    args.push('-i', join(dir, 'base', `${inst}.flac`))
+    inverts.push(`[${i + 1}:a]volume=-1[i${i}]`)
+  })
+  const mixIn = ['[0:a]', ...extracted.map((_, i) => `[i${i}]`)].join('')
+  args.push('-filter_complex', `${inverts.join(';')};${mixIn}amix=inputs=${extracted.length + 1}:normalize=0[a]`,
+    '-map', '[a]', '-compression_level', '5', join(dir, 'base', 'other.flac'))
+  await run(ffmpegPath, args, state)
+  const m2 = readMeta(dir)
+  m2.otherCleanFor = extracted.slice().sort().join(',')
+  writeMeta(dir, m2)
+}
+
+// FISCAL DE ABERTURA: se o app caiu antes do desconto (queda de energia no meio
+// de uma fila), a sessão abre inconsistente — aqui ela se conserta sozinha.
+export async function repairSession({ key, ffmpegPath }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta?.extracted?.length) return false
+  const want = meta.extracted
+    .filter((i) => existsSync(join(dir, 'base', `${i}.flac`)))
+    .sort().join(',')
+  if (!want || meta.otherCleanFor === want) return false
+  await rebuildOther(dir, ffmpegPath, {})
+  return true
+}
+
+// VACINA ANTI-GÊMEO: nunca dois trabalhos de extração na mesma música — eles
+// disputariam o processador e a bancada de arquivos (aconteceu de verdade em
+// 25/07: um gêmeo refez os Metais por 3h e quase sujou a faixa de Sax).
+const activeExtracts = new Map()
+
 // Extrai instrumentos raros de uma sessão já separada. Processa a música em
 // pedaços de 2 min, cada um num processo novo — à prova dos travamentos de
 // memória que uma passada única causa em máquinas de 6-8GB.
 export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onStatus }) {
+  const twin = activeExtracts.get(key)
+  if (twin) return { ...twin, twin: true }
+
   const id = randomUUID()
   const state = { cancelled: false, child: null }
 
@@ -932,8 +1013,9 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             onProgress({ id, stage: 'extracting', instrument: instId, label: spec.label, percent: Math.round((step / totalSteps) * 100) })
             continue
           }
-          const segIn = join(workRoot, 'one_in')
-          const segOut = join(workRoot, 'one_out')
+          // Bancada exclusiva por pedaço — dois trabalhos nunca dividem pasta
+          const segIn = join(workRoot, `${instId}_p${pi}_in`)
+          const segOut = join(workRoot, `${instId}_p${pi}_out`)
           rmSync(segIn, { recursive: true, force: true })
           rmSync(segOut, { recursive: true, force: true })
           mkdirSync(segIn, { recursive: true })
@@ -954,13 +1036,26 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             '--input_folder', segIn,
             '--store_dir', segOut,
             '--force_cpu', '--extract_instrumental'
-          ], state, null, engEnv)
+          ], state, (line) => {
+            // Placar interno da IA (tqdm de chunks): progresso DENTRO do pedaço,
+            // senão a barra congela 15-20 min por pedaço
+            const mm = line.match(/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/)
+            if (mm) {
+              const frac = Math.max(0, Math.min(0.99, parseFloat(mm[1]) / parseFloat(mm[2])))
+              onProgress({
+                id, stage: 'extracting', instrument: instId, label: spec.label,
+                percent: Math.round(((step + frac) / totalSteps) * 100)
+              })
+            }
+          }, engEnv)
 
           // O stem extraído é o wav que não é o "instrumental"
           const outFiles = readdirSync(join(segOut, 'seg')).filter((f) => f.endsWith('.wav') && f !== 'instrumental.wav')
           if (!outFiles.length) throw new Error(`Especialista não produziu saída pro pedaço ${pi + 1}`)
           const piece = join(workRoot, `${instId}_p${pi}.wav`)
           copyFileSync(join(segOut, 'seg', outFiles[0]), piece)
+          rmSync(segIn, { recursive: true, force: true })
+          rmSync(segOut, { recursive: true, force: true })
           outPieces.push({ file: piece, start: Math.round(pd.start) })
           step++
         }
@@ -990,6 +1085,10 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         m.extracted = [...new Set([...(m.extracted || []), instId])]
         if (m.scout) m.scout.detections = (m.scout.detections || []).filter((d) => d.instrument !== instId)
         writeMeta(dir, m)
+
+        // Desconto IMEDIATO: o instrumento sai de "outros" assim que fica pronto,
+        // não só no fim da fila — nunca existe "instrumento em dois lugares"
+        await rebuildOther(dir, ffmpegPath, state)
       }
 
       if (gpWanted.length) {
@@ -1041,23 +1140,8 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         step += gpUnits
       }
 
-      // 4. Recalcula o "outros" = original menos tudo que foi extraído
-      const m = readMeta(dir)
-      const extracted = m.extracted || []
-      if (extracted.length) {
-        const orig = join(dir, 'base', 'other_orig.flac')
-        if (!existsSync(orig)) copyFileSync(join(dir, 'base', 'other.flac'), orig)
-        const args = ['-y', '-loglevel', 'error', '-i', orig]
-        const inverts = []
-        extracted.forEach((inst, i) => {
-          args.push('-i', join(dir, 'base', `${inst}.flac`))
-          inverts.push(`[${i + 1}:a]volume=-1[i${i}]`)
-        })
-        const mixIn = ['[0:a]', ...extracted.map((_, i) => `[i${i}]`)].join('')
-        args.push('-filter_complex', `${inverts.join(';')};${mixIn}amix=inputs=${extracted.length + 1}:normalize=0[a]`,
-          '-map', '[a]', '-compression_level', '5', join(dir, 'base', 'other.flac'))
-        await run(ffmpegPath, args, state)
-      }
+      // 4. Fechamento: garante o "outros" limpo (cobre também guitarra/piano)
+      await rebuildOther(dir, ffmpegPath, state)
 
       rmSync(workRoot, { recursive: true, force: true })
       touchSession(dir)
@@ -1072,16 +1156,20 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         }
         onStatus({ id, state: 'error', error: message })
       }
+    } finally {
+      activeExtracts.delete(key)
     }
   })()
 
-  return {
+  const handle = {
     id,
     cancel: () => {
       state.cancelled = true
       try { state.child?.kill() } catch {}
     }
   }
+  activeExtracts.set(key, handle)
+  return handle
 }
 
 // ---------- Polir faixa: remove vazamento/ruído de um stem já separado ----------
