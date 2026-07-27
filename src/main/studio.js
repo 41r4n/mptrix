@@ -922,6 +922,75 @@ export async function repairSession({ key, ffmpegPath }) {
   return true
 }
 
+// FORMA DE ONDA: os "picos" de volume de uma faixa (as dobras sonoras da tela).
+// Decodifica em 400Hz mono — leve — e guarda em cache ao lado das faixas.
+export async function stemPeaks({ key, stem, ffmpegPath, buckets = 800 }) {
+  const dir = join(STEMS_DIR, key)
+  const flac = join(dir, 'base', `${stem}.flac`)
+  if (!existsSync(flac)) throw new Error('Faixa não encontrada.')
+  const cache = join(dir, `peaks_${stem}.json`)
+  if (existsSync(cache) && statSync(cache).mtimeMs >= statSync(flac).mtimeMs) {
+    try { return JSON.parse(readFileSync(cache, 'utf8')) } catch {}
+  }
+  const raw = await new Promise((resolve, reject) => {
+    const child = spawn(ffmpegPath, ['-v', 'quiet', '-i', flac, '-ac', '1', '-ar', '400', '-f', 's16le', '-'], { windowsHide: true })
+    const chunks = []
+    child.stdout.on('data', (d) => chunks.push(d))
+    child.on('error', reject)
+    child.on('close', () => resolve(Buffer.concat(chunks)))
+  })
+  const n = Math.floor(raw.length / 2)
+  const per = Math.max(1, Math.floor(n / buckets))
+  const peaks = []
+  for (let b = 0; b < buckets; b++) {
+    let max = 0
+    const s0 = b * per
+    const s1 = Math.min(n, s0 + per)
+    for (let s = s0; s < s1; s++) {
+      const v = Math.abs(raw.readInt16LE(s * 2))
+      if (v > max) max = v
+    }
+    peaks.push(Math.round((max / 32768) * 100) / 100)
+  }
+  writeFileSync(cache, JSON.stringify(peaks))
+  return peaks
+}
+
+// LUPA DE TRECHO: fareja SÓ o pedaço marcado do "outros" limpo e compara com
+// as notas da música inteira — o que pontua alto aqui e baixo no resto é
+// exatamente o som que se destaca no trecho (o que o ouvido notou).
+export async function investigateStretch({ key, start, end, ffmpegPath }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  const src = join(dir, 'base', 'other.flac')
+  if (!existsSync(src)) throw new Error('Stem "outros" não encontrado.')
+  const len = Math.max(2, end - start)
+  const seg = join(dir, 'lupa_seg.wav')
+  await run(ffmpegPath, [
+    '-y', '-loglevel', 'error', '-ss', String(Math.max(0, start)), '-t', String(Math.ceil(len)),
+    '-i', src, '-ac', '2', '-ar', '44100', seg
+  ], {})
+  let out
+  try {
+    out = await runScoutScript(seg, {})
+  } finally {
+    rmSync(seg, { force: true })
+  }
+  const whole = meta.scout?.arsenal || {}
+  const items = Object.entries(out.arsenal || {})
+    .map(([id, v]) => ({
+      id,
+      stretch: v.score,
+      whole: whole[id]?.score ?? null,
+      // destaque = presença no trecho além da presença geral na música
+      standout: v.score - (whole[id]?.score ?? 0)
+    }))
+    .filter((i) => SPECIALISTS[i.id] && !(meta.stems || []).includes(i.id) && i.stretch >= 0.08)
+    .sort((a, b) => (b.standout + b.stretch * 0.5) - (a.standout + a.stretch * 0.5))
+  return { start, end, items: items.slice(0, 8) }
+}
+
 // REFAZER FAIXA: apaga uma faixa extraída e devolve o som dela pra "outros",
 // deixando tudo pronto pra extrair de novo DO ZERO (sem reaproveitar pedaços
 // possivelmente suspeitos de uma rodada problemática).

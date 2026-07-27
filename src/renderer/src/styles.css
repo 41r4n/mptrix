@@ -3459,3 +3459,73 @@ section h2 {
   font-size: 12.5px;
   font-style: italic;
 }
+
+/* ---------- Forma de onda nas faixas + Lupa de trecho ---------- */
+.studio-track {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 18px 10px;
+}
+
+.studio-track-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wave-lane {
+  position: relative;
+  height: 36px;
+  cursor: crosshair;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  touch-action: none;
+}
+
+.wave-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wave-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  pointer-events: none;
+}
+
+.wave-selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(139, 148, 255, 0.22);
+  border-left: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  pointer-events: none;
+}
+
+.wave-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.lupa-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 16px;
+}

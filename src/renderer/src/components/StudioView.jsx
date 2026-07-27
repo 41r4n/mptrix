@@ -157,6 +157,81 @@ function useSmoothProgress(target, active) {
   return { display, eta }
 }
 
+// Faixa com as "dobras sonoras": desenha os picos, mostra o cursor de
+// reprodução, clique = pular pra posição, arrastar = marcar trecho pra Lupa
+function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
+  const canvasRef = useRef(null)
+  const boxRef = useRef(null)
+  const dragRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !peaks) return
+    const dpr = window.devicePixelRatio || 1
+    const w = canvas.clientWidth || 600
+    const h = canvas.clientHeight || 34
+    canvas.width = w * dpr
+    canvas.height = h * dpr
+    const ctx = canvas.getContext('2d')
+    ctx.scale(dpr, dpr)
+    ctx.clearRect(0, 0, w, h)
+    const n = peaks.length
+    const bw = w / n
+    ctx.fillStyle = 'rgba(139, 148, 255, 0.6)'
+    for (let i = 0; i < n; i++) {
+      const ph = Math.max(1.5, peaks[i] * (h - 4))
+      ctx.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 0.6), ph)
+    }
+  }, [peaks])
+
+  const timeAt = (clientX) => {
+    const r = boxRef.current.getBoundingClientRect()
+    const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width))
+    return frac * (duration || 1)
+  }
+
+  const onDown = (e) => {
+    e.preventDefault()
+    dragRef.current = { x0: e.clientX, t0: timeAt(e.clientX), moved: false }
+    const onMove = (ev) => {
+      const d = dragRef.current
+      if (!d) return
+      if (Math.abs(ev.clientX - d.x0) > 6) d.moved = true
+      if (d.moved) {
+        const t1 = timeAt(ev.clientX)
+        onSelect?.({ start: Math.min(d.t0, t1), end: Math.max(d.t0, t1) })
+      }
+    }
+    const onUp = (ev) => {
+      const d = dragRef.current
+      dragRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      if (d && !d.moved) onSeek?.(timeAt(ev.clientX))
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  const pct = duration ? Math.min(100, (pos / duration) * 100) : 0
+  return (
+    <div className="wave-lane" ref={boxRef} onPointerDown={onDown} title="Clique: pular · Arrastar: marcar trecho pra investigar">
+      <canvas ref={canvasRef} className="wave-canvas" />
+      {selection && duration > 0 && (
+        <div
+          className="wave-selection"
+          style={{
+            left: `${(selection.start / duration) * 100}%`,
+            width: `${(Math.max(0.2, selection.end - selection.start) / duration) * 100}%`
+          }}
+        />
+      )}
+      <div className="wave-playhead" style={{ left: `${pct}%` }} />
+      {!peaks && <div className="wave-loading muted">· · ·</div>}
+    </div>
+  )
+}
+
 const SEP_HINTS = [
   'isolando a voz…',
   'peneirando a bateria…',
@@ -367,6 +442,10 @@ export default function StudioView({ source, onClose }) {
   const [extractSel, setExtractSel] = useState(() => new Set())
   const [arsenal, setArsenal] = useState([]) // catálogo completo de especialistas
   const [showArsenal, setShowArsenal] = useState(false)
+  const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
+  const peaksAskedRef = useRef(new Set())
+  const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
+  const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
   const [extractJob, setExtractJob] = useState(null) // {id, label, stage, percent}
   const [exportingSong, setExportingSong] = useState(false)
   const [plan, setPlan] = useState(null) // catálogo da pré-análise
@@ -535,6 +614,35 @@ export default function StudioView({ source, onClose }) {
     })
     return off
   }, [session, extractJob, polishJob, reloadSession])
+
+  // Formas de onda: busca os picos de cada faixa (o motor guarda cache)
+  useEffect(() => {
+    if (phase !== 'ready' || !session) return
+    let alive = true
+    ;(async () => {
+      for (const stem of presentStems(session)) {
+        const tag = `${session.key}|${stem}`
+        if (peaksAskedRef.current.has(tag)) continue
+        peaksAskedRef.current.add(tag)
+        const p = await window.mptrix.studio.peaks({ key: session.key, stem })
+        if (!alive) return
+        if (p) setPeaksMap((m) => ({ ...m, [stem]: p }))
+      }
+    })()
+    return () => { alive = false }
+  }, [phase, session]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lupa de trecho: fareja só o pedaço marcado e ranqueia o que se destaca
+  const runLupa = async () => {
+    if (!waveSel || !session || lupa === 'loading') return
+    setLupa('loading')
+    const res = await window.mptrix.studio.investigate({
+      key: session.key,
+      start: waveSel.start,
+      end: waveSel.end
+    })
+    setLupa(res || { error: 'O investigador não respondeu.' })
+  }
 
   // Tudo que o painel oferece nasce marcado — inclusive Piano/Teclado, que
   // vem do caminho da cascata e ficava órfão da marcação automática
@@ -1408,6 +1516,7 @@ export default function StudioView({ source, onClose }) {
               const effectivelyOff = isMuted || (solo.size > 0 && !isSolo)
               return (
                 <div key={stem} className={`studio-track ${effectivelyOff ? 'off' : ''}`}>
+                  <div className="studio-track-head">
                   <span className="studio-track-icon">{meta.icon}</span>
                   <span className="studio-track-name">{meta.label}</span>
                   <input
@@ -1437,9 +1546,78 @@ export default function StudioView({ source, onClose }) {
                       title="Refazer essa faixa do zero (apaga e extrai de novo)"
                     >↻</button>
                   )}
+                  </div>
+                  <WaveLane
+                    peaks={peaksMap[stem]}
+                    duration={playDuration}
+                    pos={pos}
+                    selection={waveSel}
+                    onSeek={seekTo}
+                    onSelect={(sel) => { setWaveSel(sel); setLupa(null) }}
+                  />
                 </div>
               )
             })}
+            {waveSel && (
+              <div className="lupa-bar">
+                <span className="muted">
+                  🔍 Trecho marcado: <strong>{fmtTime(waveSel.start)} – {fmtTime(waveSel.end)}</strong>
+                </span>
+                <button className="btn-primary btn-small" disabled={lupa === 'loading'} onClick={runLupa}>
+                  {lupa === 'loading' ? 'Investigando… (~30s)' : 'Investigar trecho'}
+                </button>
+                <button className="btn-secondary btn-small" onClick={() => { setWaveSel(null); setLupa(null) }}>
+                  ✕ limpar
+                </button>
+              </div>
+            )}
+            {lupa && lupa !== 'loading' && lupa.error && (
+              <p className="muted studio-hint">⚠ {lupa.error}</p>
+            )}
+            {lupa && lupa !== 'loading' && !lupa.error && (
+              <div className="studio-scout">
+                <div className="studio-plan-section-title">
+                  🔍 No trecho {fmtTime(lupa.start)}–{fmtTime(lupa.end)}, o que se destaca
+                </div>
+                {(lupa.items || []).length === 0 && (
+                  <p className="muted studio-hint">
+                    Nada do arsenal se destaca nesse trecho — pode ser um timbre que os faros
+                    ainda não conhecem, ou o som está muito misturado.
+                  </p>
+                )}
+                {(lupa.items || []).map((it) => {
+                  const meta = STEM_META[it.id] || { label: it.id, icon: '🎚️' }
+                  const conf = humanConf(it.stretch)
+                  const soAqui = it.whole != null && it.standout > 0.12
+                  return (
+                    <div key={it.id} className="studio-plan-item">
+                      <span className="studio-plan-item-icon">{meta.icon}</span>
+                      <span className="studio-plan-item-name">
+                        {meta.label}
+                        <span className="studio-plan-when">
+                          {soAqui ? 'se destaca SÓ nesse trecho' : 'presente no trecho'}
+                        </span>
+                      </span>
+                      <span className={`studio-plan-conf ${conf >= 75 ? 'high' : conf >= 55 ? 'mid' : 'low'}`}>
+                        {conf}%
+                      </span>
+                      {extractSel.has(it.id) ? (
+                        <span className="muted" style={{ fontSize: '12px' }}>✓ marcado</span>
+                      ) : (
+                        <button
+                          className="btn-secondary btn-small"
+                          onClick={() => setExtractSel((s) => new Set([...s, it.id]))}
+                        >➕ marcar</button>
+                      )}
+                    </div>
+                  )
+                })}
+                <p className="muted studio-hint">
+                  O que você marcar entra na lista de extração do painel abaixo — a faixa final
+                  cobre a música inteira, como sempre.
+                </p>
+              </div>
+            )}
             {absentStems(session).length > 0 && (
               <div className="studio-absent muted">
                 Não detectados nessa música:{' '}

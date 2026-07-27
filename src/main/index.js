@@ -24,7 +24,9 @@ import {
   removeCachesForFile,
   repairSession,
   specialistCatalog,
-  redoStem
+  redoStem,
+  stemPeaks,
+  investigateStretch
 } from './studio.js'
 import {
   getYtDlpVersion,
@@ -928,6 +930,24 @@ app.whenReady().then(() => {
 
   // Arsenal completo dos especialistas — pra busca manual na tela
   ipcMain.handle('studio:catalog', () => specialistCatalog())
+
+  // Forma de onda de uma faixa (com cache em disco)
+  ipcMain.handle('studio:peaks', async (_e, { key, stem }) => {
+    try {
+      return await stemPeaks({ key, stem, ffmpegPath: FFMPEG_PATH })
+    } catch {
+      return null
+    }
+  })
+
+  // Lupa de trecho: fareja só o pedaço marcado e ranqueia o que se destaca
+  ipcMain.handle('studio:investigate', async (_e, { key, start, end }) => {
+    try {
+      return await investigateStretch({ key, start, end, ffmpegPath: FFMPEG_PATH })
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
 
   ipcMain.handle('studio:open', (_e, { path: inputFile, model, title }) => {
     if (!inputFile || !existsSync(inputFile)) {
