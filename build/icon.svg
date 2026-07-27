@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b6dff"/>
+      <stop offset="55%" stop-color="#6b5cff"/>
+      <stop offset="100%" stop-color="#9d4cff"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#sheen)"/>
+
+  <g fill="#ffffff">
+    <text x="512" y="600"
+          font-family="'Segoe UI', system-ui, sans-serif"
+          font-size="560"
+          font-weight="800"
+          text-anchor="middle"
+          letter-spacing="-20">M</text>
+  </g>
+
+  <g fill="#ffffff" opacity="0.92">
+    <rect x="332" y="740" width="50" height="80"  rx="14"/>
+    <rect x="412" y="700" width="50" height="160" rx="14"/>
+    <rect x="492" y="660" width="50" height="240" rx="14"/>
+    <rect x="572" y="700" width="50" height="160" rx="14"/>
+    <rect x="652" y="740" width="50" height="80"  rx="14"/>
+  </g>
+</svg>

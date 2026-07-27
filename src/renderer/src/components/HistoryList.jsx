@@ -1,0 +1,625 @@
+import { useMemo, useRef, useState } from 'react'
+import ConfirmDialog from './ConfirmDialog.jsx'
+import EditEntryModal from './EditEntryModal.jsx'
+import BatchActionsDialog from './BatchActionsDialog.jsx'
+import PeriodPickerModal from './PeriodPickerModal.jsx'
+
+const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+const PRESET_LABELS = {
+  all: 'Sempre',
+  today: 'Hoje',
+  '7d': 'Últimos 7 dias',
+  '30d': 'Últimos 30 dias',
+  thisMonth: 'Este mês',
+  thisYear: 'Este ano',
+  lastMonth: 'Mês passado',
+  lastYear: 'Ano passado'
+}
+
+const PRESET_ICONS = {
+  music: '🎵',
+  playlist: '📀',
+  fast: '⚡',
+  video: '🎬'
+}
+
+const TYPE_FILTERS = [
+  { value: 'all', label: 'Todos os tipos' },
+  { value: 'music', label: '🎵 Música única' },
+  { value: 'playlist', label: '📀 Playlist' },
+  { value: 'fast', label: '⚡ Rápido' },
+  { value: 'video', label: '🎬 Vídeo' }
+]
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mais recentes' },
+  { value: 'oldest', label: 'Mais antigos' },
+  { value: 'largest', label: 'Maior arquivo' },
+  { value: 'smallest', label: 'Menor arquivo' }
+]
+
+function formatTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const now = new Date()
+  const diffMin = Math.round((now - d) / 60000)
+  if (diffMin < 1) return 'agora mesmo'
+  if (diffMin < 60) return `há ${diffMin} min`
+  const diffH = Math.round(diffMin / 60)
+  if (diffH < 24) return `há ${diffH} h`
+  const diffD = Math.round(diffH / 24)
+  if (diffD < 7) return `há ${diffD} d`
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function displayTitle(entry) {
+  return entry.customName || entry.displayName || entry.title || '(sem nome)'
+}
+
+function matchesQuery(entry, q) {
+  if (!q) return true
+  const haystack = [
+    entry.customName, entry.displayName, entry.title, entry.url,
+    entry.presetName, entry.qualityLabel, entry.ext
+  ].filter(Boolean).join(' ').toLowerCase()
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean)
+  return terms.every((t) => haystack.includes(t))
+}
+
+function inPresetPeriod(timestamp, period) {
+  if (period === 'all' || !timestamp) return true
+  const t = new Date(timestamp).getTime()
+  if (isNaN(t)) return true
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+
+  if (period === 'today') return t >= todayStart
+  if (period === '7d') return t >= todayStart - 7 * 86400000
+  if (period === '30d') return t >= todayStart - 30 * 86400000
+  if (period === 'thisMonth') return t >= new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  if (period === 'thisYear') return t >= new Date(now.getFullYear(), 0, 1).getTime()
+  if (period === 'lastMonth') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime()
+    const end = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+    return t >= start && t < end
+  }
+  if (period === 'lastYear') {
+    const start = new Date(now.getFullYear() - 1, 0, 1).getTime()
+    const end = new Date(now.getFullYear(), 0, 1).getTime()
+    return t >= start && t < end
+  }
+  return true
+}
+
+function inHierarchicalPeriod(timestamp, sel) {
+  if (!timestamp) return false
+  const d = new Date(timestamp)
+  if (isNaN(d)) return false
+  const year = d.getFullYear()
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const week = Math.min(Math.ceil(day / 7), 5)
+
+  const years = new Set(sel.years || [])
+  const months = new Set(sel.months || [])
+  const weeks = new Set(sel.weeks || [])
+  const days = new Set(sel.days || [])
+
+  if (years.size === 0) return false
+  if (!years.has(year)) return false
+  if (months.size === 0) return true
+  if (!months.has(`${year}-${month}`)) return false
+  if (weeks.size === 0) return true
+  if (!weeks.has(`${year}-${month}-${week}`)) return false
+  if (days.size === 0) return true
+  return days.has(`${year}-${month}-${day}`)
+}
+
+function matchesPeriod(timestamp, periodSel) {
+  if (!periodSel || periodSel.mode === 'all') return true
+  if (periodSel.mode === 'preset') return inPresetPeriod(timestamp, periodSel.preset)
+  if (periodSel.mode === 'hierarchical') return inHierarchicalPeriod(timestamp, periodSel)
+  return true
+}
+
+function summarizePeriod(sel) {
+  if (!sel || sel.mode === 'all') return 'Sempre'
+  if (sel.mode === 'preset') return PRESET_LABELS[sel.preset] || 'Sempre'
+
+  const days = sel.days || []
+  const weeks = sel.weeks || []
+  const months = sel.months || []
+  const years = sel.years || []
+
+  if (days.length > 0) return `${days.length} dia${days.length !== 1 ? 's' : ''}`
+  if (weeks.length > 0) return `${weeks.length} semana${weeks.length !== 1 ? 's' : ''}`
+  if (months.length > 0) {
+    if (months.length <= 2) {
+      return months.map((k) => {
+        const [y, m] = k.split('-').map(Number)
+        return `${MONTH_SHORT[m - 1]}/${String(y).slice(2)}`
+      }).join(', ')
+    }
+    return `${months.length} meses`
+  }
+  if (years.length > 0) {
+    if (years.length <= 3) return years.sort().join(', ')
+    return `${years.length} anos`
+  }
+  return 'Sempre'
+}
+
+function sortEntries(entries, sortBy) {
+  const arr = [...entries]
+  if (sortBy === 'newest') return arr.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+  if (sortBy === 'oldest') return arr.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0))
+  if (sortBy === 'largest') return arr.sort((a, b) => (b.fileSize || 0) - (a.fileSize || 0))
+  if (sortBy === 'smallest') return arr.sort((a, b) => (a.fileSize || 0) - (b.fileSize || 0))
+  return arr
+}
+
+export default function HistoryList({ history, onChange, onOpenStudio, onQuickEdit }) {
+  const [unlockedIds, setUnlockedIds] = useState(() => new Set())
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [confirmState, setConfirmState] = useState(null)
+  const [editingEntry, setEditingEntry] = useState(null)
+  const [batchActionsOpen, setBatchActionsOpen] = useState(false)
+  const [periodPickerOpen, setPeriodPickerOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [periodSelection, setPeriodSelection] = useState({ mode: 'all' })
+  const [sortBy, setSortBy] = useState('newest')
+
+  const filtered = useMemo(() => {
+    const out = history.filter((e) => {
+      if (!matchesQuery(e, query.trim())) return false
+      if (filterType !== 'all' && e.presetId !== filterType) return false
+      if (!matchesPeriod(e.timestamp, periodSelection)) return false
+      return true
+    })
+    return sortEntries(out, sortBy)
+  }, [history, query, filterType, periodSelection, sortBy])
+
+  const periodActive = periodSelection.mode !== 'all'
+  const hasActiveFilters = query.trim() || filterType !== 'all' || periodActive || sortBy !== 'newest'
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="history-empty">
+        Nenhum download ainda. Quando você baixar algo, vai aparecer aqui.
+      </div>
+    )
+  }
+
+  const openFile = (entry) => entry.primaryFile && window.mptrix.shell.openPath(entry.primaryFile)
+  const showInExplorer = (entry) => entry.primaryFile && window.mptrix.shell.showInFolder(entry.primaryFile)
+
+  const toggleLock = (id) => {
+    setUnlockedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const closeConfirm = () => setConfirmState(null)
+
+  const askRemoveOne = (entry) => {
+    setConfirmState({
+      title: 'Apagar de verdade?',
+      message: `"${displayTitle(entry)}"`,
+      note: 'Sai da lista, o arquivo vai pra Lixeira do Windows e as faixas separadas são apagadas. Dá pra recuperar o arquivo na Lixeira se mudar de ideia.',
+      confirmLabel: 'Apagar tudo',
+      cancelLabel: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        closeConfirm()
+        const updated = await window.mptrix.history.remove(entry.id, { deleteFile: true })
+        setUnlockedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(entry.id)
+          return next
+        })
+        onChange?.(updated)
+      }
+    })
+  }
+
+  const enterSelectionMode = () => {
+    setSelectionMode(true)
+    setSelectedIds(new Set())
+  }
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const VISIBLE_LIMIT = 100
+  const visible = filtered.slice(0, VISIBLE_LIMIT)
+  const hiddenCount = filtered.length - visible.length
+
+  const selectAllVisible = () => setSelectedIds(new Set(visible.map((e) => e.id)))
+  const deselectAll = () => setSelectedIds(new Set())
+
+  const performBatchDelete = async () => {
+    let updated = history
+    for (const id of selectedIds) {
+      updated = await window.mptrix.history.remove(id, { deleteFile: true })
+    }
+    onChange?.(updated)
+    exitSelectionMode()
+  }
+
+  const askBatchDeleteSecond = (items) => {
+    setConfirmState({
+      title: 'Última confirmação',
+      message: `Apagar de verdade ${items.length} item${items.length !== 1 ? 's' : ''}?`,
+      note: 'Os arquivos vão pra Lixeira do Windows e as faixas separadas são apagadas. Dá pra recuperar os arquivos na Lixeira se mudar de ideia.',
+      confirmLabel: 'Sim, apagar tudo',
+      cancelLabel: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        closeConfirm()
+        await performBatchDelete()
+      }
+    })
+  }
+
+  const askBatchDelete = () => {
+    if (selectedIds.size === 0) return
+    const items = history.filter((e) => selectedIds.has(e.id))
+    const titles = items.map(displayTitle)
+    const visible = titles.slice(0, 6)
+    const extra = titles.length > 6 ? titles.length - 6 : 0
+    setConfirmState({
+      title: `Apagar ${items.length} item${items.length !== 1 ? 's' : ''} do histórico?`,
+      list: visible,
+      note: extra > 0 ? `…e mais ${extra} item${extra !== 1 ? 's' : ''}.` : null,
+      confirmLabel: 'Continuar →',
+      cancelLabel: 'Cancelar',
+      danger: false,
+      onConfirm: () => askBatchDeleteSecond(items)
+    })
+  }
+
+  const askClearAll = () => {
+    setConfirmState({
+      title: 'Limpar TODO o histórico?',
+      message: `${history.length} item${history.length !== 1 ? 's' : ''} serão removidos da lista.`,
+      note: 'Os arquivos baixados continuam onde estão. Essa ação não pode ser desfeita.',
+      confirmLabel: 'Limpar tudo',
+      cancelLabel: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        closeConfirm()
+        const updated = await window.mptrix.history.clear()
+        onChange?.(updated)
+        setUnlockedIds(new Set())
+      }
+    })
+  }
+
+  const performShare = async () => {
+    const items = history.filter((e) => selectedIds.has(e.id))
+    const paths = items.map((e) => e.primaryFile).filter(Boolean)
+    if (paths.length === 0) {
+      setConfirmState({
+        title: 'Nenhum arquivo disponível',
+        message: 'Os arquivos selecionados não foram encontrados no disco.',
+        confirmLabel: 'OK',
+        cancelLabel: null,
+        danger: false,
+        onConfirm: closeConfirm
+      })
+      return
+    }
+    const result = await window.mptrix.shell.copyFilesToClipboard(paths)
+    if (result?.error) {
+      setConfirmState({
+        title: 'Não consegui copiar',
+        message: result.error,
+        confirmLabel: 'OK',
+        danger: true,
+        onConfirm: closeConfirm
+      })
+      return
+    }
+    setConfirmState({
+      title: '📋 Arquivos copiados!',
+      message: `${result.count} arquivo${result.count !== 1 ? 's foram copiados' : ' foi copiado'} pra área de transferência.`,
+      note: 'Vai em qualquer app (WhatsApp Web, Discord, email, pasta do Windows…) e aperta Ctrl+V pra colar os arquivos como anexo.',
+      confirmLabel: 'Entendi',
+      danger: false,
+      onConfirm: () => {
+        closeConfirm()
+        exitSelectionMode()
+      }
+    })
+  }
+
+  const visibleSelectedCount = filtered.filter((e) => selectedIds.has(e.id)).length
+  const allVisibleSelected = filtered.length > 0 && visibleSelectedCount === filtered.length
+
+  const resetFilters = () => {
+    setQuery('')
+    setFilterType('all')
+    setPeriodSelection({ mode: 'all' })
+    setSortBy('newest')
+  }
+
+  return (
+    <div>
+      <div className="search-row">
+        <div className="search-input-wrap">
+          <span className="search-icon">🔍</span>
+          <input
+            type="search"
+            className="search-input"
+            placeholder="Buscar por nome, arquivo, link…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            spellCheck={false}
+          />
+          {query && (
+            <button className="search-clear" onClick={() => setQuery('')} title="Limpar">×</button>
+          )}
+        </div>
+      </div>
+
+      <div className="filter-row">
+        <select className="filter-select" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+          {TYPE_FILTERS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <button
+          className={`filter-select filter-period-btn ${periodActive ? 'active' : ''}`}
+          onClick={() => setPeriodPickerOpen(true)}
+          type="button"
+        >
+          📅 {summarizePeriod(periodSelection)}
+        </button>
+        <select className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        {hasActiveFilters && (
+          <button className="link-btn filter-reset" onClick={resetFilters}>limpar filtros</button>
+        )}
+        <span className="filter-count muted">
+          {filtered.length === history.length
+            ? history.length > VISIBLE_LIMIT
+              ? `${VISIBLE_LIMIT}+ (${history.length} no total — a busca encontra todos)`
+              : `${history.length} item${history.length !== 1 ? 's' : ''}`
+            : `${filtered.length} de ${history.length}`}
+        </span>
+      </div>
+
+      <div className="history-head">
+        {selectionMode ? (
+          <>
+            <span className="muted">
+              <strong className="selected-count">{selectedIds.size}</strong>
+              {' '}selecionado{selectedIds.size !== 1 ? 's' : ''}
+            </span>
+            <div className="history-head-actions">
+              <button className="link-btn" onClick={allVisibleSelected ? deselectAll : selectAllVisible}>
+                {allVisibleSelected ? 'desmarcar tudo' : 'selecionar tudo'}
+              </button>
+              <button
+                className="btn-primary btn-small"
+                disabled={selectedIds.size === 0}
+                onClick={() => setBatchActionsOpen(true)}
+              >
+                Confirmar {selectedIds.size > 0 ? `(${selectedIds.size})` : ''} →
+              </button>
+              <button className="btn-secondary btn-small" onClick={exitSelectionMode}>
+                Cancelar
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="history-head-actions">
+            <button
+              className="btn-secondary btn-small"
+              onClick={enterSelectionMode}
+              title="Apagar ou compartilhar vários de uma vez"
+            >
+              ☑ Selecionar vários
+            </button>
+            <button className="link-btn link-danger" onClick={askClearAll}>
+              limpar tudo
+            </button>
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="history-empty">
+          {hasActiveFilters ? (
+            <>
+              Nenhum download corresponde aos filtros.
+              <br />
+              <button className="link-btn" onClick={resetFilters}>limpar filtros</button>
+            </>
+          ) : (
+            'Nenhum download ainda.'
+          )}
+        </div>
+      ) : (
+        <ul className={`history-list ${selectionMode ? 'selection-mode' : ''}`}>
+          {visible.map((entry) => {
+            const unlocked = unlockedIds.has(entry.id)
+            const selected = selectedIds.has(entry.id)
+            const onItemClick = selectionMode ? () => toggleSelected(entry.id) : undefined
+            const shown = displayTitle(entry)
+
+            return (
+              <li
+                key={entry.id}
+                className={`history-item ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
+                onClick={onItemClick}
+              >
+                {selectionMode && (
+                  <div className={`selection-check ${selected ? 'checked' : ''}`}>
+                    {selected ? '✓' : ''}
+                  </div>
+                )}
+                <div className="history-icon" title={entry.presetName}>
+                  {PRESET_ICONS[entry.presetId] ?? '⬇'}
+                </div>
+                <div className="history-main">
+                  <div
+                    className={`history-title ${!selectionMode ? 'history-title-clickable' : ''}`}
+                    title={selectionMode ? shown : `${shown}\n\nClique pra renomear`}
+                    onClick={(e) => {
+                      if (selectionMode) return
+                      e.stopPropagation()
+                      setEditingEntry(entry)
+                    }}
+                  >
+                    {shown}
+                    {entry.customName && <span className="custom-mark" title="Renomeado por você">✎</span>}
+                  </div>
+                  <div className="history-meta">
+                    <span>{entry.presetName}</span>
+                    {entry.qualityLabel && (
+                      <>
+                        <span>•</span>
+                        <span className="quality-tag">{entry.qualityLabel}</span>
+                      </>
+                    )}
+                    {entry.ext && (
+                      <>
+                        <span>•</span>
+                        <span className="ext-tag">.{entry.ext}</span>
+                      </>
+                    )}
+                    {entry.fileSizeLabel && (
+                      <>
+                        <span>•</span>
+                        <span>{entry.fileSizeLabel}</span>
+                      </>
+                    )}
+                    {entry.files && entry.files.length > 1 && (
+                      <>
+                        <span>•</span>
+                        <span>{entry.files.length} arquivos</span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <span>{formatTime(entry.timestamp)}</span>
+                  </div>
+                </div>
+                {!selectionMode && (
+                  <div className="history-actions">
+                    <button
+                      className="btn-icon"
+                      onClick={() => onQuickEdit?.(entry)}
+                      disabled={!entry.primaryFile}
+                      title="Edição rápida (tom, BPM e velocidade — sem separar, ~1 min)"
+                    >🎚️</button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => onOpenStudio?.(entry)}
+                      disabled={!entry.primaryFile}
+                      title="Abrir no Estúdio (separar instrumentos)"
+                    >🎛️</button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => openFile(entry)}
+                      disabled={!entry.primaryFile}
+                      title="Abrir arquivo"
+                    >▶</button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => showInExplorer(entry)}
+                      disabled={!entry.primaryFile}
+                      title="Mostrar no Explorer"
+                    >📁</button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => setEditingEntry(entry)}
+                      title="Renomear"
+                    >✏️</button>
+                    <button
+                      className={`btn-icon ${unlocked ? 'btn-icon-unlocked' : ''}`}
+                      onClick={() => toggleLock(entry.id)}
+                      title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}
+                    >{unlocked ? '🔓' : '🔒'}</button>
+                    {unlocked && (
+                      <button
+                        className="btn-icon btn-icon-danger"
+                        onClick={() => askRemoveOne(entry)}
+                        title="Apagar do histórico"
+                      >✕</button>
+                    )}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {hiddenCount > 0 && (
+        <div className="history-more muted">
+          Mostrando os {VISIBLE_LIMIT} mais recentes — tem mais {hiddenCount} guardado{hiddenCount !== 1 ? 's' : ''}.
+          Use a busca ou os filtros pra encontrar qualquer um. 🔍
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        list={confirmState?.list}
+        note={confirmState?.note}
+        confirmLabel={confirmState?.confirmLabel}
+        cancelLabel={confirmState?.cancelLabel}
+        danger={confirmState?.danger}
+        onConfirm={confirmState?.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      {editingEntry && (
+        <EditEntryModal
+          entry={editingEntry}
+          onClose={() => setEditingEntry(null)}
+          onSaved={() => setEditingEntry(null)}
+        />
+      )}
+
+      <BatchActionsDialog
+        open={batchActionsOpen}
+        count={selectedIds.size}
+        onClose={() => setBatchActionsOpen(false)}
+        onDelete={() => { setBatchActionsOpen(false); askBatchDelete() }}
+        onShare={() => { setBatchActionsOpen(false); performShare() }}
+      />
+
+      {periodPickerOpen && (
+        <PeriodPickerModal
+          history={history}
+          initial={periodSelection}
+          onClose={() => setPeriodPickerOpen(false)}
+          onApply={(sel) => { setPeriodSelection(sel); setPeriodPickerOpen(false) }}
+        />
+      )}
+    </div>
+  )
+}
