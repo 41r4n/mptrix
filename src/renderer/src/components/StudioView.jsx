@@ -536,6 +536,18 @@ export default function StudioView({ source, onClose }) {
     return off
   }, [session, extractJob, polishJob, reloadSession])
 
+  // Tudo que o painel oferece nasce marcado — inclusive Piano/Teclado, que
+  // vem do caminho da cascata e ficava órfão da marcação automática
+  const defaultExtractSel = (res, sess) => {
+    const sel = new Set((res.detections || []).map((d) => d.instrument))
+    if (sess && sess.model !== 'quick') {
+      for (const s of ['guitar', 'piano']) {
+        if (!sess.stems.includes(s) && (res.gp?.[s]?.score || 0) >= (s === 'guitar' ? 0.2 : 0.15)) sel.add(s)
+      }
+    }
+    return sel
+  }
+
   // Olheiro: depois que a sessão abre, procura instrumentos raros no "outros"
   useEffect(() => {
     if (phase !== 'ready' || !session || scout !== null) return
@@ -545,9 +557,9 @@ export default function StudioView({ source, onClose }) {
       if (!aliveRef.current) return
       if (res?.error) { setScout({ detections: [] }); return }
       setScout(res)
-      setExtractSel(new Set((res.detections || []).map((d) => d.instrument)))
+      setExtractSel(defaultExtractSel(res, session))
     })
-  }, [phase, session, scout])
+  }, [phase, session, scout]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Eventos do trabalho de extração de instrumentos raros
   useEffect(() => {
@@ -690,7 +702,7 @@ export default function StudioView({ source, onClose }) {
     const res = await window.mptrix.studio.scout({ key: session.key, force: true })
     if (res?.error) { setScout({ detections: [] }); setExportMsg(`⚠ ${res.error}`); return }
     setScout(res)
-    setExtractSel(new Set((res.detections || []).map((d) => d.instrument)))
+    setExtractSel(defaultExtractSel(res, session))
   }
 
   // Refazer faixa: apaga a extraída (som volta pro "outros") e extrai do zero
