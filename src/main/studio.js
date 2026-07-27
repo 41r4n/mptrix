@@ -565,9 +565,10 @@ export async function scoutSession({ key, force = false }) {
   if (!meta) throw new Error('Sessão não encontrada.')
   if (meta.scout && !force) return meta.scout
 
-  const target = existsSync(join(dir, 'base', 'other_orig.flac'))
-    ? join(dir, 'base', 'other_orig.flac')
-    : join(dir, 'base', 'other.flac')
+  // Fareja o "outros" LIMPO (pós-desconto): a pergunta do painel é "o que MAIS
+  // dá pra extrair" — farejar o original ressuscitava fantasmas de instrumentos
+  // já extraídos (violão cheirando a dobro, metais cheirando a trompete)
+  const target = join(dir, 'base', 'other.flac')
   if (!existsSync(target)) throw new Error('Stem "outros" não encontrado nessa sessão.')
 
   const state = {}

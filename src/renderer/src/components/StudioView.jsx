@@ -1519,11 +1519,9 @@ export default function StudioView({ source, onClose }) {
                             ? 'Nível de presença de cada um segundo o faro — a decisão é sua: a busca cobre a música inteira e custa o mesmo tempo.'
                             : 'Essa música foi farejada antes dos faros novos — clica em "Farejar de novo" pra medir a presença de cada instrumento.'}
                         </p>
-                        {!presenceOf && (
-                          <button className="btn-secondary btn-small" style={{ alignSelf: 'flex-start' }} onClick={rescout}>
-                            🔄 Farejar de novo (~2-3 min)
-                          </button>
-                        )}
+                        <button className="btn-secondary btn-small" style={{ alignSelf: 'flex-start' }} onClick={rescout}>
+                          🔄 Farejar de novo (~2-3 min)
+                        </button>
                         {rest.map((c) => {
                           const meta = STEM_META[c.id] || { label: c.label, icon: '🎚️' }
                           const pres = presenceOf?.[c.id] || null
