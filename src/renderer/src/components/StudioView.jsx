@@ -167,21 +167,28 @@ function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !peaks) return
-    const dpr = window.devicePixelRatio || 1
-    const w = canvas.clientWidth || 600
-    const h = canvas.clientHeight || 34
-    canvas.width = w * dpr
-    canvas.height = h * dpr
-    const ctx = canvas.getContext('2d')
-    ctx.scale(dpr, dpr)
-    ctx.clearRect(0, 0, w, h)
-    const n = peaks.length
-    const bw = w / n
-    ctx.fillStyle = 'rgba(139, 148, 255, 0.6)'
-    for (let i = 0; i < n; i++) {
-      const ph = Math.max(1.5, peaks[i] * (h - 4))
-      ctx.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 0.6), ph)
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1
+      const w = canvas.clientWidth || 600
+      const h = canvas.clientHeight || 34
+      canvas.width = w * dpr
+      canvas.height = h * dpr
+      const ctx = canvas.getContext('2d')
+      ctx.scale(dpr, dpr)
+      ctx.clearRect(0, 0, w, h)
+      const n = peaks.length
+      const bw = w / n
+      ctx.fillStyle = 'rgba(139, 148, 255, 0.6)'
+      for (let i = 0; i < n; i++) {
+        const ph = Math.max(1.5, peaks[i] * (h - 4))
+        ctx.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 0.6), ph)
+      }
     }
+    draw()
+    // Janela mudou de tamanho? Redesenha — senão a onda fica esticada/borrada
+    const ro = new ResizeObserver(draw)
+    ro.observe(canvas)
+    return () => ro.disconnect()
   }, [peaks])
 
   const timeAt = (clientX) => {
@@ -443,7 +450,6 @@ export default function StudioView({ source, onClose }) {
   const [arsenal, setArsenal] = useState([]) // catálogo completo de especialistas
   const [showArsenal, setShowArsenal] = useState(false)
   const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
-  const peaksAskedRef = useRef(new Set())
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
   const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
   const [extractJob, setExtractJob] = useState(null) // {id, label, stage, percent}
@@ -615,15 +621,20 @@ export default function StudioView({ source, onClose }) {
     return off
   }, [session, extractJob, polishJob, reloadSession])
 
-  // Formas de onda: busca os picos de cada faixa (o motor guarda cache)
+  // Trocou de música? Zera as ondas — senão a tela mostra a onda da anterior
+  useEffect(() => {
+    setPeaksMap({})
+    setWaveSel(null)
+    setLupa(null)
+  }, [session?.key])
+
+  // Formas de onda: busca os picos de cada faixa. Roda de novo a cada recarga
+  // da sessão (o "Outros" muda a cada desconto) — o cache do motor faz ser leve
   useEffect(() => {
     if (phase !== 'ready' || !session) return
     let alive = true
     ;(async () => {
       for (const stem of presentStems(session)) {
-        const tag = `${session.key}|${stem}`
-        if (peaksAskedRef.current.has(tag)) continue
-        peaksAskedRef.current.add(tag)
         const p = await window.mptrix.studio.peaks({ key: session.key, stem })
         if (!alive) return
         if (p) setPeaksMap((m) => ({ ...m, [stem]: p }))

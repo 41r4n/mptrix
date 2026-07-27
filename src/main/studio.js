@@ -928,12 +928,14 @@ export async function stemPeaks({ key, stem, ffmpegPath, buckets = 800 }) {
   const dir = join(STEMS_DIR, key)
   const flac = join(dir, 'base', `${stem}.flac`)
   if (!existsSync(flac)) throw new Error('Faixa não encontrada.')
-  const cache = join(dir, `peaks_${stem}.json`)
+  const cache = join(dir, `peaks2_${stem}.json`)
   if (existsSync(cache) && statSync(cache).mtimeMs >= statSync(flac).mtimeMs) {
     try { return JSON.parse(readFileSync(cache, 'utf8')) } catch {}
   }
+  // 8kHz: taxa baixa o bastante pra ser leve, alta o bastante pra ENXERGAR
+  // voz/guitarra/flauta (400Hz filtrava fora tudo acima dos graves)
   const raw = await new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath, ['-v', 'quiet', '-i', flac, '-ac', '1', '-ar', '400', '-f', 's16le', '-'], { windowsHide: true })
+    const child = spawn(ffmpegPath, ['-v', 'quiet', '-i', flac, '-ac', '1', '-ar', '8000', '-f', 's16le', '-'], { windowsHide: true })
     const chunks = []
     child.stdout.on('data', (d) => chunks.push(d))
     child.on('error', reject)
@@ -950,10 +952,15 @@ export async function stemPeaks({ key, stem, ffmpegPath, buckets = 800 }) {
       const v = Math.abs(raw.readInt16LE(s * 2))
       if (v > max) max = v
     }
-    peaks.push(Math.round((max / 32768) * 100) / 100)
+    peaks.push(max / 32768)
   }
-  writeFileSync(cache, JSON.stringify(peaks))
-  return peaks
+  // Cada faixa normalizada pela própria altura (faixa baixinha também mostra
+  // sua forma) — mas faixa quase-muda fica plana mesmo, sem inflar ruído
+  const top = Math.max(...peaks)
+  const scale = top >= 0.05 ? 1 / top : 1
+  const out = peaks.map((p) => Math.round(p * scale * 100) / 100)
+  writeFileSync(cache, JSON.stringify(out))
+  return out
 }
 
 // LUPA DE TRECHO: fareja SÓ o pedaço marcado do "outros" limpo e compara com
