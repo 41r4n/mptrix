@@ -172,7 +172,9 @@ function sessionPayload(key, meta) {
     duration: meta.duration,
     analysis: meta.analysis || null,
     polished: meta.polished || {},
-    variants: Object.keys(meta.variants || {})
+    variants: Object.keys(meta.variants || {}),
+    // Faixas que nasceram de extração — são as que podem ser refeitas
+    extracted: meta.extracted || []
   }
 }
 
@@ -590,7 +592,9 @@ export async function scoutSession({ key, force = false }) {
   const scout = {
     at: new Date().toISOString(),
     detections: (out.detections || []).filter((d) => SPECIALISTS[d.instrument] && !(meta.stems || []).includes(d.instrument)),
-    gp: out.gp || null
+    gp: out.gp || null,
+    // Nível de presença de TODOS os instrumentos do arsenal (mesmo os fracos)
+    arsenal: out.arsenal || null
   }
   meta.scout = scout
   writeMeta(dir, meta)
@@ -758,6 +762,11 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
         base: ['vocals', 'drums', 'bass', 'other'],
         baseInfo,
         extras,
+        // Nível de presença de todo o arsenal (com posição convertida pro
+        // tempo real da música) — alimenta a busca manual do catálogo
+        arsenal: scoutOut.arsenal
+          ? Object.fromEntries(Object.entries(scoutOut.arsenal).map(([k, v]) => [k, { score: v.score, at: toReal(v.at || 0) }]))
+          : null,
         createdAt: new Date().toISOString()
       }
       writeFileSync(planPath, JSON.stringify(plan, null, 2))
@@ -910,6 +919,33 @@ export async function repairSession({ key, ffmpegPath }) {
   if (!want || meta.otherCleanFor === want) return false
   await rebuildOther(dir, ffmpegPath, {})
   return true
+}
+
+// REFAZER FAIXA: apaga uma faixa extraída e devolve o som dela pra "outros",
+// deixando tudo pronto pra extrair de novo DO ZERO (sem reaproveitar pedaços
+// possivelmente suspeitos de uma rodada problemática).
+export async function redoStem({ key, instrument, ffmpegPath }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  if (!(meta.extracted || []).includes(instrument)) {
+    throw new Error('Essa faixa não veio de extração — não dá pra refazer por aqui.')
+  }
+  const workRoot = join(dir, 'extract_work')
+  if (existsSync(workRoot)) {
+    for (const f of readdirSync(workRoot)) {
+      if (f.startsWith(`${instrument}_p`)) rmSync(join(workRoot, f), { recursive: true, force: true })
+    }
+  }
+  meta.extracted = meta.extracted.filter((i) => i !== instrument)
+  meta.stems = (meta.stems || []).filter((s) => s !== instrument)
+  if (meta.stemInfo) delete meta.stemInfo[instrument]
+  writeMeta(dir, meta)
+  rmSync(join(dir, 'base', `${instrument}.flac`), { force: true })
+  // Devolve o som ao "outros" — nenhum pedaço da música pode se perder
+  await rebuildOther(dir, ffmpegPath, {})
+  touchSession(dir)
+  return sessionPayload(key, readMeta(dir))
 }
 
 // VACINA ANTI-GÊMEO: nunca dois trabalhos de extração na mesma música — eles

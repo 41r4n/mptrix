@@ -23,7 +23,8 @@ import {
   freeMemMB,
   removeCachesForFile,
   repairSession,
-  specialistCatalog
+  specialistCatalog,
+  redoStem
 } from './studio.js'
 import {
   getYtDlpVersion,
@@ -1141,9 +1142,19 @@ app.whenReady().then(() => {
     return { id }
   })
 
-  ipcMain.handle('studio:scout', async (_e, { key }) => {
+  ipcMain.handle('studio:scout', async (_e, { key, force }) => {
     try {
-      return await scoutSession({ key })
+      return await scoutSession({ key, force: !!force })
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
+
+  // Refazer faixa: apaga a extraída, devolve o som pra "outros" e a tela
+  // dispara a extração de novo do zero
+  ipcMain.handle('studio:redoStem', async (_e, { key, instrument }) => {
+    try {
+      return { session: await redoStem({ key, instrument, ffmpegPath: FFMPEG_PATH }) }
     } catch (err) {
       return { error: err.message }
     }

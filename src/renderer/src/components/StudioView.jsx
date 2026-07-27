@@ -682,6 +682,35 @@ export default function StudioView({ source, onClose }) {
     setExtractJob({ id: res.id, stage: 'preparing', label: '', percent: 0 })
   }
 
+  // Farejar de novo: re-roda o olheiro (músicas antigas ganham os faros novos
+  // e os níveis de presença do arsenal)
+  const rescout = async () => {
+    if (!session || extractJob) return
+    setScout('loading')
+    const res = await window.mptrix.studio.scout({ key: session.key, force: true })
+    if (res?.error) { setScout({ detections: [] }); setExportMsg(`⚠ ${res.error}`); return }
+    setScout(res)
+    setExtractSel(new Set((res.detections || []).map((d) => d.instrument)))
+  }
+
+  // Refazer faixa: apaga a extraída (som volta pro "outros") e extrai do zero
+  const redoTrack = async (stem) => {
+    if (!session || extractJob) return
+    const meta = STEM_META[stem] || { label: stem }
+    const min = Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
+    const ok = window.confirm(
+      `Refazer a faixa de ${meta.label} do zero?\n\nEla será apagada (o som volta pra "Outros") e extraída de novo, sem aproveitar nada da rodada anterior (~${min} min).`
+    )
+    if (!ok) return
+    if (!(await waitForMemory(2500, 'ready'))) return
+    const res = await window.mptrix.studio.redoStem({ key: session.key, instrument: stem })
+    if (res?.error) { setExportMsg(`⚠ ${res.error}`); return }
+    if (res?.session) await reloadSession(res.session)
+    const ex = await window.mptrix.studio.extract({ key: session.key, instruments: [stem] })
+    if (ex?.error) { setExportMsg(`⚠ ${ex.error}`); return }
+    setExtractJob({ id: ex.id, stage: 'preparing', label: meta.label, percent: 0 })
+  }
+
   const changePitch = (next) => {
     const clamped = Math.max(-6, Math.min(6, next))
     setPitchState(clamped)
@@ -1289,16 +1318,22 @@ export default function StudioView({ source, onClose }) {
                 </button>
                 {showArsenal && (() => {
                   const offered = new Set((plan.extras || []).map((e) => e.instrument))
-                  const rest = arsenal.filter((c) => !offered.has(c.id))
+                  const presenceOf = plan.arsenal || null
+                  const rest = arsenal
+                    .filter((c) => !offered.has(c.id))
+                    .sort((a, b) => (presenceOf?.[b.id]?.score || 0) - (presenceOf?.[a.id]?.score || 0))
                   if (!rest.length) return null
                   return (
                     <>
                       <p className="muted studio-hint" style={{ margin: 0 }}>
-                        O faro não sentiu esses na música — mas dá pra pedir mesmo assim:
-                        a busca é às cegas, cobre a música inteira e custa o mesmo tempo.
+                        {presenceOf
+                          ? 'Nível de presença de cada um segundo o faro — a decisão é sua: a busca cobre a música inteira e custa o mesmo tempo.'
+                          : 'O faro não sentiu esses na música — mas dá pra pedir mesmo assim: a busca é às cegas, cobre a música inteira e custa o mesmo tempo.'}
                       </p>
                       {rest.map((c) => {
                         const meta = STEM_META[c.id] || { label: c.label, icon: '🎚️' }
+                        const pres = presenceOf?.[c.id] || null
+                        const conf = pres ? humanConf(pres.score) : null
                         return (
                           <label key={c.id} className={`studio-plan-item ${planSel.has(c.id) ? 'on' : ''}`}>
                             <input
@@ -1307,8 +1342,20 @@ export default function StudioView({ source, onClose }) {
                               onChange={() => togglePlanSel(c.id)}
                             />
                             <span className="studio-plan-item-icon">{meta.icon}</span>
-                            <span className="studio-plan-item-name">{meta.label}</span>
-                            <span />
+                            <span className="studio-plan-item-name">
+                              {meta.label}
+                              {conf != null && (
+                                <span className="studio-plan-when">
+                                  {conf >= 75 ? 'parece ter mesmo' : conf >= 55 ? 'pode ter' : conf >= 40 ? 'sinal fraco' : 'faro quase não sentiu'}
+                                  {conf >= 55 && pres.at != null && <> · perto de <strong>{fmtTime(pres.at)}</strong></>}
+                                </span>
+                              )}
+                            </span>
+                            {conf != null ? (
+                              <span className={`studio-plan-conf ${conf >= 75 ? 'high' : conf >= 55 ? 'mid' : 'low'}`}>
+                                {conf}%
+                              </span>
+                            ) : <span />}
                             <span className="studio-plan-min">+{itemMinutes(c.id)} min</span>
                           </label>
                         )
@@ -1362,6 +1409,13 @@ export default function StudioView({ source, onClose }) {
                     onClick={() => toggleSolo(stem)}
                     title="Solo (ouvir só essa faixa)"
                   >S</button>
+                  {(session.extracted || []).includes(stem) && !extractJob && (
+                    <button
+                      className="studio-mini-btn"
+                      onClick={() => redoTrack(stem)}
+                      title="Refazer essa faixa do zero (apaga e extrai de novo)"
+                    >↻</button>
+                  )}
                 </div>
               )
             })}
@@ -1451,18 +1505,29 @@ export default function StudioView({ source, onClose }) {
                   </button>
                   {showArsenal && (() => {
                     const offered = new Set(items.map((d) => d.instrument))
-                    const rest = arsenal.filter((c) => !offered.has(c.id) && !session.stems.includes(c.id))
+                    const presenceOf = scout.arsenal || null
+                    const rest = arsenal
+                      .filter((c) => !offered.has(c.id) && !session.stems.includes(c.id))
+                      .sort((a, b) => (presenceOf?.[b.id]?.score || 0) - (presenceOf?.[a.id]?.score || 0))
                     if (!rest.length) {
                       return <p className="muted studio-hint">Tudo do arsenal já está na música ou na lista acima.</p>
                     }
                     return (
                       <>
                         <p className="muted studio-hint" style={{ margin: 0 }}>
-                          O faro não sentiu esses na música — mas dá pra pedir mesmo assim:
-                          a busca é às cegas, cobre a música inteira e custa o mesmo tempo.
+                          {presenceOf
+                            ? 'Nível de presença de cada um segundo o faro — a decisão é sua: a busca cobre a música inteira e custa o mesmo tempo.'
+                            : 'Essa música foi farejada antes dos faros novos — clica em "Farejar de novo" pra medir a presença de cada instrumento.'}
                         </p>
+                        {!presenceOf && (
+                          <button className="btn-secondary btn-small" style={{ alignSelf: 'flex-start' }} onClick={rescout}>
+                            🔄 Farejar de novo (~2-3 min)
+                          </button>
+                        )}
                         {rest.map((c) => {
                           const meta = STEM_META[c.id] || { label: c.label, icon: '🎚️' }
+                          const pres = presenceOf?.[c.id] || null
+                          const conf = pres ? humanConf(pres.score) : null
                           return (
                             <label
                               key={c.id}
@@ -1474,8 +1539,20 @@ export default function StudioView({ source, onClose }) {
                                 onChange={() => toggleExtractSel(c.id)}
                               />
                               <span className="studio-plan-item-icon">{meta.icon}</span>
-                              <span className="studio-plan-item-name">{meta.label}</span>
-                              <span />
+                              <span className="studio-plan-item-name">
+                                {meta.label}
+                                {conf != null && (
+                                  <span className="studio-plan-when">
+                                    {conf >= 75 ? 'parece ter mesmo' : conf >= 55 ? 'pode ter' : conf >= 40 ? 'sinal fraco' : 'faro quase não sentiu'}
+                                    {conf >= 55 && pres.at != null && <> · perto de <strong>{fmtTime(pres.at)}</strong></>}
+                                  </span>
+                                )}
+                              </span>
+                              {conf != null ? (
+                                <span className={`studio-plan-conf ${conf >= 75 ? 'high' : conf >= 55 ? 'mid' : 'low'}`}>
+                                  {conf}%
+                                </span>
+                              ) : <span />}
                               <span className="studio-plan-min">+{itemMinutes(c.id)} min</span>
                             </label>
                           )

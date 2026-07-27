@@ -88,6 +88,7 @@ const api = {
     pickAudio: () => ipcRenderer.invoke('studio:pickAudio'),
     scout: (opts) => ipcRenderer.invoke('studio:scout', opts),
     catalog: () => ipcRenderer.invoke('studio:catalog'),
+    redoStem: (opts) => ipcRenderer.invoke('studio:redoStem', opts),
     extract: (opts) => ipcRenderer.invoke('studio:extract', opts),
     cached: (opts) => ipcRenderer.invoke('studio:cached', opts),
     plan: (opts) => ipcRenderer.invoke('studio:plan', opts),
