@@ -1377,6 +1377,15 @@ export default function StudioView({ source, onClose }) {
                 })()}
               </div>
 
+              {[...planSel].filter((i) => !isGp(i)).length >= 2 && (
+                <p className="muted studio-hint" style={{ margin: 0 }}>
+                  ⚠️ Faros parecidos podem estar cheirando o <strong>mesmo som</strong> (ex.:
+                  violino + cordas farejando um único véu). Duplicata de verdade não acontece —
+                  quem extrai primeiro leva o som, e o seguinte sai quase vazio e se esconde
+                  sozinho — mas os minutos dele são gastos do mesmo jeito. Na dúvida: extrai
+                  um, re-fareja, e aí decide o próximo.
+                </p>
+              )}
               <div className="studio-plan-footer2">
                 <div className="studio-plan-total">
                   <span className="studio-plan-total-value">~{totalMin} min</span>
@@ -1570,6 +1579,15 @@ export default function StudioView({ source, onClose }) {
                       </>
                     )
                   })()}
+                  {[...extractSel].filter((i) => !isGp(i)).length >= 2 && (
+                    <p className="muted studio-hint" style={{ margin: 0 }}>
+                      ⚠️ Faros parecidos podem estar cheirando o <strong>mesmo som</strong> (ex.:
+                      violino + cordas farejando um único véu). Duplicata de verdade não acontece —
+                      quem extrai primeiro leva o som, e o seguinte sai quase vazio e se esconde
+                      sozinho — mas os minutos dele são gastos do mesmo jeito. Na dúvida: extrai
+                      um, re-fareja, e aí decide o próximo.
+                    </p>
+                  )}
                   <div className="studio-plan-footer2">
                     <div className="studio-plan-total">
                       <span className="studio-plan-total-value">
