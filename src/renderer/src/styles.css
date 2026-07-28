@@ -3844,3 +3844,584 @@ section h2 {
     row-gap: 8px;
   }
 }
+
+/* ---------- Lupinha (zoom da interface) ---------- */
+.zoom-chip {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  padding: 4px 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.zoom-lupa {
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.zoom-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border-control);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.zoom-pct {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  min-width: 40px;
+  cursor: pointer;
+}
+
+.zoom-pct:hover {
+  color: var(--accent);
+}
+
+/* ---------- Mesa de DAW (estrutura do prototipo) ---------- */
+.daw {
+  --rail-w: 264px;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-tracks);
+}
+
+.daw-row {
+  display: flex;
+  height: 56px;
+  border-bottom: 1px solid var(--border-hair);
+}
+
+.daw-row:last-of-type {
+  border-bottom: none;
+}
+
+.daw-head-row {
+  height: 30px;
+}
+
+.daw-rail {
+  width: var(--rail-w);
+  flex: none;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  padding: 7px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.daw-rail-head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.daw-cap {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+
+.daw-cap-dim {
+  color: #4e5560;
+}
+
+.daw-rail-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.daw-rail-flex {
+  flex: 1;
+}
+
+.daw-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.daw-rail-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daw-speaker {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.daw-rail .studio-volume {
+  flex: 1;
+  height: 14px;
+  margin: 0;
+}
+
+.daw-rail .studio-mini-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  border-radius: 6px;
+  flex: none;
+}
+
+.daw-gutter {
+  flex: 1;
+  position: relative;
+  background: var(--bg-inset);
+  min-width: 0;
+}
+
+.daw .wave-lane {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.daw-row.off .wave-canvas {
+  opacity: 0.22;
+}
+
+.daw-row.off .daw-rail {
+  opacity: 0.45;
+}
+
+.daw-row.off {
+  opacity: 1;
+}
+
+.daw-ruler {
+  overflow: hidden;
+}
+
+/* overlay unico: playhead + tint + regiao marcada cruzando TODAS as pistas */
+.daw-overlay {
+  position: absolute;
+  left: var(--rail-w);
+  top: 0;
+  right: 0;
+  bottom: 0;
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 4;
+}
+
+.daw-tint {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  background: rgba(182, 255, 59, 0.055);
+  border-right: 1px solid rgba(182, 255, 59, 0.16);
+  pointer-events: none;
+}
+
+.daw-loopreg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(182, 255, 59, 0.05);
+  border-left: 1px dashed rgba(182, 255, 59, 0.45);
+  border-right: 1px dashed rgba(182, 255, 59, 0.45);
+  pointer-events: none;
+}
+
+.daw-loopreg-top {
+  height: 3px;
+  background: var(--accent);
+  opacity: 0.65;
+}
+
+.daw-ph {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.daw-ph-tri {
+  position: absolute;
+  top: 0;
+  left: -6px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--accent);
+}
+
+.daw-ph-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: var(--glow-playhead);
+}
+
+@media (max-width: 860px) {
+  .daw {
+    --rail-w: 172px;
+  }
+
+  .daw-name {
+    font-size: 11.5px;
+  }
+}
+
+/* ---------- Topbar do estudio (marca + chips do prototipo) ---------- */
+.topbar-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+}
+
+.topbar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brand-disc {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #0b0c0f, 0 0 0 3.5px rgba(182, 255, 59, 0.35);
+  flex: none;
+}
+
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  flex: none;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.09);
+  flex: none;
+}
+
+.studio-cover {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0b0c0f;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.studio-title-sub {
+  font-size: 11px;
+  color: var(--muted-2);
+  margin-top: 2px;
+}
+
+.topbar-chip {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  flex: none;
+}
+
+.topbar-chip-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+}
+
+.topbar-chip-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.topbar-chip-tom {
+  padding: 0 5px 0 11px;
+  gap: 4px;
+}
+
+.tom-value {
+  min-width: 26px;
+  text-align: center;
+}
+
+.topbar-chip-tom.transposed {
+  border-color: rgba(182, 255, 59, 0.45);
+}
+
+.topbar-chip-tom.transposed .tom-value {
+  color: var(--accent);
+}
+
+.chip-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chip-step:hover:not(:disabled) {
+  background: rgba(182, 255, 59, 0.18);
+  color: var(--accent);
+}
+
+.chip-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.chip-offset {
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(182, 255, 59, 0.14);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-offset:hover {
+  background: rgba(182, 255, 59, 0.26);
+}
+
+/* ---------- Home: marca (disco 40 + MPTrix) ---------- */
+.home-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* variante 40px do .brand-disc (28px) usado no estúdio */
+.brand-disc-lg {
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px rgba(182, 255, 59, 0.3);
+}
+
+.brand-glyph {
+  display: block;
+  fill: var(--bg);
+}
+
+.home-brand-name {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.home-tagline {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- Biblioteca em grade ---------- */
+.hlib-grid {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px 8px 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+  max-height: 62vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.hlib-grid::-webkit-scrollbar {
+  width: 10px;
+}
+
+.hlib-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hlib-grid::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+
+.hlib-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+.hlib-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.hlib-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.hlib-card.selected {
+  border-color: var(--accent-border);
+}
+
+.hlib-grid.selection-mode .hlib-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Capa colorida (hash do título -> cor de stem) */
+.hlib-cover {
+  position: relative;
+  height: 96px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hlib-initials {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--bg);
+}
+
+.hlib-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* check de seleção reposicionado no canto sup. esquerdo da capa */
+.hlib-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Corpo do card */
+.hlib-body {
+  padding: 10px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.hlib-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.hlib-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted-2);
+}
+
+/* Ações do card — sempre visíveis; quebram em 2 linhas se apertar */
+.hlib-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 12px 12px;
+  margin-top: auto;
+}

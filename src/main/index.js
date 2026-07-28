@@ -97,7 +97,8 @@ import {
   removeHistoryEntry,
   clearHistory,
   getUpdateCache,
-  setUpdateCache
+  setUpdateCache,
+  setUiZoom
 } from './store.js'
 
 const UPDATE_CHECK_TTL_MS = 4 * 60 * 60 * 1000
@@ -202,6 +203,29 @@ if (!gotInstanceLock) {
   })
 }
 
+// Degraus da lupinha (zoom da interface)
+const ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6]
+function zoomStep(dir) {
+  if (!mainWindow || mainWindow.isDestroyed()) return 1
+  const wc = mainWindow.webContents
+  let z
+  if (dir === 0) {
+    z = 1
+  } else {
+    const cur = wc.getZoomFactor()
+    let i = 0
+    for (let k = 1; k < ZOOMS.length; k++) {
+      if (Math.abs(ZOOMS[k] - cur) < Math.abs(ZOOMS[i] - cur)) i = k
+    }
+    i = Math.max(0, Math.min(ZOOMS.length - 1, i + dir))
+    z = ZOOMS[i]
+  }
+  wc.setZoomFactor(z)
+  setUiZoom(z)
+  send('ui:zoom-changed', z)
+  return z
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
@@ -227,6 +251,27 @@ function createWindow() {
     if (details.reason !== 'clean-exit' && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.reload()
     }
+  })
+
+  // LUPINHA: zoom da interface com memória — o Chromium guarda zoom sozinho
+  // por origem, então sempre impomos o valor salvo (senão um Ctrl+rodinha
+  // acidental encolhe o app pra sempre, sem caminho de volta)
+  const applyZoom = () => {
+    const z = getSettings()?.uiZoom
+    mainWindow.webContents.setZoomFactor(typeof z === 'number' ? z : 1)
+  }
+  mainWindow.webContents.on('did-finish-load', applyZoom)
+  // Atalhos clássicos (o app não tem menu, então registramos na mão):
+  // Ctrl+= aproxima, Ctrl+- afasta, Ctrl+0 volta ao normal
+  mainWindow.webContents.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown' || !input.control) return
+    if (input.key === '=' || input.key === '+') { zoomStep(1); e.preventDefault() }
+    else if (input.key === '-') { zoomStep(-1); e.preventDefault() }
+    else if (input.key === '0') { zoomStep(0); e.preventDefault() }
+  })
+  // Ctrl+rodinha do mouse também passa pela lupinha (e fica salvo direito)
+  mainWindow.webContents.on('zoom-changed', (_e, dir) => {
+    zoomStep(dir === 'in' ? 1 : -1)
   })
 
   attachContextMenu(mainWindow)
@@ -930,6 +975,12 @@ app.whenReady().then(() => {
 
   // Arsenal completo dos especialistas — pra busca manual na tela
   ipcMain.handle('studio:catalog', () => specialistCatalog())
+
+  // Lupinha: zoom da interface (dir: 1 aproxima, -1 afasta, 0 reseta)
+  ipcMain.handle('ui:zoom', (_e, dir) => zoomStep(dir))
+  ipcMain.handle('ui:zoomGet', () =>
+    mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getZoomFactor() : 1
+  )
 
   // Forma de onda de uma faixa (com cache em disco)
   ipcMain.handle('studio:peaks', async (_e, { key, stem }) => {

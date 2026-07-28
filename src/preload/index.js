@@ -77,6 +77,11 @@ const api = {
     onStatus: on('updates:status')
   },
 
+  ui: {
+    zoom: (dir) => ipcRenderer.invoke('ui:zoom', dir),
+    zoomGet: () => ipcRenderer.invoke('ui:zoomGet'),
+    onZoom: on('ui:zoom-changed')
+  },
   studio: {
     engineStatus: () => ipcRenderer.invoke('studio:engineStatus'),
     models: () => ipcRenderer.invoke('studio:models'),

@@ -57,6 +57,27 @@ function displayTitle(entry) {
   return entry.customName || entry.displayName || entry.title || '(sem nome)'
 }
 
+// Capa colorida: hash simples do título -> uma das 6 cores de stem do design
+function coverColor(title) {
+  let h = 0
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0
+  return `var(--stem-${(h % 6) + 1})`
+}
+
+// Iniciais da capa: 1ª letra das 2 primeiras palavras
+function coverInitials(title) {
+  const words = title.trim().split(/\s+/).filter(Boolean)
+  const ini = words.slice(0, 2).map((w) => w[0]).join('').toUpperCase()
+  return ini || '♪'
+}
+
+// Badge de origem da capa: derivado do que o item já mostra (ext/qualidade/preset)
+function originBadge(entry) {
+  if (entry.ext) return entry.ext.toUpperCase()
+  if (entry.qualityLabel) return entry.qualityLabel
+  return (entry.presetName || '').slice(0, 8) || '—'
+}
+
 function matchesQuery(entry, q) {
   if (!q) return true
   const haystack = [
@@ -461,7 +482,7 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           )}
         </div>
       ) : (
-        <ul className={`history-list ${selectionMode ? 'selection-mode' : ''}`}>
+        <ul className={`hlib-grid ${selectionMode ? 'selection-mode' : ''}`}>
           {visible.map((entry) => {
             const unlocked = unlockedIds.has(entry.id)
             const selected = selectedIds.has(entry.id)
@@ -471,20 +492,21 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
             return (
               <li
                 key={entry.id}
-                className={`history-item ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
+                className={`hlib-card ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
                 onClick={onItemClick}
               >
-                {selectionMode && (
-                  <div className={`selection-check ${selected ? 'checked' : ''}`}>
-                    {selected ? '✓' : ''}
-                  </div>
-                )}
-                <div className="history-icon" title={entry.presetName}>
-                  {PRESET_ICONS[entry.presetId] ?? '⬇'}
+                <div className="hlib-cover" style={{ background: coverColor(shown) }}>
+                  <span className="hlib-initials">{coverInitials(shown)}</span>
+                  {selectionMode && (
+                    <div className={`selection-check hlib-check ${selected ? 'checked' : ''}`}>
+                      {selected ? '✓' : ''}
+                    </div>
+                  )}
+                  <span className="hlib-badge" title={entry.presetName}>{originBadge(entry)}</span>
                 </div>
-                <div className="history-main">
+                <div className="hlib-body">
                   <div
-                    className={`history-title ${!selectionMode ? 'history-title-clickable' : ''}`}
+                    className={`hlib-title ${!selectionMode ? 'history-title-clickable' : ''}`}
                     title={selectionMode ? shown : `${shown}\n\nClique pra renomear`}
                     onClick={(e) => {
                       if (selectionMode) return
@@ -495,38 +517,18 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
                     {shown}
                     {entry.customName && <span className="custom-mark" title="Renomeado por você">✎</span>}
                   </div>
-                  <div className="history-meta">
-                    <span>{entry.presetName}</span>
-                    {entry.qualityLabel && (
-                      <>
-                        <span>•</span>
-                        <span className="quality-tag">{entry.qualityLabel}</span>
-                      </>
-                    )}
-                    {entry.ext && (
-                      <>
-                        <span>•</span>
-                        <span className="ext-tag">.{entry.ext}</span>
-                      </>
-                    )}
-                    {entry.fileSizeLabel && (
-                      <>
-                        <span>•</span>
-                        <span>{entry.fileSizeLabel}</span>
-                      </>
-                    )}
+                  <div className="hlib-meta">
+                    <span title={entry.presetName}>{PRESET_ICONS[entry.presetId] ?? '⬇'}</span>
+                    {entry.qualityLabel && <span className="quality-tag">{entry.qualityLabel}</span>}
+                    {entry.fileSizeLabel && <span>{entry.fileSizeLabel}</span>}
                     {entry.files && entry.files.length > 1 && (
-                      <>
-                        <span>•</span>
-                        <span>{entry.files.length} arquivos</span>
-                      </>
+                      <span>{entry.files.length} arquivos</span>
                     )}
-                    <span>•</span>
                     <span>{formatTime(entry.timestamp)}</span>
                   </div>
                 </div>
                 {!selectionMode && (
-                  <div className="history-actions">
+                  <div className="hlib-actions">
                     <button
                       className="btn-icon"
                       onClick={() => onQuickEdit?.(entry)}

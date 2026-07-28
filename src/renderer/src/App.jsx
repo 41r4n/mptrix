@@ -8,6 +8,28 @@ import UpdateFooter from './components/UpdateFooter.jsx'
 import ShareApp from './components/ShareApp.jsx'
 import { UpdatesProvider } from './contexts/UpdatesContext.jsx'
 
+// Lupinha: controle de tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0 também
+// funcionam) — flutuante, visível em qualquer tela, com memória
+function ZoomChip() {
+  const [z, setZ] = useState(1)
+  useEffect(() => {
+    window.mptrix.ui?.zoomGet?.().then((v) => setZ(v || 1)).catch(() => {})
+    const off = window.mptrix.ui?.onZoom?.((v) => setZ(v || 1))
+    return off
+  }, [])
+  if (!window.mptrix.ui) return null
+  return (
+    <div className="zoom-chip" title="Tamanho da tela — atalhos: Ctrl+= aproxima, Ctrl+- afasta, Ctrl+0 normal">
+      <span className="zoom-lupa">🔍</span>
+      <button className="zoom-btn" onClick={() => window.mptrix.ui.zoom(-1)} aria-label="Diminuir tela">−</button>
+      <button className="zoom-pct" onClick={() => window.mptrix.ui.zoom(0)} title="Clique pra voltar ao tamanho normal">
+        {Math.round(z * 100)}%
+      </button>
+      <button className="zoom-btn" onClick={() => window.mptrix.ui.zoom(1)} aria-label="Aumentar tela">+</button>
+    </div>
+  )
+}
+
 const PRESET_ICONS = {
   music: '🎵',
   playlist: '📀',
@@ -80,8 +102,15 @@ export default function App() {
     <UpdatesProvider>
       <div className="app">
         <header className="hero">
-          <h1>MPTRIX</h1>
-          <p className="tagline">Baixe MP3 e MP4 do YouTube em um clique.</p>
+          <div className="home-brand-row">
+            <span className="brand-disc brand-disc-lg" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" className="brand-glyph">
+                <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" />
+              </svg>
+            </span>
+            <span className="home-brand-name">MPTrix</span>
+          </div>
+          <p className="tagline home-tagline">Baixe MP3 e MP4 do YouTube em um clique.</p>
         </header>
 
         <UpdateBanner />
@@ -180,6 +209,7 @@ export default function App() {
 
         <UpdateFooter />
       </div>
+      <ZoomChip />
     </UpdatesProvider>
   )
 }

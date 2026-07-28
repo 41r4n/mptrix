@@ -629,6 +629,7 @@ export default function StudioView({ source, onClose }) {
             if (nodes.tint) nodes.tint.style.width = pct
           }
           if (rulerNodesRef.current.ph) rulerNodesRef.current.ph.style.left = pct
+          if (rulerNodesRef.current.tint) rulerNodesRef.current.tint.style.width = pct
           if (timerElRef.current) {
             const txt = fmtTime(t)
             if (timerElRef.current.textContent !== txt) timerElRef.current.textContent = txt
@@ -761,6 +762,32 @@ export default function StudioView({ source, onClose }) {
     })()
     return () => { alive = false }
   }, [phase, session]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Overlay do DAW: um só capturador de ponteiro pra todas as canaletas —
+  // clique pula pra posição; arrastar marca o trecho (Lupa + loop)
+  const overlayDown = (e) => {
+    if (!playDuration) return
+    const box = e.currentTarget.getBoundingClientRect()
+    const timeAt = (x) => Math.max(0, Math.min(1, (x - box.left) / box.width)) * playDuration
+    const t0 = timeAt(e.clientX)
+    const x0 = e.clientX
+    let moved = false
+    const onMove = (ev) => {
+      if (Math.abs(ev.clientX - x0) > 6) moved = true
+      if (moved) {
+        const t1 = timeAt(ev.clientX)
+        setWaveSel({ start: Math.min(t0, t1), end: Math.max(t0, t1) })
+        setLupa(null)
+      }
+    }
+    const onUp = (ev) => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      if (!moved) seekTo(timeAt(ev.clientX))
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
 
   // Lupa de trecho: fareja só o pedaço marcado e ranqueia o que se destaca
   const runLupa = async () => {
@@ -1255,29 +1282,50 @@ export default function StudioView({ source, onClose }) {
     <div className="studio-overlay">
       <header className="studio-header">
         <button
-          className="btn-secondary btn-small"
+          className="topbar-icon-btn"
           onClick={phase === 'processing' || phase === 'planning' ? cancelJob : onClose}
+          title="Voltar"
         >
-          ← Voltar
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
+        <span className="brand-disc" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="15" height="15"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0b0c0f" /></svg>
+        </span>
+        <span className="brand-name">MPTrix</span>
+        <span className="topbar-divider" />
+        <span className="studio-cover" aria-hidden="true">
+          {(source.title || 'MP').split(/\s+/).slice(0, 2).map((w) => (w[0] || '').toUpperCase()).join('')}
+        </span>
         <div className="studio-title-wrap">
           <div className="studio-title" title={source.title}>{source.title || 'Estúdio'}</div>
-          <div className="studio-badges">
-            {analysisKey && (
-              <span className="studio-badge" title={`Confiança: ${Math.round((session.analysis.strength || 0) * 100)}%`}>
-                🎼 {shiftedKey && pitch !== 0 ? `${analysisKey} → ${shiftedKey}` : analysisKey}
-              </span>
-            )}
-            {bpm && (
-              <span className="studio-badge">
-                ♩ {bpmHalf ? `${Math.round(bpmHalf)} / ${Math.round(bpm)}` : Math.round(bpm)} BPM
-                {tempo !== 100 ? ` × ${tempo}%` : ''}
-              </span>
-            )}
-          </div>
+          {model === 'quick' && <div className="studio-title-sub">🎚️ Edição rápida</div>}
         </div>
         <div className="studio-header-actions">
-          {model === 'quick' && <span className="studio-badge">🎚️ Edição rápida</span>}
+          {bpm && (
+            <span className="topbar-chip">
+              <span className="topbar-chip-label">BPM</span>
+              <span className="topbar-chip-value">
+                {bpmHalf ? `${Math.round(bpmHalf)}/${Math.round(bpm)}` : Math.round(bpm)}
+                {tempo !== 100 ? `×${tempo}%` : ''}
+              </span>
+            </span>
+          )}
+          {analysisKey && (
+            <span
+              className={`topbar-chip topbar-chip-tom ${pitch !== 0 ? 'transposed' : ''}`}
+              title={`Tom da música — confiança ${Math.round((session?.analysis?.strength || 0) * 100)}%. Use − e + pra transpor.`}
+            >
+              <span className="topbar-chip-label">TOM</span>
+              <button className="chip-step" onClick={() => changePitch(pitch - 1)} disabled={phase !== 'ready'} aria-label="Descer meio tom">−</button>
+              <span className="topbar-chip-value tom-value">{shiftedKey && pitch !== 0 ? shiftedKey : analysisKey}</span>
+              <button className="chip-step" onClick={() => changePitch(pitch + 1)} disabled={phase !== 'ready'} aria-label="Subir meio tom">+</button>
+              {pitch !== 0 && (
+                <button className="chip-offset" onClick={() => changePitch(0)} title="Voltar ao tom original">
+                  {pitch > 0 ? `+${pitch}` : pitch}
+                </button>
+              )}
+            </span>
+          )}
           <button
             className="btn-secondary btn-small"
             onClick={doExportSong}
@@ -1287,8 +1335,8 @@ export default function StudioView({ source, onClose }) {
             {exportingSong ? 'Exportando…' : 'Exportar música…'}
           </button>
           {session?.model !== 'quick' && (
-            <button className="btn-secondary btn-small" onClick={doExport} disabled={phase !== 'ready'}>
-              Exportar faixas…
+            <button className="btn-primary btn-small" onClick={doExport} disabled={phase !== 'ready'}>
+              Exportar faixas
             </button>
           )}
         </div>
@@ -1639,94 +1687,110 @@ export default function StudioView({ source, onClose }) {
       {phase === 'ready' && session && (
         <>
           <div className="studio-tracks">
-            {/* Ruler: linha do tempo com ticks + agulha triangular do playhead */}
-            {playDuration > 0 && (
-              <div
-                className="studio-ruler"
-                onPointerDown={(e) => {
-                  const r = e.currentTarget.getBoundingClientRect()
-                  seekTo(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * playDuration)
-                }}
-                title="Linha do tempo — clique pra pular"
-              >
-                {(() => {
-                  const ticks = []
-                  for (let s = 0; s < playDuration; s += 5) {
-                    const major = s % 30 === 0
-                    ticks.push(
-                      <div
-                        key={s}
-                        className={`ruler-tick ${major ? 'major' : ''}`}
-                        style={{ left: `${(s / playDuration) * 100}%` }}
-                      >
-                        {major && s > 0 && <span className="ruler-label">{fmtTime(s)}</span>}
-                      </div>
-                    )
-                  }
-                  return ticks
-                })()}
-                <div className="ruler-ph" ref={(el) => { rulerNodesRef.current.ph = el }}>
-                  <div className="ruler-ph-tri" />
-                  <div className="ruler-ph-line" />
+            {/* Mesa de DAW: rail de controles 264px + canaletas contínuas,
+                com UM overlay de playhead/tint cruzando todas as pistas */}
+            <div className="daw">
+              <div className="daw-row daw-head-row">
+                <div className="daw-rail daw-rail-head">
+                  <span className="daw-cap">PISTAS</span>
+                  <span className="daw-cap daw-cap-dim">{presentStems(session).length} STEMS</span>
+                </div>
+                <div className="daw-gutter daw-ruler">
+                  {playDuration > 0 && (() => {
+                    const ticks = []
+                    for (let s = 0; s < playDuration; s += 5) {
+                      const major = s % 30 === 0
+                      ticks.push(
+                        <div
+                          key={s}
+                          className={`ruler-tick ${major ? 'major' : ''}`}
+                          style={{ left: `${(s / playDuration) * 100}%` }}
+                        >
+                          {major && s > 0 && <span className="ruler-label">{fmtTime(s)}</span>}
+                        </div>
+                      )
+                    }
+                    return ticks
+                  })()}
                 </div>
               </div>
-            )}
-            {presentStems(session).map((stem, stemIdx) => {
-              const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
-              const col = stemColor(stem, stemIdx)
-              const isMuted = muted.has(stem)
-              const isSolo = solo.has(stem)
-              const effectivelyOff = isMuted || (solo.size > 0 && !isSolo)
-              return (
-                <div key={stem} className={`studio-track ${effectivelyOff ? 'off' : ''}`}>
-                  <div className="studio-track-head">
-                  <span className="studio-stem-bar" style={{ background: col }} />
-                  <span className="studio-track-icon">{meta.icon}</span>
-                  <span className="studio-track-name" style={{ color: col }}>{meta.label}</span>
-                  <input
-                    type="range"
-                    className="studio-volume"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={volumes[stem] ?? 1}
-                    onChange={(e) => setVolumes((v) => ({ ...v, [stem]: parseFloat(e.target.value) }))}
-                    title={`Volume: ${Math.round((volumes[stem] ?? 1) * 100)}%`}
-                  />
-                  <button
-                    className={`studio-mini-btn ${isMuted ? 'active-mute' : ''}`}
-                    onClick={() => toggleMute(stem)}
-                    title="Mudo"
-                  >M</button>
-                  <button
-                    className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
-                    onClick={() => toggleSolo(stem)}
-                    title="Solo (ouvir só essa faixa)"
-                  >S</button>
-                  {(session.extracted || []).includes(stem) && !extractJob && (
-                    <button
-                      className="studio-mini-btn"
-                      onClick={() => redoTrack(stem)}
-                      title="Refazer essa faixa do zero (apaga e extrai de novo)"
-                    >↻</button>
-                  )}
+              {presentStems(session).map((stem, stemIdx) => {
+                const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+                const col = stemColor(stem, stemIdx)
+                const isMuted = muted.has(stem)
+                const isSolo = solo.has(stem)
+                const effectivelyOff = isMuted || (solo.size > 0 && !isSolo)
+                return (
+                  <div key={stem} className={`daw-row ${effectivelyOff ? 'off' : ''}`}>
+                    <div className="daw-rail">
+                      <div className="daw-rail-top">
+                        <span className="studio-stem-bar" style={{ background: col }} />
+                        <span className="daw-name" style={{ color: col }} title={meta.label}>{meta.label}</span>
+                        <span className="daw-rail-flex" />
+                        <button
+                          className={`studio-mini-btn ${isMuted ? 'active-mute' : ''}`}
+                          onClick={() => toggleMute(stem)}
+                          title={`Silenciar ${meta.label}`}
+                          aria-pressed={isMuted}
+                        >M</button>
+                        <button
+                          className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
+                          onClick={() => toggleSolo(stem)}
+                          title={`Solo de ${meta.label}`}
+                          aria-pressed={isSolo}
+                        >S</button>
+                        {(session.extracted || []).includes(stem) && !extractJob && (
+                          <button
+                            className="studio-mini-btn"
+                            onClick={() => redoTrack(stem)}
+                            title="Refazer essa faixa do zero (apaga e extrai de novo)"
+                          >↻</button>
+                        )}
+                      </div>
+                      <div className="daw-rail-bottom">
+                        <span className="daw-speaker">🔊</span>
+                        <input
+                          type="range"
+                          className="studio-volume"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={volumes[stem] ?? 1}
+                          onChange={(e) => setVolumes((v) => ({ ...v, [stem]: parseFloat(e.target.value) }))}
+                          title={`Volume: ${Math.round((volumes[stem] ?? 1) * 100)}%`}
+                        />
+                      </div>
+                    </div>
+                    <div className="daw-gutter">
+                      <WaveLane
+                        peaks={peaksMap[stem]}
+                        duration={playDuration}
+                        color={col}
+                      />
+                    </div>
                   </div>
-                  <WaveLane
-                    peaks={peaksMap[stem]}
-                    duration={playDuration}
-                    color={col}
-                    selection={waveSel}
-                    onSeek={seekTo}
-                    onSelect={(sel) => { setWaveSel(sel); setLupa(null) }}
-                    onNodes={(kind, el) => {
-                      const m = laneNodesRef.current
-                      if (!m[stem]) m[stem] = {}
-                      m[stem][kind] = el
+                )
+              })}
+              {/* Overlay único: clique pula, arrastar marca trecho (Lupa/loop) */}
+              <div className="daw-overlay" onPointerDown={overlayDown}>
+                <div className="daw-tint" ref={(el) => { rulerNodesRef.current.tint = el }} />
+                {waveSel && playDuration > 0 && (
+                  <div
+                    className="daw-loopreg"
+                    style={{
+                      left: `${(waveSel.start / playDuration) * 100}%`,
+                      width: `${(Math.max(0.2, waveSel.end - waveSel.start) / playDuration) * 100}%`
                     }}
-                  />
+                  >
+                    <div className="daw-loopreg-top" />
+                  </div>
+                )}
+                <div className="daw-ph" ref={(el) => { rulerNodesRef.current.ph = el }}>
+                  <div className="daw-ph-tri" />
+                  <div className="daw-ph-line" />
                 </div>
-              )
-            })}
+              </div>
+            </div>
             {waveSel && (
               <div className="lupa-bar">
                 <span className="muted">
@@ -2035,15 +2099,6 @@ export default function StudioView({ source, onClose }) {
               {loopOn && (
                 <span className="loop-label">LOOP<br />{waveSel ? 'TRECHO' : 'MÚSICA'}</span>
               )}
-
-              <div className="studio-param">
-                <span className="studio-param-label">Tom</span>
-                <div className="studio-stepper">
-                  <button className="studio-mini-btn" onClick={() => changePitch(pitch - 1)}>−</button>
-                  <span className="studio-param-value">{pitch > 0 ? `+${pitch}` : pitch}</span>
-                  <button className="studio-mini-btn" onClick={() => changePitch(pitch + 1)}>+</button>
-                </div>
-              </div>
 
               <div className="studio-param">
                 <span className="studio-param-label">Velocidade</span>

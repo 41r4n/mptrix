@@ -42,6 +42,11 @@ export function setDownloadDir(dir) {
   return dir
 }
 
+export function setUiZoom(z) {
+  store.set('settings.uiZoom', z)
+  return z
+}
+
 export function getHistory() {
   return store.get('history', [])
 }
