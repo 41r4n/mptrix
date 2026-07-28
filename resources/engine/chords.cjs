@@ -61,9 +61,17 @@ const EssentiaWASM = require('./essentia-wasm.umd.js')
 const Essentia = require('./essentia.js-core.umd.js')
 const essentia = new Essentia(EssentiaWASM)
 
-// Gabaritos: maior e menor com pesos (raiz forte, quinta média, terça define)
-const TPL_MAJ = [1, 0, 0, 0, 0.85, 0, 0, 0.9, 0, 0, 0, 0]
-const TPL_MIN = [1, 0, 0, 0.85, 0, 0, 0, 0.9, 0, 0, 0, 0]
+// Gabaritos com pesos (raiz forte, terça define, quinta média, sétima colore).
+// Vocabulário de MPB/jazz: maior, menor, 7, 7M, m7, diminuto — com um pequeno
+// bônus pros simples, pra música pop não ganhar nome chique à toa.
+const SHAPES = [
+  { suf: '', t: [1, 0, 0, 0, 0.85, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.015 },
+  { suf: 'm', t: [1, 0, 0, 0.85, 0, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.015 },
+  { suf: '7', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
+  { suf: '7M', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0, 0.75], bonus: 0 },
+  { suf: 'm7', t: [1, 0, 0, 0.8, 0, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
+  { suf: '°', t: [1, 0, 0, 0.85, 0, 0, 0.85, 0, 0, 0.6, 0, 0], bonus: 0 }
+]
 function rotate(t, k) {
   const out = new Array(12)
   for (let i = 0; i < 12; i++) out[(i + k) % 12] = t[i]
@@ -71,8 +79,9 @@ function rotate(t, k) {
 }
 const TEMPLATES = []
 for (let r = 0; r < 12; r++) {
-  TEMPLATES.push({ label: NOTES[r], root: r, t: rotate(TPL_MAJ, r) })
-  TEMPLATES.push({ label: NOTES[r] + 'm', root: r, t: rotate(TPL_MIN, r) })
+  for (const sh of SHAPES) {
+    TEMPLATES.push({ label: NOTES[r] + sh.suf, root: r, t: rotate(sh.t, r), bonus: sh.bonus })
+  }
 }
 function cosine(h, t) {
   let dot = 0
@@ -139,7 +148,7 @@ for (let hIdx = 0; hIdx < nHops; hIdx++) {
   let best = null
   let bestScore = -1
   for (const tpl of TEMPLATES) {
-    let sc = cosine(chroma, tpl.t)
+    let sc = cosine(chroma, tpl.t) + tpl.bonus
     if (bassPc != null) {
       if (tpl.root === bassPc) sc += 0.08 // baixo tocando a raiz
       else if ((tpl.root + 7) % 12 === bassPc) sc += 0.03 // ou a quinta
@@ -203,12 +212,21 @@ for (const sp of spans) {
   })
 }
 
-// O MESMO acorde repetido com buraquinho no meio vira UM card só
-// (Dm 0:21 · Dm 0:30 · Dm 0:32 era o mesmo Dm respirando)
+// O MESMO acorde repetido com buraquinho no meio vira UM card só — e Dm/Dm7
+// são a mesma família (a sétima entra e sai da chroma); fica o nome do trecho
+// mais longo
+const famOf = (l) => {
+  if (l.endsWith('m7')) return l.slice(0, -1)
+  if (l.endsWith('7M')) return l.slice(0, -2)
+  if (l.endsWith('°')) return l
+  if (l.endsWith('7')) return l.slice(0, -1)
+  return l
+}
 const merged = []
 for (const c of chords) {
   const last = merged[merged.length - 1]
-  if (last && last.label === c.label && c.t - last.end < 4) {
+  if (last && famOf(last.label) === famOf(c.label) && c.t - last.end < 4) {
+    if (c.end - c.t > last.end - last.t) last.label = c.label
     last.end = c.end
     last.strength = Math.max(last.strength, c.strength)
   } else {

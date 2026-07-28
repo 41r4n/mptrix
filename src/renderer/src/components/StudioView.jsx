@@ -69,14 +69,17 @@ const STEM_COLOR_FIXED = {
 const stemColor = (stem, orderIdx) =>
   STEM_COLOR_FIXED[stem] || STEM_SCALE[orderIdx % STEM_SCALE.length]
 
-// Transposição de acordes: acompanha o chip TOM (Am − 2 semitons = Gm)
+// Transposição de acordes: acompanha o chip TOM (Am − 2 semitons = Gm).
+// Grafia de músico: Ab/Bb/Eb em vez de G#/A#/D# (como nas cifras reais).
 const CHORD_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const FLAT_SHOW = { 'G#': 'Ab', 'A#': 'Bb', 'D#': 'Eb' }
 const transposeChord = (label, semi) => {
   const m = /^([A-G]#?)(.*)$/.exec(label || '')
   if (!m) return label
   const i = CHORD_NOTES.indexOf(m[1])
   if (i < 0) return label
-  return CHORD_NOTES[(((i + semi) % 12) + 12) % 12] + m[2]
+  const root = CHORD_NOTES[(((i + semi) % 12) + 12) % 12]
+  return (FLAT_SHOW[root] || root) + m[2]
 }
 
 // Ícones do transporte (SVGs do design, viewBox 24)
