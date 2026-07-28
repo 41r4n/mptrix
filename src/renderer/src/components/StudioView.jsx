@@ -530,6 +530,7 @@ export default function StudioView({ source, onClose }) {
   const chordsGridRef = useRef(null)
   const [lyrics, setLyrics] = useState(null) // null | 'loading' | {segments} | {error}
   const [showLyrics, setShowLyrics] = useState(false)
+  const [showExtract, setShowExtract] = useState(false) // painel Extrair (olheiro/lupa/arsenal)
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const lyricsListRef = useRef(null)
@@ -777,11 +778,20 @@ export default function StudioView({ source, onClose }) {
     setShowLyrics(false)
   }, [session?.key])
 
+  // Extração em andamento? O painel Extrair se mostra sozinho (progresso visível)
+  useEffect(() => {
+    if (extractJob?.id) {
+      setShowExtract(true)
+      setShowChords(false)
+      setShowLyrics(false)
+    }
+  }, [extractJob?.id])
+
   // Painel de acordes: abre/fecha; na primeira abertura detecta (com cache)
   const toggleChords = async () => {
     const next = !showChords
     setShowChords(next)
-    if (next) setShowLyrics(false)
+    if (next) { setShowLyrics(false); setShowExtract(false) }
     if (next && !chords && session) {
       setChords('loading')
       const r = await window.mptrix.studio.chords({ key: session.key })
@@ -794,7 +804,7 @@ export default function StudioView({ source, onClose }) {
   const toggleLyrics = async () => {
     const next = !showLyrics
     setShowLyrics(next)
-    if (next) setShowChords(false)
+    if (next) { setShowChords(false); setShowExtract(false) }
     if (next && !lyrics && session) {
       setLyrics('loading')
       const r = await window.mptrix.studio.lyrics({ key: session.key })
@@ -876,6 +886,10 @@ export default function StudioView({ source, onClose }) {
         const t1 = timeAt(ev.clientX)
         setWaveSel({ start: Math.min(t0, t1), end: Math.max(t0, t1) })
         setLupa(null)
+        // marcar trecho abre o painel Extrair (é lá que mora a Lupa)
+        setShowExtract(true)
+        setShowChords(false)
+        setShowLyrics(false)
       }
     }
     const onUp = (ev) => {
@@ -1424,6 +1438,18 @@ export default function StudioView({ source, onClose }) {
               )}
             </span>
           )}
+          <button
+            className={`btn-secondary btn-small panel-toggle ${showExtract ? 'on' : ''}`}
+            onClick={() => {
+              const n = !showExtract
+              setShowExtract(n)
+              if (n) { setShowChords(false); setShowLyrics(false) }
+            }}
+            disabled={phase !== 'ready'}
+            title="Extrair mais instrumentos dessa música (olheiro, Lupa e Arsenal)"
+          >
+            {extractJob ? '⛏️ Extraindo…' : '➕ Extrair faixas'}
+          </button>
           <button
             className="btn-secondary btn-small"
             onClick={doExportSong}
@@ -2008,7 +2034,9 @@ export default function StudioView({ source, onClose }) {
                 ))}
               </div>
             )}
-            </div>
+            {/* Painel Extrair: olheiro, lupa e arsenal moram aqui, ao lado da mesa */}
+            {showExtract && (
+            <aside className="chords-panel extract-panel">
             {waveSel && (
               <div className="lupa-bar">
                 <span className="muted">
@@ -2264,6 +2292,9 @@ export default function StudioView({ source, onClose }) {
                 </p>
               </div>
             )}
+            </aside>
+            )}
+            </div>
           </div>
 
           <div className="studio-transport">
