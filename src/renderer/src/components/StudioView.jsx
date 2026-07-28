@@ -528,6 +528,11 @@ export default function StudioView({ source, onClose }) {
   const [chords, setChords] = useState(null) // null | 'loading' | {list} | {error}
   const [showChords, setShowChords] = useState(false)
   const chordsGridRef = useRef(null)
+  const [lyrics, setLyrics] = useState(null) // null | 'loading' | {segments} | {error}
+  const [showLyrics, setShowLyrics] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const lyricsListRef = useRef(null)
   // Nós do DOM escritos por frame (playhead/tint por pista, ruler, timer, seek)
   const laneNodesRef = useRef({})
   const rulerNodesRef = useRef({})
@@ -768,18 +773,68 @@ export default function StudioView({ source, onClose }) {
     setLupa(null)
     setChords(null)
     setShowChords(false)
+    setLyrics(null)
+    setShowLyrics(false)
   }, [session?.key])
 
   // Painel de acordes: abre/fecha; na primeira abertura detecta (com cache)
   const toggleChords = async () => {
     const next = !showChords
     setShowChords(next)
+    if (next) setShowLyrics(false)
     if (next && !chords && session) {
       setChords('loading')
       const r = await window.mptrix.studio.chords({ key: session.key })
       setChords(r?.error ? { error: r.error } : r)
     }
   }
+
+  // Painel de letra: transcreve a voz isolada na 1ª vez (com cache); os
+  // acordes também são carregados pra aparecerem sobre os versos
+  const toggleLyrics = async () => {
+    const next = !showLyrics
+    setShowLyrics(next)
+    if (next) setShowChords(false)
+    if (next && !lyrics && session) {
+      setLyrics('loading')
+      const r = await window.mptrix.studio.lyrics({ key: session.key })
+      setLyrics(r?.error ? { error: r.error } : r)
+      if (!chords) {
+        const c = await window.mptrix.studio.chords({ key: session.key })
+        if (!c?.error) setChords(c)
+      }
+    }
+  }
+
+  const editVerse = async (i) => {
+    const cur = lyrics?.segments?.[i]
+    if (!cur) return
+    const txt = window.prompt('Corrigir verso:', cur.text)
+    if (txt == null || txt === cur.text) return
+    const segs = lyrics.segments.map((s, k) => (k === i ? { ...s, text: txt } : s))
+    setLyrics({ ...lyrics, segments: segs, edited: true })
+    await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
+  }
+
+  const applyPaste = async () => {
+    const lines = pasteText.split('\n').map((l) => l.trim()).filter(Boolean)
+    if (!lines.length || !lyrics?.segments) {
+      setPasteOpen(false)
+      return
+    }
+    const segs = lyrics.segments.map((s, i) => (i < lines.length ? { ...s, text: lines[i] } : s))
+    setLyrics({ ...lyrics, segments: segs, edited: true })
+    setPasteOpen(false)
+    await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
+  }
+
+  // Verso ativo + rolagem suave acompanhando a música
+  const activeLyrIdx = lyrics?.segments ? lyrics.segments.findIndex((s) => pos >= s.t0 && pos < s.t1) : -1
+  useEffect(() => {
+    if (activeLyrIdx < 0 || !lyricsListRef.current) return
+    const el = lyricsListRef.current.children[activeLyrIdx]
+    if (el) lyricsListRef.current.scrollTo({ top: Math.max(0, el.offsetTop - 150), behavior: 'smooth' })
+  }, [activeLyrIdx])
 
   // Auto-scroll do painel pro acorde ativo (sempre scrollTo, nunca scrollIntoView)
   const activeChordIdx = chords?.list ? chords.list.findIndex((c) => pos >= c.t && pos < c.end) : -1
@@ -1893,6 +1948,66 @@ export default function StudioView({ source, onClose }) {
                 ))}
               </div>
             )}
+            {showLyrics && (
+              <div className="chords-panel lyrics-panel">
+                <div className="chords-head">
+                  <span className="chords-title">Letra</span>
+                  <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
+                  {lyrics?.segments?.length > 0 && (
+                    <button
+                      className="btn-secondary btn-small"
+                      onClick={() => { setPasteText(''); setPasteOpen(true) }}
+                      title="Cola a letra oficial — o texto vira o seu, a sincronização continua"
+                    >colar</button>
+                  )}
+                  <button className="btn-close" onClick={() => setShowLyrics(false)} aria-label="Fechar">×</button>
+                </div>
+                {lyrics === 'loading' && (
+                  <div className="chords-empty">
+                    <div className="studio-spinner small" />
+                    <span className="muted">
+                      Transcrevendo a voz isolada aqui no seu PC… Na primeira vez o app
+                      também baixa a IA de fala (~470MB) — pode levar vários minutos.
+                      Acontece uma vez só; depois abre na hora.
+                    </span>
+                  </div>
+                )}
+                {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
+                {lyrics?.segments && (lyrics.segments.length === 0 ? (
+                  <div className="chords-empty muted">Não ouvi versos cantados na faixa de voz.</div>
+                ) : (
+                  <div className="lyrics-list" ref={lyricsListRef}>
+                    {lyrics.segments.map((s, i) => {
+                      const st = i === activeLyrIdx ? 'now' : pos >= s.t1 ? 'past' : 'fut'
+                      const verseChords = (chords?.list || []).filter((c) => c.t >= s.t0 - 0.5 && c.t < s.t1)
+                      return (
+                        <div key={i} className={`lyr-block lyr-${st}`} onClick={() => seekTo(s.t0 + 0.01)}>
+                          {verseChords.length > 0 && (
+                            <div className="lyr-chords">
+                              {verseChords.map((c, k) => (
+                                <span
+                                  key={k}
+                                  className="lyr-chord"
+                                  style={{ left: `${Math.min(88, Math.max(0, ((c.t - s.t0) / Math.max(0.5, s.t1 - s.t0)) * 100))}%` }}
+                                >
+                                  {transposeChord(c.label, pitch)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="lyr-text">{s.text}</div>
+                          <button
+                            className="lyr-edit"
+                            onClick={(e) => { e.stopPropagation(); editVerse(i) }}
+                            title="Corrigir esse verso"
+                          >✎</button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
             {waveSel && (
               <div className="lupa-bar">
@@ -2210,6 +2325,13 @@ export default function StudioView({ source, onClose }) {
               >
                 🎼 Acordes
               </button>
+              <button
+                className={`btn-secondary btn-small panel-toggle ${showLyrics ? 'on' : ''}`}
+                onClick={toggleLyrics}
+                title="Letra transcrita da voz isolada, com os acordes em cima dos versos"
+              >
+                📜 Letra
+              </button>
               <select
                 className="filter-select tr-speed"
                 value={tempo}
@@ -2239,6 +2361,31 @@ export default function StudioView({ source, onClose }) {
               <div className="studio-export-msg" onClick={() => setExportMsg(null)}>{exportMsg}</div>
             )}
           </div>
+
+          {pasteOpen && (
+            <div className="modal-overlay" onClick={() => setPasteOpen(false)}>
+              <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
+                <div className="confirm-body">
+                  <h3 className="confirm-title">Colar a letra inteira</h3>
+                  <p className="confirm-message">
+                    Uma linha por verso. O texto passa a ser o seu — a sincronização com a
+                    música continua a que foi calculada pela voz.
+                  </p>
+                  <textarea
+                    className="lyr-paste"
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    rows={12}
+                    placeholder="Cola a letra aqui…"
+                  />
+                  <div className="confirm-actions">
+                    <button className="btn-secondary" onClick={() => setPasteOpen(false)}>Cancelar</button>
+                    <button className="btn-primary" onClick={applyPaste}>Aplicar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

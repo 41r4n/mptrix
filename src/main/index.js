@@ -27,7 +27,9 @@ import {
   redoStem,
   stemPeaks,
   investigateStretch,
-  detectChords
+  detectChords,
+  transcribeLyrics,
+  saveLyrics
 } from './studio.js'
 import {
   getYtDlpVersion,
@@ -981,6 +983,27 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:chords', async (_e, { key, force }) => {
     try {
       return await detectChords({ key, ffmpegPath: FFMPEG_PATH, force: !!force })
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
+
+  // Letra: transcreve a faixa de voz localmente (demora minutos na 1ª vez —
+  // guarda-sono ligado pra máquina não dormir no meio)
+  ipcMain.handle('studio:lyrics', async (_e, { key, force }) => {
+    heavyJobStart()
+    try {
+      return await transcribeLyrics({ key, ffmpegPath: FFMPEG_PATH, force: !!force })
+    } catch (err) {
+      return { error: err.message }
+    } finally {
+      heavyJobEnd()
+    }
+  })
+
+  ipcMain.handle('studio:lyricsSave', (_e, { key, segments }) => {
+    try {
+      return saveLyrics({ key, segments })
     } catch (err) {
       return { error: err.message }
     }

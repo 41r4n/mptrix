@@ -357,6 +357,103 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
   return m2.chords
 }
 
+// LETRA: transcrição LOCAL da faixa de voz isolada (whisper.cpp) — o texto
+// pode sair com erros de canto; o usuário corrige verso a verso ou cola a
+// letra inteira por cima mantendo a sincronização. Zero internet no uso
+// (os downloads do binário e do modelo acontecem uma única vez).
+const WHISPER_DIR = join(ENGINE_DIR, 'whisper')
+const WHISPER_ZIP_URL = 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.9.1/whisper-blas-bin-x64.zip'
+const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin'
+
+function findWhisperExe() {
+  if (!existsSync(WHISPER_DIR)) return null
+  const scan = (d) => {
+    for (const f of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, f.name)
+      if (f.isDirectory()) {
+        const r = scan(p)
+        if (r) return r
+      } else if (/^(whisper-cli|main)\.exe$/i.test(f.name)) {
+        return p
+      }
+    }
+    return null
+  }
+  return scan(WHISPER_DIR)
+}
+
+async function ensureWhisper() {
+  mkdirSync(WHISPER_DIR, { recursive: true })
+  let exe = findWhisperExe()
+  if (!exe) {
+    const zip = join(WHISPER_DIR, 'whisper.zip')
+    await downloadFile(WHISPER_ZIP_URL, zip)
+    await new Promise((resolve, reject) => {
+      // o tar do Windows 10+ descompacta zip — sem dependência nova
+      const c = spawn('tar', ['-xf', zip, '-C', WHISPER_DIR], { windowsHide: true })
+      c.on('error', reject)
+      c.on('close', (code) => (code === 0 ? resolve() : reject(new Error('extração do whisper falhou'))))
+    })
+    rmSync(zip, { force: true })
+    exe = findWhisperExe()
+    if (!exe) throw new Error('Binário do whisper não encontrado após a extração.')
+  }
+  const model = join(WHISPER_DIR, 'ggml-small.bin')
+  if (!existsSync(model)) {
+    await downloadFile(WHISPER_MODEL_URL, model)
+  }
+  return { exe, model }
+}
+
+export async function transcribeLyrics({ key, ffmpegPath, force = false }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  if (meta.lyrics && !force) return meta.lyrics
+  const vocals = join(dir, 'base', 'vocals.flac')
+  if (!existsSync(vocals)) throw new Error('Faixa de voz não encontrada nessa sessão.')
+
+  const { exe, model } = await ensureWhisper()
+  const wav = join(dir, 'lyrics_in.wav')
+  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', vocals, '-ac', '1', '-ar', '16000', wav], {})
+  const outBase = join(dir, 'lyrics_out')
+  try {
+    await new Promise((resolve, reject) => {
+      const child = spawn(exe, ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-of', outBase, '-t', '4'], { windowsHide: true })
+      let err = ''
+      child.stderr.on('data', (d) => { err += d })
+      child.on('error', reject)
+      child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(0, 300) || `whisper saiu com código ${code}`))))
+    })
+    const j = JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
+    const segments = (j.transcription || [])
+      .map((s) => ({
+        t0: (s.offsets?.from ?? 0) / 1000,
+        t1: (s.offsets?.to ?? 0) / 1000,
+        text: (s.text || '').trim()
+      }))
+      .filter((s) => s.text && s.t1 > s.t0)
+    const m2 = readMeta(dir)
+    m2.lyrics = { at: new Date().toISOString(), segments, edited: false }
+    writeMeta(dir, m2)
+    return m2.lyrics
+  } finally {
+    rmSync(wav, { force: true })
+    rmSync(`${outBase}.json`, { force: true })
+  }
+}
+
+// Correções do usuário (verso editado ou letra colada) — o texto é dele,
+// a sincronização continua a calculada
+export function saveLyrics({ key, segments }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  meta.lyrics = { ...(meta.lyrics || {}), segments, edited: true, at: new Date().toISOString() }
+  writeMeta(dir, meta)
+  return meta.lyrics
+}
+
 // Retorna a sessão pronta do cache (ou null) — resposta síncrona, sem corrida de eventos
 export function getCachedSession(filePath, model = 'htdemucs') {
   const found = findSession(filePath, model)
