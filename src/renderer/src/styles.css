@@ -3772,3 +3772,75 @@ section h2 {
 .studio-mini-btn.active-mute { background: var(--warn); color: #0b0c0f; border-color: var(--warn); }
 .studio-mini-btn.active-solo { background: var(--accent); color: #0b0c0f; border-color: var(--accent); }
 
+
+/* ---------- Acabamento PC + responsividade ---------- */
+/* Monitor largo: o estudio respira como no design (desktop-first) */
+@media (min-width: 1200px) {
+  .studio-tracks,
+  .studio-transport {
+    max-width: 1100px;
+  }
+}
+
+/* Modais nunca estouram a janela */
+.modal {
+  max-width: 92vw;
+}
+
+.modal-period,
+.modal-playlist {
+  max-width: 94vw;
+}
+
+/* O transporte quebra linha com eleganca quando aperta */
+.studio-controls-row {
+  flex-wrap: wrap;
+  row-gap: 10px;
+  justify-content: center;
+}
+
+/* Janelas medias */
+@media (max-width: 900px) {
+  .app {
+    padding: 28px 20px 48px;
+  }
+
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .period-columns {
+    grid-template-columns: 1fr 1fr;
+    height: auto;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+}
+
+/* Janelas estreitas */
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .studio-track-head {
+    flex-wrap: wrap;
+  }
+
+  .studio-track-name {
+    width: auto;
+    min-width: 90px;
+  }
+
+  .search-row,
+  .filter-row,
+  .folder-row,
+  .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .studio-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "mptrix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MPTRIX — baixador de MP3/MP4 do YouTube com interface gráfica (wrapper de yt-dlp + ffmpeg)",
   "main": "out/main/index.js",
   "author": "MPTRIX",
