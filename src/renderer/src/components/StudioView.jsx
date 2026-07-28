@@ -54,6 +54,55 @@ const STEM_META = {
 // Minutos de processamento por minuto de música (medido nesta máquina)
 const PROC_FACTOR = 9.7
 
+// Escala verde do design system — cor por stem (canônicos fixos; extras
+// ciclam a escala pela ordem em que aparecem na sessão)
+const STEM_SCALE = ['#dff9a0', '#b4e85a', '#7ed97a', '#4ecb8c', '#27a08d', '#8fa57a']
+const STEM_COLOR_FIXED = {
+  vocals: '#dff9a0',
+  drums: '#b4e85a',
+  bass: '#7ed97a',
+  guitar: '#4ecb8c',
+  piano: '#27a08d',
+  other: '#8fa57a',
+  song: '#b6ff3b'
+}
+const stemColor = (stem, orderIdx) =>
+  STEM_COLOR_FIXED[stem] || STEM_SCALE[orderIdx % STEM_SCALE.length]
+
+// Ícones do transporte (SVGs do design, viewBox 24)
+const IconBack10 = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="2.5 4 2.5 10 8.5 10" />
+    <path d="M4.6 15a9 9 0 1 0 2.1-9.4L2.5 10" />
+    <text x="12" y="16" fontSize="7.5" fontFamily="IBM Plex Mono, monospace" textAnchor="middle" fontWeight="600" fill="currentColor" stroke="none">10</text>
+  </svg>
+)
+const IconFwd10 = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="21.5 4 21.5 10 15.5 10" />
+    <path d="M19.4 15a9 9 0 1 1-2.1-9.4L21.5 10" />
+    <text x="12" y="16" fontSize="7.5" fontFamily="IBM Plex Mono, monospace" textAnchor="middle" fontWeight="600" fill="currentColor" stroke="none">10</text>
+  </svg>
+)
+const IconLoop = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+  </svg>
+)
+const IconPlay = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginLeft: 2 }}>
+    <path d="M8 5l11 7-11 7z" fill="#0b0c0f" />
+  </svg>
+)
+const IconPause = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18">
+    <path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" fill="#0b0c0f" />
+  </svg>
+)
+
 const NOTE_PT = {
   C: 'Dó', 'C#': 'Dó#', D: 'Ré', 'D#': 'Ré#', E: 'Mi', F: 'Fá',
   'F#': 'Fá#', G: 'Sol', 'G#': 'Sol#', A: 'Lá', 'A#': 'Lá#', B: 'Si',
@@ -159,7 +208,7 @@ function useSmoothProgress(target, active) {
 
 // Faixa com as "dobras sonoras": desenha os picos, mostra o cursor de
 // reprodução, clique = pular pra posição, arrastar = marcar trecho pra Lupa
-function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
+function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes }) {
   const canvasRef = useRef(null)
   const boxRef = useRef(null)
   const dragRef = useRef(null)
@@ -178,7 +227,7 @@ function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
       ctx.clearRect(0, 0, w, h)
       const n = peaks.length
       const bw = w / n
-      ctx.fillStyle = 'rgba(139, 148, 255, 0.6)'
+      ctx.fillStyle = color || 'rgba(182, 255, 59, 0.9)'
       for (let i = 0; i < n; i++) {
         const ph = Math.max(1.5, peaks[i] * (h - 4))
         ctx.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 0.6), ph)
@@ -189,7 +238,7 @@ function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
     const ro = new ResizeObserver(draw)
     ro.observe(canvas)
     return () => ro.disconnect()
-  }, [peaks])
+  }, [peaks, color])
 
   const timeAt = (clientX) => {
     const r = boxRef.current.getBoundingClientRect()
@@ -220,10 +269,12 @@ function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
     window.addEventListener('pointerup', onUp)
   }
 
-  const pct = duration ? Math.min(100, (pos / duration) * 100) : 0
   return (
     <div className="wave-lane" ref={boxRef} onPointerDown={onDown} title="Clique: pular · Arrastar: marcar trecho pra investigar">
+      <div className="wave-zero" />
       <canvas ref={canvasRef} className="wave-canvas" />
+      {/* tint da região já tocada + playhead: escritos por frame via ref */}
+      <div className="wave-tint" ref={(el) => onNodes?.('tint', el)} />
       {selection && duration > 0 && (
         <div
           className="wave-selection"
@@ -233,7 +284,9 @@ function WaveLane({ peaks, duration, pos, selection, onSeek, onSelect }) {
           }}
         />
       )}
-      <div className="wave-playhead" style={{ left: `${pct}%` }} />
+      <div className="wave-playhead" ref={(el) => onNodes?.('ph', el)}>
+        <div className="wave-ph-line" />
+      </div>
       {!peaks && <div className="wave-loading muted">· · ·</div>}
     </div>
   )
@@ -452,6 +505,14 @@ export default function StudioView({ source, onClose }) {
   const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
   const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
+  const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
+  const loopRef = useRef({ on: false, sel: null })
+  useEffect(() => { loopRef.current = { on: loopOn, sel: waveSel } }, [loopOn, waveSel])
+  // Nós do DOM escritos por frame (playhead/tint por pista, ruler, timer, seek)
+  const laneNodesRef = useRef({})
+  const rulerNodesRef = useRef({})
+  const timerElRef = useRef(null)
+  const seekElRef = useRef(null)
   const [extractJob, setExtractJob] = useState(null) // {id, label, stage, percent}
   const [exportingSong, setExportingSong] = useState(false)
   const [plan, setPlan] = useState(null) // catálogo da pré-análise
@@ -518,30 +579,88 @@ export default function StudioView({ source, onClose }) {
     setPos(sec)
   }, [])
 
-  // Posição + correção de deriva
+  // Relógio do transporte — playhead, tint, timer e seek são escritos POR
+  // FRAME direto no DOM (refs + style/textContent), nunca via re-render:
+  // regra de performance do design. O estado React (pos) atualiza só 4×/s
+  // pro restante da UI. O loop A-B do transporte também vive aqui.
   useEffect(() => {
     let lastDrift = 0
+    let lastState = 0
     const tick = (ts) => {
       const p = playerRef.current
-      if (p && p.playing) {
-        if (p.ended()) {
-          p.pause()
-          p.seek(0)
-          setPlaying(false)
-          setPos(0)
-        } else {
-          if (!draggingRef.current) setPos(p.position())
-          if (ts - lastDrift > 500) {
-            p.correctDrift()
-            lastDrift = ts
+      if (p) {
+        let t = p.position()
+        const dur = p.duration() || 0
+        if (p.playing) {
+          if (p.ended()) {
+            const lp = loopRef.current
+            if (lp.on) {
+              // Loop ligado: fim da música recomeça do ponto A, nunca para
+              const A = lp.sel ? lp.sel.start : 0
+              p.play(A).catch(() => {})
+              t = A
+            } else {
+              p.pause()
+              p.seek(0)
+              setPlaying(false)
+              setPos(0)
+              t = 0
+            }
+          } else {
+            const lp = loopRef.current
+            if (lp.on && dur) {
+              const A = lp.sel ? lp.sel.start : 0
+              const B = lp.sel ? Math.min(lp.sel.end, dur) : dur
+              if (t >= B - 0.03) {
+                p.seek(A)
+                t = A
+              }
+            }
+            if (ts - lastDrift > 500) {
+              p.correctDrift()
+              lastDrift = ts
+            }
+          }
+        }
+        if (!draggingRef.current) {
+          const pct = dur ? `${((t / dur) * 100).toFixed(3)}%` : '0%'
+          for (const nodes of Object.values(laneNodesRef.current)) {
+            if (nodes.ph) nodes.ph.style.left = pct
+            if (nodes.tint) nodes.tint.style.width = pct
+          }
+          if (rulerNodesRef.current.ph) rulerNodesRef.current.ph.style.left = pct
+          if (timerElRef.current) {
+            const txt = fmtTime(t)
+            if (timerElRef.current.textContent !== txt) timerElRef.current.textContent = txt
+          }
+          if (seekElRef.current) seekElRef.current.value = String(t)
+          if (p.playing && ts - lastState > 250) {
+            setPos(t)
+            lastState = ts
           }
         }
       }
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+    // Rede de segurança do loop: rAF congela com a janela minimizada, mas o
+    // áudio continua — este intervalo garante o retorno ao ponto A mesmo assim
+    const loopGuard = setInterval(() => {
+      const p = playerRef.current
+      const lp = loopRef.current
+      if (!p || !p.playing || !lp.on) return
+      const dur = p.duration() || 0
+      if (!dur) return
+      const A = lp.sel ? lp.sel.start : 0
+      const B = lp.sel ? Math.min(lp.sel.end, dur) : dur
+      if (p.ended()) p.play(A).catch(() => {})
+      else if (p.position() >= B - 0.25) p.seek(A)
+    }, 250)
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      clearInterval(loopGuard)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Renderização de alta qualidade em segundo plano (tom)
   const scheduleHqRender = useCallback((targetPitch) => {
@@ -1520,16 +1639,50 @@ export default function StudioView({ source, onClose }) {
       {phase === 'ready' && session && (
         <>
           <div className="studio-tracks">
-            {presentStems(session).map((stem) => {
+            {/* Ruler: linha do tempo com ticks + agulha triangular do playhead */}
+            {playDuration > 0 && (
+              <div
+                className="studio-ruler"
+                onPointerDown={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  seekTo(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * playDuration)
+                }}
+                title="Linha do tempo — clique pra pular"
+              >
+                {(() => {
+                  const ticks = []
+                  for (let s = 0; s < playDuration; s += 5) {
+                    const major = s % 30 === 0
+                    ticks.push(
+                      <div
+                        key={s}
+                        className={`ruler-tick ${major ? 'major' : ''}`}
+                        style={{ left: `${(s / playDuration) * 100}%` }}
+                      >
+                        {major && s > 0 && <span className="ruler-label">{fmtTime(s)}</span>}
+                      </div>
+                    )
+                  }
+                  return ticks
+                })()}
+                <div className="ruler-ph" ref={(el) => { rulerNodesRef.current.ph = el }}>
+                  <div className="ruler-ph-tri" />
+                  <div className="ruler-ph-line" />
+                </div>
+              </div>
+            )}
+            {presentStems(session).map((stem, stemIdx) => {
               const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+              const col = stemColor(stem, stemIdx)
               const isMuted = muted.has(stem)
               const isSolo = solo.has(stem)
               const effectivelyOff = isMuted || (solo.size > 0 && !isSolo)
               return (
                 <div key={stem} className={`studio-track ${effectivelyOff ? 'off' : ''}`}>
                   <div className="studio-track-head">
+                  <span className="studio-stem-bar" style={{ background: col }} />
                   <span className="studio-track-icon">{meta.icon}</span>
-                  <span className="studio-track-name">{meta.label}</span>
+                  <span className="studio-track-name" style={{ color: col }}>{meta.label}</span>
                   <input
                     type="range"
                     className="studio-volume"
@@ -1561,10 +1714,15 @@ export default function StudioView({ source, onClose }) {
                   <WaveLane
                     peaks={peaksMap[stem]}
                     duration={playDuration}
-                    pos={pos}
+                    color={col}
                     selection={waveSel}
                     onSeek={seekTo}
                     onSelect={(sel) => { setWaveSel(sel); setLupa(null) }}
+                    onNodes={(kind, el) => {
+                      const m = laneNodesRef.current
+                      if (!m[stem]) m[stem] = {}
+                      m[stem][kind] = el
+                    }}
                   />
                 </div>
               )
@@ -1828,14 +1986,16 @@ export default function StudioView({ source, onClose }) {
 
           <div className="studio-transport">
             <div className="studio-seek-row">
-              <span className="studio-time">{fmtTime(pos)}</span>
+              {/* timer vivo: textContent escrito por frame (ref), lima */}
+              <span className="studio-time studio-time-live" ref={timerElRef}>{fmtTime(pos)}</span>
               <input
                 type="range"
                 className="studio-seek"
                 min="0"
                 max={playDuration || 1}
                 step="0.1"
-                value={Math.min(pos, playDuration || 0)}
+                defaultValue={Math.min(pos, playDuration || 0)}
+                ref={seekElRef}
                 onPointerDown={() => { draggingRef.current = true }}
                 onPointerUp={() => { draggingRef.current = false }}
                 onChange={(e) => seekTo(parseFloat(e.target.value))}
@@ -1845,12 +2005,36 @@ export default function StudioView({ source, onClose }) {
 
             <div className="studio-controls-row">
               <button
+                className="tr-btn"
+                onClick={() => seekTo(Math.max(0, (playerRef.current?.position() || 0) - 10))}
+                title="Voltar 10 segundos"
+              >
+                <IconBack10 />
+              </button>
+              <button
                 className="studio-play-btn"
                 onClick={() => (playing ? pause() : play())}
                 title={playing ? 'Pausar' : 'Tocar'}
               >
-                {playing ? '⏸' : '▶'}
+                {playing ? <IconPause /> : <IconPlay />}
               </button>
+              <button
+                className="tr-btn"
+                onClick={() => seekTo(Math.min(playDuration || 0, (playerRef.current?.position() || 0) + 10))}
+                title="Avançar 10 segundos"
+              >
+                <IconFwd10 />
+              </button>
+              <button
+                className={`tr-btn ${loopOn ? 'on' : ''}`}
+                onClick={() => setLoopOn((v) => !v)}
+                title={waveSel ? 'Loop: repete o trecho marcado' : 'Loop: repete a música inteira'}
+              >
+                <IconLoop />
+              </button>
+              {loopOn && (
+                <span className="loop-label">LOOP<br />{waveSel ? 'TRECHO' : 'MÚSICA'}</span>
+              )}
 
               <div className="studio-param">
                 <span className="studio-param-label">Tom</span>

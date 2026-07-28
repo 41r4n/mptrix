@@ -466,7 +466,7 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder }) {
 
             {qualityProbeProgress.total > 0 && (
               qualityProbeRateLimited ? (
-                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'rgba(234,179,8,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <strong style={{ color: 'var(--warn)', fontSize: 12.5 }}>⚠ YouTube bloqueou a análise automática</strong>
                     <span>
@@ -485,7 +485,7 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder }) {
                   Analisando qualidades dos vídeos… {qualityProbeProgress.done}/{qualityProbeProgress.total}
                 </div>
               ) : probeFailed ? (
-                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'rgba(234,179,8,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <span>⚠ Não consegui detectar qualidades. Mostrando todas as opções.</span>
                   <button className="link-btn" onClick={retryQualityProbe} style={{ flexShrink: 0 }}>↻ tentar de novo</button>
                 </div>

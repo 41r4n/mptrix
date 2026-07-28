@@ -121,7 +121,7 @@ export function UpdatesProvider({ children }) {
             <div className="confirm-body">
               <div
                 className="confirm-icon"
-                style={{ background: 'rgba(74, 222, 128, 0.18)', color: '#86efac' }}
+                style={{ background: 'rgba(78, 203, 140, 0.18)', color: 'var(--ok)' }}
               >✓</div>
               <h3 className="confirm-title">Atualizado!</h3>
               <p className="confirm-message">
