@@ -188,6 +188,9 @@ for (let i = 0; i < smooth.length; i++) {
 const chords = []
 for (const sp of spans) {
   if (!sp.label) continue
+  const strength = sp.s / sp.n
+  // trecho curto E fraco = fantasma (tipo um Fm de 0.5s no meio de Fá maior)
+  if (sp.end - sp.t < 1.0 && strength < 0.78) continue
   if (sp.end - sp.t < 0.75 && chords.length && chords[chords.length - 1].end >= sp.t - 0.3) {
     chords[chords.length - 1].end = sp.end
     continue
@@ -196,8 +199,21 @@ for (const sp of spans) {
     t: Math.round(sp.t * 10) / 10,
     end: Math.round(sp.end * 10) / 10,
     label: sp.label,
-    strength: Math.round((sp.s / sp.n) * 100) / 100
+    strength: Math.round(strength * 100) / 100
   })
 }
 
-console.log(JSON.stringify({ chords, hops: nHops }))
+// O MESMO acorde repetido com buraquinho no meio vira UM card só
+// (Dm 0:21 · Dm 0:30 · Dm 0:32 era o mesmo Dm respirando)
+const merged = []
+for (const c of chords) {
+  const last = merged[merged.length - 1]
+  if (last && last.label === c.label && c.t - last.end < 4) {
+    last.end = c.end
+    last.strength = Math.max(last.strength, c.strength)
+  } else {
+    merged.push({ ...c })
+  }
+}
+
+console.log(JSON.stringify({ chords: merged, hops: nHops }))
