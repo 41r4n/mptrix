@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    html,body{margin:0;background:#08090B;}
+    *{box-sizing:border-box;}
+    a{color:#B6FF3B;}a:hover{color:#D7FF8A;}
+    input::placeholder{color:#4E5560;}
+    @keyframes sheetUp{from{transform:translateY(28px);opacity:0.4;}to{transform:none;opacity:1;}}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  </style>
+</helmet>
+<section style="display:flex;flex-direction:column;align-items:flex-start;gap:56px;padding:72px;background:#08090B;width:max-content;font-family:'Space Grotesk',sans-serif;">
+  <div style="display:flex;align-items:flex-end;gap:16px;width:100%;min-width:1440px;">
+    <div style="width:40px;height:40px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #0B0C0F,0 0 0 5px rgba(182,255,59,0.3);">
+      <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0B0C0F"></path></svg>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:700;color:#F2F4F7;letter-spacing:-0.01em;line-height:1.1;">MPTrix</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A93A0;letter-spacing:0.08em;margin-top:3px;">SEPARAÇÃO DE STEMS COM IA · ESCALA VERDE · PROTÓTIPO INTERATIVO</div>
+    </div>
+    <div style="flex:1;"></div>
+    <div style="display:flex;gap:16px;align-items:center;padding-bottom:2px;">
+      <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="width:9px;height:9px;border-radius:3px;background:{{ row.color }};"></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9BA3AF;">{{ row.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div id="studio" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">01 · ESTÚDIO — DESKTOP 1440×900 <span style="color:#3E4650;">— ESPAÇO REPRODUZ · CLIQUE/ARRASTE NAS PISTAS BUSCA · S ESMAECE AS DEMAIS · TRANSPORTE ABRE LETRA/ACORDES/SEÇÕES</span></div>
+    <div data-screen-label="Estúdio desktop" style="width:1440px;height:900px;background:#0B0C0F;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;color:#F2F4F7;user-select:none;box-shadow:0 30px 80px rgba(0,0,0,0.55);">
+      <div style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:13px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <div style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;" style-hover="background:rgba(255,255,255,0.06);color:#F2F4F7;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0B0C0F,0 0 0 3.5px rgba(182,255,59,0.35);">
+            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0B0C0F"></path></svg>
+          </div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;">MPTrix</div>
+        </div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,0.09);"></div>
+        <div style="width:34px;height:34px;border-radius:8px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;">NV</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;line-height:1.2;">Noite de Vidro <span style="color:#8A93A0;font-weight:500;">— Os Voltz</span></div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:2px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF4E45"><path d="M23 7.5a4 4 0 0 0-2.8-2.9C18.7 4.2 12 4.2 12 4.2s-6.7 0-8.2.4A4 4 0 0 0 1 7.5 42 42 0 0 0 .6 12 42 42 0 0 0 1 16.5a4 4 0 0 0 2.8 2.9c1.5.4 8.2.4 8.2.4s6.7 0 8.2-.4a4 4 0 0 0 2.8-2.9A42 42 0 0 0 23.4 12 42 42 0 0 0 23 7.5zM9.8 15.3V8.7l5.8 3.3-5.8 3.3z"></path></svg>
+            <span style="font-size:11px;color:#8A93A0;">YouTube · youtu.be/9tRxWm4Q</span>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="height:32px;padding:0 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:7px;">
+          <span style="font-size:10px;color:#8A93A0;letter-spacing:0.08em;font-weight:500;">BPM</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;">96</span>
+        </div>
+        <div style="height:32px;padding:0 5px 0 11px;border-radius:8px;border:1px solid {{ trBd }};display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#8A93A0;letter-spacing:0.08em;font-weight:500;">TOM</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:{{ trFg }};width:26px;text-align:center;">{{ tom }}</span>
+          <div style="display:flex;gap:3px;">
+            <div onClick="{{ trDown }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(182,255,59,0.18);color:#B6FF3B;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+            </div>
+            <div onClick="{{ trUp }}" style="width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(182,255,59,0.18);color:#B6FF3B;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            </div>
+          </div>
+          <sc-if value="{{ trOn }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ trReset }}" style="height:22px;padding:0 7px;border-radius:6px;background:rgba(182,255,59,0.14);display:flex;align-items:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#B6FF3B;" style-hover="background:rgba(182,255,59,0.26);">{{ trLabel }}</div>
+          </sc-if>
+        </div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,0.09);"></div>
+        <div style="height:36px;padding:0 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;gap:8px;cursor:pointer;color:#D1D5DB;font-size:13px;font-weight:600;" style-hover="border-color:rgba(255,255,255,0.28);color:#F2F4F7;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h6"></path></svg>
+          Separar faixas
+        </div>
+        <div style="height:36px;padding:0 16px;border-radius:9px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;" style-hover="background:#C9FF66;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0B0C0F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"></path></svg>
+          Exportar
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;min-height:0;">
+        <div style="flex:1;min-width:0;position:relative;display:flex;flex-direction:column;background:#101216;">
+          <div style="height:30px;flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="width:264px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#15171C;">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;color:#8A93A0;">PISTAS</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4E5560;">6 STEMS + METR.</span>
+            </div>
+            <div style="flex:1;position:relative;background:#0D0F13;min-width:0;">
+              <sc-for list="{{ ticks }}" as="tk" hint-placeholder-count="6">
+                <div style="position:absolute;left:{{ tk.left }};bottom:0;width:1px;height:{{ tk.h }}px;background:rgba(255,255,255,0.18);"></div>
+                <sc-if value="{{ tk.label }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:{{ tk.left }};bottom:13px;margin-left:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8A93A0;">{{ tk.label }}</div>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ secOn }}" hint-placeholder-val="{{ true }}">
+            <div style="height:24px;flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,0.07);">
+              <div style="width:264px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;padding:0 14px;background:#15171C;">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;color:#8A93A0;">SEÇÕES</span>
+              </div>
+              <div style="flex:1;position:relative;background:#0D0F13;min-width:0;">
+                <sc-for list="{{ secBands }}" as="sb" hint-placeholder-count="4">
+                  <div style="position:absolute;top:3px;bottom:3px;left:{{ sb.left }};width:{{ sb.w }};background:{{ sb.bg }};border-left:2px solid {{ sb.bar }};border-radius:2px;display:flex;align-items:center;padding:0 6px;overflow:hidden;">
+                    <span style="font-size:9.5px;font-weight:600;letter-spacing:0.04em;color:{{ sb.fg }};white-space:nowrap;">{{ sb.name }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+            <div style="flex:{{ rowFlex }};min-height:{{ rowMinH }}px;display:flex;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <div style="width:264px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);background:#15171C;padding:9px 14px;display:flex;flex-direction:column;justify-content:space-between;opacity:{{ row.headOp }};transition:opacity 0.25s;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:4px;height:16px;border-radius:2px;background:{{ row.color }};"></div>
+                  <div style="font-size:13px;font-weight:600;color:{{ row.color }};">{{ row.name }}</div>
+                  <div style="flex:1;"></div>
+                  <div onClick="{{ row.tM }}" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:{{ row.mBg }};color:{{ row.mFg }};border:1px solid {{ row.mBd }};" style-hover="border-color:rgba(255,255,255,0.45);">M</div>
+                  <div onClick="{{ row.tS }}" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:{{ row.sBg }};color:{{ row.sFg }};border:1px solid {{ row.sBd }};" style-hover="border-color:rgba(255,255,255,0.45);">S</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7"></path></svg>
+                  <div data-kind="vol" data-idx="{{ row.idx }}" onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" onPointerUp="{{ sliderUp }}" style="flex:1;height:18px;display:flex;align-items:center;cursor:ew-resize;touch-action:none;">
+                    <div style="position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.12);">
+                      <div style="position:absolute;left:0;top:0;bottom:0;width:{{ row.volPct }}%;border-radius:2px;background:{{ row.color }};opacity:0.7;"></div>
+                      <div style="position:absolute;top:50%;left:{{ row.volPct }}%;width:10px;height:10px;border-radius:50%;background:#E5E7EB;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,0.5);"></div>
+                    </div>
+                  </div>
+                  <div data-kind="pan" data-idx="{{ row.idx }}" onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" onPointerUp="{{ sliderUp }}" style="width:46px;flex:0 0 auto;height:18px;display:flex;align-items:center;cursor:ew-resize;touch-action:none;">
+                    <div style="position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.12);">
+                      <div style="position:absolute;left:50%;top:-2px;width:1px;height:7px;background:rgba(255,255,255,0.25);"></div>
+                      <div style="position:absolute;top:50%;left:{{ row.panPct }}%;width:9px;height:9px;border-radius:50%;background:#9BA3AF;transform:translate(-50%,-50%);"></div>
+                    </div>
+                  </div>
+                  <div style="width:22px;flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8A93A0;text-align:right;">{{ row.panLabel }}</div>
+                </div>
+              </div>
+              <div style="flex:1;position:relative;overflow:hidden;min-width:0;">
+                <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,0.05);"></div>
+                <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:{{ row.waveOp }};transition:opacity 0.25s;" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="{{ row.path }}" stroke="{{ row.color }}" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.92" fill="none"></path></svg>
+              </div>
+            </div>
+          </sc-for>
+          <div style="height:56px;flex:0 0 auto;display:flex;">
+            <div style="width:264px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);background:#15171C;padding:8px 14px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L6.5 20h11L12 3zM12 13l4.5-7"></path></svg>
+                <div style="font-size:12px;font-weight:600;color:#9BA3AF;">Metrônomo</div>
+                <div style="flex:1;"></div>
+                <div onClick="{{ toggleMetro }}" style="width:30px;height:18px;border-radius:9px;background:{{ metBg }};position:relative;cursor:pointer;transition:background 0.2s;">
+                  <div style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#0B0C0F;transform:translateX({{ metKnob }}px);transition:transform 0.2s;"></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:0.12em;color:#8A93A0;">VELOC.</span>
+                <sc-for list="{{ speeds }}" as="sp" hint-placeholder-count="3">
+                  <div onClick="{{ sp.set }}" style="height:18px;padding:0 8px;border-radius:5px;display:flex;align-items:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:{{ sp.bg }};color:{{ sp.fg }};border:1px solid {{ sp.bd }};" style-hover="border-color:rgba(255,255,255,0.45);">{{ sp.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:1;position:relative;overflow:hidden;min-width:0;">
+              <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:{{ metroLaneOp }};transition:opacity 0.25s;" viewBox="0 0 1200 100" preserveAspectRatio="none">
+                <path d="{{ metroDown }}" stroke="#E5E7EB" stroke-width="1.6" vector-effect="non-scaling-stroke" opacity="0.7" fill="none"></path>
+                <path d="{{ metroUp }}" stroke="#9BA3AF" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.35" fill="none"></path>
+              </svg>
+            </div>
+          </div>
+          <div onPointerDown="{{ seekDown }}" onPointerMove="{{ seekMove }}" onPointerUp="{{ seekUp }}" style="position:absolute;left:264px;top:0;right:0;bottom:0;cursor:crosshair;touch-action:none;z-index:4;">
+            <sc-for list="{{ grid }}" as="g" hint-placeholder-count="4">
+              <div style="position:absolute;top:30px;bottom:0;left:{{ g.left }};width:1px;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+            </sc-for>
+            <div ref="{{ rTintD }}" style="position:absolute;top:30px;bottom:0;left:0;width:16.74%;background:rgba(182,255,59,0.055);border-right:1px solid rgba(182,255,59,0.16);pointer-events:none;"></div>
+            <sc-if value="{{ loopOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:0;bottom:0;left:{{ loopLeft }};width:{{ loopW }};background:rgba(182,255,59,0.05);border-left:1px dashed rgba(182,255,59,0.45);border-right:1px dashed rgba(182,255,59,0.45);pointer-events:none;">
+                <div style="height:3px;background:#B6FF3B;opacity:0.65;"></div>
+              </div>
+            </sc-if>
+            <div ref="{{ rPhD }}" style="position:absolute;top:0;bottom:0;left:16.74%;width:0;pointer-events:none;z-index:6;">
+              <div style="position:absolute;top:0;bottom:0;left:-1px;width:2px;background:#B6FF3B;box-shadow:0 0 10px rgba(182,255,59,0.65);"></div>
+              <div style="position:absolute;top:0;left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #B6FF3B;"></div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="width:340px;flex:0 0 auto;border-left:1px solid rgba(255,255,255,0.07);background:#0D0F13;display:flex;flex-direction:column;min-height:0;">
+            <div style="height:52px;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.07);">
+              <div style="font-size:14px;font-weight:700;">{{ panelTitle }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8A93A0;">SYNC · {{ tom }} · 96 BPM</div>
+              <div style="display:flex;align-items:center;gap:3px;">
+                <div onClick="{{ trDown }}" style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(182,255,59,0.18);color:#B6FF3B;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+                </div>
+                <div onClick="{{ trUp }}" style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(182,255,59,0.18);color:#B6FF3B;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                </div>
+              </div>
+              <div style="flex:1;"></div>
+              <div onClick="{{ closePanel }}" style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;" style-hover="background:rgba(255,255,255,0.07);color:#F2F4F7;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </div>
+            </div>
+            <sc-if value="{{ isAcordes }}" hint-placeholder-val="{{ false }}">
+              <div ref="{{ rChBox }}" style="flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-content:start;">
+                <sc-for list="{{ chords }}" as="ch" hint-placeholder-count="9">
+                  <div onClick="{{ ch.go }}" style="height:62px;border-radius:9px;background:{{ ch.bg }};border:1px solid {{ ch.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;" style-hover="border-color:rgba(255,255,255,0.3);">
+                    <div style="font-size:16px;font-weight:700;color:{{ ch.fg }};">{{ ch.name }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8A93A0;">{{ ch.tl }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isLetra }}" hint-placeholder-val="{{ false }}">
+              <div ref="{{ rLyBox }}" style="flex:1;overflow:auto;padding:18px 20px;">
+                <sc-for list="{{ lyr }}" as="ln" hint-placeholder-count="8">
+                  <div ref="{{ ln.ref }}" onClick="{{ ln.go }}" style="padding:5px 0 9px 12px;border-left:2px solid {{ ln.bar }};cursor:pointer;">
+                    <div style="position:relative;height:18px;">
+                      <sc-for list="{{ ln.chords }}" as="lc" hint-placeholder-count="2">
+                        <div style="position:absolute;top:0;left:{{ lc.left }};font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;letter-spacing:-0.01em;color:{{ ln.chColor }};white-space:nowrap;transition:color 0.3s;">{{ lc.name }}</div>
+                      </sc-for>
+                    </div>
+                    <div style="font-size:15px;line-height:1.35;color:{{ ln.color }};font-weight:{{ ln.weight }};font-style:{{ ln.ital }};transition:color 0.3s;">{{ ln.text }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="height:84px;flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 20px;border-top:1px solid rgba(255,255,255,0.07);background:#0D0F13;">
+        <div style="display:flex;align-items:center;gap:9px;width:150px;flex:0 0 auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"></path></svg>
+          <div data-kind="master" data-idx="0" onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" onPointerUp="{{ sliderUp }}" style="flex:1;height:20px;display:flex;align-items:center;cursor:ew-resize;touch-action:none;">
+            <div style="position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.12);">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:{{ master }}%;border-radius:2px;background:#E5E7EB;opacity:0.7;"></div>
+              <div style="position:absolute;top:50%;left:{{ master }}%;width:11px;height:11px;border-radius:50%;background:#F2F4F7;transform:translate(-50%,-50%);"></div>
+            </div>
+          </div>
+        </div>
+        <div style="width:1px;height:30px;background:rgba(255,255,255,0.08);"></div>
+        <div onClick="{{ back10 }}" style="width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(255,255,255,0.06);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 4 2.5 10 8.5 10"></polyline><path d="M4.6 15a9 9 0 1 0 2.1-9.4L2.5 10"></path><text x="12" y="16" font-size="7.5" fill="currentColor" stroke="none" font-family="IBM Plex Mono" text-anchor="middle" font-weight="600">10</text></svg>
+        </div>
+        <div onClick="{{ togglePlay }}" style="width:52px;height:52px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 26px rgba(182,255,59,0.35);" style-hover="background:#C9FF66;">
+          <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#0B0C0F"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"></path></svg>
+          </sc-if>
+          <sc-if value="{{ notPlaying }}" hint-placeholder-val="{{ false }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#0B0C0F" style="margin-left:2px;"><path d="M8 5l11 7-11 7z"></path></svg>
+          </sc-if>
+        </div>
+        <div onClick="{{ fwd10 }}" style="width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;" style-hover="background:rgba(255,255,255,0.06);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="21.5 4 21.5 10 15.5 10"></polyline><path d="M19.4 15a9 9 0 1 1-2.1-9.4L21.5 10"></path><text x="12" y="16" font-size="7.5" fill="currentColor" stroke="none" font-family="IBM Plex Mono" text-anchor="middle" font-weight="600">10</text></svg>
+        </div>
+        <div onClick="{{ toggleLoop }}" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ loBg }};color:{{ loFg }};border:1px solid {{ loBd }};" style-hover="border-color:rgba(255,255,255,0.4);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+        </div>
+        <sc-if value="{{ loopOn }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;line-height:1.5;color:#B6FF3B;letter-spacing:0.06em;">LOOP<br>{{ loopLabel }}</div>
+        </sc-if>
+        <div ref="{{ rTcD }}" style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:#B6FF3B;width:44px;text-align:right;flex:0 0 auto;">{{ tCur }}</div>
+        <div onPointerDown="{{ seekDown }}" onPointerMove="{{ seekMove }}" onPointerUp="{{ seekUp }}" style="flex:1;height:28px;display:flex;align-items:center;cursor:pointer;touch-action:none;min-width:120px;">
+          <div style="position:relative;flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);">
+            <div ref="{{ rSeekD }}" style="position:absolute;left:0;top:0;bottom:0;width:16.74%;border-radius:2px;background:#B6FF3B;">
+              <div style="position:absolute;right:-6px;top:50%;width:12px;height:12px;border-radius:50%;background:#B6FF3B;transform:translateY(-50%);box-shadow:0 0 10px rgba(182,255,59,0.6);"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#8A93A0;width:40px;flex:0 0 auto;">{{ tTot }}</div>
+        <div style="width:1px;height:30px;background:rgba(255,255,255,0.08);"></div>
+        <div onClick="{{ goLetra }}" style="height:36px;padding:0 13px;border-radius:9px;display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;background:{{ leBg }};color:{{ leFg }};border:1px solid {{ leBd }};" style-hover="border-color:rgba(255,255,255,0.4);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 11h16M4 16h10"></path></svg>
+          Letra
+        </div>
+        <div onClick="{{ goAcordes }}" style="height:36px;padding:0 13px;border-radius:9px;display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;background:{{ acBg }};color:{{ acFg }};border:1px solid {{ acBd }};" style-hover="border-color:rgba(255,255,255,0.4);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg>
+          Acordes
+        </div>
+        <div onClick="{{ goSecoes }}" style="height:36px;padding:0 13px;border-radius:9px;display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;background:{{ seBg }};color:{{ seFg }};border:1px solid {{ seBd }};" style-hover="border-color:rgba(255,255,255,0.4);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4M10 12h7M20 12h1"></path></svg>
+          Seções
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="upload" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">02 · UPLOAD &amp; PROCESSAMENTO <span style="color:#3E4650;">— CLIQUE EM "SEPARAR STEMS" PARA SIMULAR O PROGRESSO POR STEM</span></div>
+    <div data-screen-label="Upload" style="width:1440px;height:720px;background:#0B0C0F;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;color:#F2F4F7;box-shadow:0 30px 80px rgba(0,0,0,0.55);">
+      <div style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:13px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0B0C0F,0 0 0 3.5px rgba(182,255,59,0.35);">
+            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0B0C0F"></path></svg>
+          </div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;">MPTrix</div>
+        </div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,0.09);"></div>
+        <div style="font-size:14px;font-weight:600;color:#D1D5DB;">Nova separação</div>
+        <div style="flex:1;"></div>
+        <div style="height:34px;padding:0 13px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;gap:8px;cursor:pointer;color:#D1D5DB;font-size:13px;font-weight:600;" style-hover="border-color:rgba(255,255,255,0.28);color:#F2F4F7;">Biblioteca</div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+        <div style="width:640px;display:flex;flex-direction:column;gap:18px;">
+          <sc-if value="{{ upIdle }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1.5px dashed rgba(255,255,255,0.16);border-radius:16px;padding:44px 40px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;" style-hover="border-color:rgba(182,255,59,0.5);background:rgba(182,255,59,0.02);">
+              <div style="width:52px;height:52px;border-radius:50%;background:rgba(182,255,59,0.1);display:flex;align-items:center;justify-content:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B6FF3B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6m0 0l-4 4m4-4l4 4M4 20h16"></path></svg>
+              </div>
+              <div style="font-size:19px;font-weight:600;">Arraste seu áudio aqui</div>
+              <div style="font-size:12.5px;color:#9BA3AF;">MP3, WAV ou M4A · até 20 minutos</div>
+              <div onClick="{{ startUp }}" style="margin-top:6px;height:38px;padding:0 16px;border-radius:9px;border:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;font-size:13px;font-weight:600;color:#F2F4F7;cursor:pointer;" style-hover="border-color:rgba(255,255,255,0.35);">Escolher arquivo</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#8A93A0;">OU</span>
+              <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+            </div>
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF4E45" style="flex:0 0 auto;"><path d="M23 7.5a4 4 0 0 0-2.8-2.9C18.7 4.2 12 4.2 12 4.2s-6.7 0-8.2.4A4 4 0 0 0 1 7.5 42 42 0 0 0 .6 12 42 42 0 0 0 1 16.5a4 4 0 0 0 2.8 2.9c1.5.4 8.2.4 8.2.4s6.7 0 8.2-.4a4 4 0 0 0 2.8-2.9A42 42 0 0 0 23.4 12 42 42 0 0 0 23 7.5zM9.8 15.3V8.7l5.8 3.3-5.8 3.3z"></path></svg>
+              <div style="flex:1;height:44px;border-radius:10px;background:#0B0C0F;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#9BA3AF;">https://youtu.be/9tRxWm4Q</div>
+              <div onClick="{{ startUp }}" style="height:44px;padding:0 18px;border-radius:10px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;font-size:13.5px;font-weight:700;cursor:pointer;flex:0 0 auto;" style-hover="background:#C9FF66;">Separar stems</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ upProc }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:18px;animation:fadeIn 0.3s ease;">
+              <div style="display:flex;align-items:center;gap:13px;">
+                <div style="width:44px;height:44px;border-radius:10px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;">NV</div>
+                <div>
+                  <div style="font-size:15px;font-weight:600;">Noite de Vidro — Os Voltz</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A93A0;margin-top:3px;">YOUTUBE · 3:47 · 96 BPM · Am DETECTADOS</div>
+                </div>
+                <div style="flex:1;"></div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:#B6FF3B;">{{ upTotal }}%</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ uprog }}" as="u" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:11px;">
+                    <div style="width:8px;height:8px;border-radius:3px;background:{{ u.c }};flex:0 0 auto;"></div>
+                    <div style="width:82px;flex:0 0 auto;font-size:13px;font-weight:500;color:#D1D5DB;">{{ u.n }}</div>
+                    <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+                      <div style="height:100%;width:{{ u.pct }}%;border-radius:3px;background:{{ u.c }};"></div>
+                    </div>
+                    <div style="width:38px;flex:0 0 auto;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9BA3AF;">{{ u.pct }}%</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#B6FF3B;">{{ upStatus }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ upDone }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:40px;display:flex;flex-direction:column;align-items:center;gap:14px;animation:fadeIn 0.3s ease;">
+              <div style="width:56px;height:56px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(182,255,59,0.35);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0B0C0F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <div style="font-size:19px;font-weight:700;">Separação concluída</div>
+              <div style="font-size:13px;color:#9BA3AF;">6 stems + metrônomo prontos para mixar</div>
+              <div style="display:flex;gap:10px;margin-top:6px;">
+                <div style="height:42px;padding:0 18px;border-radius:10px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;font-size:13.5px;font-weight:700;cursor:pointer;" style-hover="background:#C9FF66;">Abrir no estúdio</div>
+                <div onClick="{{ resetUp }}" style="height:42px;padding:0 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;font-size:13px;font-weight:600;color:#D1D5DB;cursor:pointer;" style-hover="border-color:rgba(255,255,255,0.35);">Nova separação</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="biblioteca" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">03 · BIBLIOTECA <span style="color:#3E4650;">— BUSCA E FILTROS FUNCIONAIS</span></div>
+    <div data-screen-label="Biblioteca" style="width:1440px;height:800px;background:#0B0C0F;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;color:#F2F4F7;box-shadow:0 30px 80px rgba(0,0,0,0.55);">
+      <div style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:13px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0B0C0F,0 0 0 3.5px rgba(182,255,59,0.35);">
+            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0B0C0F"></path></svg>
+          </div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;">MPTrix</div>
+        </div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,0.09);"></div>
+        <div style="font-size:14px;font-weight:600;color:#D1D5DB;">Biblioteca</div>
+        <div style="flex:1;"></div>
+        <div style="width:290px;height:38px;border-radius:10px;background:#15171C;border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:9px;padding:0 12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input value="{{ q }}" onChange="{{ setQ }}" placeholder="Buscar música ou artista…" style="flex:1;background:transparent;border:none;outline:none;color:#F2F4F7;font-family:'Space Grotesk',sans-serif;font-size:13px;">
+        </div>
+        <div style="height:38px;padding:0 15px;border-radius:9px;background:#B6FF3B;color:#0B0C0F;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;" style-hover="background:#C9FF66;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0B0C0F" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Nova música
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px 0;">
+        <sc-for list="{{ filChips }}" as="fc" hint-placeholder-count="3">
+          <div onClick="{{ fc.set }}" style="height:30px;padding:0 13px;border-radius:8px;display:flex;align-items:center;cursor:pointer;font-size:12.5px;font-weight:600;background:{{ fc.bg }};color:{{ fc.fg }};border:1px solid {{ fc.bd }};" style-hover="border-color:rgba(255,255,255,0.4);">{{ fc.label }}</div>
+        </sc-for>
+        <div style="flex:1;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A93A0;">{{ nSongs }}</div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:18px 24px 24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;">
+          <sc-for list="{{ songs }}" as="sg" hint-placeholder-count="8">
+            <div style="border-radius:12px;background:#15171C;border:1px solid {{ sg.bd }};overflow:hidden;cursor:pointer;transition:transform 0.15s,border-color 0.15s;" style-hover="transform:translateY(-3px);border-color:rgba(255,255,255,0.25);">
+              <div style="height:148px;background:{{ sg.c }};position:relative;display:flex;align-items:center;justify-content:center;">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;color:#0B0C0F;">{{ sg.ini }}</div>
+                <div style="position:absolute;top:10px;right:10px;height:20px;padding:0 8px;border-radius:999px;background:rgba(0,0,0,0.5);display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;color:#F2F4F7;">{{ sg.o }}</div>
+                <sc-if value="{{ sg.now }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:10px;left:10px;height:20px;padding:0 8px;border-radius:999px;background:#0B0C0F;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.08em;color:#B6FF3B;">ABERTA</div>
+                </sc-if>
+              </div>
+              <div style="padding:13px 14px 14px;">
+                <div style="font-size:14px;font-weight:600;">{{ sg.t }}</div>
+                <div style="font-size:12px;color:#9BA3AF;margin-top:2px;">{{ sg.a }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8A93A0;margin-top:8px;">{{ sg.m }}</div>
+                <div style="display:flex;gap:4px;margin-top:9px;">
+                  <sc-for list="{{ rows }}" as="dd" hint-placeholder-count="6">
+                    <div style="width:6px;height:6px;border-radius:2px;background:{{ dd.color }};opacity:0.85;"></div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:70px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <div style="font-size:15px;font-weight:600;color:#D1D5DB;">Nada por aqui</div>
+            <div style="font-size:12.5px;color:#8A93A0;">Tente outra busca ou outro filtro.</div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  <div id="mobile" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">04 · ESTÚDIO — MOBILE <span style="color:#3E4650;">— MESMO RELÓGIO DO DESKTOP · TOQUE NO NOME DA FAIXA ABRE VOLUME/PAN · CHIPS ABREM LETRA/ACORDES/SEÇÕES</span></div>
+    <div style="display:flex;gap:56px;align-items:flex-start;">
+      <div data-screen-label="Estúdio mobile" style="position:relative;">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+          <div style="height:100%;display:flex;flex-direction:column;background:#0B0C0F;color:#F2F4F7;font-family:'Space Grotesk',sans-serif;user-select:none;position:relative;padding-top:54px;padding-bottom:26px;overflow:hidden;">
+            <div style="height:46px;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 8px;">
+              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#9BA3AF;cursor:pointer;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Noite de Vidro</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8A93A0;margin-top:1px;">OS VOLTZ · 96 BPM · {{ tom }}</div>
+              </div>
+              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#B6FF3B;cursor:pointer;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"></path></svg>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column;background:#101216;border-top:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.07);">
+              <div style="height:18px;flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,0.07);">
+                <div style="width:64px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);background:#15171C;"></div>
+                <div style="flex:1;position:relative;background:#0D0F13;min-width:0;">
+                  <sc-for list="{{ mticks }}" as="mt" hint-placeholder-count="5">
+                    <div style="position:absolute;left:{{ mt.left }};bottom:0;width:1px;height:{{ mt.h }}px;background:rgba(255,255,255,0.16);"></div>
+                    <sc-if value="{{ mt.label }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;left:{{ mt.left }};bottom:7px;margin-left:3px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:#8A93A0;">{{ mt.label }}</div>
+                    </sc-if>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+                <div style="flex:1 1 0%;min-height:0;display:flex;border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <div style="width:64px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);background:#15171C;padding:4px 5px;display:flex;flex-direction:column;justify-content:center;gap:4px;opacity:{{ row.headOp }};transition:opacity 0.25s;">
+                    <div onClick="{{ row.open }}" style="display:flex;align-items:center;gap:3px;cursor:pointer;">
+                      <div style="font-size:10.5px;font-weight:700;line-height:1.1;color:{{ row.color }};">{{ row.name }}</div>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="{{ row.color }}" stroke-width="2.6" stroke-linecap="round" style="flex:0 0 auto;opacity:0.6;"><path d="M6 9l6 6 6-6"></path></svg>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                      <div onClick="{{ row.tM }}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;background:{{ row.mBg }};color:{{ row.mFg }};border:1px solid {{ row.mBd }};">M</div>
+                      <div onClick="{{ row.tS }}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;background:{{ row.sBg }};color:{{ row.sFg }};border:1px solid {{ row.sBd }};">S</div>
+                    </div>
+                  </div>
+                  <div style="flex:1;position:relative;overflow:hidden;min-width:0;">
+                    <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,0.05);"></div>
+                    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:{{ row.waveOp }};transition:opacity 0.25s;" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="{{ row.mpath }}" stroke="{{ row.color }}" stroke-width="1.4" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.92" fill="none"></path></svg>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="height:34px;flex:0 0 auto;display:flex;">
+                <div style="width:64px;flex:0 0 auto;border-right:1px solid rgba(255,255,255,0.07);background:#15171C;display:flex;align-items:center;padding:0 5px;gap:4px;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L6.5 20h11L12 3zM12 13l4.5-7"></path></svg>
+                  <div style="font-size:9px;font-weight:600;color:#9BA3AF;">Metrô.</div>
+                </div>
+                <div style="flex:1;position:relative;overflow:hidden;min-width:0;">
+                  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:{{ metroLaneOp }};transition:opacity 0.25s;" viewBox="0 0 1200 100" preserveAspectRatio="none">
+                    <path d="{{ metroDown }}" stroke="#E5E7EB" stroke-width="1.4" vector-effect="non-scaling-stroke" opacity="0.65" fill="none"></path>
+                    <path d="{{ metroUp }}" stroke="#9BA3AF" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.3" fill="none"></path>
+                  </svg>
+                </div>
+              </div>
+              <div onPointerDown="{{ seekDown }}" onPointerMove="{{ seekMove }}" onPointerUp="{{ seekUp }}" style="position:absolute;left:64px;top:0;right:0;bottom:0;touch-action:none;z-index:4;">
+                <div ref="{{ rTintM }}" style="position:absolute;top:18px;bottom:0;left:0;width:16.74%;background:rgba(182,255,59,0.055);border-right:1px solid rgba(182,255,59,0.16);pointer-events:none;"></div>
+                <sc-if value="{{ loopOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:0;bottom:0;left:{{ loopLeft }};width:{{ loopW }};background:rgba(182,255,59,0.05);border-left:1px dashed rgba(182,255,59,0.45);border-right:1px dashed rgba(182,255,59,0.45);pointer-events:none;"></div>
+                </sc-if>
+                <div ref="{{ rPhM }}" style="position:absolute;top:0;bottom:0;left:16.74%;width:0;pointer-events:none;z-index:6;">
+                  <div style="position:absolute;top:0;bottom:0;left:-1px;width:1.5px;background:#B6FF3B;box-shadow:0 0 8px rgba(182,255,59,0.65);"></div>
+                  <div style="position:absolute;top:0;left:-5px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #B6FF3B;"></div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:0 0 auto;background:#0D0F13;padding:8px 14px 0;display:flex;align-items:center;gap:9px;">
+              <div ref="{{ rTcM }}" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:#B6FF3B;width:32px;flex:0 0 auto;text-align:right;">{{ tCur }}</div>
+              <div onPointerDown="{{ seekDown }}" onPointerMove="{{ seekMove }}" onPointerUp="{{ seekUp }}" style="flex:1;height:32px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                <div style="position:relative;flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);">
+                  <div ref="{{ rSeekM }}" style="position:absolute;left:0;top:0;bottom:0;width:16.74%;border-radius:2px;background:#B6FF3B;">
+                    <div style="position:absolute;right:-6px;top:50%;width:12px;height:12px;border-radius:50%;background:#B6FF3B;transform:translateY(-50%);box-shadow:0 0 10px rgba(182,255,59,0.6);"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8A93A0;width:32px;flex:0 0 auto;">{{ tTot }}</div>
+            </div>
+            <div style="flex:0 0 auto;background:#0D0F13;height:84px;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 14px;">
+              <div onClick="{{ toggleMetro }}" style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ meBg }};color:{{ meFg }};border:1px solid {{ meBd }};">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L6.5 20h11L12 3zM12 13l4.5-7"></path></svg>
+              </div>
+              <div onClick="{{ back10 }}" style="width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 4 2.5 10 8.5 10"></polyline><path d="M4.6 15a9 9 0 1 0 2.1-9.4L2.5 10"></path><text x="12" y="16" font-size="7.5" fill="currentColor" stroke="none" font-family="IBM Plex Mono" text-anchor="middle" font-weight="600">10</text></svg>
+              </div>
+              <div onClick="{{ togglePlay }}" style="width:60px;height:60px;border-radius:50%;background:#B6FF3B;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 26px rgba(182,255,59,0.35);flex:0 0 auto;">
+                <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="#0B0C0F"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"></path></svg>
+                </sc-if>
+                <sc-if value="{{ notPlaying }}" hint-placeholder-val="{{ false }}">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="#0B0C0F" style="margin-left:2px;"><path d="M8 5l11 7-11 7z"></path></svg>
+                </sc-if>
+              </div>
+              <div onClick="{{ fwd10 }}" style="width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="21.5 4 21.5 10 15.5 10"></polyline><path d="M19.4 15a9 9 0 1 1-2.1-9.4L21.5 10"></path><text x="12" y="16" font-size="7.5" fill="currentColor" stroke="none" font-family="IBM Plex Mono" text-anchor="middle" font-weight="600">10</text></svg>
+              </div>
+              <div onClick="{{ toggleLoop }}" style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ loBg }};color:{{ loFg }};border:1px solid {{ loBd }};">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+              </div>
+            </div>
+            <div style="flex:0 0 auto;background:#0D0F13;height:52px;display:flex;align-items:center;gap:6px;padding:0 12px;border-top:1px solid rgba(255,255,255,0.06);">
+              <sc-for list="{{ speeds }}" as="sp" hint-placeholder-count="3">
+                <div onClick="{{ sp.set }}" style="height:34px;min-width:44px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;background:{{ sp.bg }};color:{{ sp.fg }};border:1px solid {{ sp.bd }};">{{ sp.label }}</div>
+              </sc-for>
+              <div style="flex:1;"></div>
+              <div onClick="{{ openLy }}" style="width:44px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;border:1px solid rgba(255,255,255,0.1);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 11h16M4 16h10"></path></svg>
+              </div>
+              <div onClick="{{ openCh }}" style="width:44px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;border:1px solid rgba(255,255,255,0.1);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg>
+              </div>
+              <div onClick="{{ openSe }}" style="width:44px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;border:1px solid rgba(255,255,255,0.1);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4M10 12h7M20 12h1"></path></svg>
+              </div>
+            </div>
+            <sc-if value="{{ shAny }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:40;animation:fadeIn 0.18s ease;"></div>
+            </sc-if>
+            <sc-if value="{{ shTrack }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;z-index:50;background:#15171C;border-top:1px solid rgba(255,255,255,0.09);border-radius:18px 18px 0 0;padding:12px 18px 34px;animation:sheetUp 0.22s ease;">
+                <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);margin:0 auto 14px;"></div>
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <div style="width:5px;height:20px;border-radius:2px;background:{{ strack.color }};"></div>
+                  <div style="font-size:17px;font-weight:700;color:{{ strack.color }};">{{ strack.name }}</div>
+                  <div style="flex:1;"></div>
+                  <div onClick="{{ strack.tM }}" style="height:34px;min-width:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;background:{{ strack.mBg }};color:{{ strack.mFg }};border:1px solid {{ strack.mBd }};">MUTE</div>
+                  <div onClick="{{ strack.tS }}" style="height:34px;min-width:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;background:{{ strack.sBg }};color:{{ strack.sFg }};border:1px solid {{ strack.sBd }};">SOLO</div>
+                </div>
+                <div style="margin-top:18px;display:flex;flex-direction:column;gap:7px;">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:#9BA3AF;">
+                    <span style="font-weight:500;">Volume</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;color:#F2F4F7;">{{ strack.volPct }}</span>
+                  </div>
+                  <div data-kind="vol" data-idx="{{ strack.idx }}" onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" onPointerUp="{{ sliderUp }}" style="height:44px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                    <div style="position:relative;flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,0.12);">
+                      <div style="position:absolute;left:0;top:0;bottom:0;width:{{ strack.volPct }}%;border-radius:3px;background:{{ strack.color }};"></div>
+                      <div style="position:absolute;top:50%;left:{{ strack.volPct }}%;width:20px;height:20px;border-radius:50%;background:#F2F4F7;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:#9BA3AF;margin-top:4px;">
+                    <span style="font-weight:500;">Pan</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;color:#F2F4F7;">{{ strack.panLabel }}</span>
+                  </div>
+                  <div data-kind="pan" data-idx="{{ strack.idx }}" onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" onPointerUp="{{ sliderUp }}" style="height:44px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                    <div style="position:relative;flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,0.12);">
+                      <div style="position:absolute;left:50%;top:-4px;width:1px;height:13px;background:rgba(255,255,255,0.3);"></div>
+                      <div style="position:absolute;top:50%;left:{{ strack.panPct }}%;width:20px;height:20px;border-radius:50%;background:#E5E7EB;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>
+                    </div>
+                  </div>
+                </div>
+                <div onClick="{{ closeSheet }}" style="margin-top:8px;height:46px;border-radius:11px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer;">Pronto</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ shLetra }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;top:180px;z-index:50;background:#15171C;border-top:1px solid rgba(255,255,255,0.09);border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:sheetUp 0.22s ease;">
+                <div style="flex:0 0 auto;padding:12px 18px 10px;">
+                  <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);margin:0 auto 12px;"></div>
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="font-size:17px;font-weight:700;">Letra cifrada</div>
+                    <div style="flex:1;"></div>
+                    <div style="display:flex;align-items:center;gap:5px;margin-right:2px;">
+                      <div onClick="{{ trDown }}" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+                      </div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:{{ trFg }};min-width:26px;text-align:center;">{{ tom }}</div>
+                      <div onClick="{{ trUp }}" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#D1D5DB;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                      </div>
+                    </div>
+                    <div onClick="{{ closeSheet }}" style="width:44px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div ref="{{ rMLyBox }}" style="flex:1;overflow:auto;padding:4px 20px 34px;">
+                  <sc-for list="{{ lyr }}" as="ln" hint-placeholder-count="8">
+                    <div ref="{{ ln.mref }}" onClick="{{ ln.go }}" style="padding:5px 0 9px 11px;border-left:2px solid {{ ln.bar }};cursor:pointer;">
+                      <div style="position:relative;height:17px;">
+                        <sc-for list="{{ ln.chords }}" as="lc" hint-placeholder-count="2">
+                          <div style="position:absolute;top:0;left:{{ lc.left }};font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:{{ ln.chColor }};white-space:nowrap;">{{ lc.name }}</div>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:14.5px;line-height:1.35;color:{{ ln.color }};font-weight:{{ ln.weight }};font-style:{{ ln.ital }};transition:color 0.3s;">{{ ln.text }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ shAcordes }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;top:180px;z-index:50;background:#15171C;border-top:1px solid rgba(255,255,255,0.09);border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:sheetUp 0.22s ease;">
+                <div style="flex:0 0 auto;padding:12px 18px 10px;">
+                  <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);margin:0 auto 12px;"></div>
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="font-size:17px;font-weight:700;">Acordes</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:{{ trFg }};">{{ tom }} · 96 BPM</div>
+                    <div style="flex:1;"></div>
+                    <div onClick="{{ closeSheet }}" style="width:44px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div ref="{{ rMChBox }}" style="flex:1;overflow:auto;padding:4px 16px 34px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-content:start;">
+                  <sc-for list="{{ chords }}" as="ch" hint-placeholder-count="12">
+                    <div onClick="{{ ch.go }}" style="height:54px;border-radius:9px;background:{{ ch.bg }};border:1px solid {{ ch.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;">
+                      <div style="font-size:15px;font-weight:700;color:{{ ch.fg }};">{{ ch.name }}</div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8A93A0;">{{ ch.tl }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ shSecoes }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;z-index:50;background:#15171C;border-top:1px solid rgba(255,255,255,0.09);border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:sheetUp 0.22s ease;">
+                <div style="flex:0 0 auto;padding:12px 18px 10px;">
+                  <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);margin:0 auto 12px;"></div>
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="font-size:17px;font-weight:700;">Seções</div>
+                    <div style="flex:1;"></div>
+                    <div onClick="{{ closeSheet }}" style="width:44px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9BA3AF;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div style="flex:0 0 auto;padding:0 14px 34px;display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ secList }}" as="sl" hint-placeholder-count="8">
+                    <div onClick="{{ sl.go }}" style="height:46px;border-radius:10px;background:{{ sl.bg }};border:1px solid {{ sl.bd }};display:flex;align-items:center;gap:10px;padding:0 12px;cursor:pointer;">
+                      <div style="width:4px;height:20px;border-radius:2px;background:{{ sl.c }};"></div>
+                      <div style="font-size:14px;font-weight:600;">{{ sl.name }}</div>
+                      <div style="flex:1;"></div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9BA3AF;">{{ sl.range }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </x-import>
+      </div>
+      <div style="width:520px;display:flex;flex-direction:column;gap:22px;padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">SISTEMA VISUAL MPTRIX</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:11px 13px;">
+              <div style="width:26px;height:26px;border-radius:7px;background:{{ row.color }};flex:0 0 auto;"></div>
+              <div style="font-size:13.5px;font-weight:600;color:{{ row.color }};width:88px;">{{ row.name }}</div>
+              <div style="flex:1;height:26px;position:relative;overflow:hidden;">
+                <svg style="position:absolute;top:0;left:0;width:100%;height:100%;" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="{{ row.mpath }}" stroke="{{ row.color }}" stroke-width="1.3" vector-effect="non-scaling-stroke" opacity="0.8" fill="none"></path></svg>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#5B6470;">DIFERENCIAIS VS. MONOCROMÁTICO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <div style="background:#15171C;border:1px solid rgba(182,255,59,0.28);border-radius:10px;padding:12px 13px;">
+              <div style="font-size:13px;font-weight:600;color:#B6FF3B;">Playhead hero</div>
+              <div style="font-size:11.5px;color:#9BA3AF;line-height:1.45;margin-top:3px;">Agulha lima com marcador triangular cruzando as 7 pistas.</div>
+            </div>
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 13px;">
+              <div style="font-size:13px;font-weight:600;">Escala verde por stem</div>
+              <div style="font-size:11.5px;color:#9BA3AF;line-height:1.45;margin-top:3px;">Um só matiz, seis níveis: identidade única e leitura instantânea.</div>
+            </div>
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 13px;">
+              <div style="font-size:13px;font-weight:600;">Tint de progresso</div>
+              <div style="font-size:11.5px;color:#9BA3AF;line-height:1.45;margin-top:3px;">Região já tocada recebe véu lima sobre as waveforms.</div>
+            </div>
+            <div style="background:#15171C;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 13px;">
+              <div style="font-size:13px;font-weight:600;">Letra cifrada + tom</div>
+              <div style="font-size:11.5px;color:#9BA3AF;line-height:1.45;margin-top:3px;">Acordes alinhados sobre a letra e transposição em um toque.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;painelInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;nenhum&quot;,&quot;acordes&quot;,&quot;letra&quot;],&quot;default&quot;:&quot;nenhum&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estúdio&quot;},&quot;mostrarSecoes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estúdio&quot;},&quot;densidade&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;confortavel&quot;,&quot;compacta&quot;],&quot;default&quot;:&quot;confortavel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estúdio&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.DUR=227;this.t=38;this.nd={};this.cbs={};
+    this.SEC=[{n:'Intro',t:0,c:'#8FA57A'},{n:'Verso 1',t:16,c:'#7ED97A'},{n:'Refrão',t:46,c:'#B6FF3B'},{n:'Verso 2',t:76,c:'#7ED97A'},{n:'Refrão',t:106,c:'#B6FF3B'},{n:'Ponte',t:136,c:'#27A08D'},{n:'Refrão',t:166,c:'#B6FF3B'},{n:'Saída',t:196,c:'#8FA57A'}];
+    this.STEMS=[{n:'Vocais',c:'#DFF9A0'},{n:'Bateria',c:'#B4E85A'},{n:'Baixo',c:'#7ED97A'},{n:'Guitarra',c:'#4ECB8C'},{n:'Teclado',c:'#27A08D'},{n:'Outro',c:'#8FA57A'}];
+    const P=[[0,.85,1,.85,1,.55,1,.35],[.22,.8,.95,.8,.95,.45,.95,.3],[.15,.65,.85,.65,.85,.55,.85,.4],[.5,.45,.9,.5,.9,.3,.9,.5],[.7,.5,.7,.55,.7,.85,.7,.6],[.3,.25,.5,.3,.5,.6,.5,.35]];
+    let seed=42;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    this.secAt=t=>{let k=0;for(let i=0;i<this.SEC.length;i++)if(t>=this.SEC[i].t)k=i;return k;};
+    const mk=(si,n)=>{let d='';for(let i=0;i<n;i++){const bt=(i+.5)/n*this.DUR;let a=P[si][this.secAt(bt)];
+      if(si===0){const ph=Math.sin(bt*1.1)+Math.sin(bt*.37);if(ph<-.4)a*=.12;}
+      if(si===1&&i%4===0)a=Math.min(1,a*1.35);
+      if(si===5)a=Math.min(1,a*(rnd()<.25?1.6:.5));
+      a*=.45+.55*rnd();
+      const x=((i+.5)*1200/n).toFixed(1),h=Math.max(1.6,a*46);
+      d+='M'+x+' '+(50-h).toFixed(1)+'L'+x+' '+(50+h).toFixed(1);}
+      return d;};
+    this.pathsD=this.STEMS.map((s,i)=>mk(i,264));
+    this.pathsM=this.STEMS.map((s,i)=>mk(i,110));
+    let md='',mu='';const bt=60/96;for(let b=0;b*bt<this.DUR;b++){const x=(b*bt/this.DUR*1200).toFixed(1);if(b%4===0)md+='M'+x+' 20L'+x+' 80';else mu+='M'+x+' 36L'+x+' 64';}
+    this.metroDown=md;this.metroUp=mu;
+    this.ticks=[];for(let s=0;s<=225;s+=5){const M=s%30===0;this.ticks.push({left:(s/this.DUR*100).toFixed(2)+'%',h:M?11:5,label:M?this.fmt(s):null});}
+    this.mticks=[];for(let s=0;s<=220;s+=10){const M=s%60===0;this.mticks.push({left:(s/this.DUR*100).toFixed(2)+'%',h:M?8:4,label:M?this.fmt(s):null});}
+    this.grid=this.ticks.filter(t=>t.h===11).map(t=>({left:t.left}));
+    const PAT={'Intro':['Am','Fmaj7','Am','Fmaj7'],'Verso 1':['Am','F','C','G'],'Verso 2':['Am','F','C','G'],'Refrão':['F','C','G','Am'],'Ponte':['Dm','F','E7','E7'],'Saída':['Am','Fmaj7','Am','Am']};
+    this.CHORDS=[];this.SEC.forEach((s,i)=>{const end=i<7?this.SEC[i+1].t:this.DUR,len=end-s.t,slots=Math.max(2,Math.round(len/5)),dur=len/slots,pat=PAT[s.n];for(let j=0;j<slots;j++)this.CHORDS.push({name:pat[j%pat.length],t:s.t+j*dur});});
+    const L=[[2,'( intro instrumental )',1],[16,'Neon derrama na calçada molhada'],[20.5,'Teu nome pisca na fachada apagada'],[25,'Guardo o barulho da cidade no bolso'],[29.5,'Conto os segundos no vidro do ônibus'],[34,'A madrugada me devolve o que é meu'],[40,'Cada esquina acende um verso teu']];
+    const REF=[[0,'Noite de vidro, não deixa cair'],[4.5,'Que o chão da cidade ainda quer te ouvir'],[9,'Se a luz quebrar, eu seguro o brilho'],[14,'Noite de vidro, ninguém dorme sozinho'],[19.5,'Noite de vidro, não deixa cair'],[24.5,'O amanhã chega devagarinho']];
+    const add=a=>a.forEach(x=>L.push(x)),ref=o=>REF.forEach(x=>L.push([o+x[0],x[1]]));
+    ref(46);
+    add([[76,'Motor ligado, a lua em stand-by'],[80.5,'O mapa rasgado apontando pra cá'],[85,'Toda buzina vira nota no ar'],[89.5,'Todo silêncio vira som de esperar'],[94,'A madrugada me devolve o que é meu'],[100,'Cada esquina acende um verso teu']]);
+    ref(106);
+    add([[136,'Quando a cidade apagar'],[141,'Deixa o compasso me guiar'],[146,'Passo a passo no breu'],[151,'O que é de vidro nunca se perdeu'],[157,'( ponte instrumental )',1]]);
+    ref(166);
+    add([[196,'Noite de vidro…'],[203,'A cidade dorme em si bemol'],[210,'( instrumental até o fim )',1]]);
+    this.LYR=L;
+    this.SONGS=[{t:'Noite de Vidro',a:'Os Voltz',m:'96 BPM · Am · 3:47',o:'YouTube',c:'#B6FF3B',now:true},{t:'Maré Baixa',a:'Luísa Prado',m:'82 BPM · C · 4:12',o:'Arquivo',c:'#7ED97A'},{t:'Km 42',a:'Fita Crepe',m:'128 BPM · Em · 2:58',o:'YouTube',c:'#4ECB8C'},{t:'Vitrola de Marte',a:'Astronauta Sim',m:'104 BPM · G · 3:21',o:'Arquivo',c:'#DFF9A0'},{t:'Chão de Fábrica',a:'Torre Sul',m:'74 BPM · Dm · 5:05',o:'YouTube',c:'#B4E85A'},{t:'Segunda Pele',a:'Nave Mãe',m:'118 BPM · F#m · 3:33',o:'Arquivo',c:'#27A08D'},{t:'Ruído Rosa',a:'Duas Marias',m:'90 BPM · Bb · 4:01',o:'YouTube',c:'#8FA57A'},{t:'Palma da Mão',a:'Rio Elétrico',m:'100 BPM · D · 3:12',o:'Arquivo',c:'#9FD98A'}];
+    this.state={playing:true,speed:1,metroOn:true,master:80,tracks:this.STEMS.map(()=>({vol:78,pan:0,mute:false,solo:false})),panelOv:null,secOv:null,loopOn:false,loopA:0,loopB:0,aSec:this.secAt(this.t),aCh:this.chAt(this.t),aLy:this.lyAt(this.t),up:'idle',upP:[0,0,0,0,0,0],q:'',fil:'Todas',sheet:null,sheetIdx:0,tr:0};
+  }
+  fmt(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+  tp(name,s){if(!s)return name;const N=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],FL={Db:'C#',Eb:'D#',Gb:'F#',Ab:'G#',Bb:'A#'};const m=name.match(/^([A-G][#b]?)(.*)$/);if(!m)return name;let r=m[1];if(FL[r])r=FL[r];const i=N.indexOf(r);if(i<0)return name;return N[(i+s+120)%12]+m[2];}
+  trUp=()=>this.setState(s=>({tr:s.tr>=11?11:s.tr+1}));
+  trDown=()=>this.setState(s=>({tr:s.tr<=-11?-11:s.tr-1}));
+  trReset=()=>this.setState({tr:0});
+  chAt(t){let k=0;this.CHORDS.forEach((c,i)=>{if(t>=c.t)k=i;});return k;}
+  lyAt(t){let k=0;this.LYR.forEach((l,i)=>{if(t>=l[0])k=i;});return k;}
+  r(n){return this.cbs[n]||(this.cbs[n]=el=>{this.nd[n]=el;});}
+  hx(c,a){return 'rgba('+parseInt(c.slice(1,3),16)+','+parseInt(c.slice(3,5),16)+','+parseInt(c.slice(5,7),16)+','+a+')';}
+  componentDidMount(){
+    this.last=performance.now();
+    const step=ts=>{const dt=Math.min(.1,(ts-this.last)/1000);this.last=ts;
+      if(this.state.playing){this.t+=dt*this.state.speed;
+        if(this.state.loopOn&&this.t>=this.state.loopB)this.t=this.state.loopA;
+        if(this.t>=this.DUR)this.t=0;
+        this.syncIdx();}
+      this.paint();this.raf=requestAnimationFrame(step);};
+    this.raf=requestAnimationFrame(step);
+    this.onKey=e=>{if(e.code==='Space'&&!/INPUT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();this.setState(s=>({playing:!s.playing}));}};
+    window.addEventListener('keydown',this.onKey);
+  }
+  componentWillUnmount(){cancelAnimationFrame(this.raf);clearInterval(this._ui);window.removeEventListener('keydown',this.onKey);}
+  componentDidUpdate(){this.paint();}
+  syncIdx(){const s=this.state,aSec=this.secAt(this.t),aCh=this.chAt(this.t),aLy=this.lyAt(this.t);if(aSec!==s.aSec||aCh!==s.aCh||aLy!==s.aLy)this.setState({aSec,aCh,aLy},()=>this.autoScroll());}
+  autoScroll(){const{aCh,aLy}=this.state,n=this.nd;
+    if(n.chBox)n.chBox.scrollTo({top:Math.max(0,Math.floor(aCh/3)*70-140),behavior:'smooth'});
+    if(n.lyBox&&n['ly'+aLy])n.lyBox.scrollTo({top:Math.max(0,n['ly'+aLy].offsetTop-150),behavior:'smooth'});
+    if(n.mLyBox&&n['mly'+aLy])n.mLyBox.scrollTo({top:Math.max(0,n['mly'+aLy].offsetTop-110),behavior:'smooth'});
+    if(n.mChBox)n.mChBox.scrollTo({top:Math.max(0,Math.floor(aCh/4)*62-100),behavior:'smooth'});}
+  paint(){const pct=(this.t/this.DUR*100).toFixed(3)+'%',n=this.nd,tc=this.fmt(this.t);
+    ['phD','phM'].forEach(k=>{if(n[k])n[k].style.left=pct;});
+    ['tintD','tintM','seekD','seekM'].forEach(k=>{if(n[k])n[k].style.width=pct;});
+    ['tcD','tcM'].forEach(k=>{if(n[k]&&n[k].textContent!==tc)n[k].textContent=tc;});}
+  setT(t){this.t=Math.max(0,Math.min(this.DUR,t));this.syncIdx();this.paint();}
+  setTrack(i,p){this.setState(s=>({tracks:s.tracks.map((t,j)=>j===i?{...t,...p}:t)}));}
+  seekEv(e){const r=e.currentTarget.getBoundingClientRect();this.setT((e.clientX-r.left)/r.width*this.DUR);}
+  seekDown=e=>{e.currentTarget.setPointerCapture(e.pointerId);this._sc=true;this.seekEv(e);};
+  seekMove=e=>{if(this._sc)this.seekEv(e);};
+  seekUp=()=>{this._sc=false;};
+  slEv(e){const el=e.currentTarget,r=el.getBoundingClientRect();let v=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));const k=el.dataset.kind,i=+el.dataset.idx;
+    if(k==='vol')this.setTrack(i,{vol:Math.round(v*100)});else if(k==='pan')this.setTrack(i,{pan:Math.round(v*100-50)});else this.setState({master:Math.round(v*100)});}
+  sliderDown=e=>{e.currentTarget.setPointerCapture(e.pointerId);this._sl=e.currentTarget;this.slEv(e);};
+  sliderMove=e=>{if(this._sl===e.currentTarget)this.slEv(e);};
+  sliderUp=()=>{this._sl=null;};
+  togglePlay=()=>this.setState(s=>({playing:!s.playing}));
+  back10=()=>this.setT(this.t-10);
+  fwd10=()=>this.setT(this.t+10);
+  toggleLoop=()=>{if(this.state.loopOn)this.setState({loopOn:false});else{const i=this.secAt(this.t);this.setState({loopOn:true,loopA:this.SEC[i].t,loopB:i<7?this.SEC[i+1].t:this.DUR});}};
+  toggleMetro=()=>this.setState(s=>({metroOn:!s.metroOn}));
+  setPanel(p){const cur=this.state.panelOv!==null?this.state.panelOv:(this.props.painelInicial!=null?this.props.painelInicial:'nenhum');this.setState({panelOv:cur===p?'nenhum':p},()=>this.autoScroll());}
+  goLetra=()=>this.setPanel('letra');
+  goAcordes=()=>this.setPanel('acordes');
+  goSecoes=()=>{const cur=this.state.secOv!==null?this.state.secOv:(this.props.mostrarSecoes!=null?this.props.mostrarSecoes:true);this.setState({secOv:!cur});};
+  closePanel=()=>this.setState({panelOv:'nenhum'});
+  startUp=()=>{clearInterval(this._ui);this.setState({up:'proc',upP:[0,0,0,0,0,0]});this._ui=setInterval(()=>{this.setState(s=>{const p=s.upP.slice();for(let i=0;i<6;i++)if(i===0||p[i-1]>38)p[i]=Math.min(100,p[i]+Math.random()*4.5);const done=p.every(x=>x>=100);if(done)clearInterval(this._ui);return{upP:p,up:done?'done':'proc'};});},90);};
+  resetUp=()=>{clearInterval(this._ui);this.setState({up:'idle',upP:[0,0,0,0,0,0]});};
+  setQ=e=>this.setState({q:e.target.value});
+  closeSheet=()=>this.setState({sheet:null});
+  openLy=()=>this.setState({sheet:'letra'},()=>this.autoScroll());
+  openCh=()=>this.setState({sheet:'acordes'},()=>this.autoScroll());
+  openSe=()=>this.setState({sheet:'secoes'});
+  renderVals(){
+    const s=this.state,pr=this.props,LIME='#B6FF3B';
+    const anySolo=s.tracks.some(t=>t.solo);
+    const panel=s.panelOv!==null?s.panelOv:(pr.painelInicial!=null?pr.painelInicial:'nenhum');
+    const secOn=s.secOv!==null?s.secOv:(pr.mostrarSecoes!=null?pr.mostrarSecoes:true);
+    const compact=(pr.densidade!=null?pr.densidade:'confortavel')==='compacta';
+    const onB=(on,c)=>({bg:on?this.hx(c,.14):'transparent',fg:on?c:'#9BA3AF',bd:on?this.hx(c,.55):'rgba(255,255,255,0.14)'});
+    const rows=this.STEMS.map((st,i)=>{const tr=s.tracks[i],dim=tr.mute||(anySolo&&!tr.solo);
+      return{idx:i,name:st.n,color:st.c,path:this.pathsD[i],mpath:this.pathsM[i],
+        volPct:tr.vol,panPct:tr.pan+50,panLabel:tr.pan===0?'C':(tr.pan<0?'L'+(-tr.pan):'R'+tr.pan),
+        mute:tr.mute,solo:tr.solo,waveOp:dim?0.22:1,headOp:dim?0.45:1,
+        mBg:tr.mute?'#EAB308':'transparent',mFg:tr.mute?'#0B0C0F':'#9BA3AF',mBd:tr.mute?'#EAB308':'rgba(255,255,255,0.16)',
+        sBg:tr.solo?LIME:'transparent',sFg:tr.solo?'#0B0C0F':'#9BA3AF',sBd:tr.solo?LIME:'rgba(255,255,255,0.16)',
+        tM:()=>this.setTrack(i,{mute:!tr.mute}),tS:()=>this.setTrack(i,{solo:!tr.solo}),
+        open:()=>this.setState({sheet:'track',sheetIdx:i})};});
+    const secBands=this.SEC.map((x,i)=>{const end=i<7?this.SEC[i+1].t:this.DUR;
+      return{name:x.n,left:(x.t/this.DUR*100).toFixed(2)+'%',w:((end-x.t)/this.DUR*100).toFixed(2)+'%',
+        bg:this.hx(x.c,i===s.aSec?0.3:0.1),fg:i===s.aSec?'#F2F4F7':'#9BA3AF',bar:x.c};});
+    const chords=this.CHORDS.map((c,i)=>({name:this.tp(c.name,s.tr),tl:this.fmt(c.t),
+      bg:i===s.aCh?'rgba(182,255,59,0.12)':'#15171C',bd:i===s.aCh?'rgba(182,255,59,0.6)':'rgba(255,255,255,0.07)',fg:i===s.aCh?LIME:'#F2F4F7',
+      go:()=>this.setT(c.t+0.01)}));
+    const lyr=this.LYR.map((l,i)=>{const st=i===s.aLy?'now':(i<s.aLy?'past':'fut');
+      const t0=l[0],t1=i<this.LYR.length-1?this.LYR[i+1][0]:this.DUR,span=Math.max(1,t1-t0);
+      const lch=l[2]?[]:this.CHORDS.filter(c=>c.t>=t0-0.4&&c.t<t1-0.4).slice(0,6)
+        .map(c=>({name:this.tp(c.name,s.tr),left:Math.min(88,Math.max(0,(c.t-t0)/span*100)).toFixed(1)+'%'}));
+      return{text:l[1],ital:l[2]?'italic':'normal',chords:lch,
+        chColor:st==='now'?'#B6FF3B':(st==='past'?'#5B6B4A':'#8FA57A'),
+        color:st==='now'?'#F2F4F7':(st==='past'?'#525B66':'#8A93A0'),weight:st==='now'?600:400,
+        bar:st==='now'?LIME:'transparent',go:()=>this.setT(l[0]+0.01),ref:this.r('ly'+i),mref:this.r('mly'+i)};});
+    const speeds=[0.5,1,2].map(v=>{const o=onB(v===s.speed,LIME);return{label:v+'x',bg:o.bg,fg:o.fg,bd:o.bd,set:()=>this.setState({speed:v})};});
+    const filChips=['Todas','YouTube','Arquivo'].map(f=>{const o=onB(f===s.fil,LIME);return{label:f,bg:o.bg,fg:o.fg,bd:o.bd,set:()=>this.setState({fil:f})};});
+    const q=s.q.toLowerCase();
+    const songs=this.SONGS.filter(x=>(s.fil==='Todas'||x.o===s.fil)&&(!q||(x.t+' '+x.a).toLowerCase().includes(q)))
+      .map(x=>({t:x.t,a:x.a,m:x.m,o:x.o,c:x.c,now:!!x.now,ini:x.t.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(),isYT:x.o==='YouTube',bd:x.now?'rgba(182,255,59,0.45)':'rgba(255,255,255,0.07)'}));
+    const uprog=this.STEMS.map((st,i)=>({n:st.n,c:st.c,pct:Math.round(s.upP[i]),done:s.upP[i]>=100}));
+    const firstUp=uprog.find(u=>!u.done);
+    const lo=onB(s.loopOn,LIME),me=onB(s.metroOn,LIME),le=onB(panel==='letra',LIME),ac=onB(panel==='acordes',LIME),se=onB(secOn,LIME);
+    const pct=(this.t/this.DUR*100).toFixed(2)+'%';
+    return{
+      playing:s.playing,notPlaying:!s.playing,togglePlay:this.togglePlay,back10:this.back10,fwd10:this.fwd10,
+      tCur:this.fmt(this.t),tTot:this.fmt(this.DUR),pctNow:pct,
+      tom:this.tp('Am',s.tr),trOn:s.tr!==0,trLabel:(s.tr>0?'+':'')+s.tr,
+      trFg:s.tr!==0?'#B6FF3B':'#F2F4F7',trBd:s.tr!==0?'rgba(182,255,59,0.45)':'rgba(255,255,255,0.1)',
+      trUp:this.trUp,trDown:this.trDown,trReset:this.trReset,
+      rows,ticks:this.ticks,mticks:this.mticks,grid:this.grid,
+      metroDown:this.metroDown,metroUp:this.metroUp,metroLaneOp:s.metroOn?0.85:0.2,
+      metKnob:s.metroOn?12:0,metBg:s.metroOn?LIME:'rgba(255,255,255,0.18)',toggleMetro:this.toggleMetro,
+      meBg:me.bg,meFg:me.fg,meBd:me.bd,
+      speeds,master:s.master,
+      sliderDown:this.sliderDown,sliderMove:this.sliderMove,sliderUp:this.sliderUp,
+      seekDown:this.seekDown,seekMove:this.seekMove,seekUp:this.seekUp,
+      loopOn:s.loopOn,toggleLoop:this.toggleLoop,loBg:lo.bg,loFg:lo.fg,loBd:lo.bd,
+      loopLeft:(s.loopA/this.DUR*100).toFixed(2)+'%',loopW:((s.loopB-s.loopA)/this.DUR*100).toFixed(2)+'%',
+      loopLabel:s.loopOn?this.SEC[this.secAt(s.loopA)].n.toUpperCase():'',
+      secOn,secBands,goSecoes:this.goSecoes,seBg:se.bg,seFg:se.fg,seBd:se.bd,
+      panelOpen:panel!=='nenhum',isLetra:panel==='letra',isAcordes:panel==='acordes',
+      panelTitle:panel==='letra'?'Letra':'Acordes',closePanel:this.closePanel,
+      goLetra:this.goLetra,goAcordes:this.goAcordes,leBg:le.bg,leFg:le.fg,leBd:le.bd,acBg:ac.bg,acFg:ac.fg,acBd:ac.bd,
+      chords,lyr,rChBox:this.r('chBox'),rLyBox:this.r('lyBox'),rMChBox:this.r('mChBox'),rMLyBox:this.r('mLyBox'),
+      rPhD:this.r('phD'),rTintD:this.r('tintD'),rSeekD:this.r('seekD'),rTcD:this.r('tcD'),
+      rPhM:this.r('phM'),rTintM:this.r('tintM'),rSeekM:this.r('seekM'),rTcM:this.r('tcM'),
+      rowFlex:compact?'0 0 auto':'1 1 0%',rowMinH:compact?58:76,
+      upIdle:s.up==='idle',upProc:s.up==='proc',upDone:s.up==='done',uprog,
+      upStatus:firstUp?('Separando '+firstUp.n.toLowerCase()+'… '+firstUp.pct+'%'):'Finalizando…',
+      upTotal:(uprog.reduce((a,u)=>a+u.pct,0)/6).toFixed(0),
+      startUp:this.startUp,resetUp:this.resetUp,
+      q:s.q,setQ:this.setQ,filChips,songs,nSongs:songs.length+(songs.length===1?' música':' músicas'),noResults:songs.length===0,
+      shAny:s.sheet!==null,shTrack:s.sheet==='track',shLetra:s.sheet==='letra',shAcordes:s.sheet==='acordes',shSecoes:s.sheet==='secoes',
+      closeSheet:this.closeSheet,openLy:this.openLy,openCh:this.openCh,openSe:this.openSe,
+      strack:rows[s.sheetIdx],
+      secList:this.SEC.map((x,i)=>{const end=i<7?this.SEC[i+1].t:this.DUR;return{name:x.n,c:x.c,range:this.fmt(x.t)+' – '+this.fmt(end),bg:i===s.aSec?'rgba(182,255,59,0.08)':'transparent',bd:i===s.aSec?'rgba(182,255,59,0.4)':'rgba(255,255,255,0.08)',go:()=>this.setT(x.t+0.01)};})
+    };
+  }
+}
+</script>
+</body>
+</html>
