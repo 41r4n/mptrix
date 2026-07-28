@@ -1387,13 +1387,26 @@ export default function StudioView({ source, onClose }) {
             </h3>
             {(phase === 'processing' || phase === 'planning') && percent != null && (
               <>
+                <div className="proc-head">
+                  <span className="proc-cover">
+                    {(source.title || 'MP').split(/\s+/).slice(0, 2).map((w) => (w[0] || '').toUpperCase()).join('')}
+                  </span>
+                  <div className="proc-info">
+                    <div className="proc-title" title={source.title}>{source.title || 'Música'}</div>
+                    <div className="proc-meta">
+                      {phase === 'planning' ? 'CATALOGANDO' : 'SEPARANDO'}
+                      {passInfo ? ` · IA ${passInfo.current}/${passInfo.total}` : ''}
+                    </div>
+                  </div>
+                  <span className="proc-pct">{Math.round(mainMeter.display)}%</span>
+                </div>
                 <div className="progress-bar alive">
                   <div className="progress-fill" style={{ width: `${mainMeter.display}%` }} />
                 </div>
                 <div className="studio-meter-line">
-                  <strong>{Math.round(mainMeter.display)}%</strong>
-                  {passInfo && <span className="muted"> · IA {passInfo.current} de {passInfo.total}</span>}
-                  {fmtEta(mainMeter.eta) && <span className="muted"> · {fmtEta(mainMeter.eta)}</span>}
+                  {fmtEta(mainMeter.eta)
+                    ? <span className="muted">{fmtEta(mainMeter.eta)}</span>
+                    : <span className="muted">medindo a velocidade…</span>}
                 </div>
                 {stage === 'separating' && (
                   <div className="muted studio-live-hint">{SEP_HINTS[hintIdx % SEP_HINTS.length]}</div>
@@ -2049,25 +2062,8 @@ export default function StudioView({ source, onClose }) {
           </div>
 
           <div className="studio-transport">
-            <div className="studio-seek-row">
-              {/* timer vivo: textContent escrito por frame (ref), lima */}
-              <span className="studio-time studio-time-live" ref={timerElRef}>{fmtTime(pos)}</span>
-              <input
-                type="range"
-                className="studio-seek"
-                min="0"
-                max={playDuration || 1}
-                step="0.1"
-                defaultValue={Math.min(pos, playDuration || 0)}
-                ref={seekElRef}
-                onPointerDown={() => { draggingRef.current = true }}
-                onPointerUp={() => { draggingRef.current = false }}
-                onChange={(e) => seekTo(parseFloat(e.target.value))}
-              />
-              <span className="studio-time">{fmtTime(playDuration)}</span>
-            </div>
-
-            <div className="studio-controls-row">
+            {/* Barra única do protótipo: controles · timer lima · seek · duração · velocidade */}
+            <div className="studio-controls-row tr-bar">
               <button
                 className="tr-btn"
                 onClick={() => seekTo(Math.max(0, (playerRef.current?.position() || 0) - 10))}
@@ -2100,18 +2096,33 @@ export default function StudioView({ source, onClose }) {
                 <span className="loop-label">LOOP<br />{waveSel ? 'TRECHO' : 'MÚSICA'}</span>
               )}
 
-              <div className="studio-param">
-                <span className="studio-param-label">Velocidade</span>
-                <select
-                  className="filter-select"
-                  value={tempo}
-                  onChange={(e) => changeTempo(parseInt(e.target.value, 10))}
-                >
-                  {SPEED_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}%</option>
-                  ))}
-                </select>
-              </div>
+              {/* timer vivo: textContent escrito por frame (ref), lima */}
+              <span className="studio-time studio-time-live" ref={timerElRef}>{fmtTime(pos)}</span>
+              <input
+                type="range"
+                className="studio-seek"
+                min="0"
+                max={playDuration || 1}
+                step="0.1"
+                defaultValue={Math.min(pos, playDuration || 0)}
+                ref={seekElRef}
+                onPointerDown={() => { draggingRef.current = true }}
+                onPointerUp={() => { draggingRef.current = false }}
+                onChange={(e) => seekTo(parseFloat(e.target.value))}
+              />
+              <span className="studio-time studio-time-total">{fmtTime(playDuration)}</span>
+
+              <span className="topbar-divider" />
+              <select
+                className="filter-select tr-speed"
+                value={tempo}
+                onChange={(e) => changeTempo(parseInt(e.target.value, 10))}
+                title="Velocidade de reprodução"
+              >
+                {SPEED_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}%</option>
+                ))}
+              </select>
 
               {altered && (
                 <button className="link-btn" onClick={resetPitchTempo}>voltar ao original</button>
@@ -2119,11 +2130,11 @@ export default function StudioView({ source, onClose }) {
 
               {pitch !== 0 && hq?.state === 'rendering' && (
                 <span className="muted studio-rendering" title="O tom já mudou — em segundo plano estou preparando a versão com qualidade de estúdio">
-                  ✨ melhorando qualidade… {hq.pct || 0}%
+                  ✨ {hq.pct || 0}%
                 </span>
               )}
               {pitch !== 0 && hq?.state === 'done' && (
-                <span className="studio-hq-done" title="Esta mudança de tom está na qualidade máxima">✨ qualidade máxima</span>
+                <span className="studio-hq-done" title="Esta mudança de tom está na qualidade máxima">✨</span>
               )}
             </div>
 
