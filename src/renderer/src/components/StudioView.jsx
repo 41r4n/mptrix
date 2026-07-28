@@ -225,12 +225,19 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
       const ctx = canvas.getContext('2d')
       ctx.scale(dpr, dpr)
       ctx.clearRect(0, 0, w, h)
-      const n = peaks.length
-      const bw = w / n
+      // Traços verticais finos com respiro, como no protótipo (~1 barra a cada
+      // 4.5px, largura 1.8, centrados na linha do meio)
+      const bars = Math.max(60, Math.floor(w / 4.5))
+      const per = peaks.length / bars
       ctx.fillStyle = color || 'rgba(182, 255, 59, 0.9)'
-      for (let i = 0; i < n; i++) {
-        const ph = Math.max(1.5, peaks[i] * (h - 4))
-        ctx.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 0.6), ph)
+      for (let b = 0; b < bars; b++) {
+        let max = 0
+        const s0 = Math.floor(b * per)
+        const s1 = Math.min(peaks.length, Math.max(s0 + 1, Math.floor((b + 1) * per)))
+        for (let s = s0; s < s1; s++) if (peaks[s] > max) max = peaks[s]
+        const ph = Math.max(2, max * (h - 8))
+        const x = (b + 0.5) * (w / bars)
+        ctx.fillRect(x - 0.9, (h - ph) / 2, 1.8, ph)
       }
     }
     draw()
@@ -1786,6 +1793,15 @@ export default function StudioView({ source, onClose }) {
               })}
               {/* Overlay único: clique pula, arrastar marca trecho (Lupa/loop) */}
               <div className="daw-overlay" onPointerDown={overlayDown}>
+                {playDuration > 0 && (() => {
+                  const lines = []
+                  for (let s = 30; s < playDuration; s += 30) {
+                    lines.push(
+                      <div key={s} className="daw-grid" style={{ left: `${(s / playDuration) * 100}%` }} />
+                    )
+                  }
+                  return lines
+                })()}
                 <div className="daw-tint" ref={(el) => { rulerNodesRef.current.tint = el }} />
                 {waveSel && playDuration > 0 && (
                   <div

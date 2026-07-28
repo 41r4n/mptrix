@@ -4588,3 +4588,36 @@ section h2 {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.24);
 }
+
+/* ---------- Pistas altas preenchendo a tela (como no prototipo) ---------- */
+.daw {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 235px);
+  min-height: 380px;
+}
+
+.daw-head-row {
+  flex: none;
+}
+
+.daw-row {
+  flex: 1 1 0%;
+  min-height: 64px;
+  height: auto;
+}
+
+.daw-grid {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+/* com poucas pistas as canaletas ficam bem altas: mantem o rail centrado */
+.daw-rail {
+  justify-content: center;
+  gap: 10px;
+}
