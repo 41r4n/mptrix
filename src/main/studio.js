@@ -58,6 +58,13 @@ function analyzeScriptPath() {
   return join(__dirname, '../../resources/engine/analyze.cjs')
 }
 
+function chordsScriptPath() {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'engine', 'chords.cjs')
+  }
+  return join(__dirname, '../../resources/engine/chords.cjs')
+}
+
 export function stemsRoot() {
   return STEMS_DIR
 }
@@ -298,6 +305,56 @@ function runAnalyzer(wavFile, ffmpegPath, state) {
       }
     })
   })
+}
+
+// ACORDES: detecta lendo os stems separados — o baixo isolado dá a raiz,
+// a harmonia limpa (sem bateria/voz) dá o tipo. Resultado cacheado no meta.
+const NON_HARMONIC = new Set([
+  'vocals', 'drums', 'bass', 'percussion', 'timpani', 'tambourine',
+  'congas', 'triangle', 'bells', 'wind-chimes', 'glockenspiel'
+])
+export async function detectChords({ key, ffmpegPath, force = false }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  if (meta.chords && !force) return meta.chords
+
+  const harm = stemsOf(meta)
+    .filter((s) => !NON_HARMONIC.has(s))
+    .filter((s) => meta.stemInfo?.[s]?.present !== false)
+    .map((s) => join(dir, 'base', `${s}.flac`))
+    .filter((p) => existsSync(p))
+  if (!harm.length) throw new Error('Sem faixas harmônicas nessa sessão.')
+  const bassP = join(dir, 'base', 'bass.flac')
+
+  const state = {}
+  const out = await new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      [chordsScriptPath(), ffmpegPath, existsSync(bassP) ? bassP : '-', ...harm],
+      { windowsHide: true, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
+    )
+    state.child = child
+    let o = ''
+    let e = ''
+    child.stdout.on('data', (d) => { o += d })
+    child.stderr.on('data', (d) => { e += d })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code !== 0) return reject(new Error(e.slice(0, 300) || `detector de acordes saiu com código ${code}`))
+      try {
+        const lines = o.trim().split('\n')
+        resolve(JSON.parse(lines[lines.length - 1]))
+      } catch (err) {
+        reject(err)
+      }
+    })
+  })
+
+  const m2 = readMeta(dir)
+  m2.chords = { at: new Date().toISOString(), list: out.chords || [] }
+  writeMeta(dir, m2)
+  return m2.chords
 }
 
 // Retorna a sessão pronta do cache (ou null) — resposta síncrona, sem corrida de eventos

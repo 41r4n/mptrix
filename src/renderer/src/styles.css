@@ -4621,3 +4621,127 @@ section h2 {
   justify-content: center;
   gap: 10px;
 }
+
+/* ---------- Painel de Acordes (Fase 1 da cifra) ---------- */
+.daw-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.daw-wrap .daw {
+  flex: 1;
+  min-width: 0;
+}
+
+.chords-panel {
+  width: 290px;
+  flex: none;
+  height: calc(100vh - 235px);
+  min-height: 380px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chords-head {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chords-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chords-sync {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+  flex: 1;
+}
+
+.chords-empty {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 12.5px;
+}
+
+.chords-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 14px;
+  align-content: start;
+}
+
+.chord-card {
+  height: 62px;
+  border-radius: 9px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.chord-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.chord-card.on {
+  background: rgba(182, 255, 59, 0.12);
+  border-color: rgba(182, 255, 59, 0.6);
+}
+
+.chord-card.on .chord-name {
+  color: var(--accent);
+}
+
+.chord-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chord-ts {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted-2);
+}
+
+.panel-toggle.on {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+@media (max-width: 980px) {
+  .daw-wrap {
+    flex-direction: column;
+  }
+
+  .chords-panel {
+    width: 100%;
+    height: 300px;
+    min-height: 0;
+  }
+}

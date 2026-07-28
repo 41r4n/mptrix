@@ -69,6 +69,16 @@ const STEM_COLOR_FIXED = {
 const stemColor = (stem, orderIdx) =>
   STEM_COLOR_FIXED[stem] || STEM_SCALE[orderIdx % STEM_SCALE.length]
 
+// Transposição de acordes: acompanha o chip TOM (Am − 2 semitons = Gm)
+const CHORD_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const transposeChord = (label, semi) => {
+  const m = /^([A-G]#?)(.*)$/.exec(label || '')
+  if (!m) return label
+  const i = CHORD_NOTES.indexOf(m[1])
+  if (i < 0) return label
+  return CHORD_NOTES[(((i + semi) % 12) + 12) % 12] + m[2]
+}
+
 // Ícones do transporte (SVGs do design, viewBox 24)
 const IconBack10 = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -515,6 +525,9 @@ export default function StudioView({ source, onClose }) {
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
   useEffect(() => { loopRef.current = { on: loopOn, sel: waveSel } }, [loopOn, waveSel])
+  const [chords, setChords] = useState(null) // null | 'loading' | {list} | {error}
+  const [showChords, setShowChords] = useState(false)
+  const chordsGridRef = useRef(null)
   // Nós do DOM escritos por frame (playhead/tint por pista, ruler, timer, seek)
   const laneNodesRef = useRef({})
   const rulerNodesRef = useRef({})
@@ -753,7 +766,30 @@ export default function StudioView({ source, onClose }) {
     setPeaksMap({})
     setWaveSel(null)
     setLupa(null)
+    setChords(null)
+    setShowChords(false)
   }, [session?.key])
+
+  // Painel de acordes: abre/fecha; na primeira abertura detecta (com cache)
+  const toggleChords = async () => {
+    const next = !showChords
+    setShowChords(next)
+    if (next && !chords && session) {
+      setChords('loading')
+      const r = await window.mptrix.studio.chords({ key: session.key })
+      setChords(r?.error ? { error: r.error } : r)
+    }
+  }
+
+  // Auto-scroll do painel pro acorde ativo (sempre scrollTo, nunca scrollIntoView)
+  const activeChordIdx = chords?.list ? chords.list.findIndex((c) => pos >= c.t && pos < c.end) : -1
+  useEffect(() => {
+    if (activeChordIdx < 0 || !chordsGridRef.current) return
+    chordsGridRef.current.scrollTo({
+      top: Math.max(0, Math.floor(activeChordIdx / 3) * 70 - 140),
+      behavior: 'smooth'
+    })
+  }, [activeChordIdx])
 
   // Formas de onda: busca os picos de cada faixa. Roda de novo a cada recarga
   // da sessão (o "Outros" muda a cada desconto) — o cache do motor faz ser leve
@@ -1709,6 +1745,7 @@ export default function StudioView({ source, onClose }) {
           <div className="studio-tracks">
             {/* Mesa de DAW: rail de controles 264px + canaletas contínuas,
                 com UM overlay de playhead/tint cruzando todas as pistas */}
+            <div className="daw-wrap">
             <div className="daw">
               <div className="daw-row daw-head-row">
                 <div className="daw-rail daw-rail-head">
@@ -1819,6 +1856,43 @@ export default function StudioView({ source, onClose }) {
                   <div className="daw-ph-line" />
                 </div>
               </div>
+            </div>
+            {showChords && (
+              <div className="chords-panel">
+                <div className="chords-head">
+                  <span className="chords-title">Acordes</span>
+                  <span className="chords-sync">
+                    {analysisKey ? (shiftedKey && pitch !== 0 ? shiftedKey : analysisKey) : ''}
+                    {bpm ? ` · ${Math.round(bpm)} BPM` : ''}
+                  </span>
+                  <button className="btn-close" onClick={() => setShowChords(false)} aria-label="Fechar">×</button>
+                </div>
+                {chords === 'loading' && (
+                  <div className="chords-empty">
+                    <div className="studio-spinner small" />
+                    <span className="muted">Lendo a harmonia das faixas… (~1 min, só na primeira vez)</span>
+                  </div>
+                )}
+                {chords?.error && <div className="chords-empty muted">⚠ {chords.error}</div>}
+                {chords?.list && (chords.list.length === 0 ? (
+                  <div className="chords-empty muted">Não consegui firmar acordes nessa música.</div>
+                ) : (
+                  <div className="chords-grid" ref={chordsGridRef}>
+                    {chords.list.map((c, i) => (
+                      <button
+                        key={i}
+                        className={`chord-card ${i === activeChordIdx ? 'on' : ''}`}
+                        onClick={() => seekTo(c.t + 0.01)}
+                        title={`força ${Math.round((c.strength || 0) * 100)}%`}
+                      >
+                        <span className="chord-name">{transposeChord(c.label, pitch)}</span>
+                        <span className="chord-ts">{fmtTime(c.t)}</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
             {waveSel && (
               <div className="lupa-bar">
@@ -2129,6 +2203,13 @@ export default function StudioView({ source, onClose }) {
               <span className="studio-time studio-time-total">{fmtTime(playDuration)}</span>
 
               <span className="topbar-divider" />
+              <button
+                className={`btn-secondary btn-small panel-toggle ${showChords ? 'on' : ''}`}
+                onClick={toggleChords}
+                title="Acordes da música, detectados das faixas separadas"
+              >
+                🎼 Acordes
+              </button>
               <select
                 className="filter-select tr-speed"
                 value={tempo}

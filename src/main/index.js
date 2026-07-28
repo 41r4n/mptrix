@@ -26,7 +26,8 @@ import {
   specialistCatalog,
   redoStem,
   stemPeaks,
-  investigateStretch
+  investigateStretch,
+  detectChords
 } from './studio.js'
 import {
   getYtDlpVersion,
@@ -975,6 +976,15 @@ app.whenReady().then(() => {
 
   // Arsenal completo dos especialistas — pra busca manual na tela
   ipcMain.handle('studio:catalog', () => specialistCatalog())
+
+  // Acordes: detecta (ou devolve do cache) os acordes da sessão
+  ipcMain.handle('studio:chords', async (_e, { key, force }) => {
+    try {
+      return await detectChords({ key, ffmpegPath: FFMPEG_PATH, force: !!force })
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
 
   // Lupinha: zoom da interface (dir: 1 aproxima, -1 afasta, 0 reseta)
   ipcMain.handle('ui:zoom', (_e, dir) => zoomStep(dir))

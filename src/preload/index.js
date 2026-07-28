@@ -96,6 +96,7 @@ const api = {
     redoStem: (opts) => ipcRenderer.invoke('studio:redoStem', opts),
     peaks: (opts) => ipcRenderer.invoke('studio:peaks', opts),
     investigate: (opts) => ipcRenderer.invoke('studio:investigate', opts),
+    chords: (opts) => ipcRenderer.invoke('studio:chords', opts),
     extract: (opts) => ipcRenderer.invoke('studio:extract', opts),
     cached: (opts) => ipcRenderer.invoke('studio:cached', opts),
     plan: (opts) => ipcRenderer.invoke('studio:plan', opts),
