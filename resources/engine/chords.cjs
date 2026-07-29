@@ -3,8 +3,9 @@
 // (sem bateria/voz) entrega o tipo (maior/menor). Vocabulário humilde de
 // propósito: melhor um Am certo que um Am7(9/11) chutado.
 // Roda como processo Node separado (ELECTRON_RUN_AS_NODE).
-// Uso: chords.cjs <ffmpeg> <bassFile|-> <harm1> [harm2 ...]
-// Saída: uma linha JSON: { chords: [{t, end, label, strength}], hops }
+// Uso: chords.cjs <ffmpeg> <bassFile|-> <beatRef|-> <harm1> [harm2 ...]
+//   beatRef = faixa pra extrair a grade de batidas (bateria isolada, ideal)
+// Saída: uma linha JSON: { chords: [{t, end, label, strength}], beats }
 'use strict'
 
 const { spawnSync } = require('child_process')
@@ -14,10 +15,11 @@ const path = require('path')
 
 const ffmpegPath = process.argv[2]
 const bassFile = process.argv[3]
-const harmFiles = process.argv.slice(4)
+const beatFile = process.argv[4]
+const harmFiles = process.argv.slice(5)
 
 if (!ffmpegPath || !harmFiles.length) {
-  console.error('uso: chords.cjs <ffmpeg> <bass|-> <harm1> [harm2...]')
+  console.error('uso: chords.cjs <ffmpeg> <bass|-> <beatref|-> <harm1> [harm2...]')
   process.exit(1)
 }
 
@@ -56,6 +58,7 @@ if (!harm || harm.length < SR * 5) {
   process.exit(0)
 }
 const bass = bassFile && bassFile !== '-' ? decodeMono(bassFile, 'b') : null
+const beatRef = beatFile && beatFile !== '-' ? decodeMono(beatFile, 'beat') : null
 
 const EssentiaWASM = require('./essentia-wasm.umd.js')
 const Essentia = require('./essentia.js-core.umd.js')
@@ -95,39 +98,35 @@ function cosine(h, t) {
   return dot / (Math.sqrt(nh * nt) + 1e-9)
 }
 
-const nHops = Math.floor((harm.length - FRAME) / HOP)
-const labels = []
-const scores = []
+// ---------- Passo 1: chroma + baixo em quadros finos (0.125s) ----------
+const FINE_HOP = Math.round(SR * 0.125)
+const nFrames = Math.floor((harm.length - FRAME) / FINE_HOP)
+const frames = [] // {t, chroma, rms}
+const bassPcs = [] // {t, pc} quando o baixo canta com confiança
 
-for (let hIdx = 0; hIdx < nHops; hIdx++) {
-  const start = hIdx * HOP
+for (let fIdx = 0; fIdx < nFrames; fIdx++) {
+  const start = fIdx * FINE_HOP
+  const t = start / SR
   const frame = harm.subarray(start, start + FRAME)
-
-  // silêncio harmônico = sem acorde
   let rms = 0
   for (let s = 0; s < frame.length; s += 4) rms += frame[s] * frame[s]
   rms = Math.sqrt(rms / (frame.length / 4))
   if (rms < 0.004) {
-    labels.push(null)
-    scores.push(0)
-    continue
+    frames.push({ t, chroma: null, rms })
+  } else {
+    const vec = essentia.arrayToVector(frame)
+    const win = essentia.Windowing(vec, true, FRAME, 'blackmanharris62')
+    const spec = essentia.Spectrum(win.frame, FRAME)
+    const peaks = essentia.SpectralPeaks(spec.spectrum, 0, 4500, 60, 40, 'magnitude', SR)
+    const hp = essentia.HPCP(peaks.frequencies, peaks.magnitudes)
+    const hpcp = essentia.vectorToArray(hp.hpcp)
+    vec.delete(); win.frame.delete(); spec.spectrum.delete()
+    peaks.frequencies.delete(); peaks.magnitudes.delete(); hp.hpcp.delete()
+    // HPCP começa em Lá (A) — rotaciona pra C=0
+    const chroma = new Array(12)
+    for (let i = 0; i < 12; i++) chroma[(i + 9) % 12] = hpcp[i]
+    frames.push({ t, chroma, rms })
   }
-
-  const vec = essentia.arrayToVector(frame)
-  const win = essentia.Windowing(vec, true, FRAME, 'blackmanharris62')
-  const spec = essentia.Spectrum(win.frame, FRAME)
-  const peaks = essentia.SpectralPeaks(spec.spectrum, 0, 4500, 60, 40, 'magnitude', SR)
-  const hp = essentia.HPCP(peaks.frequencies, peaks.magnitudes)
-  const hpcp = essentia.vectorToArray(hp.hpcp)
-  vec.delete(); win.frame.delete(); spec.spectrum.delete()
-  peaks.frequencies.delete(); peaks.magnitudes.delete(); hp.hpcp.delete()
-
-  // HPCP vem com 12 bins começando em Lá (A) — rotaciona pra C=0
-  const chroma = new Array(12)
-  for (let i = 0; i < 12; i++) chroma[(i + 9) % 12] = hpcp[i]
-
-  // raiz pelo baixo isolado (quando existe e o baixo está tocando)
-  let bassPc = null
   if (bass && start + BASS_FRAME < bass.length) {
     const bframe = bass.subarray(start, start + BASS_FRAME)
     let brms = 0
@@ -138,72 +137,123 @@ for (let hIdx = 0; hIdx < nHops; hIdx++) {
       try {
         const py = essentia.PitchYin(bvec, BASS_FRAME, true, 400, 30, SR, 0.15)
         if (py.pitchConfidence > 0.75 && py.pitch > 0) {
-          bassPc = ((Math.round(12 * Math.log2(py.pitch / 440)) + 69) % 12 + 12) % 12
+          bassPcs.push({ t, pc: ((Math.round(12 * Math.log2(py.pitch / 440)) + 69) % 12 + 12) % 12 })
         }
       } catch {}
       bvec.delete()
     }
   }
+}
 
-  let best = null
-  let bestScore = -1
-  for (const tpl of TEMPLATES) {
+// ---------- Passo 2: a grade de BATIDAS (janelas musicais, não de relógio) ----------
+// O ritmo vem da bateria isolada quando existe (batida limpa); senão da harmonia
+let ticks = []
+try {
+  const beatSig = beatRef || harm
+  const bvec = essentia.arrayToVector(beatSig)
+  const rr = essentia.RhythmExtractor2013(bvec, 208, 'multifeature', 40)
+  ticks = essentia.vectorToArray(rr.ticks)
+  bvec.delete()
+} catch {}
+if (!ticks || ticks.length < 8) {
+  // sem grade confiável: batidas artificiais de 0.5s
+  ticks = []
+  for (let t = 0; t < harm.length / SR; t += 0.5) ticks.push(t)
+}
+
+// ---------- Passo 3: nota de CADA acorde em CADA batida ----------
+const nBeats = ticks.length - 1
+const beatMeta = [] // {t, end, silent}
+const scoreMat = [] // [batida][template] = pontuação
+for (let b = 0; b < nBeats; b++) {
+  const t0 = ticks[b]
+  const t1 = ticks[b + 1]
+  const inBeat = frames.filter((f) => f.t >= t0 && f.t < t1 && f.chroma)
+  if (!inBeat.length) {
+    beatMeta.push({ t: t0, end: t1, silent: true })
+    scoreMat.push(null)
+    continue
+  }
+  const chroma = new Array(12).fill(0)
+  for (const f of inBeat) for (let i = 0; i < 12; i++) chroma[i] += f.chroma[i]
+  const bvotes = {}
+  for (const bp of bassPcs) if (bp.t >= t0 && bp.t < t1) bvotes[bp.pc] = (bvotes[bp.pc] || 0) + 1
+  let bassPc = null
+  let bn = 0
+  for (const [pc, n] of Object.entries(bvotes)) if (n > bn) { bassPc = Number(pc); bn = n }
+
+  const row = new Array(TEMPLATES.length)
+  for (let k = 0; k < TEMPLATES.length; k++) {
+    const tpl = TEMPLATES[k]
     let sc = cosine(chroma, tpl.t) + tpl.bonus
     if (bassPc != null) {
-      if (tpl.root === bassPc) sc += 0.08 // baixo tocando a raiz
-      else if ((tpl.root + 7) % 12 === bassPc) sc += 0.03 // ou a quinta
+      if (tpl.root === bassPc) sc += 0.1
+      else if ((tpl.root + 7) % 12 === bassPc) sc += 0.03
     }
-    if (sc > bestScore) {
-      bestScore = sc
-      best = tpl
-    }
+    row[k] = sc
   }
-  if (bestScore < 0.55) {
-    labels.push(null)
-    scores.push(0)
+  beatMeta.push({ t: t0, end: t1, silent: false })
+  scoreMat.push(row)
+}
+
+// ---------- Passo 3b: INÉRCIA MUSICAL (Viterbi) ----------
+// Trocar de acorde custa caro (0.22): a troca só acontece quando a evidência
+// sustenta — é o que separa harmonia real de tremeliques de uma batida
+const SWITCH = 0.22
+const K = TEMPLATES.length
+let prev = new Array(K).fill(0)
+const back = []
+for (let b = 0; b < nBeats; b++) {
+  const row = scoreMat[b]
+  const bk = new Array(K)
+  const cur = new Array(K)
+  if (!row) {
+    for (let k = 0; k < K; k++) { cur[k] = prev[k]; bk[k] = k } // silêncio: carrega o estado
   } else {
-    labels.push(best.label)
-    scores.push(bestScore)
+    let bestPrev = -Infinity
+    let bestIdx = 0
+    for (let k = 0; k < K; k++) if (prev[k] > bestPrev) { bestPrev = prev[k]; bestIdx = k }
+    for (let k = 0; k < K; k++) {
+      const stay = prev[k]
+      const jump = bestPrev - SWITCH
+      if (stay >= jump) { cur[k] = stay + row[k]; bk[k] = k }
+      else { cur[k] = jump + row[k]; bk[k] = bestIdx }
+    }
   }
+  back.push(bk)
+  prev = cur
+}
+// reconstrói o caminho vencedor
+let cursor = 0
+for (let k = 1; k < K; k++) if (prev[k] > prev[cursor]) cursor = k
+const bestPath = new Array(nBeats)
+for (let b = nBeats - 1; b >= 0; b--) {
+  bestPath[b] = cursor
+  cursor = back[b][cursor]
 }
 
-// Suavização: voto da maioria em janela de 5 hops (1.25s)
-const smooth = []
-for (let i = 0; i < labels.length; i++) {
-  const votes = {}
-  for (let k = Math.max(0, i - 2); k <= Math.min(labels.length - 1, i + 2); k++) {
-    const l = labels[k]
-    if (l) votes[l] = (votes[l] || 0) + 1
-  }
-  let top = null
-  let topN = 0
-  for (const [l, n] of Object.entries(votes)) if (n > topN) { top = l; topN = n }
-  smooth.push(topN >= 3 ? top : null)
-}
-
-// Junta hops iguais em trechos; trecho curto demais (<0.75s) é absorvido
+// ---------- Passo 4: batidas viram trechos (silêncio quebra o trecho) ----------
 const spans = []
-for (let i = 0; i < smooth.length; i++) {
-  const t = (i * HOP) / SR
-  const l = smooth[i]
-  if (spans.length && spans[spans.length - 1].label === l) {
-    spans[spans.length - 1].end = t + HOP / SR
-    spans[spans.length - 1].n++
-    spans[spans.length - 1].s += scores[i]
+for (let b = 0; b < nBeats; b++) {
+  const bm = beatMeta[b]
+  const row = scoreMat[b]
+  const label = bm.silent ? null : (row[bestPath[b]] >= 0.55 ? TEMPLATES[bestPath[b]].label : null)
+  const score = bm.silent || !row ? 0 : Math.max(0, row[bestPath[b]])
+  const last = spans[spans.length - 1]
+  if (last && last.label === label) {
+    last.end = bm.end
+    last.n++
+    last.s += score
   } else {
-    spans.push({ t, end: t + HOP / SR, label: l, n: 1, s: scores[i] })
+    spans.push({ t: bm.t, end: bm.end, label, n: 1, s: score })
   }
 }
 const chords = []
 for (const sp of spans) {
   if (!sp.label) continue
   const strength = sp.s / sp.n
-  // trecho curto E fraco = fantasma (tipo um Fm de 0.5s no meio de Fá maior)
-  if (sp.end - sp.t < 1.0 && strength < 0.78) continue
-  if (sp.end - sp.t < 0.75 && chords.length && chords[chords.length - 1].end >= sp.t - 0.3) {
-    chords[chords.length - 1].end = sp.end
-    continue
-  }
+  // acorde de UMA batida só precisa ser convincente — senão é fantasma
+  if (sp.n === 1 && strength < 0.72) continue
   chords.push({
     t: Math.round(sp.t * 10) / 10,
     end: Math.round(sp.end * 10) / 10,
@@ -225,7 +275,7 @@ const famOf = (l) => {
 const merged = []
 for (const c of chords) {
   const last = merged[merged.length - 1]
-  if (last && famOf(last.label) === famOf(c.label) && c.t - last.end < 4) {
+  if (last && famOf(last.label) === famOf(c.label) && c.t - last.end < 2.5) {
     if (c.end - c.t > last.end - last.t) last.label = c.label
     last.end = c.end
     last.strength = Math.max(last.strength, c.strength)
@@ -234,4 +284,4 @@ for (const c of chords) {
   }
 }
 
-console.log(JSON.stringify({ chords: merged, hops: nHops }))
+console.log(JSON.stringify({ chords: merged, beats: ticks.length }))

@@ -326,12 +326,14 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
     .filter((p) => existsSync(p))
   if (!harm.length) throw new Error('Sem faixas harmônicas nessa sessão.')
   const bassP = join(dir, 'base', 'bass.flac')
+  // grade de batidas: a bateria isolada é a referência perfeita
+  const drumsP = join(dir, 'base', 'drums.flac')
 
   const state = {}
   const out = await new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [chordsScriptPath(), ffmpegPath, existsSync(bassP) ? bassP : '-', ...harm],
+      [chordsScriptPath(), ffmpegPath, existsSync(bassP) ? bassP : '-', existsSync(drumsP) ? drumsP : '-', ...harm],
       { windowsHide: true, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
     )
     state.child = child
