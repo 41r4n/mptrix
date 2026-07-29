@@ -540,6 +540,13 @@ export default function StudioView({ source, onClose }) {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const lyricsListRef = useRef(null)
+  // acorde/verso da vez (escritos pelo relógio de frame)
+  const [activeChordIdx, setActiveChordIdx] = useState(-1)
+  const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
+  const chordsListRef = useRef(null)
+  const lyrSegsRef = useRef(null)
+  const lastChordIdxRef = useRef(-1)
+  const lastLyrIdxRef = useRef(-1)
   // Nós do DOM escritos por frame (playhead/tint por pista, ruler, timer, seek)
   const laneNodesRef = useRef({})
   const rulerNodesRef = useRef({})
@@ -878,15 +885,7 @@ export default function StudioView({ source, onClose }) {
     if (el) lyricsListRef.current.scrollTo({ top: Math.max(0, el.offsetTop - 150), behavior: 'smooth' })
   }, [activeLyrIdx])
 
-  // Acorde/verso ativos são decididos NO RELÓGIO DE FRAME (precisão real),
-  // com antecipação de 0.3s (o músico sente a troca no ataque) e segurando
-  // o atual até o próximo começar — sem buracos nem atraso de batida
-  const [activeChordIdx, setActiveChordIdx] = useState(-1)
-  const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
-  const chordsListRef = useRef(null)
-  const lyrSegsRef = useRef(null)
-  const lastChordIdxRef = useRef(-1)
-  const lastLyrIdxRef = useRef(-1)
+  // Listas espelhadas em refs pro relógio de frame ler sem re-render
   useEffect(() => { chordsListRef.current = chords?.list || null }, [chords])
   useEffect(() => { lyrSegsRef.current = lyrics?.segments || null }, [lyrics])
 
