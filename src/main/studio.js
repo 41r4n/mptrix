@@ -1345,9 +1345,12 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         // Mede o que o especialista realmente encontrou — faixa quase-muda
         // (instrumento que não existia de verdade) se esconde sozinha
         let meanVol = -99
+        let maxVol = -99
         await run(ffmpegPath, ['-i', join(dir, 'base', `${instId}.flac`), '-af', 'volumedetect', '-f', 'null', '-'], state, (line) => {
           const mm = line.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
           if (mm) meanVol = parseFloat(mm[1])
+          const mx = line.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+          if (mx) maxVol = parseFloat(mx[1])
         })
 
         const m = readMeta(dir)
@@ -1355,7 +1358,9 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         stems.push(instId, 'other')
         m.stems = stems
         m.stemInfo = m.stemInfo || {}
-        m.stemInfo[instId] = { present: meanVol > -48, mean: meanVol }
+        // presente = média audível OU pico real (solo curto numa música longa
+        // tem média baixa mas pico alto — o sax da Azul foi escondido injustamente)
+        m.stemInfo[instId] = { present: meanVol > -48 || maxVol > -35, mean: meanVol, max: maxVol }
         m.extracted = [...new Set([...(m.extracted || []), instId])]
         if (m.scout) m.scout.detections = (m.scout.detections || []).filter((d) => d.instrument !== instId)
         writeMeta(dir, m)
