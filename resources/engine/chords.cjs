@@ -73,7 +73,16 @@ const SHAPES = [
   { suf: '7', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
   { suf: '7M', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0, 0.75], bonus: 0 },
   { suf: 'm7', t: [1, 0, 0, 0.8, 0, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
-  { suf: '°', t: [1, 0, 0, 0.85, 0, 0, 0.85, 0, 0, 0.6, 0, 0], bonus: 0 }
+  { suf: '°', t: [1, 0, 0, 0.85, 0, 0, 0.85, 0, 0, 0.6, 0, 0], bonus: 0 },
+  // a leva nova: aumentado, suspensos, meio-diminuto, sextas.
+  // Bônus NEGATIVO de propósito: são gêmeos enarmônicos de acordes comuns
+  // (F6 = Dm7, Fsus2 = Csus4...) — só vencem quando o BAIXO canta a raiz deles
+  { suf: '+', t: [1, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 0, 0, 0], bonus: -0.025 },
+  { suf: 'sus4', t: [1, 0, 0, 0, 0, 0.85, 0, 0.9, 0, 0, 0, 0], bonus: -0.025 },
+  { suf: 'sus2', t: [1, 0, 0.85, 0, 0, 0, 0, 0.9, 0, 0, 0, 0], bonus: -0.025 },
+  { suf: 'm7(b5)', t: [1, 0, 0, 0.8, 0, 0, 0.8, 0, 0, 0, 0.7, 0], bonus: -0.01 },
+  { suf: '6', t: [1, 0, 0, 0, 0.8, 0, 0, 0.85, 0, 0.7, 0, 0], bonus: -0.025 },
+  { suf: 'm6', t: [1, 0, 0, 0.8, 0, 0, 0, 0.85, 0, 0.7, 0, 0], bonus: -0.025 }
 ]
 function rotate(t, k) {
   const out = new Array(12)
@@ -187,7 +196,8 @@ for (let b = 0; b < nBeats; b++) {
     const tpl = TEMPLATES[k]
     let sc = cosine(chroma, tpl.t) + tpl.bonus
     if (bassPc != null) {
-      if (tpl.root === bassPc) sc += 0.1
+      // o baixo isolado é o juiz de empate dos gêmeos enarmônicos
+      if (tpl.root === bassPc) sc += 0.15
       else if ((tpl.root + 7) % 12 === bassPc) sc += 0.03
     }
     row[k] = sc
@@ -266,11 +276,12 @@ for (const sp of spans) {
 // são a mesma família (a sétima entra e sai da chroma); fica o nome do trecho
 // mais longo
 const famOf = (l) => {
-  if (l.endsWith('m7')) return l.slice(0, -1)
-  if (l.endsWith('7M')) return l.slice(0, -2)
-  if (l.endsWith('°')) return l
-  if (l.endsWith('7')) return l.slice(0, -1)
-  return l
+  const m = /^([A-G]#?)(.*)$/.exec(l || '')
+  if (!m) return l
+  const suf = m[2]
+  if (suf === 'm' || suf === 'm7' || suf === 'm6') return m[1] + 'm'
+  if (suf === '' || suf === '7' || suf === '7M' || suf === '6') return m[1]
+  return l // °, +, sus e m7(b5) são famílias próprias
 }
 const merged = []
 for (const c of chords) {
@@ -282,6 +293,35 @@ for (const c of chords) {
   } else {
     merged.push({ ...c })
   }
+}
+
+// ---------- INVERSÕES: o baixo insistindo numa nota do acorde que não é a
+// raiz vira cifra com barra (C/E) — só dá pra fazer porque o baixo é isolado
+const LABEL_TONES = {}
+for (const tpl of TEMPLATES) {
+  LABEL_TONES[tpl.label] = {
+    root: tpl.root,
+    tones: tpl.t.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0)
+  }
+}
+for (const c of merged) {
+  const info = LABEL_TONES[c.label]
+  if (!info) continue
+  const votes = {}
+  let total = 0
+  for (const bp of bassPcs) {
+    if (bp.t >= c.t && bp.t < c.end) {
+      votes[bp.pc] = (votes[bp.pc] || 0) + 1
+      total++
+    }
+  }
+  if (total < 3) continue
+  let top = null
+  let tn = 0
+  for (const [pc, n] of Object.entries(votes)) if (n > tn) { top = Number(pc); tn = n }
+  // baixo firme (60%+) numa nota do acorde que não é a raiz = inversão
+  if (top == null || top === info.root || tn / total < 0.6) continue
+  if (info.tones.includes(top)) c.label = `${c.label}/${NOTES[top]}`
 }
 
 console.log(JSON.stringify({ chords: merged, beats: ticks.length }))

@@ -74,12 +74,15 @@ const stemColor = (stem, orderIdx) =>
 const CHORD_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const FLAT_SHOW = { 'G#': 'Ab', 'A#': 'Bb', 'D#': 'Eb' }
 const transposeChord = (label, semi) => {
-  const m = /^([A-G]#?)(.*)$/.exec(label || '')
+  const m = /^([A-G]#?)([^/]*)(?:\/([A-G]#?))?$/.exec(label || '')
   if (!m) return label
-  const i = CHORD_NOTES.indexOf(m[1])
-  if (i < 0) return label
-  const root = CHORD_NOTES[(((i + semi) % 12) + 12) % 12]
-  return (FLAT_SHOW[root] || root) + m[2]
+  const shift = (note) => {
+    const i = CHORD_NOTES.indexOf(note)
+    if (i < 0) return note
+    const r = CHORD_NOTES[(((i + semi) % 12) + 12) % 12]
+    return FLAT_SHOW[r] || r
+  }
+  return shift(m[1]) + m[2] + (m[3] ? `/${shift(m[3])}` : '')
 }
 
 // Ícones do transporte (SVGs do design, viewBox 24)
