@@ -311,7 +311,12 @@ function runAnalyzer(wavFile, ffmpegPath, state) {
 // a harmonia limpa (sem bateria/voz) dá o tipo. Resultado cacheado no meta.
 const NON_HARMONIC = new Set([
   'vocals', 'drums', 'bass', 'percussion', 'timpani', 'tambourine',
-  'congas', 'triangle', 'bells', 'wind-chimes', 'glockenspiel'
+  'congas', 'triangle', 'bells', 'wind-chimes', 'glockenspiel',
+  // solistas de MELODIA não opinam sobre harmonia — nota de passagem
+  // vira tempero errado no acorde (a flauta poluía a leitura da Azul)
+  'flute', 'harmonica', 'saxophone', 'violin', 'viola', 'cello',
+  'trumpet', 'trombone', 'french-horn', 'tuba', 'clarinet', 'oboe',
+  'bassoon', 'double-bass', 'dobro'
 ])
 export async function detectChords({ key, ffmpegPath, force = false }) {
   const dir = join(STEMS_DIR, key)
