@@ -199,7 +199,7 @@ for (let b = 0; b < nBeats; b++) {
 // ---------- Passo 3b: INÉRCIA MUSICAL (Viterbi) ----------
 // Trocar de acorde custa caro (0.22): a troca só acontece quando a evidência
 // sustenta — é o que separa harmonia real de tremeliques de uma batida
-const SWITCH = 0.22
+const SWITCH = 0.32
 const K = TEMPLATES.length
 let prev = new Array(K).fill(0)
 const back = []
@@ -252,8 +252,8 @@ const chords = []
 for (const sp of spans) {
   if (!sp.label) continue
   const strength = sp.s / sp.n
-  // acorde de UMA batida só precisa ser convincente — senão é fantasma
-  if (sp.n === 1 && strength < 0.72) continue
+  // acorde de UMA batida só precisa ser MUITO convincente — senão é fantasma
+  if (sp.n === 1 && strength < 0.8) continue
   chords.push({
     t: Math.round(sp.t * 10) / 10,
     end: Math.round(sp.end * 10) / 10,
