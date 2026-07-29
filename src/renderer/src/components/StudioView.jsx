@@ -667,6 +667,33 @@ export default function StudioView({ source, onClose }) {
             if (timerElRef.current.textContent !== txt) timerElRef.current.textContent = txt
           }
           if (seekElRef.current) seekElRef.current.value = String(t)
+          // acorde/verso da vez: decididos por frame, com antecipação de 0.3s
+          // e segurando o atual até o próximo começar
+          const tt = t + 0.3
+          const cl = chordsListRef.current
+          if (cl && cl.length) {
+            let idx = -1
+            for (let i = 0; i < cl.length; i++) {
+              if (cl[i].t <= tt) idx = i
+              else break
+            }
+            if (idx !== lastChordIdxRef.current) {
+              lastChordIdxRef.current = idx
+              setActiveChordIdx(idx)
+            }
+          }
+          const ls = lyrSegsRef.current
+          if (ls && ls.length) {
+            let idx = -1
+            for (let i = 0; i < ls.length; i++) {
+              if (ls[i].t0 <= tt) idx = i
+              else break
+            }
+            if (idx !== lastLyrIdxRef.current) {
+              lastLyrIdxRef.current = idx
+              setActiveLyrIdx(idx)
+            }
+          }
           if (p.playing && ts - lastState > 250) {
             setPos(t)
             lastState = ts
@@ -844,16 +871,26 @@ export default function StudioView({ source, onClose }) {
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
   }
 
-  // Verso ativo + rolagem suave acompanhando a música
-  const activeLyrIdx = lyrics?.segments ? lyrics.segments.findIndex((s) => pos >= s.t0 && pos < s.t1) : -1
+  // Verso ativo: rolagem suave acompanhando a música
   useEffect(() => {
     if (activeLyrIdx < 0 || !lyricsListRef.current) return
     const el = lyricsListRef.current.children[activeLyrIdx]
     if (el) lyricsListRef.current.scrollTo({ top: Math.max(0, el.offsetTop - 150), behavior: 'smooth' })
   }, [activeLyrIdx])
 
+  // Acorde/verso ativos são decididos NO RELÓGIO DE FRAME (precisão real),
+  // com antecipação de 0.3s (o músico sente a troca no ataque) e segurando
+  // o atual até o próximo começar — sem buracos nem atraso de batida
+  const [activeChordIdx, setActiveChordIdx] = useState(-1)
+  const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
+  const chordsListRef = useRef(null)
+  const lyrSegsRef = useRef(null)
+  const lastChordIdxRef = useRef(-1)
+  const lastLyrIdxRef = useRef(-1)
+  useEffect(() => { chordsListRef.current = chords?.list || null }, [chords])
+  useEffect(() => { lyrSegsRef.current = lyrics?.segments || null }, [lyrics])
+
   // Auto-scroll do painel pro acorde ativo (sempre scrollTo, nunca scrollIntoView)
-  const activeChordIdx = chords?.list ? chords.list.findIndex((c) => pos >= c.t && pos < c.end) : -1
   useEffect(() => {
     if (activeChordIdx < 0 || !chordsGridRef.current) return
     chordsGridRef.current.scrollTo({
