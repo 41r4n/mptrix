@@ -4942,3 +4942,17 @@ section h2 {
     height: 320px;
   }
 }
+
+/* lupinha discreta: sobe acima do transporte no estudio e so acorda no hover */
+.zoom-chip {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.zoom-chip:hover {
+  opacity: 1;
+}
+
+body.studio-open .zoom-chip {
+  bottom: 100px;
+}

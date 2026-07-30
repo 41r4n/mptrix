@@ -807,6 +807,12 @@ export default function StudioView({ source, onClose }) {
     return off
   }, [session, extractJob, polishJob, reloadSession])
 
+  // Marca no body que o estúdio está aberto (a lupinha sobe pra não cobrir o transporte)
+  useEffect(() => {
+    document.body.classList.add('studio-open')
+    return () => document.body.classList.remove('studio-open')
+  }, [])
+
   // Trocou de música? Zera as ondas — senão a tela mostra a onda da anterior
   useEffect(() => {
     setPeaksMap({})
