@@ -5095,3 +5095,42 @@ body.studio-open .zoom-chip {
   flex-direction: column;
   gap: 8px;
 }
+
+/* veredito de existencia na ficha */
+.tinfo-exist {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tinfo-exist-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tinfo-exist-pct {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  flex: none;
+}
+
+.tinfo-exist-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+
+.tinfo-exist-votes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 11.5px;
+  color: var(--muted);
+}

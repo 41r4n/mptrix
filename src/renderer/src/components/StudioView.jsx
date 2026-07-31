@@ -2500,6 +2500,42 @@ export default function StudioView({ source, onClose }) {
                     </div>
                     <button className="btn-close" onClick={() => setTrackInfo(null)} aria-label="Fechar">×</button>
                   </div>
+                  {(() => {
+                    // VEREDITO DE EXISTÊNCIA: faro (cheiro no original) + perito (extração)
+                    const isBase = !(session.extracted || []).includes(trackInfo)
+                    const smell = scout?.arsenal?.[trackInfo]?.score ?? scout?.gp?.[trackInfo]?.score ?? null
+                    const smellConf = smell != null ? humanConf(smell) : null
+                    let exist = null
+                    let existPct = null
+                    if (isBase) {
+                      exist = 'existe — é da banda-base'
+                      existPct = 97
+                    } else if (st.info.mean != null) {
+                      const mx = st.info.max ?? -99
+                      if (st.info.mean > -40) { existPct = 92; exist = 'existe com certeza' }
+                      else if (mx > -20) { existPct = 70; exist = 'existe em doses (solos e trechos)' }
+                      else if (mx > -35) { existPct = smellConf != null && smellConf >= 55 ? 45 : 30; exist = 'provável imitação de outro timbre' }
+                      else { existPct = 10; exist = 'não existe de verdade' }
+                    }
+                    if (exist == null) return null
+                    return (
+                      <div className="tinfo-exist">
+                        <div className="tinfo-exist-main">
+                          <span className="tinfo-exist-pct" style={{ color: existPct >= 60 ? col : 'var(--muted)' }}>{existPct}%</span>
+                          <div className="tinfo-exist-text">
+                            <span className="tinfo-cap">O SISTEMA ACHA QUE ESSE INSTRUMENTO…</span>
+                            <strong>{exist}</strong>
+                          </div>
+                        </div>
+                        <div className="tinfo-exist-votes">
+                          {smellConf != null && <span>👃 faro na música original: {smellConf}%</span>}
+                          {!isBase && st.info.mean != null && (
+                            <span>🔬 perito: {st.info.mean > -40 ? 'achou material firme' : (st.info.max ?? -99) > -20 ? 'achou solos/trechos reais' : (st.info.max ?? -99) > -35 ? 'achou só vestígios' : 'não achou quase nada'}</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
                   <div className="tinfo-tiles">
                     <div className="tinfo-tile">
                       <span className="tinfo-big">{vol ?? '—'}</span>
@@ -2511,7 +2547,7 @@ export default function StudioView({ source, onClose }) {
                     </div>
                     <div className="tinfo-tile">
                       <span className="tinfo-big" style={{ color: col }}>{st.coverage != null ? `${st.coverage}%` : '—'}</span>
-                      <span className="tinfo-cap">PRESENÇA</span>
+                      <span className="tinfo-cap">TEMPO EM QUE TOCA</span>
                     </div>
                   </div>
                   {st.coverage != null && (
