@@ -632,6 +632,8 @@ export default function StudioView({ source, onClose }) {
   // acorde/verso da vez (escritos pelo relógio de frame)
   const [activeChordIdx, setActiveChordIdx] = useState(-1)
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
+  const [activeWordIdx, setActiveWordIdx] = useState(-1)
+  const lastWordIdxRef = useRef(-1)
   const chordsListRef = useRef(null)
   const lyrSegsRef = useRef(null)
   const lastChordIdxRef = useRef(-1)
@@ -792,6 +794,20 @@ export default function StudioView({ source, onClose }) {
             if (idx !== lastLyrIdxRef.current) {
               lastLyrIdxRef.current = idx
               setActiveLyrIdx(idx)
+            }
+            // palavra da vez dentro do verso — é o que faz a letra acender
+            // acompanhando o canto, e não pular de estrofe em estrofe
+            const seg = ls[idx]
+            let w = -1
+            if (seg?.words?.length) {
+              for (let k = 0; k < seg.words.length; k++) {
+                if (seg.words[k].t0 <= t + 0.12) w = k
+                else break
+              }
+            }
+            if (w !== lastWordIdxRef.current) {
+              lastWordIdxRef.current = w
+              setActiveWordIdx(w)
             }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
@@ -2313,7 +2329,16 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </div>
                           )}
-                          <div className="lyr-text">{s.text}</div>
+                          <div className="lyr-text">
+                            {st === 'now' && s.words?.length
+                              ? s.words.map((w, k) => (
+                                  <span
+                                    key={k}
+                                    className={`lyr-w ${k < activeWordIdx ? 'sung' : k === activeWordIdx ? 'singing' : ''}`}
+                                  >{w.text} </span>
+                                ))
+                              : s.text}
+                          </div>
                           <button
                             className="lyr-edit"
                             onClick={(e) => { e.stopPropagation(); editVerse(i) }}

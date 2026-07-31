@@ -432,7 +432,8 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       const threads = freeMemMB() > 3072 ? '6' : '4'
       const child = spawn(
         exe,
-        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-of', outBase, '-t', threads, '-pp'],
+        // -ojf: JSON completo, com o tempo de CADA palavra (karaokê)
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-of', outBase, '-t', threads, '-pp'],
         { windowsHide: true }
       )
       let err = ''
@@ -448,11 +449,30 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     })
     const j = JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
     const segments = (j.transcription || [])
-      .map((s) => ({
-        t0: (s.offsets?.from ?? 0) / 1000,
-        t1: (s.offsets?.to ?? 0) / 1000,
-        text: (s.text || '').trim()
-      }))
+      .map((s) => {
+        // junta os pedaços do whisper em palavras inteiras, cada uma com seu
+        // instante — é isso que faz a letra acender palavra por palavra
+        const words = []
+        for (const tk of s.tokens || []) {
+          const raw = tk.text || ''
+          if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
+          const wt0 = (tk.offsets?.from ?? 0) / 1000
+          const wt1 = (tk.offsets?.to ?? 0) / 1000
+          const last = words[words.length - 1]
+          if (last && !raw.startsWith(' ')) {
+            last.text += raw
+            last.t1 = wt1
+          } else {
+            words.push({ t0: wt0, t1: wt1, text: raw.trim() })
+          }
+        }
+        return {
+          t0: (s.offsets?.from ?? 0) / 1000,
+          t1: (s.offsets?.to ?? 0) / 1000,
+          text: (s.text || '').trim(),
+          words: words.filter((w) => w.text)
+        }
+      })
       .filter((s) => s.text && s.t1 > s.t0)
     const m2 = readMeta(dir)
     m2.lyrics = { at: new Date().toISOString(), segments, edited: false }

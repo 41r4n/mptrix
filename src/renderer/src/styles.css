@@ -6539,3 +6539,18 @@ body.studio-open .zoom-chip {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ---------- Karaokê: a letra acende palavra por palavra ---------- */
+.lyr-w {
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+.lyr-w.sung {
+  color: var(--accent);
+  opacity: 0.75;
+}
+
+.lyr-w.singing {
+  color: var(--accent);
+  text-shadow: 0 0 16px rgba(182, 255, 59, 0.7);
+}
