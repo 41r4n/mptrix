@@ -6057,3 +6057,39 @@ body.studio-open .zoom-chip {
   background: rgba(255, 255, 255, 0.07);
   color: var(--text);
 }
+
+/* ---------- Aperto lateral: informação mais próxima, onda maior ---------- */
+.shelf-acts {
+  width: auto;
+  padding-left: 14px;
+}
+
+.shelf-head-acts {
+  width: auto;
+  padding-right: 6px;
+}
+
+.shelf-id {
+  width: 178px;
+  padding-right: 10px;
+}
+
+.shelf-head-name {
+  width: 178px;
+}
+
+.shelf-row .mini-wave {
+  margin: 0 14px;
+}
+
+.pres {
+  width: 54px;
+}
+
+.solo-hex {
+  margin: 0 12px;
+}
+
+.btn-dots {
+  margin-left: 6px;
+}
