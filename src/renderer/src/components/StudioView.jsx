@@ -732,7 +732,9 @@ export default function StudioView({ source, onClose }) {
             }
           }
         }
-        if (!draggingRef.current) {
+        {
+          // Playhead, tint e timer acompanham SEMPRE — inclusive durante o
+          // arrasto da barra (é justamente aí que o usuário quer ver onde está)
           const pct = dur ? `${((t / dur) * 100).toFixed(3)}%` : '0%'
           for (const nodes of Object.values(laneNodesRef.current)) {
             if (nodes.ph) nodes.ph.style.left = pct
@@ -744,7 +746,9 @@ export default function StudioView({ source, onClose }) {
             const txt = fmtTime(t)
             if (timerElRef.current.textContent !== txt) timerElRef.current.textContent = txt
           }
-          if (seekElRef.current) seekElRef.current.value = String(t)
+          // só a barra de seek não é reescrita durante o arrasto — senão
+          // brigaria com o dedo do usuário
+          if (!draggingRef.current && seekElRef.current) seekElRef.current.value = String(t)
           // acorde/verso da vez: decididos por frame, com antecipação de 0.3s
           // e segurando o atual até o próximo começar
           const tt = t + 0.3
@@ -772,7 +776,7 @@ export default function StudioView({ source, onClose }) {
               setActiveLyrIdx(idx)
             }
           }
-          if (p.playing && ts - lastState > 250) {
+          if ((p.playing || draggingRef.current) && ts - lastState > 250) {
             setPos(t)
             lastState = ts
           }
