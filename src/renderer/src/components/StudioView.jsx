@@ -2538,7 +2538,7 @@ export default function StudioView({ source, onClose }) {
                     <div className="shelf-head">
                       <span className="shelf-head-name">INSTRUMENTO</span>
                       <span className="shelf-head-wave">ONDE TOCA NA MÚSICA</span>
-                      <span className="shelf-head-acts">PRESENÇA · OUVIR · FICHA · PROMOVER</span>
+                      <span className="shelf-head-acts">PRESENÇA · OUVIR · PROMOVER · FICHA</span>
                     </div>
                     {shelvedStems(session).map((stem) => {
                       const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
@@ -2597,35 +2597,31 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </span>
                           </span>
-                          {/* cluster segmentado: um controle só, três ações —
-                              em vez de três pílulas soltas repetidas por linha */}
-                          <div className="act-group">
-                            <button
-                              className={`act ${isSolo ? 'on' : ''}`}
-                              onClick={() => toggleSolo(stem)}
-                              data-hint={`OUVIR SÓ — isola ${smeta.label} e silencia o resto, pra você julgar de ouvido antes de decidir.`}
-                              aria-pressed={isSolo}
-                            >
-                              <span className="act-glyph">▶</span>
-                              <span className="act-label">só ela</span>
-                            </button>
-                            <button
-                              className="act"
-                              onClick={() => setTrackInfo(stem)}
-                              data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência (se o sistema acha que esse instrumento é real na música)."
-                            >
-                              <span className="act-glyph">◈</span>
-                              <span className="act-label">ficha</span>
-                            </button>
-                            <button
-                              className="act act-primary"
-                              onClick={() => setStemShelf(stem, false)}
-                              data-hint="PROMOVER — sobe essa faixa pra mesa junto com as principais. Dá pra guardar de volta a qualquer momento pela ficha."
-                            >
-                              <span className="act-glyph">▲</span>
-                              <span className="act-label">promover</span>
-                            </button>
-                          </div>
+                          {/* ouvir: hexágono só com o símbolo, apartado dos outros */}
+                          <button
+                            className={`solo-hex ${isSolo ? 'on' : ''}`}
+                            onClick={() => toggleSolo(stem)}
+                            data-hint={`OUVIR SÓ — isola ${smeta.label} e silencia o resto, pra você julgar de ouvido antes de decidir.`}
+                            aria-pressed={isSolo}
+                            aria-label={`Ouvir só ${smeta.label}`}
+                          >
+                            <span className="solo-glyph">{isSolo ? '■' : '▶'}</span>
+                          </button>
+                          {/* promover: o protagonista, no meio, em placa escura */}
+                          <button
+                            className="btn-promote"
+                            onClick={() => setStemShelf(stem, false)}
+                            data-hint="PROMOVER — sobe essa faixa pra mesa junto com as principais. Dá pra guardar de volta a qualquer momento pela ficha."
+                          >
+                            <span className="promote-arrow">▲</span> promover
+                          </button>
+                          {/* ficha: discreta, na ponta */}
+                          <button
+                            className="btn-dots"
+                            onClick={() => setTrackInfo(stem)}
+                            data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência (se o sistema acha que esse instrumento é real na música)."
+                            aria-label="Ficha técnica"
+                          >⋮</button>
                           </div>
                         </div>
                       )
