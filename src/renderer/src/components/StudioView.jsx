@@ -317,7 +317,7 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
 
 // Onda em miniatura pras faixas guardadas: mostra ONDE o instrumento aparece
 // (clique pula pra lá) — faixa sem onda é faixa invisível
-function MiniWave({ peaks, duration, color, onSeek }) {
+function MiniWave({ peaks, duration, color, onSeek, onNodes }) {
   const canvasRef = useRef(null)
   useEffect(() => {
     const canvas = canvasRef.current
@@ -361,6 +361,9 @@ function MiniWave({ peaks, duration, color, onSeek }) {
       }}
     >
       <canvas ref={canvasRef} className="mini-wave-canvas" />
+      {/* tint + playhead: escritos por frame pelo relógio do transporte */}
+      <div className="mini-tint" ref={(el) => onNodes?.('tint', el)} />
+      <div className="mini-ph" ref={(el) => onNodes?.('ph', el)} />
       {!peaks && <span className="mini-wave-load muted">· · ·</span>}
     </div>
   )
@@ -2494,6 +2497,12 @@ export default function StudioView({ source, onClose }) {
                             duration={playDuration}
                             color={scol}
                             onSeek={seekTo}
+                            onNodes={(kind, el) => {
+                              const m = laneNodesRef.current
+                              const key = `shelf:${stem}`
+                              if (!m[key]) m[key] = {}
+                              m[key][kind] = el
+                            }}
                           />
                           <span className="shelf-pres" title="Quanto do tempo da música ela toca">
                             {st.coverage != null ? `${st.coverage}%` : '—'}
