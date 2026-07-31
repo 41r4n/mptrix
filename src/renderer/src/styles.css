@@ -6495,3 +6495,12 @@ body.studio-open .zoom-chip {
 .daw-cap {
   font-size: 9px;
 }
+
+/* sombra mais generosa: duas camadas (núcleo denso + halo escuro amplo) */
+.daw-shade.top {
+  box-shadow: 0 15px 26px 13px rgba(0, 0, 0, 1), 0 26px 46px 22px rgba(0, 0, 0, 0.65);
+}
+
+.daw-shade.bottom {
+  box-shadow: 0 -15px 26px 13px rgba(0, 0, 0, 1), 0 -26px 46px 22px rgba(0, 0, 0, 0.65);
+}
