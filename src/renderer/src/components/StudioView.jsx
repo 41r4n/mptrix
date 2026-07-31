@@ -2473,6 +2473,7 @@ export default function StudioView({ source, onClose }) {
             </div>
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
+              <div className={`shelf-frame ${shelfOpen ? 'open' : ''}`}>
               <div className={`shelf ${shelfOpen ? 'open' : ''}`}>
                 {(() => {
                   const list = shelvedStems(session)
@@ -2628,6 +2629,7 @@ export default function StudioView({ source, onClose }) {
                     })}
                   </>
                 )}
+              </div>
               </div>
             )}
           </div>
