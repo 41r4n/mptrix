@@ -99,6 +99,7 @@ const api = {
     investigate: (opts) => ipcRenderer.invoke('studio:investigate', opts),
     chords: (opts) => ipcRenderer.invoke('studio:chords', opts),
     lyrics: (opts) => ipcRenderer.invoke('studio:lyrics', opts),
+    onLyricsProgress: on('studio:lyricsProgress'),
     lyricsSave: (opts) => ipcRenderer.invoke('studio:lyricsSave', opts),
     extract: (opts) => ipcRenderer.invoke('studio:extract', opts),
     cached: (opts) => ipcRenderer.invoke('studio:cached', opts),

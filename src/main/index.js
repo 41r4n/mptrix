@@ -1003,7 +1003,12 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:lyrics', async (_e, { key, force }) => {
     heavyJobStart()
     try {
-      return await transcribeLyrics({ key, ffmpegPath: FFMPEG_PATH, force: !!force })
+      return await transcribeLyrics({
+        key,
+        ffmpegPath: FFMPEG_PATH,
+        force: !!force,
+        onProgress: (p) => send('studio:lyricsProgress', p)
+      })
     } catch (err) {
       return { error: err.message }
     } finally {

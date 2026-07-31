@@ -604,6 +604,8 @@ export default function StudioView({ source, onClose }) {
   const [showChords, setShowChords] = useState(false)
   const chordsGridRef = useRef(null)
   const [lyrics, setLyrics] = useState(null) // null | 'loading' | {segments} | {error}
+  const [lyricsPct, setLyricsPct] = useState(0)
+  useEffect(() => window.mptrix.studio.onLyricsProgress?.((p) => setLyricsPct(p.percent || 0)), [])
   const [showLyrics, setShowLyrics] = useState(false)
   const [showExtract, setShowExtract] = useState(false) // painel Extrair (olheiro/lupa/arsenal)
   const [pasteOpen, setPasteOpen] = useState(false)
@@ -2275,10 +2277,17 @@ export default function StudioView({ source, onClose }) {
                   <div className="chords-empty">
                     <div className="studio-spinner small" />
                     <span className="muted">
-                      Transcrevendo a voz isolada aqui no seu PC… Na primeira vez o app
-                      também baixa a IA de fala (~470MB) — pode levar vários minutos.
-                      Acontece uma vez só; depois abre na hora.
+                      Escutando a voz isolada aqui no seu PC — nada sai da máquina.
+                      Leva alguns minutos nesta primeira vez; depois abre na hora.
                     </span>
+                    {lyricsPct > 0 && (
+                      <>
+                        <div className="progress-bar alive" style={{ width: '100%' }}>
+                          <div className="progress-fill" style={{ width: `${lyricsPct}%` }} />
+                        </div>
+                        <span className="hud-num">{lyricsPct}%</span>
+                      </>
+                    )}
                   </div>
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}

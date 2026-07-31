@@ -374,19 +374,22 @@ const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/
 
 function findWhisperExe() {
   if (!existsSync(WHISPER_DIR)) return null
-  const scan = (d) => {
+  // ATENÇÃO: nas versões novas o "main.exe" é só um aviso de aposentadoria que
+  // sai com erro — o binário de verdade é o whisper-cli.exe. Procura ele
+  // primeiro; main.exe fica só como socorro pra pacotes antigos.
+  const scan = (d, name) => {
     for (const f of readdirSync(d, { withFileTypes: true })) {
       const p = join(d, f.name)
       if (f.isDirectory()) {
-        const r = scan(p)
+        const r = scan(p, name)
         if (r) return r
-      } else if (/^(whisper-cli|main)\.exe$/i.test(f.name)) {
+      } else if (f.name.toLowerCase() === name) {
         return p
       }
     }
     return null
   }
-  return scan(WHISPER_DIR)
+  return scan(WHISPER_DIR, 'whisper-cli.exe') || scan(WHISPER_DIR, 'main.exe')
 }
 
 async function ensureWhisper() {
@@ -412,7 +415,7 @@ async function ensureWhisper() {
   return { exe, model }
 }
 
-export async function transcribeLyrics({ key, ffmpegPath, force = false }) {
+export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
   if (!meta) throw new Error('Sessão não encontrada.')
@@ -426,11 +429,22 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false }) {
   const outBase = join(dir, 'lyrics_out')
   try {
     await new Promise((resolve, reject) => {
-      const child = spawn(exe, ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-of', outBase, '-t', '4'], { windowsHide: true })
+      const threads = freeMemMB() > 3072 ? '6' : '4'
+      const child = spawn(
+        exe,
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-of', outBase, '-t', threads, '-pp'],
+        { windowsHide: true }
+      )
       let err = ''
-      child.stderr.on('data', (d) => { err += d })
+      // o whisper imprime o progresso no stderr — vira barra na tela
+      child.stderr.on('data', (d) => {
+        const s = String(d)
+        err += s
+        const m = s.match(/progress\s*=\s*(\d+)%/)
+        if (m) onProgress?.({ percent: Number(m[1]) })
+      })
       child.on('error', reject)
-      child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(0, 300) || `whisper saiu com código ${code}`))))
+      child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(-300) || `whisper saiu com código ${code}`))))
     })
     const j = JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
     const segments = (j.transcription || [])
