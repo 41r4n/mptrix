@@ -2508,7 +2508,20 @@ export default function StudioView({ source, onClose }) {
                               m[key][kind] = el
                             }}
                           />
-                          <span className="shelf-pres" title="Quanto do tempo da música ela toca">
+                          <span
+                            className={`shelf-pres ${st.coverage >= 10 ? 'hi' : st.coverage >= 3 ? 'mid' : 'lo'}`}
+                            title={
+                              st.coverage != null
+                                ? `PRESENÇA — esse instrumento toca em ${st.coverage}% da música` +
+                                  (playDuration ? ` (cerca de ${fmtTime((st.coverage / 100) * playDuration)} de ${fmtTime(playDuration)})` : '') +
+                                  (st.coverage < 3
+                                    ? '. Quase nada: provável respingo de outro instrumento parecido.'
+                                    : st.coverage < 10
+                                      ? '. Aparições curtas, tipo um solo.'
+                                      : '. Presença de verdade — vale ouvir e talvez promover.')
+                                : 'Presença: ainda calculando a onda dessa faixa…'
+                            }
+                          >
                             {st.coverage != null ? `${st.coverage}%` : '—'}
                           </span>
                           <button
