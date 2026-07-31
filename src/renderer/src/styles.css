@@ -6398,3 +6398,21 @@ body.studio-open .zoom-chip {
 .daw-rail-head {
   align-items: center;
 }
+
+/* cabeçalho das pistas mais enxuto — devolve altura pra caber mais uma faixa */
+.daw-head-row {
+  height: 24px;
+}
+
+.daw-rail-head {
+  padding: 0 12px;
+  gap: 7px;
+}
+
+.daw-cap {
+  font-size: 8.5px;
+}
+
+.daw-row {
+  min-height: 58px;
+}

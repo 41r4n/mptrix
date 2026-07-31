@@ -1036,11 +1036,12 @@ export default function StudioView({ source, onClose }) {
     return () => ro.disconnect()
   }, [phase, session?.key])
 
-  const MIN_LANE = 72
+  const MIN_LANE = 66
   const laneStyle = (() => {
     const n = presentStems(session).length
     if (!dawH || !n) return undefined
-    const fit = Math.max(1, Math.floor(dawH / MIN_LANE))
+    // tolerância de 5px: uma faixa que quase cabe entra em vez de sobrar espaço
+    const fit = Math.max(1, Math.floor((dawH + 5) / MIN_LANE))
     return { flex: '0 0 auto', height: dawH / Math.min(n, fit), minHeight: 0 }
   })()
 
