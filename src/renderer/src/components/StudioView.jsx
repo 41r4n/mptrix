@@ -353,7 +353,7 @@ function MiniWave({ peaks, duration, color, onSeek, onNodes }) {
   return (
     <div
       className="mini-wave"
-      title="Onde esse instrumento aparece — clique pra ouvir"
+      data-hint="ONDE TOCA — os riscos mostram os momentos em que esse instrumento aparece na música. Clique em qualquer ponto pra pular direto pra lá."
       onPointerDown={(e) => {
         if (!duration) return
         const r = e.currentTarget.getBoundingClientRect()
@@ -2485,6 +2485,12 @@ export default function StudioView({ source, onClose }) {
                       Achados de evidência fraca — o som existe no arquivo, mas pouco.
                       Ouça pela onda (clique pra pular) e promova pra mesa o que valer a pena.
                     </p>
+                    <div className="shelf-head">
+                      <span className="shelf-head-name">INSTRUMENTO</span>
+                      <span className="shelf-head-wave">ONDE TOCA NA MÚSICA</span>
+                      <span className="shelf-head-pres">PRESENÇA</span>
+                      <span className="shelf-head-acts">OUVIR · FICHA · PROMOVER</span>
+                    </div>
                     {shelvedStems(session).map((stem) => {
                       const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
                       const scol = stemColor(stem, session.stems.indexOf(stem))
@@ -2510,16 +2516,16 @@ export default function StudioView({ source, onClose }) {
                           />
                           <span
                             className={`shelf-pres ${st.coverage >= 10 ? 'hi' : st.coverage >= 3 ? 'mid' : 'lo'}`}
-                            title={
+                            data-hint={
                               st.coverage != null
-                                ? `PRESENÇA — esse instrumento toca em ${st.coverage}% da música` +
-                                  (playDuration ? ` (cerca de ${fmtTime((st.coverage / 100) * playDuration)} de ${fmtTime(playDuration)})` : '') +
+                                ? `PRESENÇA — quanto do tempo da música esse instrumento realmente toca. Aqui: ${st.coverage}%` +
+                                  (playDuration ? `, ou seja umas ${fmtTime((st.coverage / 100) * playDuration)} de ${fmtTime(playDuration)}` : '') +
                                   (st.coverage < 3
-                                    ? '. Quase nada: provável respingo de outro instrumento parecido.'
+                                    ? '. Quase nada — provável respingo de outro instrumento parecido.'
                                     : st.coverage < 10
-                                      ? '. Aparições curtas, tipo um solo.'
-                                      : '. Presença de verdade — vale ouvir e talvez promover.')
-                                : 'Presença: ainda calculando a onda dessa faixa…'
+                                      ? '. Aparições curtas, tipo um solo ou uma virada.'
+                                      : '. Presença de verdade — vale ouvir e talvez promover pra mesa.')
+                                : 'PRESENÇA — ainda calculando a onda dessa faixa…'
                             }
                           >
                             {st.coverage != null ? `${st.coverage}%` : '—'}
