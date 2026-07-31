@@ -6379,3 +6379,22 @@ body.studio-open .zoom-chip {
 .daw-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(182, 255, 59, 0.4);
 }
+
+/* enquadramento: a altura das pistas vem medida do JS (número inteiro de
+   faixas na tela); o piso do CSS fica só como rede de segurança */
+.daw-canvas {
+  min-height: 0;
+}
+
+.daw-row {
+  min-height: 64px;
+}
+
+/* cabeçalho das pistas com respiro */
+.daw-head-row {
+  height: 32px;
+}
+
+.daw-rail-head {
+  align-items: center;
+}

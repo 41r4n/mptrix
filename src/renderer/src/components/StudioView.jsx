@@ -619,6 +619,9 @@ export default function StudioView({ source, onClose }) {
     const t = setTimeout(() => setShelfSettled(true), 320)
     return () => clearTimeout(t)
   }, [shelfOpen])
+  // altura da área das pistas — usada pra enquadrar um número inteiro de faixas
+  const dawScrollRef = useRef(null)
+  const [dawH, setDawH] = useState(0)
   const [uiZoom, setUiZoom] = useState(1)
   useEffect(() => {
     window.mptrix.ui?.zoomGet?.().then((v) => setUiZoom(v || 1)).catch(() => {})
@@ -1019,6 +1022,27 @@ export default function StudioView({ source, onClose }) {
     }
     if (res?.session) await reloadSession(res.session)
   }
+
+  // Mede a área das pistas: quantas faixas cabem inteiras, e de que tamanho.
+  // Com poucas, elas esticam; com muitas, encaixam N inteiras e o resto rola —
+  // nunca sobra meia faixa cortada na borda de baixo.
+  useEffect(() => {
+    const el = dawScrollRef.current
+    if (!el) return
+    const measure = () => setDawH(el.clientHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [phase, session?.key])
+
+  const MIN_LANE = 72
+  const laneStyle = (() => {
+    const n = presentStems(session).length
+    if (!dawH || !n) return undefined
+    const fit = Math.max(1, Math.floor(dawH / MIN_LANE))
+    return { flex: '0 0 auto', height: dawH / Math.min(n, fit), minHeight: 0 }
+  })()
 
   // Ficha técnica da faixa: presença e trechos calculados da própria onda
   const trackStats = (stem) => {
@@ -2035,7 +2059,7 @@ export default function StudioView({ source, onClose }) {
               </div>
               {/* área rolável: as pistas nunca encolhem abaixo do piso de leitura;
                   passando disso, rola (o ruler fica fixo em cima) */}
-              <div className="daw-scroll">
+              <div className="daw-scroll" ref={dawScrollRef}>
               <div className="daw-canvas">
               {presentStems(session).map((stem, stemIdx) => {
                 const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
@@ -2044,7 +2068,7 @@ export default function StudioView({ source, onClose }) {
                 const isSolo = solo.has(stem)
                 const effectivelyOff = isMuted || (solo.size > 0 && !isSolo)
                 return (
-                  <div key={stem} className={`daw-row ${effectivelyOff ? 'off' : ''}`}>
+                  <div key={stem} className={`daw-row ${effectivelyOff ? 'off' : ''}`} style={laneStyle}>
                     <div className="daw-rail">
                       <div className="daw-rail-top">
                         <span
