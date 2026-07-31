@@ -6579,3 +6579,39 @@ body.studio-open .zoom-chip {
 .lyr-block:not(.lyr-now) .lyr-fill {
   display: none;
 }
+
+/* karaokê palavra a palavra (o wipe contínuo saiu — adiantava sem marcação) */
+.lyr-fill,
+.lyr-base {
+  all: unset;
+}
+
+.lyr-fill {
+  display: none;
+}
+
+.lyr-w.sung {
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.lyr-w.singing {
+  color: var(--accent);
+  opacity: 1;
+  text-shadow: 0 0 16px rgba(182, 255, 59, 0.75);
+}
+
+.lyr-nokaraoke {
+  margin: 10px 16px 0;
+  padding: 9px 11px;
+  border-left: 2px solid var(--warn);
+  background: rgba(234, 179, 8, 0.07);
+  border-radius: 0 8px 8px 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.lyr-nokaraoke strong {
+  color: var(--text-2);
+}

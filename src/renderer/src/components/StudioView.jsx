@@ -796,28 +796,20 @@ export default function StudioView({ source, onClose }) {
               lastLyrIdxRef.current = idx
               setActiveLyrIdx(idx)
             }
-            // KARAOKÊ: o verde escorre pelo verso conforme é cantado.
-            // Com o tempo das palavras é preciso; sem ele, distribui no tempo
-            // do verso (fica suave do mesmo jeito).
+            // KARAOKÊ: acende palavra por palavra, no instante em que cada uma
+            // é cantada. Só com a marcação de palavras — sem ela, nada de
+            // adivinhar (era o que fazia o verde adiantar).
             const seg = ls[idx]
-            const fill = lyrFillRefs.current[idx]
-            if (seg && fill) {
-              let pct
-              if (seg.words?.length) {
-                const total = seg.words.reduce((a, w) => a + w.text.length + 1, 0)
-                let acc = 0
-                for (const w of seg.words) {
-                  const len = w.text.length + 1
-                  if (t >= w.t1) { acc += len; continue }
-                  if (t >= w.t0) acc += len * Math.min(1, Math.max(0, (t - w.t0) / Math.max(0.08, w.t1 - w.t0)))
-                  break
-                }
-                pct = (acc / Math.max(1, total)) * 100
-              } else {
-                pct = ((t - seg.t0) / Math.max(0.2, seg.t1 - seg.t0)) * 100
+            let w = -1
+            if (seg?.words?.length) {
+              for (let k = 0; k < seg.words.length; k++) {
+                if (seg.words[k].t0 <= t + 0.05) w = k
+                else break
               }
-              pct = Math.max(0, Math.min(100, pct))
-              fill.style.clipPath = `inset(0 ${(100 - pct).toFixed(2)}% 0 0)`
+            }
+            if (w !== lastWordIdxRef.current) {
+              lastWordIdxRef.current = w
+              setActiveWordIdx(w)
             }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
@@ -2331,6 +2323,13 @@ export default function StudioView({ source, onClose }) {
                   </div>
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
+                {lyrics?.segments?.length > 0 && !lyrics.segments.some((s) => s.words?.length) && (
+                  <p className="lyr-nokaraoke">
+                    ⚠️ Esta letra não tem a marcação de cada palavra — por isso o destaque
+                    fica no verso inteiro e pode adiantar. Clique em <strong>↻ karaokê</strong>
+                    {' '}pra reescutar marcando palavra por palavra.
+                  </p>
+                )}
                 {lyrics?.segments && (lyrics.segments.length === 0 ? (
                   <div className="chords-empty muted">Não ouvi versos cantados na faixa de voz.</div>
                 ) : (
@@ -2353,15 +2352,20 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </div>
                           )}
-                          {/* karaokê: uma cópia lima por cima, revelada da
-                              esquerda pra direita no relógio de frame */}
                           <div className="lyr-text">
-                            <span className="lyr-base">{s.text}</span>
-                            <span
-                              className="lyr-fill"
-                              aria-hidden="true"
-                              ref={(el) => { lyrFillRefs.current[i] = el }}
-                            >{s.text}</span>
+                            {s.words?.length
+                              ? s.words.map((w, k) => (
+                                  <span
+                                    key={k}
+                                    className={
+                                      st !== 'now' ? 'lyr-w'
+                                        : k < activeWordIdx ? 'lyr-w sung'
+                                          : k === activeWordIdx ? 'lyr-w singing'
+                                            : 'lyr-w'
+                                    }
+                                  >{w.text} </span>
+                                ))
+                              : s.text}
                           </div>
                           <button
                             className="lyr-edit"
