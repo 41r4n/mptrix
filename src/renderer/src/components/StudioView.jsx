@@ -2033,6 +2033,10 @@ export default function StudioView({ source, onClose }) {
                   })()}
                 </div>
               </div>
+              {/* área rolável: as pistas nunca encolhem abaixo do piso de leitura;
+                  passando disso, rola (o ruler fica fixo em cima) */}
+              <div className="daw-scroll">
+              <div className="daw-canvas">
               {presentStems(session).map((stem, stemIdx) => {
                 const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
                 const col = stemColor(stem, stemIdx)
@@ -2139,6 +2143,8 @@ export default function StudioView({ source, onClose }) {
                   <div className="daw-ph-tri" />
                   <div className="daw-ph-line" />
                 </div>
+              </div>
+              </div>
               </div>
             </div>
             {showChords && (
