@@ -811,16 +811,6 @@ export default function StudioView({ source, onClose }) {
               lastWordIdxRef.current = w
               setActiveWordIdx(w)
             }
-            // a palavra da vez vai enchendo de verde enquanto é cantada — se o
-            // cantor segura, ela enche devagar e fica acesa até a próxima
-            const fillEl = wordFillRef.current
-            if (fillEl && w >= 0 && seg?.words) {
-              const cw = seg.words[w]
-              const nx = seg.words[w + 1]
-              const end = Math.min(cw.t1 || Infinity, nx ? nx.t0 : Infinity)
-              const f = Math.max(0, Math.min(1, (t - cw.t0) / Math.max(0.12, end - cw.t0)))
-              fillEl.style.clipPath = `inset(0 ${((1 - f) * 100).toFixed(1)}% 0 0)`
-            }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
             setPos(t)
@@ -2348,28 +2338,17 @@ export default function StudioView({ source, onClose }) {
                           )}
                           <div className="lyr-text">
                             {s.words?.length
-                              ? s.words.map((w, k) => {
-                                  if (st === 'now' && k === activeWordIdx) {
-                                    // palavra da vez: cópia lima revelada conforme é cantada
-                                    return (
-                                      <span key={k} className="lyr-w now">
-                                        <span className="lyr-wbase">{w.text}</span>
-                                        <span
-                                          className="lyr-wfill"
-                                          aria-hidden="true"
-                                          ref={(el) => { if (el) wordFillRef.current = el }}
-                                        >{w.text}</span>
-                                        {' '}
-                                      </span>
-                                    )
-                                  }
-                                  return (
-                                    <span
-                                      key={k}
-                                      className={`lyr-w ${st === 'now' && k < activeWordIdx ? 'sung' : ''}`}
-                                    >{w.text} </span>
-                                  )
-                                })
+                              ? s.words.map((w, k) => (
+                                  <span
+                                    key={k}
+                                    className={
+                                      st !== 'now' ? 'lyr-w'
+                                        : k === activeWordIdx ? 'lyr-w singing'
+                                          : k < activeWordIdx ? 'lyr-w sung'
+                                            : 'lyr-w'
+                                    }
+                                  >{w.text} </span>
+                                ))
                               : s.text}
                           </div>
                           <button
