@@ -6225,3 +6225,104 @@ body.studio-open .zoom-chip {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: none; }
 }
+
+/* ---------- Trilho vertical na mesma língua da prateleira ---------- */
+.daw-rail {
+  transition: background 0.15s ease;
+}
+
+.daw-row:hover .daw-rail {
+  background: rgba(182, 255, 59, 0.035);
+}
+
+.daw-rail-head {
+  gap: 8px;
+}
+
+/* pontinho hexagonal lima no cabeçalho das pistas */
+.hex-dot {
+  width: 9px;
+  height: 10px;
+  flex: none;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  filter: drop-shadow(0 0 6px rgba(182, 255, 59, 0.7));
+}
+
+/* MUDO: placa discreta que acende em âmbar */
+.rail-mute {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 6px;
+  border: 1px solid var(--border-control);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.rail-mute:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: var(--text);
+}
+
+.rail-mute.on {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #0b0c0f;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.45);
+}
+
+/* OUVIR SÓ: hexágono compacto (irmão do da prateleira) */
+.solo-hex.sm {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+}
+
+.solo-hex.sm .solo-glyph {
+  font-size: 9px;
+}
+
+/* ações secundárias: fantasmas, sem moldura */
+.rail-ghost {
+  width: 20px;
+  height: 24px;
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rail-ghost:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+}
+
+/* volume: trilha fina na cor do próprio stem + número mono */
+.daw-rail .studio-volume {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.daw-vol-num {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted-2);
+  width: 22px;
+  text-align: right;
+  flex: none;
+}
+
+.daw-speaker {
+  opacity: 0.55;
+}

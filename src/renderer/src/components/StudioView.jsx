@@ -2009,7 +2009,9 @@ export default function StudioView({ source, onClose }) {
             <div className="daw">
               <div className="daw-row daw-head-row">
                 <div className="daw-rail daw-rail-head">
+                  <span className="hex-dot" aria-hidden="true" />
                   <span className="daw-cap">PISTAS</span>
+                  <span className="daw-rail-flex" />
                   <span className="daw-cap daw-cap-dim">{presentStems(session).length} STEMS</span>
                 </div>
                 <div className="daw-gutter daw-ruler">
@@ -2041,33 +2043,48 @@ export default function StudioView({ source, onClose }) {
                   <div key={stem} className={`daw-row ${effectivelyOff ? 'off' : ''}`}>
                     <div className="daw-rail">
                       <div className="daw-rail-top">
-                        <span className="studio-stem-bar" style={{ background: col }} />
-                        <span className="daw-name" style={{ color: col }} title={meta.label}>{meta.label}</span>
+                        <span
+                          className="studio-stem-bar"
+                          style={{ background: col, boxShadow: `0 0 10px ${col}99` }}
+                        />
+                        <span
+                          className="daw-name"
+                          style={{ color: col, textShadow: `0 0 16px ${col}66` }}
+                          title={meta.label}
+                        >{meta.label}</span>
                         <span className="daw-rail-flex" />
+                        {/* mudo: placa que acende em âmbar */}
                         <button
-                          className={`studio-mini-btn ${isMuted ? 'active-mute' : ''}`}
+                          className={`rail-mute ${isMuted ? 'on' : ''}`}
                           onClick={() => toggleMute(stem)}
-                          title={`Silenciar ${meta.label}`}
+                          data-hint={`MUDO — cala ${meta.label} sem tirar da mesa.`}
                           aria-pressed={isMuted}
+                          aria-label={`Silenciar ${meta.label}`}
                         >M</button>
+                        {/* ouvir só: hexágono, mesma língua da prateleira */}
                         <button
-                          className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
+                          className={`solo-hex sm ${isSolo ? 'on' : ''}`}
                           onClick={() => toggleSolo(stem)}
-                          title={`Solo de ${meta.label}`}
+                          data-hint={`OUVIR SÓ — isola ${meta.label} e silencia o resto.`}
                           aria-pressed={isSolo}
-                        >S</button>
+                          aria-label={`Ouvir só ${meta.label}`}
+                        >
+                          <span className="solo-glyph">{isSolo ? '■' : '▶'}</span>
+                        </button>
                         {(session.extracted || []).includes(stem) && !extractJob && (
                           <button
-                            className="studio-mini-btn"
+                            className="rail-ghost"
                             onClick={() => redoTrack(stem)}
-                            title="Refazer essa faixa do zero (apaga e extrai de novo)"
+                            data-hint="REFAZER — apaga essa faixa e extrai de novo do zero, sem reaproveitar nada."
+                            aria-label="Refazer faixa"
                           >↻</button>
                         )}
                         <button
-                          className="studio-mini-btn"
+                          className="rail-ghost"
                           onClick={() => setTrackInfo(stem)}
-                          title="Ficha técnica da faixa"
-                        >⋯</button>
+                          data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência."
+                          aria-label="Ficha técnica"
+                        >⋮</button>
                       </div>
                       <div className="daw-rail-bottom">
                         <span className="daw-speaker">🔊</span>
@@ -2079,8 +2096,10 @@ export default function StudioView({ source, onClose }) {
                           step="0.01"
                           value={volumes[stem] ?? 1}
                           onChange={(e) => setVolumes((v) => ({ ...v, [stem]: parseFloat(e.target.value) }))}
+                          style={{ accentColor: col }}
                           title={`Volume: ${Math.round((volumes[stem] ?? 1) * 100)}%`}
                         />
+                        <span className="daw-vol-num">{Math.round((volumes[stem] ?? 1) * 100)}</span>
                       </div>
                     </div>
                     <div className="daw-gutter">
