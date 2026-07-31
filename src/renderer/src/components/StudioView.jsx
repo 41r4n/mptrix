@@ -2488,8 +2488,7 @@ export default function StudioView({ source, onClose }) {
                     <div className="shelf-head">
                       <span className="shelf-head-name">INSTRUMENTO</span>
                       <span className="shelf-head-wave">ONDE TOCA NA MÚSICA</span>
-                      <span className="shelf-head-pres">PRESENÇA</span>
-                      <span className="shelf-head-acts">OUVIR · FICHA · PROMOVER</span>
+                      <span className="shelf-head-acts">PRESENÇA · OUVIR · FICHA · PROMOVER</span>
                     </div>
                     {shelvedStems(session).map((stem) => {
                       const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
@@ -2498,10 +2497,19 @@ export default function StudioView({ source, onClose }) {
                       const isSolo = solo.has(stem)
                       return (
                         <div className="shelf-row" key={stem}>
-                          <span className="studio-stem-bar" style={{ background: scol }} />
-                          <span className="shelf-name" style={{ color: scol }} title={smeta.label}>
-                            {smeta.icon} {smeta.label}
-                          </span>
+                          <div className="shelf-id">
+                            <span
+                              className="studio-stem-bar"
+                              style={{ background: scol, boxShadow: `0 0 10px ${scol}99` }}
+                            />
+                            <span
+                              className="shelf-name"
+                              style={{ color: scol, textShadow: `0 0 16px ${scol}66` }}
+                              title={smeta.label}
+                            >
+                              {smeta.icon} {smeta.label}
+                            </span>
+                          </div>
                           <MiniWave
                             peaks={peaksMap[stem]}
                             duration={playDuration}
@@ -2514,6 +2522,7 @@ export default function StudioView({ source, onClose }) {
                               m[key][kind] = el
                             }}
                           />
+                          <div className="shelf-acts">
                           <span
                             className={`shelf-pres ${st.coverage >= 10 ? 'hi' : st.coverage >= 3 ? 'mid' : 'lo'}`}
                             data-hint={
@@ -2533,11 +2542,20 @@ export default function StudioView({ source, onClose }) {
                           <button
                             className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
                             onClick={() => toggleSolo(stem)}
-                            title={`Ouvir só ${smeta.label}`}
+                            data-hint={`OUVIR SÓ — isola ${smeta.label} e silencia o resto, pra você julgar de ouvido antes de decidir.`}
                             aria-pressed={isSolo}
                           >S</button>
-                          <button className="btn-secondary btn-small" onClick={() => setTrackInfo(stem)}>⋯</button>
-                          <button className="btn-secondary btn-small" onClick={() => setStemShelf(stem, false)}>▲ promover</button>
+                          <button
+                            className="btn-secondary btn-small"
+                            onClick={() => setTrackInfo(stem)}
+                            data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência (se o sistema acha que esse instrumento é real na música)."
+                          >⋯</button>
+                          <button
+                            className="btn-secondary btn-small shelf-promote"
+                            onClick={() => setStemShelf(stem, false)}
+                            data-hint="PROMOVER — sobe essa faixa pra mesa junto com as principais. Dá pra guardar de volta a qualquer momento pela ficha."
+                          >▲ promover</button>
+                          </div>
                         </div>
                       )
                     })}
