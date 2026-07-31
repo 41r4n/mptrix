@@ -2488,58 +2488,54 @@ export default function StudioView({ source, onClose }) {
                     : 'quase mudo'
             return (
               <div className="modal-overlay" onClick={() => setTrackInfo(null)}>
-                <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
-                  <div className="confirm-body tinfo">
-                    <h3 className="confirm-title">
-                      <span className="studio-stem-bar" style={{ background: col, display: 'inline-block', marginRight: 8 }} />
-                      {meta.icon} {meta.label}
-                    </h3>
-                    <div className="tinfo-row">
-                      <span className="tinfo-label">Origem</span>
-                      <span>{(session.extracted || []).includes(trackInfo) ? 'extraída por especialista' : 'banda-base da separação'}</span>
+                <div className="modal modal-small tinfo-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="tinfo-head">
+                    <span className="tinfo-disc" style={{ background: col }}>{meta.icon}</span>
+                    <div className="tinfo-head-text">
+                      <div className="tinfo-name">{meta.label}</div>
+                      <div className="tinfo-sub">
+                        {(session.extracted || []).includes(trackInfo) ? 'EXTRAÍDA POR ESPECIALISTA' : 'BANDA-BASE DA SEPARAÇÃO'}
+                        {st.info.present === false ? ' · ESCONDIDA (QUASE MUDA)' : ''}
+                      </div>
                     </div>
-                    {st.info.mean != null && (
-                      <div className="tinfo-row">
-                        <span className="tinfo-label">Volume médio</span>
-                        <span>{vol} <span className="muted">({st.info.mean} dB)</span></span>
-                      </div>
-                    )}
-                    {st.info.max != null && (
-                      <div className="tinfo-row">
-                        <span className="tinfo-label">Pico</span>
-                        <span className="muted">{st.info.max} dB</span>
-                      </div>
-                    )}
-                    {st.coverage != null && (
-                      <div className="tinfo-row">
-                        <span className="tinfo-label">Presença</span>
-                        <span>toca em <strong>{st.coverage}%</strong> da música</span>
-                      </div>
-                    )}
-                    {st.ranges.length > 0 && (
-                      <div className="tinfo-row">
-                        <span className="tinfo-label">Trechos principais</span>
-                        <span className="tinfo-ranges">
-                          {st.ranges.map((r, i) => (
-                            <button
-                              key={i}
-                              className="tinfo-range"
-                              onClick={() => { seekTo(r.a + 0.01); setTrackInfo(null) }}
-                              title="Clique pra pular pra esse trecho"
-                            >
-                              {fmtTime(r.a)}–{fmtTime(r.b)}
-                            </button>
-                          ))}
-                        </span>
-                      </div>
-                    )}
-                    {st.info.present === false && (
-                      <p className="muted confirm-message">Faixa marcada como quase-muda (escondida do player).</p>
-                    )}
-                    <div className="confirm-actions">
-                      <button className="btn-secondary" onClick={() => setTrackInfo(null)}>Fechar</button>
+                    <button className="btn-close" onClick={() => setTrackInfo(null)} aria-label="Fechar">×</button>
+                  </div>
+                  <div className="tinfo-tiles">
+                    <div className="tinfo-tile">
+                      <span className="tinfo-big">{vol ?? '—'}</span>
+                      <span className="tinfo-cap">VOLUME{st.info.mean != null ? ` · ${st.info.mean} dB` : ''}</span>
+                    </div>
+                    <div className="tinfo-tile">
+                      <span className="tinfo-big">{st.info.max != null ? `${st.info.max} dB` : '—'}</span>
+                      <span className="tinfo-cap">PICO</span>
+                    </div>
+                    <div className="tinfo-tile">
+                      <span className="tinfo-big" style={{ color: col }}>{st.coverage != null ? `${st.coverage}%` : '—'}</span>
+                      <span className="tinfo-cap">PRESENÇA</span>
                     </div>
                   </div>
+                  {st.coverage != null && (
+                    <div className="tinfo-presbar">
+                      <div style={{ width: `${st.coverage}%`, background: col }} />
+                    </div>
+                  )}
+                  {st.ranges.length > 0 && (
+                    <div className="tinfo-sec">
+                      <div className="tinfo-cap">ONDE ELA TOCA — CLIQUE PRA IR</div>
+                      <div className="tinfo-ranges">
+                        {st.ranges.map((r, i) => (
+                          <button
+                            key={i}
+                            className="tinfo-range"
+                            style={{ borderColor: `${col}55` }}
+                            onClick={() => { seekTo(r.a + 0.01); setTrackInfo(null) }}
+                          >
+                            ▸ {fmtTime(r.a)}–{fmtTime(r.b)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )
