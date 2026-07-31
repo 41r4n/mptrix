@@ -4956,3 +4956,48 @@ section h2 {
 body.studio-open .zoom-chip {
   bottom: 100px;
 }
+
+/* ---------- Ficha tecnica da faixa (menuzinho ...) ---------- */
+.tinfo {
+  text-align: left;
+  gap: 10px;
+}
+
+.tinfo-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.tinfo-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  min-width: 120px;
+  flex: none;
+}
+
+.tinfo-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tinfo-range {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-control);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.tinfo-range:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}

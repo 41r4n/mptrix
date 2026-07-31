@@ -540,6 +540,7 @@ export default function StudioView({ source, onClose }) {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const lyricsListRef = useRef(null)
+  const [trackInfo, setTrackInfo] = useState(null) // stem da ficha técnica aberta
   // acorde/verso da vez (escritos pelo relógio de frame)
   const [activeChordIdx, setActiveChordIdx] = useState(-1)
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
@@ -918,6 +919,36 @@ export default function StudioView({ source, onClose }) {
     })()
     return () => { alive = false }
   }, [phase, session]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ficha técnica da faixa: presença e trechos calculados da própria onda
+  const trackStats = (stem) => {
+    const info = session?.stemInfo?.[stem] || {}
+    const pk = peaksMap[stem]
+    const dur = playDuration || session?.duration || 0
+    let coverage = null
+    let ranges = []
+    if (pk && pk.length && dur) {
+      const thr = 0.15
+      let act = 0
+      let run = null
+      const rs = []
+      for (let i = 0; i < pk.length; i++) {
+        const t = (i / pk.length) * dur
+        if (pk[i] > thr) {
+          act++
+          if (!run) run = { a: t, b: t }
+          else run.b = t
+        } else if (run) {
+          if (run.b - run.a >= 2) rs.push(run)
+          run = null
+        }
+      }
+      if (run && run.b - run.a >= 2) rs.push(run)
+      coverage = Math.round((act / pk.length) * 100)
+      ranges = rs.sort((x, y) => (y.b - y.a) - (x.b - x.a)).slice(0, 4).sort((x, y) => x.a - y.a)
+    }
+    return { info, coverage, ranges }
+  }
 
   // Overlay do DAW: um só capturador de ponteiro pra todas as canaletas —
   // clique pula pra posição; arrastar marca o trecho (Lupa + loop)
@@ -1932,6 +1963,11 @@ export default function StudioView({ source, onClose }) {
                             title="Refazer essa faixa do zero (apaga e extrai de novo)"
                           >↻</button>
                         )}
+                        <button
+                          className="studio-mini-btn"
+                          onClick={() => setTrackInfo(stem)}
+                          title="Ficha técnica da faixa"
+                        >⋯</button>
                       </div>
                       <div className="daw-rail-bottom">
                         <span className="daw-speaker">🔊</span>
@@ -2440,6 +2476,74 @@ export default function StudioView({ source, onClose }) {
               <div className="studio-export-msg" onClick={() => setExportMsg(null)}>{exportMsg}</div>
             )}
           </div>
+
+          {trackInfo && (() => {
+            const meta = STEM_META[trackInfo] || { label: trackInfo, icon: '🎚️' }
+            const col = stemColor(trackInfo, presentStems(session).indexOf(trackInfo))
+            const st = trackStats(trackInfo)
+            const vol = st.info.mean == null ? null
+              : st.info.mean > -25 ? 'forte'
+                : st.info.mean > -40 ? 'normal'
+                  : st.info.mean > -55 ? 'discreto'
+                    : 'quase mudo'
+            return (
+              <div className="modal-overlay" onClick={() => setTrackInfo(null)}>
+                <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
+                  <div className="confirm-body tinfo">
+                    <h3 className="confirm-title">
+                      <span className="studio-stem-bar" style={{ background: col, display: 'inline-block', marginRight: 8 }} />
+                      {meta.icon} {meta.label}
+                    </h3>
+                    <div className="tinfo-row">
+                      <span className="tinfo-label">Origem</span>
+                      <span>{(session.extracted || []).includes(trackInfo) ? 'extraída por especialista' : 'banda-base da separação'}</span>
+                    </div>
+                    {st.info.mean != null && (
+                      <div className="tinfo-row">
+                        <span className="tinfo-label">Volume médio</span>
+                        <span>{vol} <span className="muted">({st.info.mean} dB)</span></span>
+                      </div>
+                    )}
+                    {st.info.max != null && (
+                      <div className="tinfo-row">
+                        <span className="tinfo-label">Pico</span>
+                        <span className="muted">{st.info.max} dB</span>
+                      </div>
+                    )}
+                    {st.coverage != null && (
+                      <div className="tinfo-row">
+                        <span className="tinfo-label">Presença</span>
+                        <span>toca em <strong>{st.coverage}%</strong> da música</span>
+                      </div>
+                    )}
+                    {st.ranges.length > 0 && (
+                      <div className="tinfo-row">
+                        <span className="tinfo-label">Trechos principais</span>
+                        <span className="tinfo-ranges">
+                          {st.ranges.map((r, i) => (
+                            <button
+                              key={i}
+                              className="tinfo-range"
+                              onClick={() => { seekTo(r.a + 0.01); setTrackInfo(null) }}
+                              title="Clique pra pular pra esse trecho"
+                            >
+                              {fmtTime(r.a)}–{fmtTime(r.b)}
+                            </button>
+                          ))}
+                        </span>
+                      </div>
+                    )}
+                    {st.info.present === false && (
+                      <p className="muted confirm-message">Faixa marcada como quase-muda (escondida do player).</p>
+                    )}
+                    <div className="confirm-actions">
+                      <button className="btn-secondary" onClick={() => setTrackInfo(null)}>Fechar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {pasteOpen && (
             <div className="modal-overlay" onClick={() => setPasteOpen(false)}>
