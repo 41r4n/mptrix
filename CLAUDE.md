@@ -28,6 +28,14 @@ Playhead, tint, timer e seek são atualizados **por frame via refs** (`style.lef
 O estado `pos` atualiza ~4×/s só pro resto da UI. Waveforms: canvas com redesenho por
 ResizeObserver, cor vinda do stem.
 
+## Vocabulário visual (regra da casa)
+**Borda em volta de texto = clicável.** Informação que não clica NUNCA usa forma de botão —
+mentir pro dedo do usuário é bug de design. Pra destacar sem falsa affordance, use:
+peso/tamanho da fonte, cor + halo (`text-shadow`), leitura de painel (número mono grande +
+rótulo em caixa-alta, separados por hairlines — classe `.hud`), medidor segmentado
+(`.pres-meter`, aceno ao carregador do Omnitrix), barra de cor lateral, ou hexágono
+(`clip-path` + ampulheta) pra marcas. Neon só onde carrega informação — nunca decorativo.
+
 ## Acessibilidade
 Contraste AA em texto e controles; alvos de toque generosos; `aria-pressed` em M/S quando mexer neles;
 nunca `scrollIntoView` — use `scrollTo({ behavior: 'smooth' })`.
