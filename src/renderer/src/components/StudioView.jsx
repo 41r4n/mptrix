@@ -2487,7 +2487,11 @@ export default function StudioView({ source, onClose }) {
                   return (
                     <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
                       <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
-                      <span className="shelf-box">📦</span>
+                      <span className="hex-badge" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0b0c0f" />
+                        </svg>
+                      </span>
                       <div className="shelf-titlewrap">
                         <span className="shelf-title">GUARDADAS</span>
                         <span className="shelf-sub">
@@ -2495,13 +2499,31 @@ export default function StudioView({ source, onClose }) {
                           {top ? ` · maior presença: ${STEM_META[top.s]?.label || top.s} (${top.c}%)` : ''}
                         </span>
                       </div>
-                      <span className="shelf-count">{list.length}</span>
-                      <span className="shelf-chips">
+                      {/* leitura de status, não botões: número mono + rótulo,
+                          separados por finos traços — vocabulário de painel */}
+                      <span className="hud">
+                        <span className="hud-cell">
+                          <span className="hud-num">{list.length}</span>
+                          <span className="hud-cap">guardadas</span>
+                        </span>
                         {strong > 0 && (
-                          <span className="shelf-chip hi">⚡ {strong} vale{strong !== 1 ? 'm' : ''} ouvir</span>
+                          <span className="hud-cell on">
+                            <span className="hud-num">{strong}</span>
+                            <span className="hud-cap">vale{strong !== 1 ? 'm' : ''} ouvir</span>
+                          </span>
                         )}
-                        {mid > 0 && <span className="shelf-chip mid">{mid} aparição{mid !== 1 ? 'ões' : ''} curta{mid !== 1 ? 's' : ''}</span>}
-                        {weak > 0 && <span className="shelf-chip lo">{weak} fiapo{weak !== 1 ? 's' : ''}</span>}
+                        {mid > 0 && (
+                          <span className="hud-cell">
+                            <span className="hud-num">{mid}</span>
+                            <span className="hud-cap">aparição{mid !== 1 ? 'ões' : ''} curta{mid !== 1 ? 's' : ''}</span>
+                          </span>
+                        )}
+                        {weak > 0 && (
+                          <span className="hud-cell dim">
+                            <span className="hud-num">{weak}</span>
+                            <span className="hud-cap">fiapo{weak !== 1 ? 's' : ''}</span>
+                          </span>
+                        )}
                       </span>
                     </button>
                   )
@@ -2547,7 +2569,7 @@ export default function StudioView({ source, onClose }) {
                           />
                           <div className="shelf-acts">
                           <span
-                            className={`shelf-pres ${st.coverage >= 10 ? 'hi' : st.coverage >= 3 ? 'mid' : 'lo'}`}
+                            className={`pres ${st.coverage >= 10 ? 'hi' : st.coverage >= 3 ? 'mid' : 'lo'}`}
                             data-hint={
                               st.coverage != null
                                 ? `PRESENÇA — quanto do tempo da música esse instrumento realmente toca. Aqui: ${st.coverage}%` +
@@ -2560,7 +2582,15 @@ export default function StudioView({ source, onClose }) {
                                 : 'PRESENÇA — ainda calculando a onda dessa faixa…'
                             }
                           >
-                            {st.coverage != null ? `${st.coverage}%` : '—'}
+                            <span className="pres-num">{st.coverage != null ? `${st.coverage}%` : '—'}</span>
+                            <span className="pres-meter" aria-hidden="true">
+                              {[0, 1, 2, 3, 4].map((i) => (
+                                <i
+                                  key={i}
+                                  className={i < Math.min(5, Math.ceil((st.coverage || 0) / 4)) ? 'on' : ''}
+                                />
+                              ))}
+                            </span>
                           </span>
                           <button
                             className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}

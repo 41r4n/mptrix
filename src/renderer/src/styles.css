@@ -5743,3 +5743,139 @@ body.studio-open .zoom-chip {
 .shelf-acts {
   width: 290px;
 }
+
+/* ==============================================================
+   VOCABULÁRIO VISUAL (regra da casa, aprendida na marra):
+   BORDA EM VOLTA DE TEXTO = CLICÁVEL. Informação que não clica
+   nunca usa forma de botão — usa peso, cor, brilho, medidor ou
+   traço. Mentir pro dedo do usuário é bug de design.
+   ============================================================== */
+
+/* --- Leitura de status estilo painel (HUD) --- */
+.hud {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.hud-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 0 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  white-space: nowrap;
+}
+
+.hud-cell:last-child {
+  border-right: none;
+  padding-right: 2px;
+}
+
+.hud-num {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-2);
+}
+
+.hud-cap {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.hud-cell.on .hud-num {
+  color: var(--accent);
+  text-shadow: 0 0 16px rgba(182, 255, 59, 0.55);
+}
+
+.hud-cell.on .hud-cap {
+  color: rgba(182, 255, 59, 0.75);
+}
+
+.hud-cell.dim .hud-num {
+  color: var(--muted-2);
+}
+
+/* --- Selo hexagonal (aceno ao Omnitrix) --- */
+.hex-badge {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  filter: drop-shadow(0 0 10px rgba(182, 255, 59, 0.45));
+}
+
+/* --- Presença: medidor segmentado, não pastilha --- */
+.pres {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  width: 62px;
+  flex: none;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  cursor: help;
+}
+
+.pres-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted-2);
+}
+
+.pres.hi .pres-num {
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(182, 255, 59, 0.5);
+}
+
+.pres.mid .pres-num {
+  color: var(--text-2);
+}
+
+.pres-meter {
+  display: flex;
+  gap: 2px;
+}
+
+.pres-meter i {
+  width: 8px;
+  height: 3px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pres-meter i.on {
+  background: var(--muted);
+}
+
+.pres.mid .pres-meter i.on {
+  background: var(--text-2);
+}
+
+.pres.hi .pres-meter i.on {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(182, 255, 59, 0.6);
+}
+
+/* botões continuam com cara de botão — a diferença agora é honesta */
+.shelf-acts {
+  gap: 10px;
+}
