@@ -1047,13 +1047,18 @@ export default function StudioView({ source, onClose }) {
     return () => ro.disconnect()
   }, [phase, session?.key, updateDawCut])
 
+  // TETO DE 10 FAIXAS NA TELA: mais que isso aperta demais e a leitura morre.
+  // Com até 10, elas dividem toda a altura (maior tamanho possível); passando
+  // disso, o tamanho trava no de 10 e o resto vai pra rolagem.
+  const MAX_LANES = 10
   const MIN_LANE = 66
   const laneStyle = (() => {
     const n = presentStems(session).length
     if (!dawH || !n) return undefined
-    // tolerância de 5px: uma faixa que quase cabe entra em vez de sobrar espaço
-    const fit = Math.max(1, Math.floor((dawH + 5) / MIN_LANE))
-    return { flex: '0 0 auto', height: dawH / Math.min(n, fit), minHeight: 0 }
+    // em janela pequena, mostra só quantas cabem legíveis (nunca mais que 10)
+    const fits = Math.max(1, Math.floor((dawH + 5) / MIN_LANE))
+    const visible = Math.min(n, MAX_LANES, fits)
+    return { flex: '0 0 auto', height: dawH / visible, minHeight: 0 }
   })()
 
   // Ficha técnica da faixa: presença e trechos calculados da própria onda
