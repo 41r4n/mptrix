@@ -6554,3 +6554,28 @@ body.studio-open .zoom-chip {
   color: var(--accent);
   text-shadow: 0 0 16px rgba(182, 255, 59, 0.7);
 }
+
+/* ---------- Karaokê v2: o verde escorre pela letra ---------- */
+.lyr-text {
+  position: relative;
+}
+
+.lyr-base {
+  display: block;
+}
+
+.lyr-fill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(182, 255, 59, 0.45);
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+  white-space: inherit;
+}
+
+/* só o verso da vez usa o karaokê */
+.lyr-block:not(.lyr-now) .lyr-fill {
+  display: none;
+}

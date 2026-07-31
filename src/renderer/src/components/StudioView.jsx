@@ -634,6 +634,7 @@ export default function StudioView({ source, onClose }) {
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
   const [activeWordIdx, setActiveWordIdx] = useState(-1)
   const lastWordIdxRef = useRef(-1)
+  const lyrFillRefs = useRef({})
   const chordsListRef = useRef(null)
   const lyrSegsRef = useRef(null)
   const lastChordIdxRef = useRef(-1)
@@ -795,19 +796,28 @@ export default function StudioView({ source, onClose }) {
               lastLyrIdxRef.current = idx
               setActiveLyrIdx(idx)
             }
-            // palavra da vez dentro do verso — é o que faz a letra acender
-            // acompanhando o canto, e não pular de estrofe em estrofe
+            // KARAOKÊ: o verde escorre pelo verso conforme é cantado.
+            // Com o tempo das palavras é preciso; sem ele, distribui no tempo
+            // do verso (fica suave do mesmo jeito).
             const seg = ls[idx]
-            let w = -1
-            if (seg?.words?.length) {
-              for (let k = 0; k < seg.words.length; k++) {
-                if (seg.words[k].t0 <= t + 0.12) w = k
-                else break
+            const fill = lyrFillRefs.current[idx]
+            if (seg && fill) {
+              let pct
+              if (seg.words?.length) {
+                const total = seg.words.reduce((a, w) => a + w.text.length + 1, 0)
+                let acc = 0
+                for (const w of seg.words) {
+                  const len = w.text.length + 1
+                  if (t >= w.t1) { acc += len; continue }
+                  if (t >= w.t0) acc += len * Math.min(1, Math.max(0, (t - w.t0) / Math.max(0.08, w.t1 - w.t0)))
+                  break
+                }
+                pct = (acc / Math.max(1, total)) * 100
+              } else {
+                pct = ((t - seg.t0) / Math.max(0.2, seg.t1 - seg.t0)) * 100
               }
-            }
-            if (w !== lastWordIdxRef.current) {
-              lastWordIdxRef.current = w
-              setActiveWordIdx(w)
+              pct = Math.max(0, Math.min(100, pct))
+              fill.style.clipPath = `inset(0 ${(100 - pct).toFixed(2)}% 0 0)`
             }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
@@ -2281,11 +2291,25 @@ export default function StudioView({ source, onClose }) {
                   <span className="chords-title">Letra</span>
                   <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
                   {lyrics?.segments?.length > 0 && (
-                    <button
-                      className="btn-secondary btn-small"
-                      onClick={() => { setPasteText(''); setPasteOpen(true) }}
-                      title="Cola a letra oficial — o texto vira o seu, a sincronização continua"
-                    >colar</button>
+                    <>
+                      {!lyrics.segments.some((s) => s.words?.length) && (
+                        <button
+                          className="btn-secondary btn-small"
+                          onClick={async () => {
+                            setLyrics('loading')
+                            setLyricsPct(0)
+                            const r = await window.mptrix.studio.lyrics({ key: session.key, force: true })
+                            setLyrics(r?.error ? { error: r.error } : r)
+                          }}
+                          data-hint="REFAZER — escuta de novo pra marcar o tempo de cada palavra (karaokê preciso). Leva os mesmos minutos da primeira vez."
+                        >↻ karaokê</button>
+                      )}
+                      <button
+                        className="btn-secondary btn-small"
+                        onClick={() => { setPasteText(''); setPasteOpen(true) }}
+                        data-hint="COLAR — cola a letra oficial por cima. O texto vira o seu e a sincronização continua a calculada."
+                      >colar</button>
+                    </>
                   )}
                   <button className="btn-close" onClick={() => setShowLyrics(false)} aria-label="Fechar">×</button>
                 </div>
@@ -2329,15 +2353,15 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </div>
                           )}
+                          {/* karaokê: uma cópia lima por cima, revelada da
+                              esquerda pra direita no relógio de frame */}
                           <div className="lyr-text">
-                            {st === 'now' && s.words?.length
-                              ? s.words.map((w, k) => (
-                                  <span
-                                    key={k}
-                                    className={`lyr-w ${k < activeWordIdx ? 'sung' : k === activeWordIdx ? 'singing' : ''}`}
-                                  >{w.text} </span>
-                                ))
-                              : s.text}
+                            <span className="lyr-base">{s.text}</span>
+                            <span
+                              className="lyr-fill"
+                              aria-hidden="true"
+                              ref={(el) => { lyrFillRefs.current[i] = el }}
+                            >{s.text}</span>
                           </div>
                           <button
                             className="lyr-edit"
