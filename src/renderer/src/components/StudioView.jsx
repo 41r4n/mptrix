@@ -1023,6 +1023,33 @@ export default function StudioView({ source, onClose }) {
     if (res?.session) await reloadSession(res.session)
   }
 
+  // LEGENDA FLUTUANTE: uma só, posicionada em tela cheia — assim nunca é
+  // cortada por área de rolagem nem escapa pela borda da janela
+  const [hint, setHint] = useState(null)
+  useEffect(() => {
+    const HINT_W = 300
+    const show = (e) => {
+      const el = e.target?.closest?.('[data-hint]')
+      if (!el) return
+      const text = el.getAttribute('data-hint')
+      if (!text) return
+      const r = el.getBoundingClientRect()
+      const x = Math.max(12, Math.min(window.innerWidth - HINT_W - 12, r.left + r.width / 2 - HINT_W / 2))
+      const below = r.top < 150
+      setHint({ text, x, y: below ? r.bottom + 10 : r.top - 10, below })
+    }
+    const hide = (e) => {
+      if (e.target?.closest?.('[data-hint]')) setHint(null)
+    }
+    document.addEventListener('mouseover', show)
+    document.addEventListener('mouseout', hide)
+    window.addEventListener('scroll', () => setHint(null), true)
+    return () => {
+      document.removeEventListener('mouseover', show)
+      document.removeEventListener('mouseout', hide)
+    }
+  }, [])
+
   // Sombras de borda: avisam ao olho que há faixa cortada acima/abaixo
   const [dawCut, setDawCut] = useState({ top: false, bottom: false })
   const updateDawCut = useCallback(() => {
@@ -2960,6 +2987,13 @@ export default function StudioView({ source, onClose }) {
             </div>
           )}
         </>
+      )}
+
+      {hint && (
+        <div
+          className={`hint-pop ${hint.below ? 'below' : ''}`}
+          style={{ left: hint.x, top: hint.y }}
+        >{hint.text}</div>
       )}
     </div>
   )
