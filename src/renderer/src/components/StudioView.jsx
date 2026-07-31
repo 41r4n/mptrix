@@ -315,6 +315,57 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
   )
 }
 
+// Onda em miniatura pras faixas guardadas: mostra ONDE o instrumento aparece
+// (clique pula pra lá) — faixa sem onda é faixa invisível
+function MiniWave({ peaks, duration, color, onSeek }) {
+  const canvasRef = useRef(null)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !peaks) return
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1
+      const w = canvas.clientWidth || 300
+      const h = canvas.clientHeight || 26
+      canvas.width = w * dpr
+      canvas.height = h * dpr
+      const ctx = canvas.getContext('2d')
+      ctx.scale(dpr, dpr)
+      ctx.clearRect(0, 0, w, h)
+      const bars = Math.max(40, Math.floor(w / 3.5))
+      const per = peaks.length / bars
+      ctx.fillStyle = color || 'rgba(182, 255, 59, 0.9)'
+      for (let b = 0; b < bars; b++) {
+        let max = 0
+        const s0 = Math.floor(b * per)
+        const s1 = Math.min(peaks.length, Math.max(s0 + 1, Math.floor((b + 1) * per)))
+        for (let s = s0; s < s1; s++) if (peaks[s] > max) max = peaks[s]
+        const ph = Math.max(1.5, max * (h - 4))
+        const x = (b + 0.5) * (w / bars)
+        ctx.fillRect(x - 0.7, (h - ph) / 2, 1.4, ph)
+      }
+    }
+    draw()
+    const ro = new ResizeObserver(draw)
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [peaks, color])
+
+  return (
+    <div
+      className="mini-wave"
+      title="Onde esse instrumento aparece — clique pra ouvir"
+      onPointerDown={(e) => {
+        if (!duration) return
+        const r = e.currentTarget.getBoundingClientRect()
+        onSeek?.(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration)
+      }}
+    >
+      <canvas ref={canvasRef} className="mini-wave-canvas" />
+      {!peaks && <span className="mini-wave-load muted">· · ·</span>}
+    </div>
+  )
+}
+
 const SEP_HINTS = [
   'isolando a voz…',
   'peneirando a bateria…',
@@ -335,6 +386,14 @@ function keyLabel(analysis) {
 function presentStems(sess) {
   if (!sess?.stemInfo) return sess?.stems || []
   return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && !sess.stemInfo[s]?.shelved)
+}
+
+// Player: TUDO que tem som entra na mistura — inclusive as guardadas. O som
+// delas foi descontado do "outros", então deixá-las de fora tocaria a música
+// incompleta. A prateleira é só onde elas ficam NA TELA.
+function audibleStems(sess) {
+  if (!sess?.stemInfo) return sess?.stems || []
+  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false)
 }
 
 // Prateleira: faixas guardadas (evidência fraca ou decisão do dono)
@@ -761,7 +820,7 @@ export default function StudioView({ source, onClose }) {
         if (wasPlaying) p.pause()
         const variant = res.variant || 'base'
         const format = res.format || 'flac'
-        await p.load(presentStems(session), stemUrl(session.key, variant, format), targetPitch)
+        await p.load(audibleStems(session), stemUrl(session.key, variant, format), targetPitch)
         const m = mixerRef.current
         p.applyGains(m.volumes, m.muted, m.solo)
         p.seek(cur)
@@ -792,7 +851,7 @@ export default function StudioView({ source, onClose }) {
       return next
     })
     try {
-      await p.load(presentStems(sess), stemUrl(sess.key, 'base', 'flac'), 0)
+      await p.load(audibleStems(sess), stemUrl(sess.key, 'base', 'flac'), 0)
       const m = mixerRef.current
       p.applyGains({ ...m.volumes }, m.muted, m.solo)
       p.seek(pos)
@@ -1226,7 +1285,7 @@ export default function StudioView({ source, onClose }) {
 
     const startSession = async (sess) => {
       setSession(sess)
-      const active = presentStems(sess)
+      const active = audibleStems(sess)
       const vols = {}
       for (const stem of active) vols[stem] = 1
       setVolumes(vols)
@@ -2402,27 +2461,56 @@ export default function StudioView({ source, onClose }) {
             </div>
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
-              <div className="shelf">
+              <div className={`shelf ${shelfOpen ? 'open' : ''}`}>
                 <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
-                  📦 Guardadas ({shelvedStems(session).length}) {shelfOpen ? '▾' : '▸'}
+                  <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
+                  📦 Guardadas
+                  <span className="shelf-count">{shelvedStems(session).length}</span>
+                  {!shelfOpen && (
+                    <span className="shelf-preview muted">
+                      {shelvedStems(session).map((s) => STEM_META[s]?.label || s).join(' · ')}
+                    </span>
+                  )}
                 </button>
-                {shelfOpen && shelvedStems(session).map((stem) => {
-                  const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
-                  const scol = stemColor(stem, session.stems.indexOf(stem))
-                  const si = session.stemInfo?.[stem] || {}
-                  return (
-                    <div className="shelf-row" key={stem}>
-                      <span className="studio-stem-bar" style={{ background: scol }} />
-                      <span className="shelf-name">{smeta.icon} {smeta.label}</span>
-                      <span className="shelf-meta muted">
-                        {si.mean != null ? `${si.mean} dB` : ''}
-                        {si.max != null ? ` · pico ${si.max} dB` : ''}
-                      </span>
-                      <button className="btn-secondary btn-small" onClick={() => setTrackInfo(stem)}>⋯ ficha</button>
-                      <button className="btn-secondary btn-small" onClick={() => setStemShelf(stem, false)}>▲ promover</button>
-                    </div>
-                  )
-                })}
+                {shelfOpen && (
+                  <>
+                    <p className="shelf-hint muted">
+                      Achados de evidência fraca — o som existe no arquivo, mas pouco.
+                      Ouça pela onda (clique pra pular) e promova pra mesa o que valer a pena.
+                    </p>
+                    {shelvedStems(session).map((stem) => {
+                      const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+                      const scol = stemColor(stem, session.stems.indexOf(stem))
+                      const st = trackStats(stem)
+                      const isSolo = solo.has(stem)
+                      return (
+                        <div className="shelf-row" key={stem}>
+                          <span className="studio-stem-bar" style={{ background: scol }} />
+                          <span className="shelf-name" style={{ color: scol }} title={smeta.label}>
+                            {smeta.icon} {smeta.label}
+                          </span>
+                          <MiniWave
+                            peaks={peaksMap[stem]}
+                            duration={playDuration}
+                            color={scol}
+                            onSeek={seekTo}
+                          />
+                          <span className="shelf-pres" title="Quanto do tempo da música ela toca">
+                            {st.coverage != null ? `${st.coverage}%` : '—'}
+                          </span>
+                          <button
+                            className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
+                            onClick={() => toggleSolo(stem)}
+                            title={`Ouvir só ${smeta.label}`}
+                            aria-pressed={isSolo}
+                          >S</button>
+                          <button className="btn-secondary btn-small" onClick={() => setTrackInfo(stem)}>⋯</button>
+                          <button className="btn-secondary btn-small" onClick={() => setStemShelf(stem, false)}>▲ promover</button>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>
