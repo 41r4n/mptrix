@@ -25,6 +25,7 @@ import {
   repairSession,
   specialistCatalog,
   redoStem,
+  setShelved,
   stemPeaks,
   investigateStretch,
   detectChords,
@@ -978,6 +979,15 @@ app.whenReady().then(() => {
 
   // Arsenal completo dos especialistas — pra busca manual na tela
   ipcMain.handle('studio:catalog', () => specialistCatalog())
+
+  // Prateleira: guardar/promover faixa (nada é apagado)
+  ipcMain.handle('studio:shelve', (_e, { key, stem, shelved }) => {
+    try {
+      return { session: setShelved({ key, stem, shelved }) }
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
 
   // Acordes: detecta (ou devolve do cache) os acordes da sessão
   ipcMain.handle('studio:chords', async (_e, { key, force }) => {

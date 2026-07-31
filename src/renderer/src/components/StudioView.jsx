@@ -331,9 +331,16 @@ function keyLabel(analysis) {
 }
 
 // "Mostra o que a música tem": faixas praticamente silenciosas ficam de fora
+// Mesa: só quem toca de verdade (nem quase-mudas, nem guardadas na prateleira)
 function presentStems(sess) {
   if (!sess?.stemInfo) return sess?.stems || []
-  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false)
+  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && !sess.stemInfo[s]?.shelved)
+}
+
+// Prateleira: faixas guardadas (evidência fraca ou decisão do dono)
+function shelvedStems(sess) {
+  if (!sess?.stemInfo) return []
+  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && sess.stemInfo[s]?.shelved)
 }
 
 function absentStems(sess) {
@@ -541,6 +548,7 @@ export default function StudioView({ source, onClose }) {
   const [pasteText, setPasteText] = useState('')
   const lyricsListRef = useRef(null)
   const [trackInfo, setTrackInfo] = useState(null) // stem da ficha técnica aberta
+  const [shelfOpen, setShelfOpen] = useState(false) // abinha das guardadas
   // acorde/verso da vez (escritos pelo relógio de frame)
   const [activeChordIdx, setActiveChordIdx] = useState(-1)
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
@@ -911,7 +919,9 @@ export default function StudioView({ source, onClose }) {
     if (phase !== 'ready' || !session) return
     let alive = true
     ;(async () => {
-      for (const stem of presentStems(session)) {
+      // inclui as guardadas: a ficha técnica delas também precisa da onda
+      const wanted = session.stems.filter((s) => session.stemInfo?.[s]?.present !== false)
+      for (const stem of wanted) {
         const p = await window.mptrix.studio.peaks({ key: session.key, stem })
         if (!alive) return
         if (p) setPeaksMap((m) => ({ ...m, [stem]: p }))
@@ -919,6 +929,17 @@ export default function StudioView({ source, onClose }) {
     })()
     return () => { alive = false }
   }, [phase, session]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Guardar/promover faixa na prateleira (persistido no meta da sessão)
+  const setStemShelf = async (stem, shelved) => {
+    if (!session) return
+    const res = await window.mptrix.studio.shelve({ key: session.key, stem, shelved })
+    if (res?.error) {
+      setExportMsg(`⚠ ${res.error}`)
+      return
+    }
+    if (res?.session) await reloadSession(res.session)
+  }
 
   // Ficha técnica da faixa: presença e trechos calculados da própria onda
   const trackStats = (stem) => {
@@ -2379,6 +2400,31 @@ export default function StudioView({ source, onClose }) {
             </aside>
             )}
             </div>
+            {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
+            {shelvedStems(session).length > 0 && (
+              <div className="shelf">
+                <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
+                  📦 Guardadas ({shelvedStems(session).length}) {shelfOpen ? '▾' : '▸'}
+                </button>
+                {shelfOpen && shelvedStems(session).map((stem) => {
+                  const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+                  const scol = stemColor(stem, session.stems.indexOf(stem))
+                  const si = session.stemInfo?.[stem] || {}
+                  return (
+                    <div className="shelf-row" key={stem}>
+                      <span className="studio-stem-bar" style={{ background: scol }} />
+                      <span className="shelf-name">{smeta.icon} {smeta.label}</span>
+                      <span className="shelf-meta muted">
+                        {si.mean != null ? `${si.mean} dB` : ''}
+                        {si.max != null ? ` · pico ${si.max} dB` : ''}
+                      </span>
+                      <button className="btn-secondary btn-small" onClick={() => setTrackInfo(stem)}>⋯ ficha</button>
+                      <button className="btn-secondary btn-small" onClick={() => setStemShelf(stem, false)}>▲ promover</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           <div className="studio-transport">
@@ -2570,6 +2616,21 @@ export default function StudioView({ source, onClose }) {
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  {(session.extracted || []).includes(trackInfo) && (
+                    <div className="confirm-actions">
+                      {session.stemInfo?.[trackInfo]?.shelved ? (
+                        <button
+                          className="btn-primary btn-small"
+                          onClick={() => { setStemShelf(trackInfo, false); setTrackInfo(null) }}
+                        >▲ Promover pra mesa</button>
+                      ) : (
+                        <button
+                          className="btn-secondary btn-small"
+                          onClick={() => { setStemShelf(trackInfo, true); setTrackInfo(null) }}
+                        >📦 Guardar na prateleira</button>
+                      )}
                     </div>
                   )}
                 </div>

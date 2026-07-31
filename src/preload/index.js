@@ -94,6 +94,7 @@ const api = {
     scout: (opts) => ipcRenderer.invoke('studio:scout', opts),
     catalog: () => ipcRenderer.invoke('studio:catalog'),
     redoStem: (opts) => ipcRenderer.invoke('studio:redoStem', opts),
+    shelve: (opts) => ipcRenderer.invoke('studio:shelve', opts),
     peaks: (opts) => ipcRenderer.invoke('studio:peaks', opts),
     investigate: (opts) => ipcRenderer.invoke('studio:investigate', opts),
     chords: (opts) => ipcRenderer.invoke('studio:chords', opts),

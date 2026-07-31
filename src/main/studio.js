@@ -1159,6 +1159,17 @@ export async function investigateStretch({ key, start, end, ffmpegPath }) {
   return { start, end, items: items.slice(0, 8) }
 }
 
+// PRATELEIRA: guardar/promover uma faixa — nada é apagado, só muda de assento
+export function setShelved({ key, stem, shelved }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  meta.stemInfo = meta.stemInfo || {}
+  meta.stemInfo[stem] = { ...(meta.stemInfo[stem] || {}), shelved: !!shelved }
+  writeMeta(dir, meta)
+  return sessionPayload(key, readMeta(dir))
+}
+
 // REFAZER FAIXA: apaga uma faixa extraída e devolve o som dela pra "outros",
 // deixando tudo pronto pra extrair de novo DO ZERO (sem reaproveitar pedaços
 // possivelmente suspeitos de uma rodada problemática).
@@ -1360,7 +1371,11 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         m.stemInfo = m.stemInfo || {}
         // presente = média audível OU pico real (solo curto numa música longa
         // tem média baixa mas pico alto — o sax da Azul foi escondido injustamente)
-        m.stemInfo[instId] = { present: meanVol > -48 || maxVol > -35, mean: meanVol, max: maxVol }
+        const present = meanVol > -48 || maxVol > -35
+        // REGRA DO RESPINGO: evidência fraca nasce na prateleira, não na mesa
+        // (músico contratado não toca 3 segundos — respingo de ímã toca)
+        const shelved = present && meanVol <= -42
+        m.stemInfo[instId] = { present, mean: meanVol, max: maxVol, shelved }
         m.extracted = [...new Set([...(m.extracted || []), instId])]
         if (m.scout) m.scout.detections = (m.scout.detections || []).filter((d) => d.instrument !== instId)
         writeMeta(dir, m)
