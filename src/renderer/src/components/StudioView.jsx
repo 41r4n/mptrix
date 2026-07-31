@@ -2469,16 +2469,30 @@ export default function StudioView({ source, onClose }) {
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
               <div className={`shelf ${shelfOpen ? 'open' : ''}`}>
-                <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
-                  <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
-                  📦 Guardadas
-                  <span className="shelf-count">{shelvedStems(session).length}</span>
-                  {!shelfOpen && (
-                    <span className="shelf-preview muted">
-                      {shelvedStems(session).map((s) => STEM_META[s]?.label || s).join(' · ')}
-                    </span>
-                  )}
-                </button>
+                {(() => {
+                  const list = shelvedStems(session)
+                  // campeã da prateleira: a que mais toca (candidata natural a subir)
+                  let top = null
+                  for (const s of list) {
+                    const c = trackStats(s).coverage
+                    if (c != null && (!top || c > top.c)) top = { s, c }
+                  }
+                  return (
+                    <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
+                      <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
+                      <span className="shelf-box">📦</span>
+                      <span className="shelf-title">GUARDADAS</span>
+                      <span className="shelf-count">{list.length}</span>
+                      <span className="shelf-summary">
+                        {shelfOpen
+                          ? top
+                            ? <>maior presença: <strong>{STEM_META[top.s]?.label || top.s}</strong> · {top.c}%</>
+                            : 'achados de evidência fraca'
+                          : list.map((s) => STEM_META[s]?.label || s).join(' · ')}
+                      </span>
+                    </button>
+                  )
+                })()}
                 {shelfOpen && (
                   <>
                     <p className="shelf-hint muted">
