@@ -611,6 +611,14 @@ export default function StudioView({ source, onClose }) {
   const lyricsListRef = useRef(null)
   const [trackInfo, setTrackInfo] = useState(null) // stem da ficha técnica aberta
   const [shelfOpen, setShelfOpen] = useState(false) // abinha das guardadas
+  // depois que a abertura termina, o corpo volta a "vazar" (pras legendas
+  // flutuantes não serem cortadas durante a animação de altura)
+  const [shelfSettled, setShelfSettled] = useState(false)
+  useEffect(() => {
+    if (!shelfOpen) { setShelfSettled(false); return }
+    const t = setTimeout(() => setShelfSettled(true), 320)
+    return () => clearTimeout(t)
+  }, [shelfOpen])
   const [uiZoom, setUiZoom] = useState(1)
   useEffect(() => {
     window.mptrix.ui?.zoomGet?.().then((v) => setUiZoom(v || 1)).catch(() => {})
@@ -2492,7 +2500,7 @@ export default function StudioView({ source, onClose }) {
                   }
                   return (
                     <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
-                      <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
+                      <span className={`shelf-caret ${shelfOpen ? 'open' : ''}`}>▸</span>
                       <span className="hex-badge" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="14" height="14">
                           <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0b0c0f" />
@@ -2534,8 +2542,9 @@ export default function StudioView({ source, onClose }) {
                     </button>
                   )
                 })()}
-                {shelfOpen && (
-                  <>
+                {/* corpo sempre montado: quem anima é a altura (0fr → 1fr) */}
+                <div className={`shelf-body ${shelfOpen ? 'open' : ''} ${shelfSettled ? 'settled' : ''}`}>
+                  <div className="shelf-inner">
                     <div className="shelf-head">
                       <span className="shelf-head-name">INSTRUMENTO</span>
                       <span className="shelf-head-wave">ONDE TOCA NA MÚSICA</span>
@@ -2627,8 +2636,8 @@ export default function StudioView({ source, onClose }) {
                         </div>
                       )
                     })}
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
               </div>
             )}

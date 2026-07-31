@@ -6170,3 +6170,58 @@ body.studio-open .zoom-chip {
     calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px)
   );
 }
+
+/* ---------- Abre e fecha com animação ---------- */
+.shelf-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shelf-body.open {
+  grid-template-rows: 1fr;
+}
+
+.shelf-inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shelf-body.open .shelf-inner {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.06s;
+}
+
+/* terminada a abertura, o conteúdo volta a vazar (legendas flutuantes) */
+.shelf-body.settled .shelf-inner {
+  overflow: visible;
+}
+
+.shelf-caret {
+  display: inline-block;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shelf-caret.open {
+  transform: rotate(90deg);
+}
+
+/* as linhas entram em cascata quando abre */
+.shelf-body.open .shelf-row {
+  animation: shelfRowIn 0.32s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+.shelf-body.open .shelf-row:nth-child(2) { animation-delay: 0.04s; }
+.shelf-body.open .shelf-row:nth-child(3) { animation-delay: 0.08s; }
+.shelf-body.open .shelf-row:nth-child(4) { animation-delay: 0.12s; }
+.shelf-body.open .shelf-row:nth-child(5) { animation-delay: 0.16s; }
+.shelf-body.open .shelf-row:nth-child(n + 6) { animation-delay: 0.2s; }
+
+@keyframes shelfRowIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
