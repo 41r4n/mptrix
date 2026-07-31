@@ -2471,34 +2471,43 @@ export default function StudioView({ source, onClose }) {
               <div className={`shelf ${shelfOpen ? 'open' : ''}`}>
                 {(() => {
                   const list = shelvedStems(session)
-                  // campeã da prateleira: a que mais toca (candidata natural a subir)
+                  // triagem por presença: quem vale ouvir, quem é só aparição, quem é fiapo
                   let top = null
+                  let strong = 0
+                  let mid = 0
+                  let weak = 0
                   for (const s of list) {
                     const c = trackStats(s).coverage
-                    if (c != null && (!top || c > top.c)) top = { s, c }
+                    if (c == null) continue
+                    if (!top || c > top.c) top = { s, c }
+                    if (c >= 10) strong++
+                    else if (c >= 3) mid++
+                    else weak++
                   }
                   return (
                     <button className="shelf-toggle" onClick={() => setShelfOpen((v) => !v)}>
                       <span className="shelf-caret">{shelfOpen ? '▾' : '▸'}</span>
                       <span className="shelf-box">📦</span>
-                      <span className="shelf-title">GUARDADAS</span>
+                      <div className="shelf-titlewrap">
+                        <span className="shelf-title">GUARDADAS</span>
+                        <span className="shelf-sub">
+                          {list.length} achado{list.length !== 1 ? 's' : ''} de evidência fraca
+                          {top ? ` · maior presença: ${STEM_META[top.s]?.label || top.s} (${top.c}%)` : ''}
+                        </span>
+                      </div>
                       <span className="shelf-count">{list.length}</span>
-                      <span className="shelf-summary">
-                        {shelfOpen
-                          ? top
-                            ? <>maior presença: <strong>{STEM_META[top.s]?.label || top.s}</strong> · {top.c}%</>
-                            : 'achados de evidência fraca'
-                          : list.map((s) => STEM_META[s]?.label || s).join(' · ')}
+                      <span className="shelf-chips">
+                        {strong > 0 && (
+                          <span className="shelf-chip hi">⚡ {strong} vale{strong !== 1 ? 'm' : ''} ouvir</span>
+                        )}
+                        {mid > 0 && <span className="shelf-chip mid">{mid} aparição{mid !== 1 ? 'ões' : ''} curta{mid !== 1 ? 's' : ''}</span>}
+                        {weak > 0 && <span className="shelf-chip lo">{weak} fiapo{weak !== 1 ? 's' : ''}</span>}
                       </span>
                     </button>
                   )
                 })()}
                 {shelfOpen && (
                   <>
-                    <p className="shelf-hint muted">
-                      Achados de evidência fraca — o som existe no arquivo, mas pouco.
-                      Ouça pela onda (clique pra pular) e promova pra mesa o que valer a pena.
-                    </p>
                     <div className="shelf-head">
                       <span className="shelf-head-name">INSTRUMENTO</span>
                       <span className="shelf-head-wave">ONDE TOCA NA MÚSICA</span>
