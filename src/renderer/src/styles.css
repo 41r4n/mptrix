@@ -6093,3 +6093,18 @@ body.studio-open .zoom-chip {
 .btn-dots {
   margin-left: 6px;
 }
+
+/* ---------- Barra de título da prateleira: verde permanente ---------- */
+.shelf-toggle {
+  background: rgba(182, 255, 59, 0.07);
+  border-bottom: 1px solid rgba(182, 255, 59, 0.16);
+  transition: background 0.15s ease;
+}
+
+.shelf-toggle:hover {
+  background: rgba(182, 255, 59, 0.14);
+}
+
+.shelf.open .shelf-toggle {
+  border-bottom-color: rgba(182, 255, 59, 0.22);
+}
