@@ -611,6 +611,11 @@ export default function StudioView({ source, onClose }) {
   const lyricsListRef = useRef(null)
   const [trackInfo, setTrackInfo] = useState(null) // stem da ficha técnica aberta
   const [shelfOpen, setShelfOpen] = useState(false) // abinha das guardadas
+  const [uiZoom, setUiZoom] = useState(1)
+  useEffect(() => {
+    window.mptrix.ui?.zoomGet?.().then((v) => setUiZoom(v || 1)).catch(() => {})
+    return window.mptrix.ui?.onZoom?.((v) => setUiZoom(v || 1))
+  }, [])
   // acorde/verso da vez (escritos pelo relógio de frame)
   const [activeChordIdx, setActiveChordIdx] = useState(-1)
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
@@ -2592,22 +2597,35 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </span>
                           </span>
-                          <button
-                            className={`studio-mini-btn ${isSolo ? 'active-solo' : ''}`}
-                            onClick={() => toggleSolo(stem)}
-                            data-hint={`OUVIR SÓ — isola ${smeta.label} e silencia o resto, pra você julgar de ouvido antes de decidir.`}
-                            aria-pressed={isSolo}
-                          >S</button>
-                          <button
-                            className="btn-secondary btn-small"
-                            onClick={() => setTrackInfo(stem)}
-                            data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência (se o sistema acha que esse instrumento é real na música)."
-                          >⋯</button>
-                          <button
-                            className="btn-secondary btn-small shelf-promote"
-                            onClick={() => setStemShelf(stem, false)}
-                            data-hint="PROMOVER — sobe essa faixa pra mesa junto com as principais. Dá pra guardar de volta a qualquer momento pela ficha."
-                          >▲ promover</button>
+                          {/* cluster segmentado: um controle só, três ações —
+                              em vez de três pílulas soltas repetidas por linha */}
+                          <div className="act-group">
+                            <button
+                              className={`act ${isSolo ? 'on' : ''}`}
+                              onClick={() => toggleSolo(stem)}
+                              data-hint={`OUVIR SÓ — isola ${smeta.label} e silencia o resto, pra você julgar de ouvido antes de decidir.`}
+                              aria-pressed={isSolo}
+                            >
+                              <span className="act-glyph">▶</span>
+                              <span className="act-label">só ela</span>
+                            </button>
+                            <button
+                              className="act"
+                              onClick={() => setTrackInfo(stem)}
+                              data-hint="FICHA TÉCNICA — origem, volume, pico, presença e o veredito de existência (se o sistema acha que esse instrumento é real na música)."
+                            >
+                              <span className="act-glyph">◈</span>
+                              <span className="act-label">ficha</span>
+                            </button>
+                            <button
+                              className="act act-primary"
+                              onClick={() => setStemShelf(stem, false)}
+                              data-hint="PROMOVER — sobe essa faixa pra mesa junto com as principais. Dá pra guardar de volta a qualquer momento pela ficha."
+                            >
+                              <span className="act-glyph">▲</span>
+                              <span className="act-label">promover</span>
+                            </button>
+                          </div>
                           </div>
                         </div>
                       )
@@ -2697,6 +2715,15 @@ export default function StudioView({ source, onClose }) {
 
               {altered && (
                 <button className="link-btn" onClick={resetPitchTempo}>voltar ao original</button>
+              )}
+
+              {/* lupinha vive aqui dentro no estúdio (fora, ela atropelava as faixas) */}
+              {window.mptrix.ui && (
+                <span className="tr-zoom" data-hint="TAMANHO DA TELA — atalhos: Ctrl+= aproxima, Ctrl+− afasta, Ctrl+0 volta ao normal.">
+                  <button className="act" onClick={() => window.mptrix.ui.zoom(-1)} aria-label="Diminuir">−</button>
+                  <button className="act" onClick={() => window.mptrix.ui.zoom(0)}>{Math.round(uiZoom * 100)}%</button>
+                  <button className="act" onClick={() => window.mptrix.ui.zoom(1)} aria-label="Aumentar">+</button>
+                </span>
               )}
 
               {pitch !== 0 && hq?.state === 'rendering' && (
