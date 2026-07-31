@@ -6416,3 +6416,49 @@ body.studio-open .zoom-chip {
 .daw-row {
   min-height: 58px;
 }
+
+/* ---------- Sombras de borda: sinal de que a lista continua ---------- */
+.daw-shade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* logo abaixo da régua fixa */
+.daw-shade.top {
+  top: 24px;
+  box-shadow: 0 7px 16px 7px rgba(0, 0, 0, 0.85);
+}
+
+.daw-shade.bottom {
+  bottom: 0;
+  box-shadow: 0 -7px 16px 7px rgba(0, 0, 0, 0.85);
+}
+
+.daw.cut-top .daw-shade.top,
+.daw.cut-bottom .daw-shade.bottom {
+  opacity: 1;
+}
+
+/* fiozinho lima junto da sombra: "tem mais coisa por aqui" */
+.daw-shade::after {
+  content: '';
+  position: absolute;
+  left: var(--rail-w);
+  right: 0;
+  height: 1px;
+  background: rgba(182, 255, 59, 0.22);
+}
+
+.daw-shade.top::after {
+  top: 0;
+}
+
+.daw-shade.bottom::after {
+  bottom: 0;
+}

@@ -1023,18 +1023,29 @@ export default function StudioView({ source, onClose }) {
     if (res?.session) await reloadSession(res.session)
   }
 
+  // Sombras de borda: avisam ao olho que há faixa cortada acima/abaixo
+  const [dawCut, setDawCut] = useState({ top: false, bottom: false })
+  const updateDawCut = useCallback(() => {
+    const el = dawScrollRef.current
+    if (!el) return
+    const top = el.scrollTop > 2
+    const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 2
+    setDawCut((c) => (c.top === top && c.bottom === bottom ? c : { top, bottom }))
+  }, [])
+
   // Mede a área das pistas: quantas faixas cabem inteiras, e de que tamanho.
   // Com poucas, elas esticam; com muitas, encaixam N inteiras e o resto rola —
   // nunca sobra meia faixa cortada na borda de baixo.
   useEffect(() => {
     const el = dawScrollRef.current
     if (!el) return
-    const measure = () => setDawH(el.clientHeight)
+    const measure = () => { setDawH(el.clientHeight); updateDawCut() }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild) // altura do conteúdo
     return () => ro.disconnect()
-  }, [phase, session?.key])
+  }, [phase, session?.key, updateDawCut])
 
   const MIN_LANE = 66
   const laneStyle = (() => {
@@ -2031,7 +2042,7 @@ export default function StudioView({ source, onClose }) {
             {/* Mesa de DAW: rail de controles 264px + canaletas contínuas,
                 com UM overlay de playhead/tint cruzando todas as pistas */}
             <div className="daw-wrap">
-            <div className="daw">
+            <div className={`daw ${dawCut.top ? 'cut-top' : ''} ${dawCut.bottom ? 'cut-bottom' : ''}`}>
               <div className="daw-row daw-head-row">
                 <div className="daw-rail daw-rail-head">
                   <span className="hex-dot" aria-hidden="true" />
@@ -2060,7 +2071,7 @@ export default function StudioView({ source, onClose }) {
               </div>
               {/* área rolável: as pistas nunca encolhem abaixo do piso de leitura;
                   passando disso, rola (o ruler fica fixo em cima) */}
-              <div className="daw-scroll" ref={dawScrollRef}>
+              <div className="daw-scroll" ref={dawScrollRef} onScroll={updateDawCut}>
               <div className="daw-canvas">
               {presentStems(session).map((stem, stemIdx) => {
                 const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
@@ -2171,6 +2182,10 @@ export default function StudioView({ source, onClose }) {
               </div>
               </div>
               </div>
+              {/* sombras de borda: o olho entende na hora que tem mais faixa
+                  acima/abaixo — sem elas o corte parece defeito */}
+              <div className="daw-shade top" aria-hidden="true" />
+              <div className="daw-shade bottom" aria-hidden="true" />
             </div>
             {showChords && (
               <div className="chords-panel">
