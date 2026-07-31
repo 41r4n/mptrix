@@ -6462,3 +6462,36 @@ body.studio-open .zoom-chip {
 .daw-shade.bottom::after {
   bottom: 0;
 }
+
+/* ---------- Sombras ancoradas na área de rolagem + mais densas ---------- */
+.daw-scrollwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.daw-scrollwrap .daw-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.daw-shade.top {
+  top: 0;
+  box-shadow: 0 11px 22px 11px rgba(0, 0, 0, 0.96);
+}
+
+.daw-shade.bottom {
+  bottom: 0;
+  box-shadow: 0 -11px 22px 11px rgba(0, 0, 0, 0.96);
+}
+
+/* régua com respiro de volta (a sombra não depende mais dessa altura) */
+.daw-head-row {
+  height: 28px;
+}
+
+.daw-cap {
+  font-size: 9px;
+}

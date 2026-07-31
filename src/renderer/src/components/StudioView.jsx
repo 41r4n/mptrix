@@ -2071,6 +2071,7 @@ export default function StudioView({ source, onClose }) {
               </div>
               {/* área rolável: as pistas nunca encolhem abaixo do piso de leitura;
                   passando disso, rola (o ruler fica fixo em cima) */}
+              <div className="daw-scrollwrap">
               <div className="daw-scroll" ref={dawScrollRef} onScroll={updateDawCut}>
               <div className="daw-canvas">
               {presentStems(session).map((stem, stemIdx) => {
@@ -2182,10 +2183,11 @@ export default function StudioView({ source, onClose }) {
               </div>
               </div>
               </div>
-              {/* sombras de borda: o olho entende na hora que tem mais faixa
-                  acima/abaixo — sem elas o corte parece defeito */}
+              {/* sombras ancoradas na própria área de rolagem (nunca desalinham
+                  com a régua): o olho entende que tem mais faixa acima/abaixo */}
               <div className="daw-shade top" aria-hidden="true" />
               <div className="daw-shade bottom" aria-hidden="true" />
+              </div>
             </div>
             {showChords && (
               <div className="chords-panel">
