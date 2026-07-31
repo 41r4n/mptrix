@@ -634,7 +634,7 @@ export default function StudioView({ source, onClose }) {
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
   const [activeWordIdx, setActiveWordIdx] = useState(-1)
   const lastWordIdxRef = useRef(-1)
-  const lyrFillRefs = useRef({})
+  const wordFillRef = useRef(null)
   const chordsListRef = useRef(null)
   const lyrSegsRef = useRef(null)
   const lastChordIdxRef = useRef(-1)
@@ -811,6 +811,16 @@ export default function StudioView({ source, onClose }) {
               lastWordIdxRef.current = w
               setActiveWordIdx(w)
             }
+            // a palavra da vez vai enchendo de verde enquanto é cantada — se o
+            // cantor segura, ela enche devagar e fica acesa até a próxima
+            const fillEl = wordFillRef.current
+            if (fillEl && w >= 0 && seg?.words) {
+              const cw = seg.words[w]
+              const nx = seg.words[w + 1]
+              const end = Math.min(cw.t1 || Infinity, nx ? nx.t0 : Infinity)
+              const f = Math.max(0, Math.min(1, (t - cw.t0) / Math.max(0.12, end - cw.t0)))
+              fillEl.style.clipPath = `inset(0 ${((1 - f) * 100).toFixed(1)}% 0 0)`
+            }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
             setPos(t)
@@ -964,7 +974,12 @@ export default function StudioView({ source, onClose }) {
     if (next) { setShowChords(false); setShowExtract(false) }
     if (next && !lyrics && session) {
       setLyrics('loading')
-      const r = await window.mptrix.studio.lyrics({ key: session.key })
+      let r = await window.mptrix.studio.lyrics({ key: session.key })
+      // letra guardada sem marcação de palavra: refaz sozinha, sem pedir nada
+      if (!r?.error && r?.segments?.length && !r.segments.some((s) => s.words?.length)) {
+        setLyricsPct(0)
+        r = await window.mptrix.studio.lyrics({ key: session.key, force: true })
+      }
       setLyrics(r?.error ? { error: r.error } : r)
       if (!chords) {
         const c = await window.mptrix.studio.chords({ key: session.key })
@@ -2283,25 +2298,11 @@ export default function StudioView({ source, onClose }) {
                   <span className="chords-title">Letra</span>
                   <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
                   {lyrics?.segments?.length > 0 && (
-                    <>
-                      {!lyrics.segments.some((s) => s.words?.length) && (
-                        <button
-                          className="btn-secondary btn-small"
-                          onClick={async () => {
-                            setLyrics('loading')
-                            setLyricsPct(0)
-                            const r = await window.mptrix.studio.lyrics({ key: session.key, force: true })
-                            setLyrics(r?.error ? { error: r.error } : r)
-                          }}
-                          data-hint="REFAZER — escuta de novo pra marcar o tempo de cada palavra (karaokê preciso). Leva os mesmos minutos da primeira vez."
-                        >↻ karaokê</button>
-                      )}
-                      <button
-                        className="btn-secondary btn-small"
-                        onClick={() => { setPasteText(''); setPasteOpen(true) }}
-                        data-hint="COLAR — cola a letra oficial por cima. O texto vira o seu e a sincronização continua a calculada."
-                      >colar</button>
-                    </>
+                    <button
+                      className="btn-secondary btn-small"
+                      onClick={() => { setPasteText(''); setPasteOpen(true) }}
+                      data-hint="COLAR — cola a letra oficial por cima. O texto vira o seu e a sincronização continua a calculada."
+                    >colar</button>
                   )}
                   <button className="btn-close" onClick={() => setShowLyrics(false)} aria-label="Fechar">×</button>
                 </div>
@@ -2323,13 +2324,6 @@ export default function StudioView({ source, onClose }) {
                   </div>
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
-                {lyrics?.segments?.length > 0 && !lyrics.segments.some((s) => s.words?.length) && (
-                  <p className="lyr-nokaraoke">
-                    ⚠️ Esta letra não tem a marcação de cada palavra — por isso o destaque
-                    fica no verso inteiro e pode adiantar. Clique em <strong>↻ karaokê</strong>
-                    {' '}pra reescutar marcando palavra por palavra.
-                  </p>
-                )}
                 {lyrics?.segments && (lyrics.segments.length === 0 ? (
                   <div className="chords-empty muted">Não ouvi versos cantados na faixa de voz.</div>
                 ) : (
@@ -2354,17 +2348,28 @@ export default function StudioView({ source, onClose }) {
                           )}
                           <div className="lyr-text">
                             {s.words?.length
-                              ? s.words.map((w, k) => (
-                                  <span
-                                    key={k}
-                                    className={
-                                      st !== 'now' ? 'lyr-w'
-                                        : k < activeWordIdx ? 'lyr-w sung'
-                                          : k === activeWordIdx ? 'lyr-w singing'
-                                            : 'lyr-w'
-                                    }
-                                  >{w.text} </span>
-                                ))
+                              ? s.words.map((w, k) => {
+                                  if (st === 'now' && k === activeWordIdx) {
+                                    // palavra da vez: cópia lima revelada conforme é cantada
+                                    return (
+                                      <span key={k} className="lyr-w now">
+                                        <span className="lyr-wbase">{w.text}</span>
+                                        <span
+                                          className="lyr-wfill"
+                                          aria-hidden="true"
+                                          ref={(el) => { if (el) wordFillRef.current = el }}
+                                        >{w.text}</span>
+                                        {' '}
+                                      </span>
+                                    )
+                                  }
+                                  return (
+                                    <span
+                                      key={k}
+                                      className={`lyr-w ${st === 'now' && k < activeWordIdx ? 'sung' : ''}`}
+                                    >{w.text} </span>
+                                  )
+                                })
                               : s.text}
                           </div>
                           <button

@@ -432,8 +432,10 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       const threads = freeMemMB() > 3072 ? '6' : '4'
       const child = spawn(
         exe,
-        // -ojf: JSON completo, com o tempo de CADA palavra (karaokê)
-        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-of', outBase, '-t', threads, '-pp'],
+        // -ojf: JSON completo com o tempo de CADA palavra.
+        // -dtw small: alinhamento fino — sem isso os tempos são um chute grosso.
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', 'small',
+          '-of', outBase, '-t', threads, '-pp'],
         { windowsHide: true }
       )
       let err = ''
@@ -474,6 +476,44 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
         }
       })
       .filter((s) => s.text && s.t1 > s.t0)
+
+    // AUTO-SINCRONIA: a IA costuma marcar o verso um pouco antes do canto
+    // começar. Em vez de pedir ajuste ao usuário, comparo com a energia da
+    // própria voz e corrijo o desencontro sistemático sozinho.
+    try {
+      const peaks = await stemPeaks({ key, stem: 'vocals', ffmpegPath })
+      const dur = meta.duration || 0
+      if (peaks?.length && dur > 0 && segments.length >= 4) {
+        const step = dur / peaks.length
+        const THR = 0.12
+        const onsetNear = (t) => {
+          const a = Math.max(1, Math.floor((t - 1.2) / step))
+          const b = Math.min(peaks.length - 1, Math.ceil((t + 1.2) / step))
+          for (let i = a; i <= b; i++) {
+            if (peaks[i] >= THR && peaks[i - 1] < THR) return i * step
+          }
+          return null
+        }
+        const deltas = []
+        for (const s of segments) {
+          const o = onsetNear(s.t0)
+          if (o != null) deltas.push(o - s.t0)
+        }
+        if (deltas.length >= 4) {
+          deltas.sort((x, y) => x - y)
+          let off = deltas[Math.floor(deltas.length / 2)] // mediana
+          off = Math.max(-1.2, Math.min(1.2, off))
+          if (Math.abs(off) > 0.05) {
+            for (const s of segments) {
+              s.t0 += off
+              s.t1 += off
+              for (const w of s.words || []) { w.t0 += off; w.t1 += off }
+            }
+          }
+        }
+      }
+    } catch {}
+
     const m2 = readMeta(dir)
     m2.lyrics = { at: new Date().toISOString(), segments, edited: false }
     writeMeta(dir, m2)

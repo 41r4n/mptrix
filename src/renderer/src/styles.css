@@ -6615,3 +6615,29 @@ body.studio-open .zoom-chip {
 .lyr-nokaraoke strong {
   color: var(--text-2);
 }
+
+/* ---------- Karaokê estilo Spotify: a palavra enche enquanto é cantada ---------- */
+.lyr-w.now {
+  position: relative;
+  display: inline-block;
+  white-space: pre;
+}
+
+.lyr-wbase {
+  color: inherit;
+}
+
+.lyr-wfill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  text-shadow: 0 0 16px rgba(182, 255, 59, 0.75);
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+  white-space: pre;
+}
+
+.lyr-nokaraoke {
+  display: none;
+}
