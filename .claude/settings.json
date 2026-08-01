@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(D=\"C:/Users/airan/.claude/projects/c--Users-airan-Desktop-MPTRIX/94fbab17-37b9-403f-a6da-5120ecf2bb0e/subagents/workflows/wf_959fd617-77c\"; wc -l < \"$D/journal.jsonl\"; ls \"$D\" | grep -c jsonl; node -e \" *)",
+      "Read(//c/Users/airan/.claude/projects/c--Users-airan-Desktop-MPTRIX/94fbab17-37b9-403f-a6da-5120ecf2bb0e/subagents/workflows/wf_959fd617-77c/**)",
+      "Bash(node alg_frases-puras.mjs)",
+      "Bash(node alg_programacao-dinamica.mjs --quiet)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 3000)",
+      "Bash(node alg_frases-mais-maiuscula.mjs)",
+      "Bash(node alg_frases-mais-maiuscula.mjs --search)",
+      "Bash(node alg_frases-puras.mjs --wide)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 6000 --seed dp_best_params.json)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_best_params.json --diff)",
+      "Bash(node alg_frases-mais-maiuscula.mjs --diff)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_best_params.json --quiet)",
+      "Bash(cp dp_best_params.json dp_seed_v1.json)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 5000 --seed dp_seed_v1.json)",
+      "Bash(cp dp_best_params.json dp_seed_v2.json)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 6000 --seed dp_seed_v2.json)",
+      "Bash(NSTART=200 SEED=777 node alg_frases-mais-maiuscula.mjs --search)",
+      "Bash(sed -i \"s/^const LYRICS_V = 2$/const LYRICS_V = 3/\" src/main/studio.js)",
+      "Bash(node -)",
+      "Bash(NSTART=250 SEED=999 node alg_frases-mais-maiuscula.mjs --search)"
+    ]
+  }
+}

@@ -476,7 +476,7 @@ function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
 
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 2
+const LYRICS_V = 3
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -565,14 +565,16 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     // do whisper ali é melhor que qualquer chute meu. Só quando ele amontoa
     // palavras no instrumental (o clássico "a letra entra antes do cantor") é
     // que a frase inteira é reencaixada, preservando o espaçamento relativo.
+    let env = null
+    let frases = []
     try {
-      const env = await vocalEnvelope(vocals, ffmpegPath)
+      env = await vocalEnvelope(vocals, ffmpegPath)
       const regions = env?.data?.length ? voiceRegions(env.data, env.hop) : []
-      // frase = região de voz; respiro de até 350ms não parte a frase
-      const frases = []
+      // frase cantada = região de voz; respiro de até 280ms não parte a frase.
+      // É ISSO que vira verso lá embaixo — a frase que o cantor canta.
       for (const r of regions) {
         const last = frases[frases.length - 1]
-        if (last && r[0] - last[1] < 0.35) last[1] = r[1]
+        if (last && r[0] - last[1] < 0.28) last[1] = r[1]
         else frases.push([r[0], r[1]])
       }
       if (frases.length >= 2 && words.length) {
@@ -643,62 +645,149 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       if (words[i].t0 < words[i - 1].t0 + 0.04) words[i].t0 = words[i - 1].t0 + 0.04
     }
 
-    // VERSOS DE VERDADE: o corte nasce da pausa real do canto (limiar adaptado
-    // à música), não do blocão do whisper. Assim o verso vira na hora que a
-    // frase vira — e não 20 segundos depois.
-    const MAXC = 42
-    const MAXDUR = 7
-    const gapOf = (i) => (i > 0 ? words[i].t0 - Math.max(words[i - 1].t1 || 0, words[i - 1].t0) : Infinity)
-    const gaps = words.map((_, i) => gapOf(i)).filter((g) => isFinite(g) && g > 0).sort((a, b) => a - b)
-    const med = gaps[Math.floor(gaps.length / 2)] || 0.1
-    const GAP = Math.min(1.1, Math.max(0.45, med * 4))
-    const cortes = new Set(words.length ? [0] : [])
-    for (let i = 1; i < words.length; i++) if (gapOf(i) >= GAP) cortes.add(i)
-    // linha comprida ou longa demais quebra na maior pausa interna
-    for (let guarda = 0; guarda < 400; guarda++) {
-      let mudou = false
-      const ini = [...cortes].sort((a, b) => a - b)
-      for (let c = 0; c < ini.length; c++) {
-        const a = ini[c]
-        const b = c + 1 < ini.length ? ini[c + 1] : words.length
-        if (b - a < 4) continue
-        const txt = words.slice(a, b).map((w) => w.text).join(' ')
-        const durL = (words[b - 1].t1 || words[b - 1].t0) - words[a].t0
-        if (txt.length <= MAXC && durL <= MAXDUR) continue
-        let best = -1
-        let bestG = -1
-        for (let i = a + 2; i <= b - 2; i++) {
-          const g = gapOf(i)
-          if (g > bestG) { bestG = g; best = i }
+    // VERSOS DE VERDADE: o verso é a FRASE CANTADA — o trecho de voz entre dois
+    // silêncios de verdade. Não adianta cortar pelo intervalo entre palavras: o
+    // whisper cola o fim de cada palavra no começo da próxima, então esse
+    // intervalo é quase sempre zero (foi o que deixava a letra picotada).
+    // Depois da frase, o TEXTO afina o corte: o whisper maiusculiza onde ouve
+    // começo de frase musical, e verso não termina em palavrinha de ligação.
+    const MAXC = 46
+    const MAXDUR = 6.5
+    const MAIUSC = (t) => /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ]/.test(t)
+    const PONTO = (t) => /[.,;:!?]$/.test(t)
+    const semPonto = (t) => t.replace(/[.,;:!?]+$/, '')
+    // nome próprio maiúsculo no meio da frase não é começo de verso
+    const NAO_INICIA = new Set(['Deus', 'Senhor', 'Jesus', 'Cristo', 'Santo', 'Espírito', 'Pai', 'Rei',
+      'Teus', 'Teu', 'Tua', 'Tuas', 'Seu', 'Sua', 'Ele', 'Ela'])
+    const LIGACAO = new Set(['me', 'te', 'se', 'lhe', 'o', 'a', 'os', 'as', 'de', 'do', 'da', 'dos', 'das',
+      'e', 'em', 'no', 'na', 'nos', 'nas', 'um', 'uma', 'que', 'com', 'por', 'pro', 'pra', 'para', 'ao', 'à',
+      'meu', 'teu', 'seu', 'minha', 'tua', 'sua', 'mais', 'muito', 'já', 'ó', 'num', 'numa'])
+
+    let grupos = []
+    if (frases.length >= 2 && words.length) {
+      // cada palavra na frase cantada em que ela cai (ordem garantida)
+      const dono = words.map((w) => {
+        let best = 0
+        let bd = Infinity
+        for (let k = 0; k < frases.length; k++) {
+          const [a, b] = frases[k]
+          const d = w.t0 < a ? a - w.t0 : w.t0 > b ? w.t0 - b : 0
+          if (d < bd) { bd = d; best = k }
         }
-        if (best > 0 && !cortes.has(best)) { cortes.add(best); mudou = true; break }
+        return best
+      })
+      for (let i = 1; i < dono.length; i++) if (dono[i] < dono[i - 1]) dono[i] = dono[i - 1]
+      let i = 0
+      while (i < words.length) {
+        const f = dono[i]
+        let j = i
+        while (j + 1 < words.length && dono[j + 1] === f) j++
+        grupos.push(words.slice(i, j + 1))
+        i = j + 1
       }
-      if (!mudou) break
+    } else if (words.length) {
+      grupos = [words.slice()]
     }
-    // linha de 1–2 palavras gruda na anterior, se couber
-    {
-      let ini = [...cortes].sort((a, b) => a - b)
-      for (let c = 1; c < ini.length; c++) {
-        const a = ini[c]
-        const b = c + 1 < ini.length ? ini[c + 1] : words.length
-        if (b - a > 2) continue
-        const junto = words.slice(ini[c - 1], b)
-        const cabe = junto.map((w) => w.text).join(' ').length <= MAXC + 8 &&
-          (junto[junto.length - 1].t1 || 0) - junto[0].t0 <= MAXDUR + 3
-        if (cabe) { cortes.delete(a); ini = [...cortes].sort((x, y) => x - y); c-- }
-      }
-    }
-    const segments = []
-    {
-      const ini = [...cortes].sort((a, b) => a - b)
-      for (let c = 0; c < ini.length; c++) {
-        const a = ini[c]
-        const b = c + 1 < ini.length ? ini[c + 1] : words.length
-        const ws = words.slice(a, b)
-        if (!ws.length) continue
-        segments.push({ t0: ws[0].t0, t1: ws[ws.length - 1].t1, text: ws.map((w) => w.text).join(' '), words: ws })
+
+    // 1) palavra Maiúscula sobrando no fim do verso é começo do PRÓXIMO
+    for (let g = 0; g < grupos.length - 1; g++) {
+      for (let n = 0; n < 2; n++) {
+        const cur = grupos[g]
+        if (cur.length < 2) break
+        const ult = cur[cur.length - 1].text
+        if (!MAIUSC(ult) || NAO_INICIA.has(semPonto(ult))) break
+        if (PONTO(cur[cur.length - 2].text)) break
+        grupos[g + 1].unshift(cur.pop())
       }
     }
+    // 2) palavrinha de ligação sobrando no fim ("...me") também é do próximo.
+    //    Com vírgula colada ("me,") não: ali é fim de frase de verdade.
+    for (let g = 0; g < grupos.length - 1; g++) {
+      for (let n = 0; n < 2; n++) {
+        const cur = grupos[g]
+        if (cur.length < 2) break
+        const ult = cur[cur.length - 1].text
+        if (PONTO(ult) || !LIGACAO.has(ult.toLowerCase())) break
+        grupos[g + 1].unshift(cur.pop())
+      }
+    }
+    // 3) Maiúscula no MEIO da frase abre verso novo
+    grupos = grupos.flatMap((g) => {
+      const out = []
+      let atual = [g[0]]
+      for (let k = 1; k < g.length; k++) {
+        const w = g[k]
+        if (MAIUSC(w.text) && !NAO_INICIA.has(semPonto(w.text))) { out.push(atual); atual = [] }
+        atual.push(w)
+      }
+      if (atual.length) out.push(atual)
+      return out
+    })
+    // 4) frase comprida demais (canto emendado) quebra no melhor ponto interno
+    const quebrar = (g) => {
+      const txt = g.map((w) => w.text).join(' ')
+      const dur = g[g.length - 1].t0 - g[0].t0
+      if ((txt.length <= MAXC && dur <= MAXDUR) || g.length < 4) return [g]
+      const meio = g.length / 2
+      let best = -1
+      let bestP = -Infinity
+      for (let k = 1; k <= g.length - 1; k++) {
+        let p = 0
+        if (PONTO(g[k - 1].text)) p += 2
+        if (env?.data?.length) {
+          // vale de energia entre as duas palavras: quanto mais fundo, melhor
+          const a = Math.round(g[k - 1].t0 / env.hop)
+          const b = Math.round(g[k].t0 / env.hop)
+          let vale = 1
+          for (let x = a; x <= b && x < env.data.length; x++) vale = Math.min(vale, env.data[x])
+          p += (1 - Math.min(1, vale / 0.2)) * 2
+        }
+        p -= Math.abs(k - meio) / g.length
+        if (k === 1 || k === g.length - 1) p -= 1.2
+        if (LIGACAO.has(semPonto(g[k - 1].text).toLowerCase())) p -= 2.5
+        if (p > bestP) { bestP = p; best = k }
+      }
+      if (best < 1) return [g]
+      return [...quebrar(g.slice(0, best)), ...quebrar(g.slice(best))]
+    }
+    grupos = grupos.flatMap(quebrar)
+    // 5) respiro curto + palavra minúscula = continuação da linha anterior.
+    //    Só a PAUSA decide: juntar por tamanho de texto colava versos certos.
+    const silencioAntes = (g) => {
+      const t = g[0].t0
+      for (let k = 1; k < frases.length; k++) if (frases[k][0] > t - 0.3) return frases[k][0] - frases[k - 1][1]
+      return Infinity
+    }
+    for (let g = 1; g < grupos.length; g++) {
+      const cur = grupos[g]
+      const ant = grupos[g - 1]
+      if (MAIUSC(cur[0].text)) continue
+      if (/[.!?]$/.test(ant[ant.length - 1].text)) continue
+      if (silencioAntes(cur) > 0.5) continue
+      const junto = [...ant, ...cur]
+      if (junto.map((w) => w.text).join(' ').length > MAXC) continue
+      if (junto[junto.length - 1].t0 - junto[0].t0 > MAXDUR) continue
+      grupos[g - 1] = junto
+      grupos.splice(g, 1)
+      g--
+    }
+    // 6) caco de uma palavra gruda no vizinho — nunca na frente de uma
+    //    Maiúscula, que ali é começo de linha e o caco é o fim da de trás
+    for (let g = 0; g < grupos.length; g++) {
+      if (grupos[g].length > 1) continue
+      const cabe = (x) => x && x.map((w) => w.text).join(' ').length + grupos[g][0].text.length + 1 <= MAXC + 6
+      const antes = grupos[g - 1]
+      const depois = grupos[g + 1]
+      const dAntes = antes ? grupos[g][0].t0 - antes[antes.length - 1].t0 : Infinity
+      let dDepois = depois ? depois[0].t0 - grupos[g][0].t0 : Infinity
+      if (depois && MAIUSC(depois[0].text)) dDepois = Infinity
+      if (dAntes <= dDepois && cabe(antes)) { antes.push(...grupos.splice(g, 1)[0]); g-- }
+      else if (depois && cabe(depois)) { depois.unshift(...grupos.splice(g, 1)[0]); g-- }
+    }
+
+    const segments = grupos
+      .filter((g) => g.length)
+      .map((g) => ({ t0: g[0].t0, t1: g[g.length - 1].t1, text: g.map((w) => w.text).join(' '), words: g }))
     for (let i = 0; i < segments.length; i++) {
       const s = segments[i]
       const nx = segments[i + 1]
