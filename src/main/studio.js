@@ -415,7 +415,9 @@ async function ensureWhisper() {
   return { exe, model }
 }
 
-// Envelope fino da voz (RMS a cada 25ms) — é a régua pra encaixar as palavras
+// Envelope fino da voz (RMS a cada 25ms) — é a régua pra saber onde tem canto.
+// Normaliza pelo percentil 95, não pelo pico: um grito solto no refrão não pode
+// achatar a música inteira e derrubar os limiares.
 async function vocalEnvelope(flac, ffmpegPath, hop = 0.025) {
   const SR = 8000
   const raw = await new Promise((resolve, reject) => {
@@ -431,30 +433,57 @@ async function vocalEnvelope(flac, ffmpegPath, hop = 0.025) {
   for (let s = 0; s + per <= n; s += per) {
     let sum = 0
     let c = 0
-    for (let k = 0; k < per; k += 2) {
+    for (let k = 0; k < per; k++) {
       const v = raw.readInt16LE((s + k) * 2) / 32768
       sum += v * v
       c++
     }
     data.push(Math.sqrt(sum / Math.max(1, c)))
   }
-  let max = 0
-  for (const v of data) if (v > max) max = v
-  return { hop, data: max > 0 ? data.map((v) => v / max) : data }
+  if (!data.length) return { hop, data }
+  const sorted = [...data].sort((a, b) => a - b)
+  const ref = sorted[Math.floor(sorted.length * 0.95)] || sorted[sorted.length - 1] || 1
+  return { hop, data: data.map((v) => Math.min(1.5, v / ref)) }
 }
 
-// Sílabas aproximadas (grupos de vogais) — "azul" pesa mais que "e"
-function sylCount(word) {
-  const s = String(word).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  const g = s.match(/[aeiouy]+/g)
-  return Math.max(1, g ? g.length : 1)
+// Onde tem voz de verdade: histerese (entra alto, só sai quando cai bem) e
+// junta o que estiver separado por menos de 120ms — respiro no meio da frase
+// não é fim de frase.
+function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
+  const out = []
+  let on = false
+  let start = 0
+  for (let i = 0; i < data.length; i++) {
+    if (!on && data[i] >= HI) {
+      on = true
+      let j = i
+      while (j > 0 && data[j - 1] >= LO) j--
+      start = j
+    } else if (on && data[i] < LO) {
+      on = false
+      if ((i - start) * hop >= MIN) out.push([start * hop, i * hop])
+    }
+  }
+  if (on) out.push([start * hop, data.length * hop])
+  const merged = []
+  for (const r of out) {
+    const last = merged[merged.length - 1]
+    if (last && r[0] - last[1] < 0.12) last[1] = r[1]
+    else merged.push([r[0], r[1]])
+  }
+  return merged
 }
+
+// Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
+// na primeira abertura — o usuário não tem que pedir nem saber que existiu.
+const LYRICS_V = 2
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
   if (!meta) throw new Error('Sessão não encontrada.')
-  if (meta.lyrics && !force) return meta.lyrics
+  // letra corrigida à mão é do usuário: nunca se refaz por cima dela
+  if (meta.lyrics && !force && (meta.lyrics.edited || meta.lyrics.v === LYRICS_V)) return meta.lyrics
   const vocals = join(dir, 'base', 'vocals.flac')
   if (!existsSync(vocals)) throw new Error('Faixa de voz não encontrada nessa sessão.')
 
@@ -467,9 +496,15 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       const threads = freeMemMB() > 3072 ? '6' : '4'
       const child = spawn(
         exe,
-        // -ojf: JSON completo com o tempo de CADA palavra.
-        // -dtw small: alinhamento fino — sem isso os tempos são um chute grosso.
-        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', 'small',
+        // -ojf: JSON completo com o tempo de CADA palavra — é daqui que sai o
+        // karaokê. (O -dtw foi medido e devolvia t_dtw = -1 em 100% dos tokens
+        // nesta build: só custava um segundo passe do decoder. Removido.)
+        // -mc 0: NÃO carrega o texto de um bloco pro seguinte. Numa faixa de voz
+        // isolada os 30s iniciais costumam ser instrumental; com contexto o
+        // modelo se prende ao próprio erro e transcreve a música inteira como
+        // "[silêncio]" (aconteceu de verdade num teste). -sns cala os tokens de
+        // não-fala pelo mesmo motivo.
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-mc', '0', '-sns',
           '-of', outBase, '-t', threads, '-pp'],
         { windowsHide: true }
       )
@@ -485,134 +520,202 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(-300) || `whisper saiu com código ${code}`))))
     })
     const j = JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
-    const segments = (j.transcription || [])
-      .map((s) => {
-        // junta os pedaços do whisper em palavras inteiras, cada uma com seu
-        // instante — é isso que faz a letra acender palavra por palavra
-        const words = []
-        for (const tk of s.tokens || []) {
-          const raw = tk.text || ''
-          if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
-          const wt0 = (tk.offsets?.from ?? 0) / 1000
-          const wt1 = (tk.offsets?.to ?? 0) / 1000
-          const last = words[words.length - 1]
-          if (last && !raw.startsWith(' ')) {
-            last.text += raw
-            last.t1 = wt1
-          } else {
-            words.push({ t0: wt0, t1: wt1, text: raw.trim() })
-          }
-        }
-        return {
-          t0: (s.offsets?.from ?? 0) / 1000,
-          t1: (s.offsets?.to ?? 0) / 1000,
-          text: (s.text || '').trim(),
-          words: words.filter((w) => w.text)
-        }
-      })
-      .filter((s) => s.text && s.t1 > s.t0)
 
-    // AUTO-SINCRONIA VERSO A VERSO: a IA arredonda os tempos e costuma marcar
-    // o verso segundos antes do canto entrar. Como temos a VOZ ISOLADA, dá pra
-    // encaixar cada verso na entrada real de voz mais próxima — cada música
-    // com sua dinâmica, sem ajuste manual nenhum.
-    try {
-      // régua fina da voz (25ms) — a mesma que alinha as palavras
-      const env = await vocalEnvelope(vocals, ffmpegPath)
-      if (env?.data?.length && segments.length >= 2) {
-        const { hop, data } = env
-        // entrada de voz = energia sobe depois de um respiro de silêncio
-        const onsets = []
-        const BACK = Math.max(2, Math.round(0.18 / hop))
-        for (let i = BACK; i < data.length - 2; i++) {
-          if (data[i] < 0.10) continue
-          let quiet = true
-          for (let k = i - BACK; k < i; k++) if (data[k] >= 0.045) { quiet = false; break }
-          if (!quiet) continue
-          if (!onsets.length || i * hop - onsets[onsets.length - 1] > 0.3) onsets.push(i * hop)
+    // O whisper entrega "versos" que na verdade são blocões de 15 a 25 segundos
+    // (várias frases grudadas), mas o tempo de cada PALAVRA dentro deles é bom —
+    // medido: 84% já cai em cima da voz, erro médio de 85ms. Então a palavra é a
+    // unidade de verdade: junta todas numa fita só e ignora o corte do whisper.
+    const words = []
+    for (const s of j.transcription || []) {
+      let cur = null
+      for (const tk of s.tokens || []) {
+        const raw = tk.text || ''
+        // [_BEG_] e afins são marcas internas do modelo, não letra
+        if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
+        const wt0 = (tk.offsets?.from ?? 0) / 1000
+        const wt1 = (tk.offsets?.to ?? 0) / 1000
+        if (cur && !raw.startsWith(' ')) {
+          cur.text += raw
+          cur.t1 = wt1
+        } else {
+          cur = { t0: wt0, t1: wt1, text: raw.trim() }
+          words.push(cur)
         }
-        if (onsets.length >= 2) {
-          const orig = segments.map((s) => ({
-            t0: s.t0,
-            t1: s.t1,
-            words: (s.words || []).map((w) => ({ t0: w.t0, t1: w.t1 }))
-          }))
-          // 1) cada verso puxa pra entrada de voz mais próxima, na ordem —
-          //    janela larga pros dois lados (a IA erra pra frente e pra trás)
-          let used = -1
-          for (let i = 0; i < segments.length; i++) {
-            const s = segments[i]
-            let best = -1
-            let bestD = Infinity
-            for (let j = used + 1; j < onsets.length; j++) {
-              const d = onsets[j] - orig[i].t0
-              if (d < -4.5) continue
-              if (d > 7) break
-              if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = j }
-            }
-            if (best < 0) continue
-            used = best
-            const delta = onsets[best] - orig[i].t0
-            if (Math.abs(delta) < 0.1) continue
-            s.t0 = onsets[best]
-            s.t1 = orig[i].t1 + delta
+      }
+    }
+    // quando o modelo trava repetindo uma sílaba ("Tudududu...") os pedaços vêm
+    // sem espaço e viram uma "palavra" de centenas de letras — isso não é letra
+    for (let i = words.length - 1; i >= 0; i--) if (words[i].text.length > 28) words.splice(i, 1)
+    // anotações tipo [MÚSICA DE FUNDO] chegam partidas em várias palavras —
+    // varre pra frente e só apaga quando o par abre/fecha realmente existe
+    for (let i = 0; i < words.length; i++) {
+      if (!/^\[/.test(words[i].text)) continue
+      let fim = -1
+      for (let k = i; k < Math.min(words.length, i + 8); k++) {
+        if (/\]$/.test(words[k].text)) { fim = k; break }
+      }
+      if (fim < 0) continue
+      words.splice(i, fim - i + 1)
+      i--
+    }
+
+    // ENCAIXE POR FRASE: a voz isolada diz exatamente onde tem canto e onde tem
+    // silêncio. Cada palavra é atribuída à frase cantada mais próxima, na ordem.
+    // Frase cujas palavras já caíram todas em cima da voz não é tocada — o tempo
+    // do whisper ali é melhor que qualquer chute meu. Só quando ele amontoa
+    // palavras no instrumental (o clássico "a letra entra antes do cantor") é
+    // que a frase inteira é reencaixada, preservando o espaçamento relativo.
+    try {
+      const env = await vocalEnvelope(vocals, ffmpegPath)
+      const regions = env?.data?.length ? voiceRegions(env.data, env.hop) : []
+      // frase = região de voz; respiro de até 350ms não parte a frase
+      const frases = []
+      for (const r of regions) {
+        const last = frases[frases.length - 1]
+        if (last && r[0] - last[1] < 0.35) last[1] = r[1]
+        else frases.push([r[0], r[1]])
+      }
+      if (frases.length >= 2 && words.length) {
+        const distF = (t, [a, b]) => (t < a ? a - t : t > b ? t - b : 0)
+        const distVoz = (t) => {
+          let bd = Infinity
+          for (const f of frases) { const d = distF(t, f); if (d < bd) bd = d }
+          return bd
+        }
+        // ALUCINAÇÃO: em solo instrumental longo a faixa de voz fica muda e o
+        // whisper "preenche" repetindo o refrão. Uma palavra solta longe da voz
+        // é só atraso da IA; uma FILA de palavras no vazio é invenção — some.
+        const lixo = []
+        for (let i = 0; i < words.length; i++) {
+          if (distVoz(words[i].t0) <= 2.5) continue
+          let j = i
+          while (j + 1 < words.length && distVoz(words[j + 1].t0) > 2.5) j++
+          if (j - i + 1 >= 3 || words[j].t0 - words[i].t0 >= 3) {
+            for (let k = i; k <= j; k++) lixo.push(k)
           }
-          // 2) mantém a ordem e evita um verso invadir o seguinte
-          for (let i = 0; i < segments.length; i++) {
-            const s = segments[i]
-            const nx = segments[i + 1]
-            if (i > 0 && s.t0 < segments[i - 1].t0 + 0.3) s.t0 = segments[i - 1].t0 + 0.3
-            if (nx && s.t1 > nx.t0 - 0.05) s.t1 = Math.max(s.t0 + 0.4, nx.t0 - 0.05)
-            if (s.t1 <= s.t0) s.t1 = s.t0 + 0.6
+          i = j
+        }
+        // se "sobrar" quase nada, quem está errado é a régua e não a letra
+        if (lixo.length && lixo.length < words.length * 0.5) {
+          for (let k = lixo.length - 1; k >= 0; k--) words.splice(lixo[k], 1)
+        }
+        const dono = words.map((w) => {
+          let best = 0
+          let bd = Infinity
+          for (let k = 0; k < frases.length; k++) {
+            const d = distF(w.t0, frases[k])
+            if (d < bd) { bd = d; best = k }
           }
-          // 3) palavras: peso por sílaba (palavra longa ocupa mais tempo) e
-          //    depois encaixe nos ataques reais de voz dentro do verso
-          for (const s of segments) {
-            const ws = s.words || []
-            if (!ws.length) continue
-            const dur = Math.max(0.3, s.t1 - s.t0)
-            const totalSyl = ws.reduce((a, w) => a + sylCount(w.text), 0)
-            let acc = 0
-            for (const w of ws) {
-              const k = sylCount(w.text)
-              w.t0 = s.t0 + (acc / totalSyl) * dur
-              acc += k
-              w.t1 = s.t0 + (acc / totalSyl) * dur
-            }
-            // ataques de sílaba: subidas nítidas de energia dentro do verso
-            const a = Math.max(1, Math.floor(s.t0 / hop))
-            const b = Math.min(data.length - 2, Math.ceil(s.t1 / hop))
-            const hits = []
-            for (let i = a; i <= b; i++) {
-              if (data[i] > 0.07 && data[i] > data[i - 1] * 1.3 && data[i] >= data[i + 1] * 0.85) {
-                if (!hits.length || i * hop - hits[hits.length - 1] > 0.09) hits.push(i * hop)
-              }
-            }
-            // cada palavra puxa pro ataque mais próximo, sem trocar a ordem
-            let hi = 0
-            for (const w of ws) {
-              let best = -1
-              let bestD = 0.32
-              for (let j = hi; j < hits.length; j++) {
-                if (hits[j] < w.t0 - 0.32) continue
-                if (hits[j] > w.t0 + 0.32) break
-                const d = Math.abs(hits[j] - w.t0)
-                if (d < bestD) { bestD = d; best = j }
-              }
-              if (best >= 0) { w.t0 = hits[best]; hi = best + 1 }
-            }
-            // a palavra vale até a próxima começar (canto segurado fica aceso)
-            for (let i = 0; i < ws.length; i++) {
-              ws[i].t1 = i + 1 < ws.length ? ws[i + 1].t0 : s.t1
-              if (ws[i].t1 <= ws[i].t0) ws[i].t1 = ws[i].t0 + 0.15
+          return bd > 8 ? -1 : best
+        })
+        // ordem: uma palavra nunca volta pra uma frase anterior à da vizinha
+        let ult = -1
+        for (let i = 0; i < dono.length; i++) {
+          if (dono[i] < 0) continue
+          if (dono[i] < ult) dono[i] = ult
+          else ult = dono[i]
+        }
+        let i = 0
+        while (i < words.length) {
+          const f = dono[i]
+          if (f < 0) { i++; continue }
+          let j = i
+          while (j + 1 < words.length && dono[j + 1] === f) j++
+          const [a, b] = frases[f]
+          const grupo = words.slice(i, j + 1)
+          const fora = grupo.some((w) => w.t0 < a - 0.15 || w.t0 > b + 0.15)
+          if (fora) {
+            const p0 = grupo[0].t0
+            const span = Math.max(0.001, grupo[grupo.length - 1].t0 - p0)
+            // guarda um pedaço do fim da frase pra última palavra respirar
+            const util = Math.max(0.2, (b - a) * 0.85)
+            for (const w of grupo) {
+              const novo = a + ((w.t0 - p0) / span) * util
+              w.t1 += novo - w.t0
+              w.t0 = novo
             }
           }
+          i = j + 1
         }
       }
     } catch {}
+    for (let i = 1; i < words.length; i++) {
+      if (words[i].t0 < words[i - 1].t0 + 0.04) words[i].t0 = words[i - 1].t0 + 0.04
+    }
+
+    // VERSOS DE VERDADE: o corte nasce da pausa real do canto (limiar adaptado
+    // à música), não do blocão do whisper. Assim o verso vira na hora que a
+    // frase vira — e não 20 segundos depois.
+    const MAXC = 42
+    const MAXDUR = 7
+    const gapOf = (i) => (i > 0 ? words[i].t0 - Math.max(words[i - 1].t1 || 0, words[i - 1].t0) : Infinity)
+    const gaps = words.map((_, i) => gapOf(i)).filter((g) => isFinite(g) && g > 0).sort((a, b) => a - b)
+    const med = gaps[Math.floor(gaps.length / 2)] || 0.1
+    const GAP = Math.min(1.1, Math.max(0.45, med * 4))
+    const cortes = new Set(words.length ? [0] : [])
+    for (let i = 1; i < words.length; i++) if (gapOf(i) >= GAP) cortes.add(i)
+    // linha comprida ou longa demais quebra na maior pausa interna
+    for (let guarda = 0; guarda < 400; guarda++) {
+      let mudou = false
+      const ini = [...cortes].sort((a, b) => a - b)
+      for (let c = 0; c < ini.length; c++) {
+        const a = ini[c]
+        const b = c + 1 < ini.length ? ini[c + 1] : words.length
+        if (b - a < 4) continue
+        const txt = words.slice(a, b).map((w) => w.text).join(' ')
+        const durL = (words[b - 1].t1 || words[b - 1].t0) - words[a].t0
+        if (txt.length <= MAXC && durL <= MAXDUR) continue
+        let best = -1
+        let bestG = -1
+        for (let i = a + 2; i <= b - 2; i++) {
+          const g = gapOf(i)
+          if (g > bestG) { bestG = g; best = i }
+        }
+        if (best > 0 && !cortes.has(best)) { cortes.add(best); mudou = true; break }
+      }
+      if (!mudou) break
+    }
+    // linha de 1–2 palavras gruda na anterior, se couber
+    {
+      let ini = [...cortes].sort((a, b) => a - b)
+      for (let c = 1; c < ini.length; c++) {
+        const a = ini[c]
+        const b = c + 1 < ini.length ? ini[c + 1] : words.length
+        if (b - a > 2) continue
+        const junto = words.slice(ini[c - 1], b)
+        const cabe = junto.map((w) => w.text).join(' ').length <= MAXC + 8 &&
+          (junto[junto.length - 1].t1 || 0) - junto[0].t0 <= MAXDUR + 3
+        if (cabe) { cortes.delete(a); ini = [...cortes].sort((x, y) => x - y); c-- }
+      }
+    }
+    const segments = []
+    {
+      const ini = [...cortes].sort((a, b) => a - b)
+      for (let c = 0; c < ini.length; c++) {
+        const a = ini[c]
+        const b = c + 1 < ini.length ? ini[c + 1] : words.length
+        const ws = words.slice(a, b)
+        if (!ws.length) continue
+        segments.push({ t0: ws[0].t0, t1: ws[ws.length - 1].t1, text: ws.map((w) => w.text).join(' '), words: ws })
+      }
+    }
+    for (let i = 0; i < segments.length; i++) {
+      const s = segments[i]
+      const nx = segments[i + 1]
+      const last = s.words[s.words.length - 1]
+      s.t1 = Math.max(last.t1 || last.t0 + 0.3, last.t0 + 0.3)
+      if (nx && s.t1 > nx.t0) s.t1 = nx.t0
+      // a palavra fica acesa até a próxima entrar — canto segurado não apaga
+      for (let k = 0; k < s.words.length; k++) {
+        const w = s.words[k]
+        const wn = s.words[k + 1]
+        w.t1 = wn ? wn.t0 : s.t1
+        if (w.t1 <= w.t0) w.t1 = w.t0 + 0.15
+      }
+    }
 
     const m2 = readMeta(dir)
-    m2.lyrics = { at: new Date().toISOString(), segments, edited: false }
+    m2.lyrics = { at: new Date().toISOString(), v: LYRICS_V, segments, edited: false }
     writeMeta(dir, m2)
     return m2.lyrics
   } finally {

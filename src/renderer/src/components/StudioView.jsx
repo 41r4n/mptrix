@@ -804,9 +804,15 @@ export default function StudioView({ source, onClose }) {
             const seg = ls[idx]
             let w = -1
             if (seg?.words?.length) {
-              for (let k = 0; k < seg.words.length; k++) {
-                if (seg.words[k].t0 <= t + 0.05) w = k
-                else break
+              if (t > seg.t1 + 0.4) {
+                // verso acabou e o instrumental correu: ninguém está cantando,
+                // então nenhuma palavra fica acesa (todas viram "já cantada")
+                w = seg.words.length
+              } else {
+                for (let k = 0; k < seg.words.length; k++) {
+                  if (seg.words[k].t0 <= t + 0.05) w = k
+                  else break
+                }
               }
             }
             if (w !== lastWordIdxRef.current) {
@@ -980,12 +986,44 @@ export default function StudioView({ source, onClose }) {
     }
   }
 
+  // O verso é DESENHADO a partir de s.words (é o que acende palavra por
+  // palavra), então trocar só o s.text não apareceria na tela. Aqui o texto novo
+  // é remontado em cima dos instantes já medidos: as entradas de voz continuam
+  // sendo as mesmas, só as palavras mudam.
+  const reword = (s, txt) => {
+    const novas = String(txt).trim().split(/\s+/).filter(Boolean)
+    if (!novas.length) return { ...s, text: String(txt) }
+    const velhas = s.words || []
+    const t0 = s.t0
+    const t1 = Math.max(s.t1, t0 + 0.4)
+    const words = novas.map((text, i) => {
+      let inicio
+      if (velhas.length >= 2 && novas.length >= 2) {
+        // espalha as palavras novas pelos mesmos ataques de voz das antigas
+        const j = Math.round((i * (velhas.length - 1)) / (novas.length - 1))
+        inicio = velhas[j].t0
+      } else if (velhas.length === 1 && i === 0) {
+        inicio = velhas[0].t0
+      } else {
+        inicio = t0 + ((t1 - t0) * i) / novas.length
+      }
+      return { t0: inicio, t1: inicio, text }
+    })
+    for (let i = 1; i < words.length; i++) {
+      if (words[i].t0 < words[i - 1].t0 + 0.08) words[i].t0 = words[i - 1].t0 + 0.08
+    }
+    for (let i = 0; i < words.length; i++) {
+      words[i].t1 = i + 1 < words.length ? words[i + 1].t0 : Math.max(t1, words[i].t0 + 0.2)
+    }
+    return { ...s, text: novas.join(' '), words }
+  }
+
   const editVerse = async (i) => {
     const cur = lyrics?.segments?.[i]
     if (!cur) return
     const txt = window.prompt('Corrigir verso:', cur.text)
     if (txt == null || txt === cur.text) return
-    const segs = lyrics.segments.map((s, k) => (k === i ? { ...s, text: txt } : s))
+    const segs = lyrics.segments.map((s, k) => (k === i ? reword(s, txt) : s))
     setLyrics({ ...lyrics, segments: segs, edited: true })
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
   }
@@ -996,7 +1034,7 @@ export default function StudioView({ source, onClose }) {
       setPasteOpen(false)
       return
     }
-    const segs = lyrics.segments.map((s, i) => (i < lines.length ? { ...s, text: lines[i] } : s))
+    const segs = lyrics.segments.map((s, i) => (i < lines.length ? reword(s, lines[i]) : s))
     setLyrics({ ...lyrics, segments: segs, edited: true })
     setPasteOpen(false)
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
