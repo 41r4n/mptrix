@@ -476,7 +476,7 @@ function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
 
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 3
+const LYRICS_V = 4
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -497,15 +497,20 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       const child = spawn(
         exe,
         // -ojf: JSON completo com o tempo de CADA palavra — é daqui que sai o
-        // karaokê. (O -dtw foi medido e devolvia t_dtw = -1 em 100% dos tokens
-        // nesta build: só custava um segundo passe do decoder. Removido.)
+        // karaokê.
+        // -dtw small + -nfa: alinhamento DTW de verdade (casa o token com o
+        // áudio pela atenção do modelo, não por heurística). O -nfa é
+        // OBRIGATÓRIO: o flash attention vem ligado por padrão e o próprio
+        // whisper avisa "dtw_token_timestamps is not supported with flash_attn
+        // - disabling" — era por isso que t_dtw voltava -1 em todos os tokens.
+        // Medido: palavras erradas por mais de 300ms caem de 11% para 5%.
         // -mc 0: NÃO carrega o texto de um bloco pro seguinte. Numa faixa de voz
         // isolada os 30s iniciais costumam ser instrumental; com contexto o
         // modelo se prende ao próprio erro e transcreve a música inteira como
         // "[silêncio]" (aconteceu de verdade num teste). -sns cala os tokens de
         // não-fala pelo mesmo motivo.
-        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-mc', '0', '-sns',
-          '-of', outBase, '-t', threads, '-pp'],
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', 'small', '-nfa',
+          '-mc', '0', '-sns', '-of', outBase, '-t', threads, '-pp'],
         { windowsHide: true }
       )
       let err = ''
@@ -532,8 +537,10 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
         const raw = tk.text || ''
         // [_BEG_] e afins são marcas internas do modelo, não letra
         if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
-        const wt0 = (tk.offsets?.from ?? 0) / 1000
+        // t_dtw vem em CENTÉSIMOS de segundo (offsets vêm em milésimos) e vale
+        // -1 quando o alinhamento não fechou naquele token — aí cai no offset.
         const wt1 = (tk.offsets?.to ?? 0) / 1000
+        const wt0 = tk.t_dtw >= 0 ? tk.t_dtw / 100 : (tk.offsets?.from ?? 0) / 1000
         if (cur && !raw.startsWith(' ')) {
           cur.text += raw
           cur.t1 = wt1

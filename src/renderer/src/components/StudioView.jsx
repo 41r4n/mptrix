@@ -720,7 +720,11 @@ export default function StudioView({ source, onClose }) {
     const tick = (ts) => {
       const p = playerRef.current
       if (p) {
-        let t = p.position()
+        // O que o ouvido escuta está ATRÁS do currentTime: o áudio já entregue
+        // à placa de som ainda não saiu pelo alto-falante. Sem descontar isso,
+        // playhead, timer e letra andam adiantados uns 10–40ms de graça.
+        let t = p.position() - (p.ctx?.outputLatency || p.ctx?.baseLatency || 0)
+        if (t < 0) t = 0
         const dur = p.duration() || 0
         if (p.playing) {
           if (p.ended()) {
@@ -811,7 +815,10 @@ export default function StudioView({ source, onClose }) {
                 w = seg.words.length
               } else {
                 for (let k = 0; k < seg.words.length; k++) {
-                  if (seg.words[k].t0 <= t + 0.05) w = k
+                  // antecipação de um quadro só. Os 50ms de antes eram muleta
+                  // pra tempo ruim; com o DTW o tempo já é bom e a muleta
+                  // virava a sensação de "acendeu antes de cantar".
+                  if (seg.words[k].t0 <= t + 0.02) w = k
                   else break
                 }
               }
