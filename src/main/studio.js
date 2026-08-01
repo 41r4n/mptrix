@@ -517,16 +517,19 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     // encaixar cada verso na entrada real de voz mais próxima — cada música
     // com sua dinâmica, sem ajuste manual nenhum.
     try {
-      const peaks = await stemPeaks({ key, stem: 'vocals', ffmpegPath })
-      const dur = meta.duration || 0
-      if (peaks?.length && dur > 0 && segments.length >= 2) {
-        const step = dur / peaks.length
-        // entrada de voz = silêncio antes, som que se sustenta depois
+      // régua fina da voz (25ms) — a mesma que alinha as palavras
+      const env = await vocalEnvelope(vocals, ffmpegPath)
+      if (env?.data?.length && segments.length >= 2) {
+        const { hop, data } = env
+        // entrada de voz = energia sobe depois de um respiro de silêncio
         const onsets = []
-        for (let i = 2; i < peaks.length - 1; i++) {
-          const quiet = peaks[i - 1] < 0.07 && peaks[i - 2] < 0.07
-          const loud = peaks[i] >= 0.13 && peaks[i + 1] >= 0.09
-          if (quiet && loud) onsets.push(i * step)
+        const BACK = Math.max(2, Math.round(0.18 / hop))
+        for (let i = BACK; i < data.length - 2; i++) {
+          if (data[i] < 0.10) continue
+          let quiet = true
+          for (let k = i - BACK; k < i; k++) if (data[k] >= 0.045) { quiet = false; break }
+          if (!quiet) continue
+          if (!onsets.length || i * hop - onsets[onsets.length - 1] > 0.3) onsets.push(i * hop)
         }
         if (onsets.length >= 2) {
           const orig = segments.map((s) => ({
@@ -534,19 +537,24 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
             t1: s.t1,
             words: (s.words || []).map((w) => ({ t0: w.t0, t1: w.t1 }))
           }))
-          // 1) cada verso vai pra entrada de voz mais próxima do seu início
+          // 1) cada verso puxa pra entrada de voz mais próxima, na ordem —
+          //    janela larga pros dois lados (a IA erra pra frente e pra trás)
+          let used = -1
           for (let i = 0; i < segments.length; i++) {
             const s = segments[i]
-            let best = null
-            for (const o of onsets) {
-              const d = o - orig[i].t0
-              if (d < -2 || d > 7) continue
-              if (best == null || Math.abs(o - orig[i].t0) < Math.abs(best - orig[i].t0)) best = o
+            let best = -1
+            let bestD = Infinity
+            for (let j = used + 1; j < onsets.length; j++) {
+              const d = onsets[j] - orig[i].t0
+              if (d < -4.5) continue
+              if (d > 7) break
+              if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = j }
             }
-            if (best == null) continue
-            const delta = best - orig[i].t0
-            if (Math.abs(delta) < 0.12) continue
-            s.t0 = best
+            if (best < 0) continue
+            used = best
+            const delta = onsets[best] - orig[i].t0
+            if (Math.abs(delta) < 0.1) continue
+            s.t0 = onsets[best]
             s.t1 = orig[i].t1 + delta
           }
           // 2) mantém a ordem e evita um verso invadir o seguinte
@@ -559,7 +567,6 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
           }
           // 3) palavras: peso por sílaba (palavra longa ocupa mais tempo) e
           //    depois encaixe nos ataques reais de voz dentro do verso
-          const env = await vocalEnvelope(vocals, ffmpegPath).catch(() => null)
           for (const s of segments) {
             const ws = s.words || []
             if (!ws.length) continue
@@ -572,9 +579,7 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
               acc += k
               w.t1 = s.t0 + (acc / totalSyl) * dur
             }
-            if (!env?.data?.length) continue
             // ataques de sílaba: subidas nítidas de energia dentro do verso
-            const { hop, data } = env
             const a = Math.max(1, Math.floor(s.t0 / hop))
             const b = Math.min(data.length - 2, Math.ceil(s.t1 / hop))
             const hits = []
