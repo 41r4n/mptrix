@@ -787,9 +787,11 @@ export default function StudioView({ source, onClose }) {
           }
           const ls = lyrSegsRef.current
           if (ls && ls.length) {
+            // letra NÃO usa a antecipação dos acordes: verso acende quando é
+            // cantado, não antes
             let idx = -1
             for (let i = 0; i < ls.length; i++) {
-              if (ls[i].t0 <= tt) idx = i
+              if (ls[i].t0 <= t) idx = i
               else break
             }
             if (idx !== lastLyrIdxRef.current) {

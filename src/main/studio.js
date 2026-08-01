@@ -477,38 +477,63 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       })
       .filter((s) => s.text && s.t1 > s.t0)
 
-    // AUTO-SINCRONIA: a IA costuma marcar o verso um pouco antes do canto
-    // começar. Em vez de pedir ajuste ao usuário, comparo com a energia da
-    // própria voz e corrijo o desencontro sistemático sozinho.
+    // AUTO-SINCRONIA VERSO A VERSO: a IA arredonda os tempos e costuma marcar
+    // o verso segundos antes do canto entrar. Como temos a VOZ ISOLADA, dá pra
+    // encaixar cada verso na entrada real de voz mais próxima — cada música
+    // com sua dinâmica, sem ajuste manual nenhum.
     try {
       const peaks = await stemPeaks({ key, stem: 'vocals', ffmpegPath })
       const dur = meta.duration || 0
-      if (peaks?.length && dur > 0 && segments.length >= 4) {
+      if (peaks?.length && dur > 0 && segments.length >= 2) {
         const step = dur / peaks.length
-        const THR = 0.12
-        const onsetNear = (t) => {
-          const a = Math.max(1, Math.floor((t - 1.2) / step))
-          const b = Math.min(peaks.length - 1, Math.ceil((t + 1.2) / step))
-          for (let i = a; i <= b; i++) {
-            if (peaks[i] >= THR && peaks[i - 1] < THR) return i * step
-          }
-          return null
+        // entrada de voz = silêncio antes, som que se sustenta depois
+        const onsets = []
+        for (let i = 2; i < peaks.length - 1; i++) {
+          const quiet = peaks[i - 1] < 0.07 && peaks[i - 2] < 0.07
+          const loud = peaks[i] >= 0.13 && peaks[i + 1] >= 0.09
+          if (quiet && loud) onsets.push(i * step)
         }
-        const deltas = []
-        for (const s of segments) {
-          const o = onsetNear(s.t0)
-          if (o != null) deltas.push(o - s.t0)
-        }
-        if (deltas.length >= 4) {
-          deltas.sort((x, y) => x - y)
-          let off = deltas[Math.floor(deltas.length / 2)] // mediana
-          off = Math.max(-1.2, Math.min(1.2, off))
-          if (Math.abs(off) > 0.05) {
-            for (const s of segments) {
-              s.t0 += off
-              s.t1 += off
-              for (const w of s.words || []) { w.t0 += off; w.t1 += off }
+        if (onsets.length >= 2) {
+          const orig = segments.map((s) => ({
+            t0: s.t0,
+            t1: s.t1,
+            words: (s.words || []).map((w) => ({ t0: w.t0, t1: w.t1 }))
+          }))
+          // 1) cada verso vai pra entrada de voz mais próxima do seu início
+          for (let i = 0; i < segments.length; i++) {
+            const s = segments[i]
+            let best = null
+            for (const o of onsets) {
+              const d = o - orig[i].t0
+              if (d < -2 || d > 7) continue
+              if (best == null || Math.abs(o - orig[i].t0) < Math.abs(best - orig[i].t0)) best = o
             }
+            if (best == null) continue
+            const delta = best - orig[i].t0
+            if (Math.abs(delta) < 0.12) continue
+            s.t0 = best
+            s.t1 = orig[i].t1 + delta
+          }
+          // 2) mantém a ordem e evita um verso invadir o seguinte
+          for (let i = 0; i < segments.length; i++) {
+            const s = segments[i]
+            const nx = segments[i + 1]
+            if (i > 0 && s.t0 < segments[i - 1].t0 + 0.3) s.t0 = segments[i - 1].t0 + 0.3
+            if (nx && s.t1 > nx.t0 - 0.05) s.t1 = Math.max(s.t0 + 0.4, nx.t0 - 0.05)
+            if (s.t1 <= s.t0) s.t1 = s.t0 + 0.6
+          }
+          // 3) redistribui as palavras dentro do novo intervalo do verso
+          for (let i = 0; i < segments.length; i++) {
+            const s = segments[i]
+            const o = orig[i]
+            const oDur = Math.max(0.2, o.t1 - o.t0)
+            const nDur = Math.max(0.2, s.t1 - s.t0)
+            const k = nDur / oDur
+            s.words = (s.words || []).map((w, wi) => ({
+              ...w,
+              t0: s.t0 + (o.words[wi].t0 - o.t0) * k,
+              t1: s.t0 + (o.words[wi].t1 - o.t0) * k
+            }))
           }
         }
       }
