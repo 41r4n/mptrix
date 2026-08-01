@@ -415,6 +415,41 @@ async function ensureWhisper() {
   return { exe, model }
 }
 
+// Envelope fino da voz (RMS a cada 25ms) — é a régua pra encaixar as palavras
+async function vocalEnvelope(flac, ffmpegPath, hop = 0.025) {
+  const SR = 8000
+  const raw = await new Promise((resolve, reject) => {
+    const child = spawn(ffmpegPath, ['-v', 'quiet', '-i', flac, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { windowsHide: true })
+    const chunks = []
+    child.stdout.on('data', (d) => chunks.push(d))
+    child.on('error', reject)
+    child.on('close', () => resolve(Buffer.concat(chunks)))
+  })
+  const n = Math.floor(raw.length / 2)
+  const per = Math.max(1, Math.round(SR * hop))
+  const data = []
+  for (let s = 0; s + per <= n; s += per) {
+    let sum = 0
+    let c = 0
+    for (let k = 0; k < per; k += 2) {
+      const v = raw.readInt16LE((s + k) * 2) / 32768
+      sum += v * v
+      c++
+    }
+    data.push(Math.sqrt(sum / Math.max(1, c)))
+  }
+  let max = 0
+  for (const v of data) if (v > max) max = v
+  return { hop, data: max > 0 ? data.map((v) => v / max) : data }
+}
+
+// Sílabas aproximadas (grupos de vogais) — "azul" pesa mais que "e"
+function sylCount(word) {
+  const s = String(word).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const g = s.match(/[aeiouy]+/g)
+  return Math.max(1, g ? g.length : 1)
+}
+
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
@@ -522,18 +557,50 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
             if (nx && s.t1 > nx.t0 - 0.05) s.t1 = Math.max(s.t0 + 0.4, nx.t0 - 0.05)
             if (s.t1 <= s.t0) s.t1 = s.t0 + 0.6
           }
-          // 3) redistribui as palavras dentro do novo intervalo do verso
-          for (let i = 0; i < segments.length; i++) {
-            const s = segments[i]
-            const o = orig[i]
-            const oDur = Math.max(0.2, o.t1 - o.t0)
-            const nDur = Math.max(0.2, s.t1 - s.t0)
-            const k = nDur / oDur
-            s.words = (s.words || []).map((w, wi) => ({
-              ...w,
-              t0: s.t0 + (o.words[wi].t0 - o.t0) * k,
-              t1: s.t0 + (o.words[wi].t1 - o.t0) * k
-            }))
+          // 3) palavras: peso por sílaba (palavra longa ocupa mais tempo) e
+          //    depois encaixe nos ataques reais de voz dentro do verso
+          const env = await vocalEnvelope(vocals, ffmpegPath).catch(() => null)
+          for (const s of segments) {
+            const ws = s.words || []
+            if (!ws.length) continue
+            const dur = Math.max(0.3, s.t1 - s.t0)
+            const totalSyl = ws.reduce((a, w) => a + sylCount(w.text), 0)
+            let acc = 0
+            for (const w of ws) {
+              const k = sylCount(w.text)
+              w.t0 = s.t0 + (acc / totalSyl) * dur
+              acc += k
+              w.t1 = s.t0 + (acc / totalSyl) * dur
+            }
+            if (!env?.data?.length) continue
+            // ataques de sílaba: subidas nítidas de energia dentro do verso
+            const { hop, data } = env
+            const a = Math.max(1, Math.floor(s.t0 / hop))
+            const b = Math.min(data.length - 2, Math.ceil(s.t1 / hop))
+            const hits = []
+            for (let i = a; i <= b; i++) {
+              if (data[i] > 0.07 && data[i] > data[i - 1] * 1.3 && data[i] >= data[i + 1] * 0.85) {
+                if (!hits.length || i * hop - hits[hits.length - 1] > 0.09) hits.push(i * hop)
+              }
+            }
+            // cada palavra puxa pro ataque mais próximo, sem trocar a ordem
+            let hi = 0
+            for (const w of ws) {
+              let best = -1
+              let bestD = 0.32
+              for (let j = hi; j < hits.length; j++) {
+                if (hits[j] < w.t0 - 0.32) continue
+                if (hits[j] > w.t0 + 0.32) break
+                const d = Math.abs(hits[j] - w.t0)
+                if (d < bestD) { bestD = d; best = j }
+              }
+              if (best >= 0) { w.t0 = hits[best]; hi = best + 1 }
+            }
+            // a palavra vale até a próxima começar (canto segurado fica aceso)
+            for (let i = 0; i < ws.length; i++) {
+              ws[i].t1 = i + 1 < ws.length ? ws[i + 1].t0 : s.t1
+              if (ws[i].t1 <= ws[i].t0) ws[i].t1 = ws[i].t0 + 0.15
+            }
           }
         }
       }
