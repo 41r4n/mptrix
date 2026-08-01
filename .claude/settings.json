@@ -22,7 +22,24 @@
       "Bash(NSTART=200 SEED=777 node alg_frases-mais-maiuscula.mjs --search)",
       "Bash(sed -i \"s/^const LYRICS_V = 2$/const LYRICS_V = 3/\" src/main/studio.js)",
       "Bash(node -)",
-      "Bash(NSTART=250 SEED=999 node alg_frases-mais-maiuscula.mjs --search)"
+      "Bash(NSTART=250 SEED=999 node alg_frases-mais-maiuscula.mjs --search)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 7000 --seed dp_seed_v3.json)",
+      "PowerShell($n=\\(Get-Process electron -ErrorAction SilentlyContinue | Measure-Object\\).Count; \"electron rodando: $n\"; Get-Content \"$env:TEMP\\\\mptrix-dev27.log\" -Tail 4)",
+      "Bash(cp dp_best_params.json dp_seed_v4.json)",
+      "Bash(cp alg_programacao-dinamica.mjs /tmp/algB.mjs)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_seed_v4.json --diff)",
+      "Bash(sed -e \"s/a7b1b8a4af956884/2ed7196fa6c2043b/\" -e \"s/'real.json'/'real3.json'/\" runreal.mjs)",
+      "Bash(node runreal3.mjs)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_seed_v4.json --quiet)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 8000 --seed dp_seed_v4.json)",
+      "Bash(cp dp_best_params.json dp_seed_v5.json)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 8000 --seed dp_seed_v5.json)",
+      "Bash(node placar.mjs \"C:/Users/airan/AppData/Local/MPTRIX/stems/2ed7196fa6c2043b/base/vocals.flac\" real3.json)",
+      "Bash(cp dp_best_params.json dp_seed_v6.json)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_seed_v6.json --quiet)",
+      "Bash(node alg_programacao-dinamica.mjs --params dp_seed_v6.json --diff)",
+      "Bash(node placar2.mjs)",
+      "Bash(node alg_programacao-dinamica.mjs --tune 9000 --seed dp_seed_v6.json)"
     ]
   }
 }

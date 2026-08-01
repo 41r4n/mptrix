@@ -794,11 +794,15 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       const last = s.words[s.words.length - 1]
       s.t1 = Math.max(last.t1 || last.t0 + 0.3, last.t0 + 0.3)
       if (nx && s.t1 > nx.t0) s.t1 = nx.t0
-      // a palavra fica acesa até a próxima entrar — canto segurado não apaga
+      // a palavra fica acesa até a próxima entrar — canto segurado não apaga.
+      // A ÚLTIMA apaga quando a voz para: o verso continua na tela durante o
+      // instrumental, mas ninguém fica brilhando sem estar sendo cantado.
+      let fimDaVoz = s.t1
+      for (const [a, b] of frases) if (last.t0 >= a - 0.15 && last.t0 <= b + 0.15) { fimDaVoz = b; break }
       for (let k = 0; k < s.words.length; k++) {
         const w = s.words[k]
         const wn = s.words[k + 1]
-        w.t1 = wn ? wn.t0 : s.t1
+        w.t1 = wn ? wn.t0 : Math.min(s.t1, Math.max(fimDaVoz, w.t0 + 0.25))
         if (w.t1 <= w.t0) w.t1 = w.t0 + 0.15
       }
     }

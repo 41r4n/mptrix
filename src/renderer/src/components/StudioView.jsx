@@ -804,7 +804,8 @@ export default function StudioView({ source, onClose }) {
             const seg = ls[idx]
             let w = -1
             if (seg?.words?.length) {
-              if (t > seg.t1 + 0.4) {
+              const fimCantado = seg.words[seg.words.length - 1]?.t1 ?? seg.t1
+              if (t > fimCantado + 0.4) {
                 // verso acabou e o instrumental correu: ninguém está cantando,
                 // então nenhuma palavra fica acesa (todas viram "já cantada")
                 w = seg.words.length
