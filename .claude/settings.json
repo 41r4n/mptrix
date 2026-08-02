@@ -67,7 +67,11 @@
       "Bash(node alg_programacao-dinamica.mjs --params p_azul_z.json --quiet)",
       "Bash(node alg_programacao-dinamica.mjs --params p_arde_z.json --quiet)",
       "Bash(node dp_graft.mjs --quiet)",
-      "Bash(node alg_programacao-dinamica.mjs --params dp_params_final.json)"
+      "Bash(node alg_programacao-dinamica.mjs --params dp_params_final.json)",
+      "Bash(curl -sL -o ggml-large-v3-turbo-q5_0.bin.part \"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin\")",
+      "Bash(mv ggml-large-v3-turbo-q5_0.bin.part ggml-large-v3-turbo-q5_0.bin)",
+      "Bash(node repete.mjs)",
+      "Bash(node letra.mjs)"
     ]
   }
 }

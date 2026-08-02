@@ -994,6 +994,31 @@ export default function StudioView({ source, onClose }) {
     }
   }
 
+  // A letra que o MPTrix escreveu, em texto puro com as estrofes separadas —
+  // é isso que vai pra área de transferência e daí pra onde a pessoa quiser.
+  // Vale principalmente pra música que nem letra tem na internet.
+  const letraEmTexto = () => {
+    const segs = lyrics?.segments || []
+    let out = ''
+    for (let i = 0; i < segs.length; i++) {
+      if (i > 0) out += segs[i].estrofe ? '\n\n' : '\n'
+      out += segs[i].text
+    }
+    const nome = session?.title ? `${session.title}\n\n` : ''
+    return nome + out + '\n'
+  }
+
+  const [copiado, setCopiado] = useState(false)
+  const copiarLetra = async () => {
+    try {
+      await navigator.clipboard.writeText(letraEmTexto())
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1800)
+    } catch {
+      /* sem área de transferência: não trava a tela */
+    }
+  }
+
   // O verso é DESENHADO a partir de s.words (é o que acende palavra por
   // palavra), então trocar só o s.text não apareceria na tela. Aqui o texto novo
   // é remontado em cima dos instantes já medidos: as entradas de voz continuam
@@ -2338,6 +2363,13 @@ export default function StudioView({ source, onClose }) {
                   {lyrics?.segments?.length > 0 && (
                     <button
                       className="btn-secondary btn-small"
+                      onClick={copiarLetra}
+                      data-hint="COPIAR — a letra inteira, em estrofes, pra colar onde quiser e mandar pra quem quiser."
+                    >{copiado ? 'copiada ✓' : 'copiar'}</button>
+                  )}
+                  {lyrics?.segments?.length > 0 && (
+                    <button
+                      className="btn-secondary btn-small"
                       onClick={() => { setPasteText(''); setPasteOpen(true) }}
                       data-hint="COLAR — cola a letra oficial por cima. O texto vira o seu e a sincronização continua a calculada."
                     >colar</button>
@@ -2370,7 +2402,11 @@ export default function StudioView({ source, onClose }) {
                       const st = i === activeLyrIdx ? 'now' : pos >= s.t1 ? 'past' : 'fut'
                       const verseChords = (chords?.list || []).filter((c) => c.t >= s.t0 - 0.5 && c.t < s.t1)
                       return (
-                        <div key={i} className={`lyr-block lyr-${st}`} onClick={() => seekTo(s.t0 + 0.01)}>
+                        <div
+                          key={i}
+                          className={`lyr-block lyr-${st}${s.estrofe ? ' lyr-estrofe' : ''}`}
+                          onClick={() => seekTo(s.t0 + 0.01)}
+                        >
                           {verseChords.length > 0 && (
                             <div className="lyr-chords">
                               {verseChords.map((c, k) => (

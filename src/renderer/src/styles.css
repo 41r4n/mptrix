@@ -6662,3 +6662,13 @@ body.studio-open .zoom-chip {
   opacity: 0.62;
   text-shadow: none;
 }
+
+/* ---- Letra: estrofes ----
+   Bloco de versos separado por respiro musical. O espaço em branco é o que
+   transforma a pilha de linhas em letra de encarte — mesma quebra que vai no
+   texto copiado. Hairline discreta só pra marcar a divisão sem virar caixa. */
+.lyrics-list .lyr-block.lyr-estrofe {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}

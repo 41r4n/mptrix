@@ -370,7 +370,17 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
 // (os downloads do binário e do modelo acontecem uma única vez).
 const WHISPER_DIR = join(ENGINE_DIR, 'whisper')
 const WHISPER_ZIP_URL = 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.9.1/whisper-blas-bin-x64.zip'
-const WHISPER_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin'
+// large-v3-turbo quantizado: 547MB (só 80MB a mais que o small antigo), mas é
+// modelo GRANDE — ouve a letra de verdade onde o small inventava ("essa cor que
+// azuleja o dia" saía "essa cor de azul Leja o dia") — e ainda entrega um verso
+// por segmento, já cortado. Turbo tem 4 camadas de decoder, então roda perto de
+// um modelo médio. Pico de RAM medido: 1,0 GB.
+const WHISPER_MODEL = 'ggml-large-v3-turbo-q5_0.bin'
+const WHISPER_MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL}`
+// o preset do -dtw TEM que casar com o modelo (grafia com ponto)
+const WHISPER_DTW = 'large.v3.turbo'
+// modelos de versões anteriores do MPTrix — apagados pra não ocupar disco à toa
+const WHISPER_MODELOS_VELHOS = ['ggml-small.bin']
 
 function findWhisperExe() {
   if (!existsSync(WHISPER_DIR)) return null
@@ -408,9 +418,14 @@ async function ensureWhisper() {
     exe = findWhisperExe()
     if (!exe) throw new Error('Binário do whisper não encontrado após a extração.')
   }
-  const model = join(WHISPER_DIR, 'ggml-small.bin')
+  const model = join(WHISPER_DIR, WHISPER_MODEL)
   if (!existsSync(model)) {
     await downloadFile(WHISPER_MODEL_URL, model)
+  }
+  // modelo antigo só ocupa disco depois que o novo chegou inteiro
+  for (const velho of WHISPER_MODELOS_VELHOS) {
+    const p = join(WHISPER_DIR, velho)
+    if (existsSync(p)) { try { rmSync(p, { force: true }) } catch {} }
   }
   return { exe, model }
 }
@@ -476,7 +491,7 @@ function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
 
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 4
+const LYRICS_V = 5
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -509,7 +524,7 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
         // modelo se prende ao próprio erro e transcreve a música inteira como
         // "[silêncio]" (aconteceu de verdade num teste). -sns cala os tokens de
         // não-fala pelo mesmo motivo.
-        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', 'small', '-nfa',
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', WHISPER_DTW, '-nfa',
           '-mc', '0', '-sns', '-of', outBase, '-t', threads, '-pp'],
         { windowsHide: true }
       )
@@ -528,10 +543,13 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
 
     // O whisper entrega "versos" que na verdade são blocões de 15 a 25 segundos
     // (várias frases grudadas), mas o tempo de cada PALAVRA dentro deles é bom —
-    // medido: 84% já cai em cima da voz, erro médio de 85ms. Então a palavra é a
-    // unidade de verdade: junta todas numa fita só e ignora o corte do whisper.
+    // medido: 84% já cai em cima da voz, erro médio de 85ms. Cada palavra guarda
+    // de qual SEGMENTO do whisper ela veio — com o modelo large-v3-turbo esses
+    // segmentos já são os versos da letra, um por linha.
     const words = []
+    let iSeg = -1
     for (const s of j.transcription || []) {
+      iSeg++
       let cur = null
       for (const tk of s.tokens || []) {
         const raw = tk.text || ''
@@ -541,11 +559,16 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
         // -1 quando o alinhamento não fechou naquele token — aí cai no offset.
         const wt1 = (tk.offsets?.to ?? 0) / 1000
         const wt0 = tk.t_dtw >= 0 ? tk.t_dtw / 100 : (tk.offsets?.from ?? 0) / 1000
+        // a confiança do modelo em cada palavra é o que decide, mais adiante,
+        // qual versão vale quando a mesma frase é cantada de novo
+        const pp = typeof tk.p === 'number' ? tk.p : 0.5
         if (cur && !raw.startsWith(' ')) {
           cur.text += raw
           cur.t1 = wt1
+          cur.ps += pp
+          cur.pn++
         } else {
-          cur = { t0: wt0, t1: wt1, text: raw.trim() }
+          cur = { t0: wt0, t1: wt1, text: raw.trim(), ps: pp, pn: 1, seg: iSeg }
           words.push(cur)
         }
       }
@@ -652,85 +675,29 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       if (words[i].t0 < words[i - 1].t0 + 0.04) words[i].t0 = words[i - 1].t0 + 0.04
     }
 
-    // VERSOS DE VERDADE: o verso é a FRASE CANTADA — o trecho de voz entre dois
-    // silêncios de verdade. Não adianta cortar pelo intervalo entre palavras: o
-    // whisper cola o fim de cada palavra no começo da próxima, então esse
-    // intervalo é quase sempre zero (foi o que deixava a letra picotada).
-    // Depois da frase, o TEXTO afina o corte: o whisper maiusculiza onde ouve
-    // começo de frase musical, e verso não termina em palavrinha de ligação.
+    // VERSOS: o large-v3-turbo já entrega UM VERSO POR SEGMENTO — a máquina de
+    // corte que existia aqui foi construída pro modelo small, que devolvia
+    // blocões de 25 segundos com várias frases grudadas. Agora o corte do
+    // próprio modelo é melhor que qualquer regra minha, então ele manda; o que
+    // sobrou é conserto de borda: verso comprido demais quebra, caco de uma
+    // palavra gruda no vizinho.
     const MAXC = 46
     const MAXDUR = 6.5
     const MAIUSC = (t) => /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ]/.test(t)
     const PONTO = (t) => /[.,;:!?]$/.test(t)
     const semPonto = (t) => t.replace(/[.,;:!?]+$/, '')
-    // nome próprio maiúsculo no meio da frase não é começo de verso
-    const NAO_INICIA = new Set(['Deus', 'Senhor', 'Jesus', 'Cristo', 'Santo', 'Espírito', 'Pai', 'Rei',
-      'Teus', 'Teu', 'Tua', 'Tuas', 'Seu', 'Sua', 'Ele', 'Ela'])
     const LIGACAO = new Set(['me', 'te', 'se', 'lhe', 'o', 'a', 'os', 'as', 'de', 'do', 'da', 'dos', 'das',
       'e', 'em', 'no', 'na', 'nos', 'nas', 'um', 'uma', 'que', 'com', 'por', 'pro', 'pra', 'para', 'ao', 'à',
       'meu', 'teu', 'seu', 'minha', 'tua', 'sua', 'mais', 'muito', 'já', 'ó', 'num', 'numa'])
 
     let grupos = []
-    if (frases.length >= 2 && words.length) {
-      // cada palavra na frase cantada em que ela cai (ordem garantida)
-      const dono = words.map((w) => {
-        let best = 0
-        let bd = Infinity
-        for (let k = 0; k < frases.length; k++) {
-          const [a, b] = frases[k]
-          const d = w.t0 < a ? a - w.t0 : w.t0 > b ? w.t0 - b : 0
-          if (d < bd) { bd = d; best = k }
-        }
-        return best
-      })
-      for (let i = 1; i < dono.length; i++) if (dono[i] < dono[i - 1]) dono[i] = dono[i - 1]
-      let i = 0
-      while (i < words.length) {
-        const f = dono[i]
-        let j = i
-        while (j + 1 < words.length && dono[j + 1] === f) j++
-        grupos.push(words.slice(i, j + 1))
-        i = j + 1
-      }
-    } else if (words.length) {
-      grupos = [words.slice()]
+    for (const w of words) {
+      const ult = grupos[grupos.length - 1]
+      if (ult && ult[0].seg === w.seg) ult.push(w)
+      else grupos.push([w])
     }
 
-    // 1) palavra Maiúscula sobrando no fim do verso é começo do PRÓXIMO
-    for (let g = 0; g < grupos.length - 1; g++) {
-      for (let n = 0; n < 2; n++) {
-        const cur = grupos[g]
-        if (cur.length < 2) break
-        const ult = cur[cur.length - 1].text
-        if (!MAIUSC(ult) || NAO_INICIA.has(semPonto(ult))) break
-        if (PONTO(cur[cur.length - 2].text)) break
-        grupos[g + 1].unshift(cur.pop())
-      }
-    }
-    // 2) palavrinha de ligação sobrando no fim ("...me") também é do próximo.
-    //    Com vírgula colada ("me,") não: ali é fim de frase de verdade.
-    for (let g = 0; g < grupos.length - 1; g++) {
-      for (let n = 0; n < 2; n++) {
-        const cur = grupos[g]
-        if (cur.length < 2) break
-        const ult = cur[cur.length - 1].text
-        if (PONTO(ult) || !LIGACAO.has(ult.toLowerCase())) break
-        grupos[g + 1].unshift(cur.pop())
-      }
-    }
-    // 3) Maiúscula no MEIO da frase abre verso novo
-    grupos = grupos.flatMap((g) => {
-      const out = []
-      let atual = [g[0]]
-      for (let k = 1; k < g.length; k++) {
-        const w = g[k]
-        if (MAIUSC(w.text) && !NAO_INICIA.has(semPonto(w.text))) { out.push(atual); atual = [] }
-        atual.push(w)
-      }
-      if (atual.length) out.push(atual)
-      return out
-    })
-    // 4) frase comprida demais (canto emendado) quebra no melhor ponto interno
+    // verso comprido (o modelo emendou duas frases) quebra no vale de energia
     const quebrar = (g) => {
       const txt = g.map((w) => w.text).join(' ')
       const dur = g[g.length - 1].t0 - g[0].t0
@@ -739,55 +706,34 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       let best = -1
       let bestP = -Infinity
       for (let k = 1; k <= g.length - 1; k++) {
-        let p = 0
-        if (PONTO(g[k - 1].text)) p += 2
+        let pz = 0
+        if (MAIUSC(g[k].text)) pz += 2
+        if (PONTO(g[k - 1].text)) pz += 2
         if (env?.data?.length) {
-          // vale de energia entre as duas palavras: quanto mais fundo, melhor
           const a = Math.round(g[k - 1].t0 / env.hop)
           const b = Math.round(g[k].t0 / env.hop)
           let vale = 1
           for (let x = a; x <= b && x < env.data.length; x++) vale = Math.min(vale, env.data[x])
-          p += (1 - Math.min(1, vale / 0.2)) * 2
+          pz += (1 - Math.min(1, vale / 0.2)) * 2
         }
-        p -= Math.abs(k - meio) / g.length
-        if (k === 1 || k === g.length - 1) p -= 1.2
-        if (LIGACAO.has(semPonto(g[k - 1].text).toLowerCase())) p -= 2.5
-        if (p > bestP) { bestP = p; best = k }
+        pz -= Math.abs(k - meio) / g.length
+        if (k === 1 || k === g.length - 1) pz -= 1.2
+        if (LIGACAO.has(semPonto(g[k - 1].text).toLowerCase())) pz -= 2.5
+        if (pz > bestP) { bestP = pz; best = k }
       }
       if (best < 1) return [g]
       return [...quebrar(g.slice(0, best)), ...quebrar(g.slice(best))]
     }
     grupos = grupos.flatMap(quebrar)
-    // 5) respiro curto + palavra minúscula = continuação da linha anterior.
-    //    Só a PAUSA decide: juntar por tamanho de texto colava versos certos.
-    const silencioAntes = (g) => {
-      const t = g[0].t0
-      for (let k = 1; k < frases.length; k++) if (frases[k][0] > t - 0.3) return frases[k][0] - frases[k - 1][1]
-      return Infinity
-    }
-    for (let g = 1; g < grupos.length; g++) {
-      const cur = grupos[g]
-      const ant = grupos[g - 1]
-      if (MAIUSC(cur[0].text)) continue
-      if (/[.!?]$/.test(ant[ant.length - 1].text)) continue
-      if (silencioAntes(cur) > 0.5) continue
-      const junto = [...ant, ...cur]
-      if (junto.map((w) => w.text).join(' ').length > MAXC) continue
-      if (junto[junto.length - 1].t0 - junto[0].t0 > MAXDUR) continue
-      grupos[g - 1] = junto
-      grupos.splice(g, 1)
-      g--
-    }
-    // 6) caco de uma palavra gruda no vizinho — nunca na frente de uma
-    //    Maiúscula, que ali é começo de linha e o caco é o fim da de trás
+
+    // caco de uma palavra gruda no vizinho mais perto
     for (let g = 0; g < grupos.length; g++) {
       if (grupos[g].length > 1) continue
       const cabe = (x) => x && x.map((w) => w.text).join(' ').length + grupos[g][0].text.length + 1 <= MAXC + 6
       const antes = grupos[g - 1]
       const depois = grupos[g + 1]
       const dAntes = antes ? grupos[g][0].t0 - antes[antes.length - 1].t0 : Infinity
-      let dDepois = depois ? depois[0].t0 - grupos[g][0].t0 : Infinity
-      if (depois && MAIUSC(depois[0].text)) dDepois = Infinity
+      const dDepois = depois ? depois[0].t0 - grupos[g][0].t0 : Infinity
       if (dAntes <= dDepois && cabe(antes)) { antes.push(...grupos.splice(g, 1)[0]); g-- }
       else if (depois && cabe(depois)) { depois.unshift(...grupos.splice(g, 1)[0]); g-- }
     }
@@ -814,6 +760,16 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       }
     }
 
+    unificarRepeticoes(segments)
+    marcarEstrofes(segments)
+    for (const s of segments) {
+      // letra é texto pra ler: cada verso começa com maiúscula
+      const w0 = s.words[0]
+      if (w0?.text) w0.text = w0.text.charAt(0).toUpperCase() + w0.text.slice(1)
+      s.text = s.words.map((w) => w.text).join(' ')
+      for (const w of s.words) { delete w.ps; delete w.pn; delete w.seg }
+    }
+
     const m2 = readMeta(dir)
     m2.lyrics = { at: new Date().toISOString(), v: LYRICS_V, segments, edited: false }
     writeMeta(dir, m2)
@@ -822,6 +778,134 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     rmSync(wav, { force: true })
     rmSync(`${outBase}.json`, { force: true })
   }
+}
+
+// REPETIÇÃO: cada bloco de 30s é transcrito do zero (sem contexto, senão o
+// modelo entra em loop no instrumental), então o refrão sai escrito diferente a
+// cada volta. Aqui as voltas são reconhecidas e todas adotam a mesma versão.
+//
+// O reconhecimento é por SEÇÃO, não por linha: duas linhas parecidas soltas não
+// provam nada (a música tem versos vizinhos parecidos de propósito — "Do céu
+// ficar azul" e "Do céu ferver o azul"), mas uma SEQUÊNCIA de linhas parecidas
+// na mesma ordem só pode ser o refrão voltando.
+const repNorm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+
+function repDistancia(a, b) {
+  let ant = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(ant[j] + 1, cur[j - 1] + 1, ant[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    }
+    ant = cur
+  }
+  return ant[b.length]
+}
+
+function repParecido(t1, t2) {
+  const a = repNorm(t1).split(' ')
+  const b = repNorm(t2).split(' ')
+  return 1 - repDistancia(a, b) / Math.max(1, Math.max(a.length, b.length))
+}
+
+export function unificarRepeticoes(segments) {
+  const n = segments.length
+  if (n < 6) return segments
+  const LIM = 0.34   // parecença mínima entre duas linhas
+  const CORRIDA = 3  // linhas seguidas parecidas pra valer como seção repetida
+  const T = segments.map((s) => s.text)
+  const pai = Array.from({ length: n }, (_, i) => i)
+  const acha = (x) => (pai[x] === x ? x : (pai[x] = acha(pai[x])))
+  for (let d = 2; d < n; d++) {
+    let i = 0
+    while (i + d < n) {
+      if (repParecido(T[i], T[i + d]) < LIM) { i++; continue }
+      let j = i
+      while (j + 1 + d < n && repParecido(T[j + 1], T[j + 1 + d]) >= LIM) j++
+      if (j - i + 1 >= CORRIDA) for (let k = i; k <= j; k++) pai[acha(k)] = acha(k + d)
+      i = j + 1
+    }
+  }
+  const grupos = new Map()
+  for (let i = 0; i < n; i++) {
+    const r = acha(i)
+    if (!grupos.has(r)) grupos.set(r, [])
+    grupos.get(r).push(i)
+  }
+  for (const g of grupos.values()) {
+    if (g.length < 2) continue
+    const conf = g.map((i) => {
+      const ws = segments[i].words
+      return ws.reduce((a, w) => a + (w.pn ? w.ps / w.pn : 0.5), 0) / Math.max(1, ws.length)
+    })
+    const topo = Math.max(...conf)
+    // entre as versões que o modelo ouviu quase igualmente bem, vale a MAIS
+    // COMPLETA — senão o refrão inteiro herda a volta em que ele comeu palavra
+    let campeao = g[0]
+    let melhor = -1
+    for (let k = 0; k < g.length; k++) {
+      if (conf[k] < topo - 0.08) continue
+      const nota = segments[g[k]].words.length * 100 + conf[k]
+      if (nota > melhor) { melhor = nota; campeao = g[k] }
+    }
+    const textos = segments[campeao].words.map((w) => w.text)
+    for (const i of g) {
+      if (i === campeao) continue
+      segments[i].words = repalavrar(segments[i], textos)
+      segments[i].text = segments[i].words.map((w) => w.text).join(' ')
+    }
+  }
+  return segments
+}
+
+// Troca o texto de um verso mantendo os instantes medidos. Se o número de
+// palavras bate, é troca seca (tempo intacto); se não, as palavras novas são
+// espalhadas pelas entradas de voz que já existiam.
+function repalavrar(seg, textos) {
+  const velhas = seg.words
+  if (textos.length === velhas.length) {
+    velhas.forEach((w, i) => { w.text = textos[i] })
+    return velhas
+  }
+  const t0 = velhas[0].t0
+  const t1 = Math.max(seg.t1, t0 + 0.4)
+  const novas = textos.map((text, i) => {
+    let inicio
+    if (velhas.length >= 2 && textos.length >= 2) {
+      inicio = velhas[Math.round((i * (velhas.length - 1)) / (textos.length - 1))].t0
+    } else if (velhas.length === 1 && i === 0) {
+      inicio = velhas[0].t0
+    } else {
+      inicio = t0 + ((t1 - t0) * i) / textos.length
+    }
+    return { t0: inicio, t1: inicio, text, ps: 0.5, pn: 1 }
+  })
+  for (let i = 1; i < novas.length; i++) {
+    if (novas[i].t0 < novas[i - 1].t0 + 0.08) novas[i].t0 = novas[i - 1].t0 + 0.08
+  }
+  for (let i = 0; i < novas.length; i++) {
+    novas[i].t1 = i + 1 < novas.length ? novas[i + 1].t0 : Math.max(t1, novas[i].t0 + 0.2)
+  }
+  return novas
+}
+
+// ESTROFES: bloco de versos separado por respiro musical. É o que transforma a
+// pilha de linhas em letra de encarte — e é a quebra que vai pro texto copiado.
+export function marcarEstrofes(segments) {
+  const vaos = []
+  for (let i = 1; i < segments.length; i++) {
+    const v = segments[i].t0 - segments[i - 1].t1
+    if (v > 0) vaos.push(v)
+  }
+  vaos.sort((a, b) => a - b)
+  const med = vaos[Math.floor(vaos.length / 2)] || 0.5
+  const LIM = Math.max(1.4, med * 2.4)
+  for (let i = 1; i < segments.length; i++) {
+    segments[i].estrofe = segments[i].t0 - segments[i - 1].t1 >= LIM
+  }
+  if (segments.length) segments[0].estrofe = false
+  return segments
 }
 
 // Correções do usuário (verso editado ou letra colada) — o texto é dele,
