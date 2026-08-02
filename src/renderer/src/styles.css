@@ -6672,3 +6672,66 @@ body.studio-open .zoom-chip {
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* ================= Corrigir verso: o lápis e o campo =================
+   O lápis é um HEXÁGONO — a mesma forma da marca, já usada nos medidores e nos
+   selos. Fica apagado até o mouse chegar no verso; ao chegar, acende no lima
+   com o halo da assinatura. É botão de verdade, então pode ter forma de botão:
+   a regra da casa proíbe é INFORMAÇÃO fingindo ser clicável. */
+.lyr-edit {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.16s ease, background 0.16s ease, filter 0.16s ease;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+.lyr-edit svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: var(--muted-2);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.16s ease;
+}
+.lyr-block:hover .lyr-edit,
+.lyr-edit:focus-visible {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+}
+.lyr-edit:hover {
+  background: rgba(182, 255, 59, 0.14);
+  filter: drop-shadow(0 0 6px rgba(182, 255, 59, 0.45));
+}
+.lyr-edit:hover svg { stroke: var(--accent); }
+
+/* Campo de correção: moldura chanfrada no lima com brilho — é o mesmo aceno de
+   "mostrador ligado" do resto do app. O texto continua na fonte da letra pra
+   não dar susto de troca de tipografia no meio da leitura. */
+.lyr-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 11px;
+  background: var(--bg-inset);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: inherit;
+  line-height: inherit;
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  outline: none;
+  caret-color: var(--accent);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  box-shadow: 0 0 0 1px rgba(182, 255, 59, 0.16), 0 0 14px rgba(182, 255, 59, 0.18) inset;
+}
+.lyr-input::selection { background: rgba(182, 255, 59, 0.28); }

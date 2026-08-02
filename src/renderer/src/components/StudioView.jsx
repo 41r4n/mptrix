@@ -1056,14 +1056,39 @@ export default function StudioView({ source, onClose }) {
     return { ...s, text: novas.join(' '), words }
   }
 
-  const editVerse = async (i) => {
+  // Correção do verso NO LUGAR. Antes isso chamava window.prompt(), que o
+  // Electron simplesmente não tem — o lápis não fazia nada. Agora o verso vira
+  // campo ali mesmo: Enter grava, Esc desiste, e o tempo de cada palavra é
+  // remontado por cima dos instantes já medidos.
+  const [editIdx, setEditIdx] = useState(-1)
+  const [editTxt, setEditTxt] = useState('')
+  // o Esc fecha o campo, e fechar dispara o blur — que gravaria assim mesmo,
+  // porque o React só atualiza o estado depois. Esta bandeira segura isso.
+  const desistiuRef = useRef(false)
+
+  const abrirEdicao = (i) => {
     const cur = lyrics?.segments?.[i]
     if (!cur) return
-    const txt = window.prompt('Corrigir verso:', cur.text)
-    if (txt == null || txt === cur.text) return
+    setEditIdx(i)
+    setEditTxt(cur.text)
+  }
+
+  const gravarEdicao = async () => {
+    if (desistiuRef.current) { desistiuRef.current = false; return }
+    const i = editIdx
+    const cur = lyrics?.segments?.[i]
+    setEditIdx(-1)
+    if (!cur) return
+    const txt = editTxt.trim()
+    if (!txt || txt === cur.text) return
     const segs = lyrics.segments.map((s, k) => (k === i ? reword(s, txt) : s))
     setLyrics({ ...lyrics, segments: segs, edited: true })
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
+  }
+
+  const teclaEdicao = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); gravarEdicao() }
+    else if (e.key === 'Escape') { e.preventDefault(); desistiuRef.current = true; setEditIdx(-1) }
   }
 
   const applyPaste = async () => {
@@ -2425,26 +2450,46 @@ export default function StudioView({ source, onClose }) {
                               ))}
                             </div>
                           )}
-                          <div className="lyr-text">
-                            {s.words?.length
-                              ? s.words.map((w, k) => (
-                                  <span
-                                    key={k}
-                                    className={
-                                      st !== 'now' ? 'lyr-w'
-                                        : k === activeWordIdx ? 'lyr-w singing'
-                                          : k < activeWordIdx ? 'lyr-w sung'
-                                            : 'lyr-w'
-                                    }
-                                  >{w.text} </span>
-                                ))
-                              : s.text}
-                          </div>
-                          <button
-                            className="lyr-edit"
-                            onClick={(e) => { e.stopPropagation(); editVerse(i) }}
-                            title="Corrigir esse verso"
-                          >✎</button>
+                          {editIdx === i ? (
+                            <input
+                              className="lyr-input"
+                              value={editTxt}
+                              autoFocus
+                              onChange={(e) => setEditTxt(e.target.value)}
+                              onKeyDown={teclaEdicao}
+                              onBlur={gravarEdicao}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div className="lyr-text">
+                              {s.words?.length
+                                ? s.words.map((w, k) => (
+                                    <span
+                                      key={k}
+                                      className={
+                                        st !== 'now' ? 'lyr-w'
+                                          : k === activeWordIdx ? 'lyr-w singing'
+                                            : k < activeWordIdx ? 'lyr-w sung'
+                                              : 'lyr-w'
+                                      }
+                                    >{w.text} </span>
+                                  ))
+                                : s.text}
+                            </div>
+                          )}
+                          {editIdx !== i && (
+                            <button
+                              className="lyr-edit"
+                              onClick={(e) => { e.stopPropagation(); abrirEdicao(i) }}
+                              data-hint="CORRIGIR — troca o texto do verso. O tempo de cada palavra continua o que foi medido."
+                              aria-label="Corrigir esse verso"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M4 20h4L19 9l-4-4L4 16v4z" />
+                                <path d="M15 5l4 4" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       )
                     })}
