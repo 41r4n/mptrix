@@ -2457,9 +2457,7 @@ export default function StudioView({ source, onClose }) {
               <div className="chords-panel lyrics-panel">
                 <div className="chords-head">
                   <span className="chords-title">Letra</span>
-                  <span className="chords-sync">
-                    {editAviso || (lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA')}
-                  </span>
+                  <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
                   {lyrics?.segments?.length > 0 && (
                     <button
                       className="btn-secondary btn-small"
@@ -2494,6 +2492,16 @@ export default function StudioView({ source, onClose }) {
                   </div>
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
+                {editAviso && (
+                  <div className="lyr-recado-moldura">
+                    <div className="lyr-recado">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      <span>{editAviso}</span>
+                    </div>
+                  </div>
+                )}
                 {lyrics?.segments && (lyrics.segments.length === 0 ? (
                   <div className="chords-empty muted">Não ouvi versos cantados na faixa de voz.</div>
                 ) : (

@@ -6774,3 +6774,43 @@ body.studio-open .zoom-chip {
 }
 .lyr-voltar:hover { background: rgba(255, 255, 255, 0.1); }
 .lyr-voltar:hover svg { stroke: var(--text); }
+
+/* ================= Recado do que acabou de acontecer =================
+   Fica logo abaixo do cabeçalho do painel, na largura toda, onde o olho passa
+   ao voltar pra letra. Antes isso era um rótulo pequeno no canto e ninguém via.
+   Mesma moldura chanfrada do campo de edição — inclusive a camada por baixo,
+   senão a diagonal do chanfro fica sem linha e o canto lê como buraco.
+   NÃO é botão e não pode parecer: sem hover, sem cursor de mão, fundo chapado
+   e a linha lima só no contorno. */
+.lyr-recado-moldura {
+  margin: 10px 14px 4px;
+  padding: 1px;
+  background: var(--accent);
+  clip-path: polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px);
+  filter: drop-shadow(0 0 9px rgba(182, 255, 59, 0.3));
+  animation: recado-entra 0.22s ease-out;
+}
+.lyr-recado {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  background: #16200c;
+  clip-path: polygon(10.4px 0, 100% 0, 100% calc(100% - 10.4px), calc(100% - 10.4px) 100%, 0 100%, 0 10.4px);
+}
+.lyr-recado svg {
+  width: 15px; height: 15px; flex: 0 0 auto; fill: none;
+  stroke: var(--accent); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.lyr-recado span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+@keyframes recado-entra {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: none; }
+}
