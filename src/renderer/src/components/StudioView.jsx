@@ -1125,11 +1125,17 @@ export default function StudioView({ source, onClose }) {
     setEditTxt(cur.text)
   }
 
-  const gravarEdicao = async (propagar = false) => {
+  // A correção vale em todas as voltas da mesma frase, sem perguntar: quem
+  // decide isso é o detector de repetição, e ele só entrega verso do MESMO
+  // grupo E com o texto hoje idêntico. Como a checagem já foi feita, pedir
+  // confirmação seria burocracia. A saída é o ↻, que desfaz tudo de uma vez —
+  // desfazer é trava melhor que confirmar: confirmação a gente clica no
+  // automático, desfazer só se usa quando algo deu errado de verdade.
+  const gravarEdicao = async () => {
     if (desistiuRef.current) { desistiuRef.current = false; return }
     const i = editIdx
     const cur = lyrics?.segments?.[i]
-    const irmaos = propagar ? irmaosDoVerso(i) : []
+    const irmaos = irmaosDoVerso(i)
     setEditIdx(-1)
     if (!cur) return
     const txt = editTxt.trim()
@@ -1146,7 +1152,7 @@ export default function StudioView({ source, onClose }) {
   const [editAviso, setEditAviso] = useState('')
 
   const teclaEdicao = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); gravarEdicao(false) }
+    if (e.key === 'Enter') { e.preventDefault(); gravarEdicao() }
     else if (e.key === 'Escape') { e.preventDefault(); desistiuRef.current = true; setEditIdx(-1) }
   }
 
@@ -2520,7 +2526,7 @@ export default function StudioView({ source, onClose }) {
                                   autoFocus
                                   onChange={(e) => setEditTxt(e.target.value)}
                                   onKeyDown={teclaEdicao}
-                                  onBlur={() => gravarEdicao(false)}
+                                  onBlur={gravarEdicao}
                                 />
                               </div>
                               {originalDoVerso(i) && (
@@ -2528,26 +2534,12 @@ export default function StudioView({ source, onClose }) {
                                   className="lyr-voltar"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => desfazerVerso(i)}
-                                  data-hint={`VOLTAR AO ORIGINAL — devolve esse verso ao que o sistema tinha escutado: "${originalDoVerso(i).text}". O tempo das palavras volta junto, o medido. Some quando o verso já está igual ao original.`}
+                                  data-hint={`VOLTAR AO ORIGINAL — devolve pro que o sistema tinha escutado: "${originalDoVerso(i).text}". O tempo das palavras volta junto, o medido.${irmaosDoVerso(i).length ? ` Desfaz nas ${irmaosDoVerso(i).length + 1} voltas dessa frase, as mesmas em que a correção valeu.` : ''} Some quando o verso já está igual ao original.`}
                                 >
                                   <svg viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M3 12a9 9 0 1 0 3-6.7" />
                                     <path d="M3 4v5h5" />
                                   </svg>
-                                </button>
-                              )}
-                              {irmaosDoVerso(i).length > 0 && (
-                                <button
-                                  className="lyr-todas"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => gravarEdicao(true)}
-                                  data-hint={`APLICAR NAS REPETIÇÕES — esse verso volta mais ${irmaosDoVerso(i).length} vez${irmaosDoVerso(i).length > 1 ? 'es' : ''} na música, com o mesmo texto. O conserto vale pra todas de uma vez, e cada uma mantém o tempo dela. Só entra aqui verso que o sistema reconheceu como a MESMA frase voltando — não é troca de texto parecido pela música.`}
-                                >
-                                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M4 5h11a5 5 0 0 1 0 10H7" />
-                                    <path d="M10 12l-3 3 3 3" />
-                                  </svg>
-                                  <span>+{irmaosDoVerso(i).length}</span>
                                 </button>
                               )}
                             </div>
