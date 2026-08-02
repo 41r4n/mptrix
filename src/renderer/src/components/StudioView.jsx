@@ -1014,6 +1014,49 @@ export default function StudioView({ source, onClose }) {
   }
 
   const [copiado, setCopiado] = useState(false)
+  const [lapidando, setLapidando] = useState(false)
+  const [lapidaResto, setLapidaResto] = useState(null)
+  const [lapidaAviso, setLapidaAviso] = useState('')
+
+  // quantas escutas ainda faltam pra essa música
+  useEffect(() => {
+    if (!session?.key || !lyrics?.segments?.length) return
+    let vivo = true
+    window.mptrix.studio.lyricsLeft({ key: session.key }).then((r) => {
+      if (vivo) setLapidaResto(r?.restantes ?? 0)
+    })
+    return () => { vivo = false }
+  }, [session?.key, lyrics])
+
+  // LAPIDAR: mais uma escuta da mesma música, feita de outro jeito. Cada palavra
+  // fica com a versão que mais apareceu — quanto mais escutas, mais a maioria
+  // acerta. Não mexe no tempo, só no texto.
+  const lapidarLetra = async () => {
+    if (!session?.key || lapidando) return
+    setLapidando(true)
+    setLapidaAviso('')
+    setLyricsPct(0)
+    try {
+      const r = await window.mptrix.studio.lyricsPolish({ key: session.key })
+      if (r?.error) setLapidaAviso(`não deu: ${r.error}`)
+      else if (r?.esgotado) setLapidaAviso('já ouvi essa música de todos os jeitos que sei')
+      else {
+        if (r?.lyrics?.segments) setLyrics(r.lyrics)
+        setLapidaResto(r?.restantes ?? 0)
+        setLapidaAviso(
+          r.mudou > 0
+            ? `${r.mudou} palavra${r.mudou > 1 ? 's' : ''} mudou ${r.rotulo}`
+            : `nada mudou ${r.rotulo} — a letra se manteve`
+        )
+      }
+    } catch (e) {
+      setLapidaAviso(`não deu: ${e.message}`)
+    } finally {
+      setLapidando(false)
+      setLyricsPct(0)
+      setTimeout(() => setLapidaAviso(''), 9000)
+    }
+  }
   const copiarLetra = async () => {
     try {
       await navigator.clipboard.writeText(letraEmTexto())
@@ -2365,6 +2408,16 @@ export default function StudioView({ source, onClose }) {
                 <div className="chords-head">
                   <span className="chords-title">Letra</span>
                   <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
+                  {lyrics?.segments?.length > 0 && lapidaResto !== 0 && (
+                    <button
+                      className="btn-secondary btn-small btn-lapidar"
+                      onClick={lapidarLetra}
+                      disabled={lapidando}
+                      data-hint="LAPIDAR — ouve a música de novo de um jeito diferente e cruza com o que já existe: cada palavra fica com a versão que mais apareceu. Some quando eu já tiver ouvido de todos os jeitos."
+                    >
+                      {lapidando ? 'ouvindo…' : `lapidar${lapidaResto ? ` (${lapidaResto})` : ''}`}
+                    </button>
+                  )}
                   {lyrics?.segments?.length > 0 && (
                     <button
                       className="btn-secondary btn-small"
@@ -2399,6 +2452,20 @@ export default function StudioView({ source, onClose }) {
                   </div>
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
+                {(lapidando || lapidaAviso) && (
+                  <div className="lapida-linha">
+                    {lapidando ? (
+                      <>
+                        <div className="progress-bar alive" style={{ width: '100%' }}>
+                          <div className="progress-fill" style={{ width: `${lyricsPct}%` }} />
+                        </div>
+                        <span className="hud-cap">ouvindo de outro jeito · {lyricsPct}%</span>
+                      </>
+                    ) : (
+                      <span className="hud-cap">{lapidaAviso}</span>
+                    )}
+                  </div>
+                )}
                 {lyrics?.segments && (lyrics.segments.length === 0 ? (
                   <div className="chords-empty muted">Não ouvi versos cantados na faixa de voz.</div>
                 ) : (

@@ -30,6 +30,8 @@ import {
   investigateStretch,
   detectChords,
   transcribeLyrics,
+  polirLyrics,
+  lapidacoesRestantes,
   saveLyrics
 } from './studio.js'
 import {
@@ -1013,6 +1015,31 @@ app.whenReady().then(() => {
       return { error: err.message }
     } finally {
       heavyJobEnd()
+    }
+  })
+
+  // Lapidar: mais uma escuta da mesma música, feita de outro jeito, votando
+  // palavra a palavra em cima do que já existe
+  ipcMain.handle('studio:lyricsPolish', async (_e, { key }) => {
+    heavyJobStart()
+    try {
+      return await polirLyrics({
+        key,
+        ffmpegPath: FFMPEG_PATH,
+        onProgress: (p) => send('studio:lyricsProgress', p)
+      })
+    } catch (err) {
+      return { error: err.message }
+    } finally {
+      heavyJobEnd()
+    }
+  })
+
+  ipcMain.handle('studio:lyricsLeft', (_e, { key }) => {
+    try {
+      return { restantes: lapidacoesRestantes(key) }
+    } catch {
+      return { restantes: 0 }
     }
   })
 

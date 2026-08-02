@@ -101,6 +101,8 @@ const api = {
     lyrics: (opts) => ipcRenderer.invoke('studio:lyrics', opts),
     onLyricsProgress: on('studio:lyricsProgress'),
     lyricsSave: (opts) => ipcRenderer.invoke('studio:lyricsSave', opts),
+    lyricsPolish: (opts) => ipcRenderer.invoke('studio:lyricsPolish', opts),
+    lyricsLeft: (opts) => ipcRenderer.invoke('studio:lyricsLeft', opts),
     extract: (opts) => ipcRenderer.invoke('studio:extract', opts),
     cached: (opts) => ipcRenderer.invoke('studio:cached', opts),
     plan: (opts) => ipcRenderer.invoke('studio:plan', opts),

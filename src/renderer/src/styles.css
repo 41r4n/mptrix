@@ -6672,3 +6672,27 @@ body.studio-open .zoom-chip {
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* ---- Lapidar a letra ----
+   Faixa de estado embaixo do cabeçalho do painel: barra enquanto ouve, recado
+   curto depois. Sem caixa em volta — informação não finge ser botão. */
+.lapida-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.lapida-linha .progress-bar { flex: 1; }
+.lapida-linha .hud-cap {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+/* o botão de lapidar carrega o acento: é a ação que faz a letra melhorar */
+.btn-lapidar { border-color: rgba(182, 255, 59, 0.35); color: var(--accent); }
+.btn-lapidar:hover:not(:disabled) { border-color: var(--accent); background: rgba(182, 255, 59, 0.08); }
+.btn-lapidar:disabled { opacity: 0.55; cursor: default; }
