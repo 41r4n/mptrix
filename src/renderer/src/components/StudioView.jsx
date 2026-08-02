@@ -1152,12 +1152,14 @@ export default function StudioView({ source, onClose }) {
   }
   const [editAviso, setEditAviso] = useState('')
   const avisoTimerRef = useRef(null)
-  // 6s era pouco pra ler e ainda entender o que mudou. 14s dá tempo de olhar,
-  // conferir o número e decidir se vai desfazer — que é o ponto do recado.
+  // Tempo do recado na tela, ajustado no olho do dono. Ficou curto porque a
+  // caixa é grande e no caminho da vista: o que antes parecia "sumiu rápido"
+  // era o recado escondido num rótulo, não o tempo.
+  const AVISO_MS = 4500
   const avisar = (texto) => {
     setEditAviso(texto)
     if (avisoTimerRef.current) clearTimeout(avisoTimerRef.current)
-    avisoTimerRef.current = setTimeout(() => setEditAviso(''), 14000)
+    avisoTimerRef.current = setTimeout(() => setEditAviso(''), AVISO_MS)
   }
 
   const teclaEdicao = (e) => {
