@@ -1156,11 +1156,28 @@ export default function StudioView({ source, onClose }) {
   // caixa é grande e no caminho da vista: o que antes parecia "sumiu rápido"
   // era o recado escondido num rótulo, não o tempo.
   const AVISO_MS = 4500
+  const SAIDA_MS = 260
+  const [avisoSaindo, setAvisoSaindo] = useState(false)
+  const saidaTimerRef = useRef(null)
+  // Sai em duas etapas: primeiro marca a saída (a animação roda), só depois
+  // desmonta. Sem isso o elemento some do DOM na hora e não há o que animar.
   const avisar = (texto) => {
+    clearTimeout(avisoTimerRef.current)
+    clearTimeout(saidaTimerRef.current)
+    setAvisoSaindo(false)
     setEditAviso(texto)
-    if (avisoTimerRef.current) clearTimeout(avisoTimerRef.current)
-    avisoTimerRef.current = setTimeout(() => setEditAviso(''), AVISO_MS)
+    avisoTimerRef.current = setTimeout(() => {
+      setAvisoSaindo(true)
+      saidaTimerRef.current = setTimeout(() => {
+        setEditAviso('')
+        setAvisoSaindo(false)
+      }, SAIDA_MS)
+    }, AVISO_MS)
   }
+  useEffect(() => () => {
+    clearTimeout(avisoTimerRef.current)
+    clearTimeout(saidaTimerRef.current)
+  }, [])
 
   const teclaEdicao = (e) => {
     if (e.key === 'Enter') { e.preventDefault(); gravarEdicao() }
@@ -2501,7 +2518,7 @@ export default function StudioView({ source, onClose }) {
                 )}
                 {lyrics?.error && <div className="chords-empty muted">⚠ {lyrics.error}</div>}
                 {editAviso && (
-                  <div className="lyr-recado-moldura">
+                  <div className={`lyr-recado-moldura${avisoSaindo ? ' saindo' : ''}`}>
                     <div className="lyr-recado">
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M20 6L9 17l-5-5" />
