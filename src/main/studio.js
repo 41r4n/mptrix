@@ -760,6 +760,18 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       }
     }
 
+    // O modelo foi treinado em vídeo legendado e às vezes inventa crédito de
+    // legendador ou pedido de inscrição no canal. Não é letra, e numa letra
+    // que a pessoa vai copiar e mandar pro amigo isso é constrangedor.
+    const LIXO = [
+      /legenda(s|do)?\s+(por|pela|pelo)/i, /amara\.org/i, /subtitle|subtitulo|caption/i,
+      /inscreva-se/i, /obrigado por (assistir|ver)/i, /www\.|https?:/i,
+      /^\s*(legendas?|tradu(ç|c)(ã|a)o)\s*[:\-]/i
+    ]
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (LIXO.some((r) => r.test(segments[i].text))) segments.splice(i, 1)
+    }
+
     unificarRepeticoes(segments)
     marcarEstrofes(segments)
     for (const s of segments) {
