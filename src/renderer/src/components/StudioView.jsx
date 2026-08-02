@@ -1093,21 +1093,24 @@ export default function StudioView({ source, onClose }) {
       .map(({ k }) => k)
   }
 
-  // O verso como o sistema entregou, antes de qualquer correção minha.
-  // Guardado na primeira edição — é o que deixa voltar atrás.
-  const originalDoVerso = (i) => {
-    const o = lyrics?.original?.[i]
-    if (!o) return null
-    return o.text !== lyrics.segments[i]?.text ? o : null
-  }
+  // O que o SISTEMA escreveu nesse verso. Se ainda não houve correção gravada,
+  // é o próprio texto que está lá — a letra automática.
+  const textoDoSistema = (i) =>
+    lyrics?.original?.[i]?.text ?? lyrics?.segments?.[i]?.text ?? ''
+
+  // O ↻ aparece sempre que o que está no campo for diferente do que a máquina
+  // escreveu. Antes ele só existia depois de uma correção JÁ GRAVADA — ou seja,
+  // sumia exatamente na hora em que a pessoa ia procurar por ele.
+  const podeVoltar = (i) => editTxt.trim() !== textoDoSistema(i)
 
   const desfazerVerso = async (i) => {
+    setEditIdx(-1)
+    desistiuRef.current = true
     const orig = lyrics?.original?.[i]
+    // nada gravado ainda: o ↻ só joga fora o que eu estava digitando
     if (!orig) return
     // desfaz nas mesmas voltas em que a correção valeu, pra não sobrar metade
     const alvos = new Set([i, ...irmaosDoVerso(i)])
-    setEditIdx(-1)
-    desistiuRef.current = true
     const segs = lyrics.segments.map((s, k) =>
       alvos.has(k) && lyrics.original[k] ? { ...lyrics.original[k] } : s
     )
@@ -2529,12 +2532,12 @@ export default function StudioView({ source, onClose }) {
                                   onBlur={gravarEdicao}
                                 />
                               </div>
-                              {originalDoVerso(i) && (
+                              {podeVoltar(i) && (
                                 <button
                                   className="lyr-voltar"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => desfazerVerso(i)}
-                                  data-hint={`VOLTAR AO ORIGINAL — devolve pro que o sistema tinha escutado: "${originalDoVerso(i).text}". O tempo das palavras volta junto, o medido.${irmaosDoVerso(i).length ? ` Desfaz nas ${irmaosDoVerso(i).length + 1} voltas dessa frase, as mesmas em que a correção valeu.` : ''} Some quando o verso já está igual ao original.`}
+                                  data-hint={`VOLTAR AO QUE O SISTEMA ESCREVEU — devolve pra "${textoDoSistema(i)}". O tempo das palavras volta junto, o medido.${irmaosDoVerso(i).length ? ` Desfaz nas ${irmaosDoVerso(i).length + 1} voltas dessa frase.` : ''} (Esc só descarta o que você digitou; o ↻ grava a volta.)`}
                                 >
                                   <svg viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M3 12a9 9 0 1 0 3-6.7" />
