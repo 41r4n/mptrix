@@ -1070,7 +1070,21 @@ export function saveLyrics({ key, segments }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
   if (!meta) throw new Error('Sessão não encontrada.')
-  meta.lyrics = { ...(meta.lyrics || {}), segments, edited: true, at: new Date().toISOString() }
+  // Na PRIMEIRA correção, guarda a letra como o sistema entregou. É o que
+  // permite voltar atrás depois — sem isso a correção é via de mão única, e
+  // uma troca infeliz vira perda definitiva do que a máquina tinha acertado.
+  // guarda o estado ANTERIOR a esta gravação; na primeira vez isso é
+  // exatamente a letra automática, que é o ponto de retorno que interessa
+  const original = meta.lyrics?.original || meta.lyrics?.segments
+  // se a pessoa desfez tudo, o rótulo volta a ser AUTOMÁTICA
+  const igual = original && JSON.stringify(original) === JSON.stringify(segments)
+  meta.lyrics = {
+    ...(meta.lyrics || {}),
+    segments,
+    original: original || undefined,
+    edited: !igual,
+    at: new Date().toISOString()
+  }
   writeMeta(dir, meta)
   return meta.lyrics
 }

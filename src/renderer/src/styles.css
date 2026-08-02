@@ -6777,3 +6777,27 @@ body.studio-open .zoom-chip {
   filter: drop-shadow(0 0 7px rgba(182, 255, 59, 0.5));
 }
 .lyr-todas:hover svg { stroke: var(--bg); }
+
+/* Voltar ao original: mesma família do "aplicar nas repetições", mas neutro —
+   não é a ação principal, é a saída de emergência. Só acende no hover, e só
+   existe quando o verso está de fato diferente do que o sistema escutou. */
+.lyr-voltar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  transition: background 0.16s ease, filter 0.16s ease;
+}
+.lyr-voltar svg {
+  width: 14px; height: 14px; fill: none;
+  stroke: var(--muted-2); stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: stroke 0.16s ease;
+}
+.lyr-voltar:hover { background: rgba(255, 255, 255, 0.1); }
+.lyr-voltar:hover svg { stroke: var(--text); }

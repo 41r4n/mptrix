@@ -1093,6 +1093,31 @@ export default function StudioView({ source, onClose }) {
       .map(({ k }) => k)
   }
 
+  // O verso como o sistema entregou, antes de qualquer correção minha.
+  // Guardado na primeira edição — é o que deixa voltar atrás.
+  const originalDoVerso = (i) => {
+    const o = lyrics?.original?.[i]
+    if (!o) return null
+    return o.text !== lyrics.segments[i]?.text ? o : null
+  }
+
+  const desfazerVerso = async (i) => {
+    const orig = lyrics?.original?.[i]
+    if (!orig) return
+    // desfaz nas mesmas voltas em que a correção valeu, pra não sobrar metade
+    const alvos = new Set([i, ...irmaosDoVerso(i)])
+    setEditIdx(-1)
+    desistiuRef.current = true
+    const segs = lyrics.segments.map((s, k) =>
+      alvos.has(k) && lyrics.original[k] ? { ...lyrics.original[k] } : s
+    )
+    setLyrics({ ...lyrics, segments: segs })
+    setEditAviso(alvos.size > 1 ? `${alvos.size} versos voltaram ao original` : 'verso voltou ao original')
+    setTimeout(() => setEditAviso(''), 6000)
+    const r = await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
+    if (r?.segments) setLyrics(r)
+  }
+
   const abrirEdicao = (i) => {
     const cur = lyrics?.segments?.[i]
     if (!cur) return
@@ -2498,6 +2523,19 @@ export default function StudioView({ source, onClose }) {
                                   onBlur={() => gravarEdicao(false)}
                                 />
                               </div>
+                              {originalDoVerso(i) && (
+                                <button
+                                  className="lyr-voltar"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => desfazerVerso(i)}
+                                  data-hint={`VOLTAR AO ORIGINAL — devolve esse verso ao que o sistema tinha escutado: "${originalDoVerso(i).text}". O tempo das palavras volta junto, o medido. Some quando o verso já está igual ao original.`}
+                                >
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                                    <path d="M3 4v5h5" />
+                                  </svg>
+                                </button>
+                              )}
                               {irmaosDoVerso(i).length > 0 && (
                                 <button
                                   className="lyr-todas"
