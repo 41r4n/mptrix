@@ -1115,8 +1115,7 @@ export default function StudioView({ source, onClose }) {
       alvos.has(k) && lyrics.original[k] ? { ...lyrics.original[k] } : s
     )
     setLyrics({ ...lyrics, segments: segs })
-    setEditAviso(alvos.size > 1 ? `${alvos.size} versos voltaram ao original` : 'verso voltou ao original')
-    setTimeout(() => setEditAviso(''), 6000)
+    avisar(alvos.size > 1 ? `${alvos.size} versos voltaram ao original` : 'verso voltou ao original')
     const r = await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
     if (r?.segments) setLyrics(r)
   }
@@ -1148,11 +1147,18 @@ export default function StudioView({ source, onClose }) {
     // a segunda volta é cantada em outro momento, e o karaokê dela continua o dela
     const segs = lyrics.segments.map((s, k) => (alvos.has(k) ? reword(s, txt) : s))
     setLyrics({ ...lyrics, segments: segs, edited: true })
-    setEditAviso(alvos.size > 1 ? `corrigido em ${alvos.size} lugares` : '')
-    setTimeout(() => setEditAviso(''), 6000)
+    avisar(alvos.size > 1 ? `corrigido em ${alvos.size} lugares` : 'verso corrigido')
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
   }
   const [editAviso, setEditAviso] = useState('')
+  const avisoTimerRef = useRef(null)
+  // 6s era pouco pra ler e ainda entender o que mudou. 14s dá tempo de olhar,
+  // conferir o número e decidir se vai desfazer — que é o ponto do recado.
+  const avisar = (texto) => {
+    setEditAviso(texto)
+    if (avisoTimerRef.current) clearTimeout(avisoTimerRef.current)
+    avisoTimerRef.current = setTimeout(() => setEditAviso(''), 14000)
+  }
 
   const teclaEdicao = (e) => {
     if (e.key === 'Enter') { e.preventDefault(); gravarEdicao() }
