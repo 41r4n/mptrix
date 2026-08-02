@@ -30,6 +30,7 @@ import {
   investigateStretch,
   detectChords,
   transcribeLyrics,
+  gruposDeRepeticao,
   saveLyrics
 } from './studio.js'
 import {
@@ -1013,6 +1014,16 @@ app.whenReady().then(() => {
       return { error: err.message }
     } finally {
       heavyJobEnd()
+    }
+  })
+
+  // Quais versos são a mesma frase voltando — é o que autoriza propagar uma
+  // correção sem sair trocando texto parecido pela música afora
+  ipcMain.handle('studio:lyricsGroups', (_e, { segments }) => {
+    try {
+      return { grupos: gruposDeRepeticao(segments || []) }
+    } catch {
+      return { grupos: [] }
     }
   })
 

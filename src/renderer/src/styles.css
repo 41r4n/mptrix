@@ -6744,3 +6744,36 @@ body.studio-open .zoom-chip {
   clip-path: polygon(9.4px 0, 100% 0, 100% calc(100% - 9.4px), calc(100% - 9.4px) 100%, 0 100%, 0 9.4px);
 }
 .lyr-input::selection { background: rgba(182, 255, 59, 0.28); }
+
+/* Aplicar nas repetições: fica DENTRO da caixinha de edição, com a contagem
+   escrita nele — você vê quantos lugares vão mudar ANTES de apertar. Mesma
+   linguagem do ↻ refazer das faixas: hexágono, seta de volta, lima no hover. */
+.lyr-edicao { display: flex; align-items: stretch; gap: 6px; }
+.lyr-edicao .lyr-input-moldura { flex: 1; min-width: 0; }
+.lyr-todas {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px;
+  border: none;
+  background: rgba(182, 255, 59, 0.12);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  transition: background 0.16s ease, filter 0.16s ease;
+}
+.lyr-todas svg {
+  width: 13px; height: 13px; fill: none;
+  stroke: var(--accent); stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.lyr-todas:hover {
+  background: var(--accent);
+  color: var(--bg);
+  filter: drop-shadow(0 0 7px rgba(182, 255, 59, 0.5));
+}
+.lyr-todas:hover svg { stroke: var(--bg); }

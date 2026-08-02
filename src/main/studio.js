@@ -859,9 +859,14 @@ function repParecido(t1, t2) {
   return 1 - repDistancia(a, b) / Math.max(1, Math.max(a.length, b.length))
 }
 
-export function unificarRepeticoes(segments) {
+// Quais versos são A MESMA FRASE voltando. Devolve, pra cada verso, o número do
+// seu grupo (ou -1 se ele não se repete). É a peça que permite corrigir um verso
+// e o conserto valer nas outras voltas SEM sair trocando texto igual pela
+// música — que é onde estaria o perigo de destruir um verso que só PARECE igual.
+export function gruposDeRepeticao(segments) {
   const n = segments.length
-  if (n < 6) return segments
+  const solto = new Array(n).fill(-1)
+  if (n < 6) return solto
   const LIM = 0.34   // parecença mínima entre duas linhas
   const CORRIDA = 3  // linhas seguidas parecidas pra valer como seção repetida
   const T = segments.map((s) => s.text)
@@ -877,11 +882,30 @@ export function unificarRepeticoes(segments) {
       i = j + 1
     }
   }
-  const grupos = new Map()
+  const conta = new Map()
   for (let i = 0; i < n; i++) {
     const r = acha(i)
-    if (!grupos.has(r)) grupos.set(r, [])
-    grupos.get(r).push(i)
+    conta.set(r, (conta.get(r) || 0) + 1)
+  }
+  const numero = new Map()
+  for (let i = 0; i < n; i++) {
+    const r = acha(i)
+    if (conta.get(r) < 2) continue
+    if (!numero.has(r)) numero.set(r, numero.size)
+    solto[i] = numero.get(r)
+  }
+  return solto
+}
+
+export function unificarRepeticoes(segments) {
+  const n = segments.length
+  if (n < 6) return segments
+  const marca = gruposDeRepeticao(segments)
+  const grupos = new Map()
+  for (let i = 0; i < n; i++) {
+    if (marca[i] < 0) continue
+    if (!grupos.has(marca[i])) grupos.set(marca[i], [])
+    grupos.get(marca[i]).push(i)
   }
   for (const g of grupos.values()) {
     if (g.length < 2) continue

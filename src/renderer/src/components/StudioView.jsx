@@ -1066,6 +1066,33 @@ export default function StudioView({ source, onClose }) {
   // porque o React só atualiza o estado depois. Esta bandeira segura isso.
   const desistiuRef = useRef(false)
 
+  // Quais versos são a mesma frase voltando. Vem do mesmo detector que unifica
+  // as repetições na transcrição — ele acha SEQUÊNCIAS de linhas parecidas na
+  // mesma ordem, não texto igual solto. Foi assim que ele não confundiu
+  // "Do céu ficar azul" com "Do céu ferver o azul" na Azul.
+  const [gruposRep, setGruposRep] = useState([])
+  useEffect(() => {
+    const segs = lyrics?.segments
+    if (!segs?.length) { setGruposRep([]); return }
+    let vivo = true
+    window.mptrix.studio
+      .lyricsGroups({ segments: segs.map((s) => ({ text: s.text })) })
+      .then((r) => { if (vivo) setGruposRep(r?.grupos || []) })
+    return () => { vivo = false }
+  }, [lyrics])
+
+  // irmãos do verso i: mesma frase musical E hoje com o texto exatamente igual.
+  // A segunda trava importa: se duas voltas já estão diferentes, não encosto.
+  const irmaosDoVerso = (i) => {
+    const segs = lyrics?.segments || []
+    const g = gruposRep[i]
+    if (g == null || g < 0) return []
+    return segs
+      .map((s, k) => ({ s, k }))
+      .filter(({ s, k }) => k !== i && gruposRep[k] === g && s.text === segs[i].text)
+      .map(({ k }) => k)
+  }
+
   const abrirEdicao = (i) => {
     const cur = lyrics?.segments?.[i]
     if (!cur) return
@@ -1073,21 +1100,28 @@ export default function StudioView({ source, onClose }) {
     setEditTxt(cur.text)
   }
 
-  const gravarEdicao = async () => {
+  const gravarEdicao = async (propagar = false) => {
     if (desistiuRef.current) { desistiuRef.current = false; return }
     const i = editIdx
     const cur = lyrics?.segments?.[i]
+    const irmaos = propagar ? irmaosDoVerso(i) : []
     setEditIdx(-1)
     if (!cur) return
     const txt = editTxt.trim()
     if (!txt || txt === cur.text) return
-    const segs = lyrics.segments.map((s, k) => (k === i ? reword(s, txt) : s))
+    const alvos = new Set([i, ...irmaos])
+    // cada ocorrência recebe o texto novo POR CIMA DOS SEUS PRÓPRIOS instantes:
+    // a segunda volta é cantada em outro momento, e o karaokê dela continua o dela
+    const segs = lyrics.segments.map((s, k) => (alvos.has(k) ? reword(s, txt) : s))
     setLyrics({ ...lyrics, segments: segs, edited: true })
+    setEditAviso(alvos.size > 1 ? `corrigido em ${alvos.size} lugares` : '')
+    setTimeout(() => setEditAviso(''), 6000)
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
   }
+  const [editAviso, setEditAviso] = useState('')
 
   const teclaEdicao = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); gravarEdicao() }
+    if (e.key === 'Enter') { e.preventDefault(); gravarEdicao(false) }
     else if (e.key === 'Escape') { e.preventDefault(); desistiuRef.current = true; setEditIdx(-1) }
   }
 
@@ -2389,7 +2423,9 @@ export default function StudioView({ source, onClose }) {
               <div className="chords-panel lyrics-panel">
                 <div className="chords-head">
                   <span className="chords-title">Letra</span>
-                  <span className="chords-sync">{lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA'}</span>
+                  <span className="chords-sync">
+                    {editAviso || (lyrics?.edited ? 'CORRIGIDA' : 'AUTOMÁTICA')}
+                  </span>
                   {lyrics?.segments?.length > 0 && (
                     <button
                       className="btn-secondary btn-small"
@@ -2451,15 +2487,31 @@ export default function StudioView({ source, onClose }) {
                             </div>
                           )}
                           {editIdx === i ? (
-                            <div className="lyr-input-moldura" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                className="lyr-input"
-                                value={editTxt}
-                                autoFocus
-                                onChange={(e) => setEditTxt(e.target.value)}
-                                onKeyDown={teclaEdicao}
-                                onBlur={gravarEdicao}
-                              />
+                            <div className="lyr-edicao" onClick={(e) => e.stopPropagation()}>
+                              <div className="lyr-input-moldura">
+                                <input
+                                  className="lyr-input"
+                                  value={editTxt}
+                                  autoFocus
+                                  onChange={(e) => setEditTxt(e.target.value)}
+                                  onKeyDown={teclaEdicao}
+                                  onBlur={() => gravarEdicao(false)}
+                                />
+                              </div>
+                              {irmaosDoVerso(i).length > 0 && (
+                                <button
+                                  className="lyr-todas"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => gravarEdicao(true)}
+                                  data-hint={`APLICAR NAS REPETIÇÕES — esse verso volta mais ${irmaosDoVerso(i).length} vez${irmaosDoVerso(i).length > 1 ? 'es' : ''} na música, com o mesmo texto. O conserto vale pra todas de uma vez, e cada uma mantém o tempo dela. Só entra aqui verso que o sistema reconheceu como a MESMA frase voltando — não é troca de texto parecido pela música.`}
+                                >
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M4 5h11a5 5 0 0 1 0 10H7" />
+                                    <path d="M10 12l-3 3 3 3" />
+                                  </svg>
+                                  <span>+{irmaosDoVerso(i).length}</span>
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <div className="lyr-text">
