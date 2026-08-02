@@ -512,99 +512,6 @@ function carregarLexicoUmaVez() {
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
 const LYRICS_V = 7
 
-// Lê o JSON do whisper e devolve a fita de palavras, cada uma com seu instante,
-// a confiança do modelo e de qual segmento ela veio. Usada tanto na transcrição
-// normal quanto em cada lapidação.
-// Uma passada do whisper: roda o binário e devolve o JSON lido. Os flags são o
-// resultado de muita medição — ver os comentários abaixo antes de mexer.
-async function rodarWhisper({ exe, model, wav, outBase, onProgress }) {
-  await new Promise((resolve, reject) => {
-    const threads = freeMemMB() > 3072 ? '6' : '4'
-    const child = spawn(
-      exe,
-      // -ojf: JSON completo com o tempo de CADA palavra — é daqui que sai o
-      // karaokê.
-      // -dtw + -nfa: alinhamento DTW de verdade (casa o token com o áudio pela
-      // atenção do modelo, não por heurística). O -nfa é OBRIGATÓRIO: o flash
-      // attention vem ligado por padrão e o próprio whisper avisa
-      // "dtw_token_timestamps is not supported with flash_attn - disabling" —
-      // era por isso que t_dtw voltava -1 em todos os tokens. Medido: palavras
-      // erradas por mais de 300ms caem de 11% para 5%.
-      // -mc 0: NÃO carrega o texto de um bloco pro seguinte. Numa faixa de voz
-      // isolada os 30s iniciais costumam ser instrumental; com contexto o modelo
-      // se prende ao próprio erro e transcreve a música inteira como "[silêncio]"
-      // (aconteceu de verdade num teste). -sns cala os tokens de não-fala pelo
-      // mesmo motivo. Efeito colateral conhecido: --prompt vira código morto.
-      ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', WHISPER_DTW, '-nfa',
-        '-mc', '0', '-sns', '-of', outBase, '-t', threads, '-pp'],
-      { windowsHide: true }
-    )
-    let err = ''
-    // o whisper imprime o progresso no stderr — vira barra na tela
-    child.stderr.on('data', (d) => {
-      const t = String(d)
-      err += t
-      const m = t.match(/progress\s*=\s*(\d+)%/)
-      if (m) onProgress?.({ percent: Number(m[1]) })
-    })
-    child.on('error', reject)
-    child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(-300) || `whisper saiu com código ${code}`))))
-  })
-  return JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
-}
-
-export function palavrasDoJson(j) {
-// O whisper entrega "versos" que na verdade são blocões de 15 a 25 segundos
-  // (várias frases grudadas), mas o tempo de cada PALAVRA dentro deles é bom —
-  // medido: 84% já cai em cima da voz, erro médio de 85ms. Cada palavra guarda
-  // de qual SEGMENTO do whisper ela veio — com o modelo large-v3-turbo esses
-  // segmentos já são os versos da letra, um por linha.
-  const words = []
-  let iSeg = -1
-  for (const s of j.transcription || []) {
-    iSeg++
-    let cur = null
-    for (const tk of s.tokens || []) {
-      const raw = tk.text || ''
-      // [_BEG_] e afins são marcas internas do modelo, não letra
-      if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
-      // t_dtw vem em CENTÉSIMOS de segundo (offsets vêm em milésimos) e vale
-      // -1 quando o alinhamento não fechou naquele token — aí cai no offset.
-      const wt1 = (tk.offsets?.to ?? 0) / 1000
-      const wt0 = tk.t_dtw >= 0 ? tk.t_dtw / 100 : (tk.offsets?.from ?? 0) / 1000
-      // a confiança do modelo em cada palavra é o que decide, mais adiante,
-      // qual versão vale quando a mesma frase é cantada de novo
-      const pp = typeof tk.p === 'number' ? tk.p : 0.5
-      if (cur && !raw.startsWith(' ')) {
-        cur.text += raw
-        cur.t1 = wt1
-        cur.ps += pp
-        cur.pn++
-      } else {
-        cur = { t0: wt0, t1: wt1, text: raw.trim(), ps: pp, pn: 1, seg: iSeg }
-        words.push(cur)
-      }
-    }
-  }
-  // quando o modelo trava repetindo uma sílaba ("Tudududu...") os pedaços vêm
-  // sem espaço e viram uma "palavra" de centenas de letras — isso não é letra
-  for (let i = words.length - 1; i >= 0; i--) if (words[i].text.length > 28) words.splice(i, 1)
-  // anotações tipo [MÚSICA DE FUNDO] chegam partidas em várias palavras —
-  // varre pra frente e só apaga quando o par abre/fecha realmente existe
-  for (let i = 0; i < words.length; i++) {
-    if (!/^\[/.test(words[i].text)) continue
-    let fim = -1
-    for (let k = i; k < Math.min(words.length, i + 8); k++) {
-      if (/\]$/.test(words[k].text)) { fim = k; break }
-    }
-    if (fim < 0) continue
-    words.splice(i, fim - i + 1)
-    i--
-  }
-
-  return words
-}
-
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
@@ -619,8 +526,87 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
   await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', vocals, '-ac', '1', '-ar', '16000', wav], {})
   const outBase = join(dir, 'lyrics_out')
   try {
-    const j = await rodarWhisper({ exe, model, wav, outBase, onProgress })
-    const words = palavrasDoJson(j)
+    await new Promise((resolve, reject) => {
+      const threads = freeMemMB() > 3072 ? '6' : '4'
+      const child = spawn(
+        exe,
+        // -ojf: JSON completo com o tempo de CADA palavra — é daqui que sai o
+        // karaokê.
+        // -dtw small + -nfa: alinhamento DTW de verdade (casa o token com o
+        // áudio pela atenção do modelo, não por heurística). O -nfa é
+        // OBRIGATÓRIO: o flash attention vem ligado por padrão e o próprio
+        // whisper avisa "dtw_token_timestamps is not supported with flash_attn
+        // - disabling" — era por isso que t_dtw voltava -1 em todos os tokens.
+        // Medido: palavras erradas por mais de 300ms caem de 11% para 5%.
+        // -mc 0: NÃO carrega o texto de um bloco pro seguinte. Numa faixa de voz
+        // isolada os 30s iniciais costumam ser instrumental; com contexto o
+        // modelo se prende ao próprio erro e transcreve a música inteira como
+        // "[silêncio]" (aconteceu de verdade num teste). -sns cala os tokens de
+        // não-fala pelo mesmo motivo.
+        ['-m', model, '-l', 'pt', '-f', wav, '-oj', '-ojf', '-dtw', WHISPER_DTW, '-nfa',
+          '-mc', '0', '-sns', '-of', outBase, '-t', threads, '-pp'],
+        { windowsHide: true }
+      )
+      let err = ''
+      // o whisper imprime o progresso no stderr — vira barra na tela
+      child.stderr.on('data', (d) => {
+        const s = String(d)
+        err += s
+        const m = s.match(/progress\s*=\s*(\d+)%/)
+        if (m) onProgress?.({ percent: Number(m[1]) })
+      })
+      child.on('error', reject)
+      child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.slice(-300) || `whisper saiu com código ${code}`))))
+    })
+    const j = JSON.parse(readFileSync(`${outBase}.json`, 'utf8'))
+
+    // O whisper entrega "versos" que na verdade são blocões de 15 a 25 segundos
+    // (várias frases grudadas), mas o tempo de cada PALAVRA dentro deles é bom —
+    // medido: 84% já cai em cima da voz, erro médio de 85ms. Cada palavra guarda
+    // de qual SEGMENTO do whisper ela veio — com o modelo large-v3-turbo esses
+    // segmentos já são os versos da letra, um por linha.
+    const words = []
+    let iSeg = -1
+    for (const s of j.transcription || []) {
+      iSeg++
+      let cur = null
+      for (const tk of s.tokens || []) {
+        const raw = tk.text || ''
+        // [_BEG_] e afins são marcas internas do modelo, não letra
+        if (!raw.trim() || /^\[.*\]$/.test(raw.trim())) continue
+        // t_dtw vem em CENTÉSIMOS de segundo (offsets vêm em milésimos) e vale
+        // -1 quando o alinhamento não fechou naquele token — aí cai no offset.
+        const wt1 = (tk.offsets?.to ?? 0) / 1000
+        const wt0 = tk.t_dtw >= 0 ? tk.t_dtw / 100 : (tk.offsets?.from ?? 0) / 1000
+        // a confiança do modelo em cada palavra é o que decide, mais adiante,
+        // qual versão vale quando a mesma frase é cantada de novo
+        const pp = typeof tk.p === 'number' ? tk.p : 0.5
+        if (cur && !raw.startsWith(' ')) {
+          cur.text += raw
+          cur.t1 = wt1
+          cur.ps += pp
+          cur.pn++
+        } else {
+          cur = { t0: wt0, t1: wt1, text: raw.trim(), ps: pp, pn: 1, seg: iSeg }
+          words.push(cur)
+        }
+      }
+    }
+    // quando o modelo trava repetindo uma sílaba ("Tudududu...") os pedaços vêm
+    // sem espaço e viram uma "palavra" de centenas de letras — isso não é letra
+    for (let i = words.length - 1; i >= 0; i--) if (words[i].text.length > 28) words.splice(i, 1)
+    // anotações tipo [MÚSICA DE FUNDO] chegam partidas em várias palavras —
+    // varre pra frente e só apaga quando o par abre/fecha realmente existe
+    for (let i = 0; i < words.length; i++) {
+      if (!/^\[/.test(words[i].text)) continue
+      let fim = -1
+      for (let k = i; k < Math.min(words.length, i + 8); k++) {
+        if (/\]$/.test(words[k].text)) { fim = k; break }
+      }
+      if (fim < 0) continue
+      words.splice(i, fim - i + 1)
+      i--
+    }
 
     // ENCAIXE POR FRASE: a voz isolada diz exatamente onde tem canto e onde tem
     // silêncio. Cada palavra é atribuída à frase cantada mais próxima, na ordem.
@@ -1052,179 +1038,6 @@ export function marcarEstrofes(segments) {
   }
   if (segments.length) segments[0].estrofe = false
   return segments
-}
-
-// ============================ LAPIDAR A LETRA ============================
-// A transcrição é UM palpite. O jeito de melhorar não é eu ficar trocando o
-// ajuste global (conserta numa música, quebra em outra) — é juntar VOTANTES.
-//
-// Cada aperto no botão traz mais uma escuta da mesma música, feita de um jeito
-// diferente, e cada palavra fica com a versão que mais apareceu. Isso funciona
-// por um motivo medido aqui mesmo: na votação entre as voltas do refrão, com
-// DOIS votantes não dá pra decidir nada; com TRÊS ou mais a maioria acerta.
-//
-// As escutas são diferentes de propósito, pra errarem em lugares diferentes:
-// a mistura completa erra por causa do instrumental mascarando a voz; a voz
-// isolada erra por artefato da separação; deslocar a janela muda onde o modelo
-// corta os blocos de 30s; mudar a velocidade muda o alongamento das vogais,
-// que é justamente o que confunde no canto.
-const LAPIDACOES = [
-  { id: 'mistura', rotulo: 'ouvindo a música inteira, não só a voz' },
-  { id: 'janela', rotulo: 'deslocando a janela de escuta' },
-  { id: 'lento', rotulo: 'ouvindo a voz mais devagar' },
-  { id: 'rapido', rotulo: 'ouvindo a voz mais rápido' }
-]
-
-export function lapidacoesRestantes(key) {
-  const meta = readMeta(join(STEMS_DIR, key))
-  const feitas = meta?.lyrics?.polidas || []
-  return LAPIDACOES.filter((l) => !feitas.includes(l.id)).length
-}
-
-export async function polirLyrics({ key, ffmpegPath, onProgress }) {
-  const dir = join(STEMS_DIR, key)
-  const meta = readMeta(dir)
-  if (!meta?.lyrics?.segments?.length) throw new Error('Não há letra pra lapidar ainda.')
-  const feitas = meta.lyrics.polidas || []
-  const passo = LAPIDACOES.find((l) => !feitas.includes(l.id))
-  if (!passo) return { esgotado: true, mudou: 0, restantes: 0 }
-
-  const vocals = join(dir, 'base', 'vocals.flac')
-  const fonte = meta.sourceFile
-  const entrada = passo.id === 'mistura' && fonte && existsSync(fonte) ? fonte : vocals
-  if (passo.id === 'mistura' && entrada === vocals) {
-    // sem o arquivo original não dá pra ouvir a mistura: pula pro próximo passo
-    meta.lyrics.polidas = [...feitas, 'mistura']
-    writeMeta(dir, meta)
-    return polirLyrics({ key, ffmpegPath, onProgress })
-  }
-
-  const filtros = { janela: 'adelay=1600:all=1', lento: 'atempo=0.9', rapido: 'atempo=1.12' }
-  // fator pra devolver o tempo à linha do tempo original
-  const escala = { lento: 0.9, rapido: 1.12 }[passo.id] || 1
-  const desloca = passo.id === 'janela' ? -1.6 : 0
-
-  const { exe, model } = await ensureWhisper()
-  const wav = join(dir, `lapida_${passo.id}.wav`)
-  const outBase = join(dir, `lapida_${passo.id}`)
-  const args = ['-y', '-loglevel', 'error', '-i', entrada, '-ac', '1', '-ar', '16000']
-  if (filtros[passo.id]) args.push('-af', filtros[passo.id])
-  args.push(wav)
-  await run(ffmpegPath, args, {})
-
-  try {
-    const j = await rodarWhisper({ exe, model, wav, outBase, onProgress })
-    const novas = palavrasDoJson(j).map((w) => ({ ...w, t0: w.t0 * escala + desloca }))
-    if (!novas.length) throw new Error('essa escuta não devolveu nada')
-
-    const segments = meta.lyrics.segments
-    const alvo = segments.flatMap((s) => s.words || [])
-    // primeira lapidação: o que já existe vale como o primeiro voto
-    for (const w of alvo) if (!w.v) w.v = { [w.text]: 1 }
-
-    const chave = (t) => repNorm(t)
-    const pares = alinharPalavras(alvo.map((w) => chave(w.text)), novas.map((w) => chave(w.text)))
-    for (const [ia, ib] of pares) {
-      if (ia == null || ib == null) continue
-      // só conta o voto se as duas escutas estão falando do MESMO momento —
-      // senão o alinhamento por texto pode casar palavras de trechos distintos
-      if (Math.abs(alvo[ia].t0 - novas[ib].t0) > 2.5) continue
-      const t = novas[ib].text
-      alvo[ia].v[t] = (alvo[ia].v[t] || 0) + 1
-    }
-
-    const antes = alvo.map((w) => w.text)
-    const trocadas = new Set()
-    for (let i = 0; i < alvo.length; i++) {
-      const w = alvo[i]
-      let campeao = w.text
-      let melhor = w.v[w.text] || 0
-      // empate mantém o que já estava: com dois votantes não existe maioria
-      for (const [t, n] of Object.entries(w.v)) if (n > melhor) { melhor = n; campeao = t }
-      if (campeao !== w.text) { w.text = campeao; trocadas.add(i) }
-    }
-    // Quando a escuta nova junta duas palavras numa só ("Ou virar" → "Ouvirá",
-    // "Bate finca" → "Batifica"), o voto cai numa posição só e o verso fica com
-    // as duas coladas. Toda troca que fica parecida demais com a vizinha é
-    // desfeita — e "parecida" aqui é começar igual, que é como a palavra se
-    // parte. Só desfaz o que ESTA lapidação trocou; o resto não se toca.
-    const comeco = (a, b) => {
-      let k = 0
-      while (k < a.length && k < b.length && a[k] === b[k]) k++
-      return k
-    }
-    for (let i = 1; i < alvo.length; i++) {
-      const a = repNorm(alvo[i - 1].text)
-      const b = repNorm(alvo[i].text)
-      if (!a || !b || a === b) continue
-      const c = comeco(a, b)
-      const curta = Math.min(a.length, b.length)
-      const longa = Math.max(a.length, b.length)
-      // ou a curta é o começo inteiro da longa ("ou" dentro de "ouvira"),
-      // ou as duas começam igual por 3+ letras ("bate"/"batifica")
-      const colada = (c >= curta && curta >= 2 && longa >= curta * 3) ||
-        (c >= 3 && c >= curta - 1 && curta <= longa * 0.55)
-      if (!colada) continue
-      if (trocadas.has(i)) { alvo[i].text = antes[i]; trocadas.delete(i) }
-      else if (trocadas.has(i - 1)) { alvo[i - 1].text = antes[i - 1]; trocadas.delete(i - 1) }
-    }
-    const mudou = trocadas.size
-
-    // o texto mudou: passa o corretor de palavra inexistente e remonta os versos
-    try {
-      const lex = carregarLexicoUmaVez()
-      if (lex) {
-        const r = corrigirVersos(segments, lex)
-        for (let i = 0; i < segments.length; i++) {
-          r.segments[i].words.forEach((w, k) => { segments[i].words[k].text = w.text })
-        }
-      }
-    } catch {}
-    for (const s of segments) {
-      for (let k = 0; k < s.words.length - 1; k++) {
-        if (/[.!?]$/.test(s.words[k].text) && /^[a-zà-ÿ]/.test(s.words[k + 1].text)) {
-          s.words[k].text = s.words[k].text.replace(/[.!?]+$/, '')
-        }
-      }
-      const w0 = s.words[0]
-      if (w0?.text) w0.text = w0.text.charAt(0).toUpperCase() + w0.text.slice(1)
-      s.text = s.words.map((w) => w.text).join(' ')
-    }
-
-    const m2 = readMeta(dir)
-    m2.lyrics = {
-      ...m2.lyrics,
-      segments,
-      polidas: [...feitas, passo.id],
-      at: new Date().toISOString()
-    }
-    writeMeta(dir, m2)
-    // A PRIMEIRA lapidação sozinha não muda nada por construção: com dois
-    // votantes qualquer divergência dá empate e o empate mantém o que estava.
-    // Fazer o usuário esperar minutos pra ver "nada mudou" é maldade — então o
-    // primeiro aperto já traz a segunda escuta junto, que é quando a maioria
-    // começa a decidir de verdade.
-    if (!feitas.length && LAPIDACOES.length > 1) {
-      const seg = await polirLyrics({ key, ffmpegPath, onProgress })
-      if (!seg?.error) {
-        return {
-          mudou: mudou + (seg.mudou || 0),
-          rotulo: `${passo.rotulo} e ${seg.rotulo}`,
-          restantes: seg.restantes,
-          lyrics: seg.lyrics
-        }
-      }
-    }
-    return {
-      mudou,
-      rotulo: passo.rotulo,
-      restantes: LAPIDACOES.length - feitas.length - 1,
-      lyrics: m2.lyrics
-    }
-  } finally {
-    rmSync(wav, { force: true })
-    rmSync(`${outBase}.json`, { force: true })
-  }
 }
 
 // Correções do usuário (verso editado ou letra colada) — o texto é dele,
