@@ -571,6 +571,14 @@ function createStemPlayer() {
   }
 }
 
+// Quanto a letra acende ANTES do instante medido da palavra. Não é maquiagem:
+// no karaokê o cantor precisa ver a palavra pra cantar ela, então um fio de
+// dianteira é o certo. O valor saiu do ouvido do dono do app — as duas réguas
+// automáticas que eu construí discordam até no sinal (uma acusa 82ms adiantado
+// medindo o pico da sílaba, a outra 175ms atrasado medindo a saída do
+// silêncio), então quem decide aqui é a orelha.
+const ADIANTA_LETRA = 0.08
+
 export default function StudioView({ source, onClose }) {
   const [phase, setPhase] = useState('starting')
   const [stage, setStage] = useState(null)
@@ -795,7 +803,7 @@ export default function StudioView({ source, onClose }) {
             // cantado, não antes
             let idx = -1
             for (let i = 0; i < ls.length; i++) {
-              if (ls[i].t0 <= t) idx = i
+              if (ls[i].t0 <= t + ADIANTA_LETRA) idx = i
               else break
             }
             if (idx !== lastLyrIdxRef.current) {
@@ -815,10 +823,7 @@ export default function StudioView({ source, onClose }) {
                 w = seg.words.length
               } else {
                 for (let k = 0; k < seg.words.length; k++) {
-                  // antecipação de um quadro só. Os 50ms de antes eram muleta
-                  // pra tempo ruim; com o DTW o tempo já é bom e a muleta
-                  // virava a sensação de "acendeu antes de cantar".
-                  if (seg.words[k].t0 <= t + 0.02) w = k
+                  if (seg.words[k].t0 <= t + ADIANTA_LETRA) w = k
                   else break
                 }
               }

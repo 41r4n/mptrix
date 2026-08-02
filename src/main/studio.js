@@ -491,7 +491,7 @@ function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
 
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 5
+const LYRICS_V = 6
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -847,28 +847,110 @@ export function unificarRepeticoes(segments) {
   }
   for (const g of grupos.values()) {
     if (g.length < 2) continue
-    const conf = g.map((i) => {
-      const ws = segments[i].words
-      return ws.reduce((a, w) => a + (w.pn ? w.ps / w.pn : 0.5), 0) / Math.max(1, ws.length)
-    })
-    const topo = Math.max(...conf)
-    // entre as versões que o modelo ouviu quase igualmente bem, vale a MAIS
-    // COMPLETA — senão o refrão inteiro herda a volta em que ele comeu palavra
-    let campeao = g[0]
-    let melhor = -1
-    for (let k = 0; k < g.length; k++) {
-      if (conf[k] < topo - 0.08) continue
-      const nota = segments[g[k]].words.length * 100 + conf[k]
-      if (nota > melhor) { melhor = nota; campeao = g[k] }
-    }
-    const textos = segments[campeao].words.map((w) => w.text)
+    // com 3 voltas ou mais dá pra ter MAIORIA de verdade palavra a palavra.
+    // Com duas, voto nenhum decide nada: aí vale a linha inteira que o modelo
+    // ouviu melhor — e, em empate técnico, a mais completa.
+    const textos = g.length >= 3
+      ? votarPalavras(g.map((i) => segments[i].words))
+      : melhorLinha(g.map((i) => segments[i].words))
     for (const i of g) {
-      if (i === campeao) continue
       segments[i].words = repalavrar(segments[i], textos)
       segments[i].text = segments[i].words.map((w) => w.text).join(' ')
     }
   }
   return segments
+}
+
+function melhorLinha(versoes) {
+  const media = (ws) => ws.reduce((a, w) => a + (w.pn ? w.ps / w.pn : 0.5), 0) / Math.max(1, ws.length)
+  const conf = versoes.map(media)
+  const topo = Math.max(...conf)
+  let melhor = versoes[0]
+  let nota = -1
+  for (let k = 0; k < versoes.length; k++) {
+    if (conf[k] < topo - 0.08) continue
+    const n = versoes[k].length * 100 + conf[k]
+    if (n > nota) { nota = n; melhor = versoes[k] }
+  }
+  return melhor.map((w) => w.text)
+}
+
+// VOTO PALAVRA A PALAVRA entre as voltas. Escolher a melhor LINHA inteira joga
+// fora o acerto das outras: se o refrão foi ouvido 4 vezes e 3 delas trazem
+// "dizer", a maioria tem que ganhar mesmo que a 4ª ("descer") seja a linha em
+// que o modelo estava mais confiante no geral.
+function votarPalavras(versoes) {
+  const conf = (w) => (w.pn ? w.ps / w.pn : 0.5)
+  // molde = a volta mais completa; as outras são alinhadas contra ela
+  let molde = versoes[0]
+  for (const v of versoes) if (v.length > molde.length) molde = v
+  const chave = (ws) => ws.map((w) => repNorm(w.text))
+  const km = chave(molde)
+  const urnas = molde.map(() => new Map())
+  // a urna agrupa pela palavra "nua" (sem acento, sem pontuação, sem maiúscula)
+  // e guarda as grafias exatas — assim "cedinho" e "cedinho," não brigam entre
+  // si, e no fim sai a grafia que mais apareceu
+  const votar = (urna, w) => {
+    const k = repNorm(w.text)
+    const u = urna.get(k) || { n: 0, c: 0, grafias: new Map() }
+    u.n++
+    u.c += conf(w)
+    u.grafias.set(w.text, (u.grafias.get(w.text) || 0) + 1)
+    urna.set(k, u)
+  }
+  for (const v of versoes) {
+    if (v === molde) { molde.forEach((w, i) => votar(urnas[i], w)); continue }
+    for (const [im, iv] of alinharPalavras(km, chave(v))) {
+      if (im != null && iv != null) votar(urnas[im], v[iv])
+    }
+  }
+  // palavra que só apareceu na minoria das voltas não é letra — é sobra de uma
+  // passagem só (foi assim que um "Obrigado!" do fim do show entrou no refrão)
+  const minimo = Math.ceil(versoes.length / 2)
+  const saida = []
+  for (let i = 0; i < urnas.length; i++) {
+    let melhor = null
+    let total = 0
+    for (const u of urnas[i].values()) {
+      total += u.n
+      if (!melhor || u.n > melhor.n || (u.n === melhor.n && u.c > melhor.c)) melhor = u
+    }
+    if (!melhor || total < minimo) continue
+    let grafia = molde[i].text
+    let g = -1
+    for (const [texto, n] of melhor.grafias) if (n > g) { g = n; grafia = texto }
+    saida.push(grafia)
+  }
+  return saida.length ? saida : molde.map((w) => w.text)
+}
+
+// Alinhamento de duas sequências de palavras (Needleman-Wunsch) — devolve os
+// pares de índices que se correspondem, tolerando palavra a mais ou a menos.
+function alinharPalavras(a, b) {
+  const n = a.length
+  const m = b.length
+  const BURACO = -1
+  const IGUAL = 1
+  const DIF = -0.6
+  const S = Array.from({ length: n + 1 }, () => new Float64Array(m + 1))
+  for (let i = 1; i <= n; i++) S[i][0] = i * BURACO
+  for (let j = 1; j <= m; j++) S[0][j] = j * BURACO
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const par = a[i - 1] === b[j - 1] ? IGUAL : DIF
+      S[i][j] = Math.max(S[i - 1][j - 1] + par, S[i - 1][j] + BURACO, S[i][j - 1] + BURACO)
+    }
+  }
+  const out = []
+  let i = n
+  let j = m
+  while (i > 0 || j > 0) {
+    const par = i > 0 && j > 0 ? (a[i - 1] === b[j - 1] ? IGUAL : DIF) : 0
+    if (i > 0 && j > 0 && S[i][j] === S[i - 1][j - 1] + par) { out.push([i - 1, j - 1]); i--; j-- }
+    else if (i > 0 && S[i][j] === S[i - 1][j] + BURACO) { out.push([i - 1, null]); i-- }
+    else { out.push([null, j - 1]); j-- }
+  }
+  return out.reverse()
 }
 
 // Troca o texto de um verso mantendo os instantes medidos. Se o número de

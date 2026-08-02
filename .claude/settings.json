@@ -71,7 +71,9 @@
       "Bash(curl -sL -o ggml-large-v3-turbo-q5_0.bin.part \"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin\")",
       "Bash(mv ggml-large-v3-turbo-q5_0.bin.part ggml-large-v3-turbo-q5_0.bin)",
       "Bash(node repete.mjs)",
-      "Bash(node letra.mjs)"
+      "Bash(node letra.mjs)",
+      "Bash(curl -sL -o turbo_f16.part \"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin\")",
+      "Bash(mv turbo_f16.part ggml-large-v3-turbo.bin)"
     ]
   }
 }
