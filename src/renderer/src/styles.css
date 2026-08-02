@@ -6715,10 +6715,20 @@ body.studio-open .zoom-chip {
 }
 .lyr-edit:hover svg { stroke: var(--accent); }
 
-/* Campo de correção: moldura chanfrada no lima com brilho — é o mesmo aceno de
-   "mostrador ligado" do resto do app. O texto continua na fonte da letra pra
-   não dar susto de troca de tipografia no meio da leitura. */
+/* Campo de correção. O chanfro é feito com clip-path, e clip-path CORTA a borda
+   junto — a diagonal ficava sem linha nenhuma e o canto lia como buraco. Por
+   isso a moldura é uma camada por baixo: o lima preenche a forma inteira, o
+   campo por cima é 1px menor em toda a volta, e o que sobra aparecendo é a
+   borda — que agora acompanha o corte, diagonal incluída. */
+.lyr-input-moldura {
+  position: relative;
+  padding: 1px;
+  background: var(--accent);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  filter: drop-shadow(0 0 7px rgba(182, 255, 59, 0.28));
+}
 .lyr-input {
+  display: block;
   width: 100%;
   box-sizing: border-box;
   padding: 7px 11px;
@@ -6727,11 +6737,10 @@ body.studio-open .zoom-chip {
   font-family: var(--font-ui);
   font-size: inherit;
   line-height: inherit;
-  border: 1px solid var(--accent);
+  border: none;
   border-radius: 0;
   outline: none;
   caret-color: var(--accent);
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
-  box-shadow: 0 0 0 1px rgba(182, 255, 59, 0.16), 0 0 14px rgba(182, 255, 59, 0.18) inset;
+  clip-path: polygon(9.4px 0, 100% 0, 100% calc(100% - 9.4px), calc(100% - 9.4px) 100%, 0 100%, 0 9.4px);
 }
 .lyr-input::selection { background: rgba(182, 255, 59, 0.28); }

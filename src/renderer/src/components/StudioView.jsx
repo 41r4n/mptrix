@@ -2451,15 +2451,16 @@ export default function StudioView({ source, onClose }) {
                             </div>
                           )}
                           {editIdx === i ? (
-                            <input
-                              className="lyr-input"
-                              value={editTxt}
-                              autoFocus
-                              onChange={(e) => setEditTxt(e.target.value)}
-                              onKeyDown={teclaEdicao}
-                              onBlur={gravarEdicao}
-                              onClick={(e) => e.stopPropagation()}
-                            />
+                            <div className="lyr-input-moldura" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                className="lyr-input"
+                                value={editTxt}
+                                autoFocus
+                                onChange={(e) => setEditTxt(e.target.value)}
+                                onKeyDown={teclaEdicao}
+                                onBlur={gravarEdicao}
+                              />
+                            </div>
                           ) : (
                             <div className="lyr-text">
                               {s.words?.length
