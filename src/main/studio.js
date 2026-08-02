@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { carregarLexico, corrigirVersos } from './lexico.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -370,17 +371,19 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
 // (os downloads do binário e do modelo acontecem uma única vez).
 const WHISPER_DIR = join(ENGINE_DIR, 'whisper')
 const WHISPER_ZIP_URL = 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.9.1/whisper-blas-bin-x64.zip'
-// large-v3-turbo quantizado: 547MB (só 80MB a mais que o small antigo), mas é
-// modelo GRANDE — ouve a letra de verdade onde o small inventava ("essa cor que
-// azuleja o dia" saía "essa cor de azul Leja o dia") — e ainda entrega um verso
-// por segmento, já cortado. Turbo tem 4 camadas de decoder, então roda perto de
-// um modelo médio. Pico de RAM medido: 1,0 GB.
-const WHISPER_MODEL = 'ggml-large-v3-turbo-q5_0.bin'
+// large-v3 COMPLETO, quantizado: 1031MB. O turbo (547MB) tem o MESMO encoder —
+// o mesmo "ouvido" — mas com o decoder podado de 32 para 4 camadas, e é
+// justamente o decoder que resolve som ambíguo. Por isso o turbo errava sempre
+// igual: "Batifica pé a" no lugar de "Beatifica-me a", "o maio" no lugar de
+// "o mar e o". Medido contra a letra oficial da Azul, cruzada em 6 fontes:
+// turbo 82,6% de acerto de palavra, large-v3 86,0%. Custa 1,7x o tempo e
+// 2,0 GB de RAM (medido). O modelo antigo é apagado do disco sozinho.
+const WHISPER_MODEL = 'ggml-large-v3-q5_0.bin'
 const WHISPER_MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL}`
 // o preset do -dtw TEM que casar com o modelo (grafia com ponto)
-const WHISPER_DTW = 'large.v3.turbo'
+const WHISPER_DTW = 'large.v3'
 // modelos de versões anteriores do MPTrix — apagados pra não ocupar disco à toa
-const WHISPER_MODELOS_VELHOS = ['ggml-small.bin']
+const WHISPER_MODELOS_VELHOS = ['ggml-small.bin', 'ggml-large-v3-turbo-q5_0.bin']
 
 function findWhisperExe() {
   if (!existsSync(WHISPER_DIR)) return null
@@ -489,9 +492,25 @@ function voiceRegions(data, hop, HI = 0.18, LO = 0.07, MIN = 0.12) {
   return merged
 }
 
+// O dicionário pt-BR (VERO, LGPL/MPL) fica embarcado — o app é 100% offline.
+// Carrega uma vez só: são 312 mil radicais e leva meio segundo.
+let LEXICO = undefined
+function carregarLexicoUmaVez() {
+  if (LEXICO !== undefined) return LEXICO
+  try {
+    const base = app.isPackaged
+      ? join(process.resourcesPath, 'lexico')
+      : join(__dirname, '../../resources/lexico')
+    LEXICO = existsSync(join(base, 'pt-BR.dic')) ? carregarLexico(base) : null
+  } catch {
+    LEXICO = null
+  }
+  return LEXICO
+}
+
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 6
+const LYRICS_V = 7
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -773,8 +792,27 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     }
 
     unificarRepeticoes(segments)
+    // CORRETOR DE PALAVRA INEXISTENTE: só toca no que NÃO é português. Medido
+    // em 3 músicas: das 1065 palavras, 7 não existiam no dicionário e 3 foram
+    // trocadas — 2 melhoraram ("Batifica" → "Beatifica"), 1 neutra, nenhuma
+    // piorou. Prêmio pequeno de propósito: palavra que existe não se toca.
+    try {
+      const lex = carregarLexicoUmaVez()
+      if (lex) {
+        const r = corrigirVersos(segments, lex)
+        segments.length = 0
+        segments.push(...r.segments)
+      }
+    } catch {}
     marcarEstrofes(segments)
     for (const s of segments) {
+      // ponto no meio do verso seguido de minúscula ("azulzinho. sim") é sobra
+      // da junção de duas voltas — em letra pra ler, isso fica feio
+      for (let k = 0; k < s.words.length - 1; k++) {
+        if (/[.!?]$/.test(s.words[k].text) && /^[a-zà-ÿ]/.test(s.words[k + 1].text)) {
+          s.words[k].text = s.words[k].text.replace(/[.!?]+$/, '')
+        }
+      }
       // letra é texto pra ler: cada verso começa com maiúscula
       const w0 = s.words[0]
       if (w0?.text) w0.text = w0.text.charAt(0).toUpperCase() + w0.text.slice(1)

@@ -54,6 +54,13 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "resources/lexico",
+        "to": "lexico",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
