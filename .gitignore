@@ -3,3 +3,8 @@ out/
 release/
 *.log
 dist/
+
+# segredos: token do Replicate nunca vai pro repositorio
+.replicate-token
+.env
+*.token
