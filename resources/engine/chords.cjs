@@ -65,25 +65,66 @@ const Essentia = require('./essentia.js-core.umd.js')
 const essentia = new Essentia(EssentiaWASM)
 
 // Gabaritos com pesos (raiz forte, terça define, quinta média, sétima colore).
-// Vocabulário de MPB/jazz: maior, menor, 7, 7M, m7, diminuto — com um pequeno
-// bônus pros simples, pra música pop não ganhar nome chique à toa.
+//
+// O VOCABULÁRIO É CURTO DE PROPÓSITO. A distribuição real da música gravada
+// (McFee & Bello, sobre Isophonics+Billboard+RWC+USPOP) é: maior/menor 69,9%,
+// sétimas 21,3%, TODO o resto 8,8%. Cinco qualidades cobrem ~86% da música que
+// existe; cada qualidade a mais compra menos de 1% de cobertura e paga com
+// dezenas de falsos positivos. Foi o que aconteceu aqui: com sus2/sus4/+/6/m6
+// no páreo o detector devolvia 43 FORMAS DISTINTAS numa música que usa 8.
+//
+// Pior: vários desses são GÊMEOS ENÁRMONICOS de acordes comuns (F6 tem as
+// mesmas notas de Dm7; Csus2 as mesmas de Gsus4) — nenhuma croma consegue
+// separar, então eles só roubam voto. E + e ° são simétricos: nem raiz têm.
+//
+// BONUS = prior de complexidade. Com croma ruidosa, template de 4 notas quase
+// sempre "explica" melhor o quadro do que a tríade — o bônus compensa isso,
+// exigindo evidência extra pra escolher acorde mais raro.
 const SHAPES = [
-  { suf: '', t: [1, 0, 0, 0, 0.85, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.015 },
-  { suf: 'm', t: [1, 0, 0, 0.85, 0, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.015 },
-  { suf: '7', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
-  { suf: '7M', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0, 0.75], bonus: 0 },
-  { suf: 'm7', t: [1, 0, 0, 0.8, 0, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0 },
-  { suf: '°', t: [1, 0, 0, 0.85, 0, 0, 0.85, 0, 0, 0.6, 0, 0], bonus: 0 },
-  // a leva nova: aumentado, suspensos, meio-diminuto, sextas.
-  // Bônus NEGATIVO de propósito: são gêmeos enarmônicos de acordes comuns
-  // (F6 = Dm7, Fsus2 = Csus4...) — só vencem quando o BAIXO canta a raiz deles
-  { suf: '+', t: [1, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 0, 0, 0], bonus: -0.025 },
-  { suf: 'sus4', t: [1, 0, 0, 0, 0, 0.85, 0, 0.9, 0, 0, 0, 0], bonus: -0.025 },
-  { suf: 'sus2', t: [1, 0, 0.85, 0, 0, 0, 0, 0.9, 0, 0, 0, 0], bonus: -0.025 },
-  { suf: 'm7(b5)', t: [1, 0, 0, 0.8, 0, 0, 0.8, 0, 0, 0, 0.7, 0], bonus: -0.01 },
-  { suf: '6', t: [1, 0, 0, 0, 0.8, 0, 0, 0.85, 0, 0.7, 0, 0], bonus: -0.025 },
-  { suf: 'm6', t: [1, 0, 0, 0.8, 0, 0, 0, 0.85, 0, 0.7, 0, 0], bonus: -0.025 }
+  { suf: '', t: [1, 0, 0, 0, 0.85, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.035 },
+  { suf: 'm', t: [1, 0, 0, 0.85, 0, 0, 0, 0.9, 0, 0, 0, 0], bonus: 0.035 },
+  { suf: '7', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0.01 },
+  { suf: 'm7', t: [1, 0, 0, 0.8, 0, 0, 0, 0.7, 0, 0, 0.75, 0], bonus: 0.01 },
+  { suf: '7M', t: [1, 0, 0, 0, 0.8, 0, 0, 0.7, 0, 0, 0, 0.75], bonus: 0.01 },
+  // dim e meio-dim são raros, mas são FUNÇÃO de verdade em MPB (o C#° da Azul
+  // é um deles) — ficam, pagando um preço pra não aparecer à toa
+  { suf: '°', t: [1, 0, 0, 0.85, 0, 0, 0.85, 0, 0, 0.6, 0, 0], bonus: -0.02 },
+  { suf: 'm7(b5)', t: [1, 0, 0, 0.8, 0, 0, 0.8, 0, 0, 0, 0.7, 0], bonus: -0.02 }
 ]
+
+// ---------- TONALIDADE ----------
+// O detector sabia o tom e não usava pra nada. Num Dm, um C#+ ou um Csus2
+// deveriam ter que PAGAR pra serem escolhidos; antes vinham de graça.
+const ESC_MAIOR = [0, 2, 4, 5, 7, 9, 11]
+const ESC_MENOR = [0, 2, 3, 5, 7, 8, 10]
+let tomPc = null
+let tomEscala = null
+let tomNome = null
+try {
+  const kvec = essentia.arrayToVector(harm)
+  const kx = essentia.KeyExtractor(kvec)
+  kvec.delete()
+  const i = NOTES.indexOf(String(kx.key).replace('b', '#'))
+  if (i >= 0) {
+    // grafia com bemol quando o tom pede (Bb, não A#): pra quem lê cifra,
+    // A#7M num tom de Dm é ruído, mesmo sendo a mesma nota
+    tomPc = String(kx.key).includes('b') ? (NOTES.indexOf(String(kx.key)[0]) + 11) % 12 : i
+    tomEscala = String(kx.scale).toLowerCase().startsWith('min') ? 'minor' : 'major'
+    tomNome = kx.key + (tomEscala === 'minor' ? 'm' : '')
+  }
+} catch {}
+// notas do campo harmônico. No menor entram a sétima natural E a maior
+// (harmônica), porque o V7 e o vii° do menor vivem dela — é exatamente o
+// caso do C#° e do A7 da Azul, que ficariam "fora do tom" sem isso
+const NO_TOM = new Array(12).fill(true)
+if (tomPc != null) {
+  NO_TOM.fill(false)
+  const esc = tomEscala === 'minor' ? ESC_MENOR : ESC_MAIOR
+  for (const g of esc) NO_TOM[(tomPc + g) % 12] = true
+  if (tomEscala === 'minor') NO_TOM[(tomPc + 11) % 12] = true
+}
+const KEY_W = 0.06
+
 function rotate(t, k) {
   const out = new Array(12)
   for (let i = 0; i < 12; i++) out[(i + k) % 12] = t[i]
@@ -92,7 +133,13 @@ function rotate(t, k) {
 const TEMPLATES = []
 for (let r = 0; r < 12; r++) {
   for (const sh of SHAPES) {
-    TEMPLATES.push({ label: NOTES[r] + sh.suf, root: r, t: rotate(sh.t, r), bonus: sh.bonus })
+    const t = rotate(sh.t, r)
+    let dentro = 0
+    let notas = 0
+    for (let i = 0; i < 12; i++) if (t[i] > 0) { notas++; if (NO_TOM[i]) dentro++ }
+    // bônus proporcional a quanto do acorde cabe no tom detectado
+    const noTom = KEY_W * (dentro / Math.max(1, notas))
+    TEMPLATES.push({ label: NOTES[r] + sh.suf, root: r, t, bonus: sh.bonus + noTom })
   }
 }
 function cosine(h, t) {
@@ -107,50 +154,92 @@ function cosine(h, t) {
   return dot / (Math.sqrt(nh * nt) + 1e-9)
 }
 
-// ---------- Passo 1: chroma + baixo em quadros finos (0.125s) ----------
-const FINE_HOP = Math.round(SR * 0.125)
-const nFrames = Math.floor((harm.length - FRAME) / FINE_HOP)
+// ---------- Passo 1: CROMA por NNLS (log-frequência, com afinação corrigida) ----
+// Antes isso era HPCP em cima de picos espectrais. A literatura mede a
+// diferença e ela é grande: no mesmo conjunto de 55 músicas dos Beatles,
+// HPCP+template dá 59% e a mesma cadeia trocando só a croma por NNLS sobe pra
+// ~70%. É o maior ganho isolado que existe sem treinar modelo nenhum — e o
+// essentia que já vem embarcado aqui tem o algoritmo pronto.
+//
+// A cadeia é a do Chordino: janela Hann de 16384 (sem normalizar) -> Spectrum
+// -> LogSpectrum (que JÁ estima a afinação do disco e corrige) -> NNLSChroma.
+// Sai croma de 12 bins E croma de BAIXO separada, de graça.
+//
+// SEM SOBREPOSIÇÃO (hop = janela): medido, o LogSpectrum do essentia.js custa
+// 425ms POR CHAMADA — 99,6% do tempo todo — porque a ponte JS/WASM reconstrói o
+// algoritmo a cada quadro. Com sobreposição de 8x davam 40 minutos por música.
+// Sem sobreposição são ~700 quadros de 371ms, que ainda é resolução de sobra pra
+// acorde (a decisão acontece por BATIDA, não por quadro).
+//
+// useNNLS fica FALSE: medido nesta build, o solver NNLS devolve croma toda zero
+// (207 de 207 quadros vazios). Com ele desligado a cadeia entrega croma cheia e
+// musicalmente correta — conferido à mão num trecho da Azul, deu A#/G/D com
+// baixo em G bem onde a cifra diz Gm7.
+const NNLS_FRAME = 16384
+const NNLS_HOP = 16384
 const frames = [] // {t, chroma, rms}
 const bassPcs = [] // {t, pc} quando o baixo canta com confiança
-
-for (let fIdx = 0; fIdx < nFrames; fIdx++) {
-  const start = fIdx * FINE_HOP
-  const t = start / SR
-  const frame = harm.subarray(start, start + FRAME)
-  let rms = 0
-  for (let s = 0; s < frame.length; s += 4) rms += frame[s] * frame[s]
-  rms = Math.sqrt(rms / (frame.length / 4))
-  if (rms < 0.004) {
-    frames.push({ t, chroma: null, rms })
-  } else {
-    const vec = essentia.arrayToVector(frame)
-    const win = essentia.Windowing(vec, true, FRAME, 'blackmanharris62')
-    const spec = essentia.Spectrum(win.frame, FRAME)
-    const peaks = essentia.SpectralPeaks(spec.spectrum, 0, 4500, 60, 40, 'magnitude', SR)
-    const hp = essentia.HPCP(peaks.frequencies, peaks.magnitudes)
-    const hpcp = essentia.vectorToArray(hp.hpcp)
-    vec.delete(); win.frame.delete(); spec.spectrum.delete()
-    peaks.frequencies.delete(); peaks.magnitudes.delete(); hp.hpcp.delete()
-    // HPCP começa em Lá (A) — rotaciona pra C=0
-    const chroma = new Array(12)
-    for (let i = 0; i < 12; i++) chroma[(i + 9) % 12] = hpcp[i]
-    frames.push({ t, chroma, rms })
+{
+  const mat = new (require('./essentia-wasm.umd.js').VectorVectorFloat)()
+  const locais = []
+  let meanT = null
+  const n = Math.floor((harm.length - NNLS_FRAME) / NNLS_HOP)
+  const rmsPorQuadro = new Float64Array(Math.max(0, n))
+  for (let i = 0; i < n; i++) {
+    const ini2 = i * NNLS_HOP
+    const quadro = harm.subarray(ini2, ini2 + NNLS_FRAME)
+    let rms = 0
+    for (let k = 0; k < quadro.length; k += 8) rms += quadro[k] * quadro[k]
+    rmsPorQuadro[i] = Math.sqrt(rms / (quadro.length / 8))
+    const v = essentia.arrayToVector(quadro)
+    const w = essentia.Windowing(v, false, NNLS_FRAME, 'hann')
+    const sp = essentia.Spectrum(w.frame, NNLS_FRAME)
+    const ls = essentia.LogSpectrum(sp.spectrum, 3, NNLS_FRAME, 0.01, SR)
+    mat.push_back(ls.logFreqSpectrum)
+    locais.push(ls.localTuning)
+    meanT = essentia.vectorToArray(ls.meanTuning)
+    v.delete(); w.frame.delete(); sp.spectrum.delete()
   }
-  if (bass && start + BASS_FRAME < bass.length) {
-    const bframe = bass.subarray(start, start + BASS_FRAME)
-    let brms = 0
-    for (let s = 0; s < bframe.length; s += 4) brms += bframe[s] * bframe[s]
-    brms = Math.sqrt(brms / (bframe.length / 4))
-    if (brms > 0.004) {
-      const bvec = essentia.arrayToVector(bframe)
-      try {
-        const py = essentia.PitchYin(bvec, BASS_FRAME, true, 400, 30, SR, 0.15)
-        if (py.pitchConfidence > 0.75 && py.pitch > 0) {
-          bassPcs.push({ t, pc: ((Math.round(12 * Math.log2(py.pitch / 440)) + 69) % 12 + 12) % 12 })
-        }
-      } catch {}
-      bvec.delete()
+  if (n > 0) {
+    const nn = essentia.NNLSChroma(
+      mat, essentia.arrayToVector(meanT), essentia.arrayToVector(locais),
+      'none', NNLS_FRAME, SR, 0.7, 1.0, 'global', false
+    )
+    for (let i = 0; i < nn.chromagram.size(); i++) {
+      const c = essentia.vectorToArray(nn.chromagram.get(i))
+      // a croma do NNLS começa em Lá (A); aqui tudo trabalha com C=0
+      const chroma = new Array(12)
+      let soma = 0
+      for (let k = 0; k < 12; k++) { chroma[(k + 9) % 12] = c[k]; soma += c[k] }
+      frames.push({
+        t: (i * NNLS_HOP) / SR,
+        chroma: soma > 1e-6 ? chroma : null,
+        rms: rmsPorQuadro[i] || 0
+      })
     }
+  }
+}
+
+// O baixo isolado continua vindo do PitchYin: ele dá a NOTA cantada, não a
+// energia por classe — é o que decide inversão e desempata gêmeo enârmonico
+if (bass) {
+  const BHOP = Math.round(SR * 0.125)
+  const nb = Math.floor((bass.length - BASS_FRAME) / BHOP)
+  for (let i = 0; i < nb; i++) {
+    const ini2 = i * BHOP
+    const bframe = bass.subarray(ini2, ini2 + BASS_FRAME)
+    let brms = 0
+    for (let k = 0; k < bframe.length; k += 4) brms += bframe[k] * bframe[k]
+    brms = Math.sqrt(brms / (bframe.length / 4))
+    if (brms <= 0.004) continue
+    const bvec = essentia.arrayToVector(bframe)
+    try {
+      const py = essentia.PitchYin(bvec, BASS_FRAME, true, 400, 30, SR, 0.15)
+      if (py.pitchConfidence > 0.75 && py.pitch > 0) {
+        bassPcs.push({ t: ini2 / SR, pc: (((Math.round(12 * Math.log2(py.pitch / 440)) + 69) % 12) + 12) % 12 })
+      }
+    } catch {}
+    bvec.delete()
   }
 }
 
@@ -183,8 +272,14 @@ for (let b = 0; b < nBeats; b++) {
     scoreMat.push(null)
     continue
   }
+  // Soma simples dos quadros da batida. TENTEI mediana numa janela de duas
+  // batidas (a literatura mede +6,6 pontos com janela larga) e MEDIU PIOR aqui:
+  // 74,6% -> 73,1%. A causa e local: com a croma a 371ms e acorde trocando a
+  // cada 1-2 batidas nesta musica, a janela de duas batidas atravessa a troca e
+  // borra as duas harmonias numa so.
   const chroma = new Array(12).fill(0)
   for (const f of inBeat) for (let i = 0; i < 12; i++) chroma[i] += f.chroma[i]
+
   const bvotes = {}
   for (const bp of bassPcs) if (bp.t >= t0 && bp.t < t1) bvotes[bp.pc] = (bvotes[bp.pc] || 0) + 1
   let bassPc = null
@@ -324,4 +419,23 @@ for (const c of merged) {
   if (info.tones.includes(top)) c.label = `${c.label}/${NOTES[top]}`
 }
 
-console.log(JSON.stringify({ chords: merged, beats: ticks.length }))
+// GRAFIA CONFORME O TOM. A nota e a mesma, mas pra quem le cifra "A#7M" num
+// tom de Dm e ruido: escreve-se Bb7M. Tons com bemol na armadura passam a
+// mostrar bemol; os com sustenido continuam com sustenido.
+const BEMOIS = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' }
+const TONS_COM_BEMOL = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm'])
+if (tomNome && TONS_COM_BEMOL.has(tomNome.replace('#', '#'))) {
+  // ...com uma exceção que todo músico escreve assim: o diminuto SENSÍVEL (meio
+  // tom abaixo da tônica) fica em sustenido mesmo em tom bemol, porque ele
+  // funciona como nota que PUXA pra tônica. Num Dm é C#°, nunca Db° — e é
+  // exatamente assim que a cifra oficial da Azul escreve.
+  const sensivel = tomPc != null ? NOTES[(tomPc + 11) % 12] : null
+  const trocar = (l) => {
+    const str = String(l)
+    const raiz = (str.match(/^[A-G]#?/) || [''])[0]
+    const eSensivelDim = sensivel && raiz === sensivel && /°/.test(str)
+    return str.replace(/([A-G]#)/g, (m2, _p, pos) => (eSensivelDim && pos === 0 ? m2 : (BEMOIS[m2] || m2)))
+  }
+  for (const c of merged) c.label = trocar(c.label)
+}
+console.log(JSON.stringify({ chords: merged, beats: ticks.length, key: tomNome }))
