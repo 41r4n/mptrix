@@ -642,6 +642,8 @@ export default function StudioView({ source, onClose }) {
   const [activeLyrIdx, setActiveLyrIdx] = useState(-1)
   const [activeWordIdx, setActiveWordIdx] = useState(-1)
   const lastWordIdxRef = useRef(-1)
+  // cópias lima de cada palavra do verso ativo — preenchidas por frame
+  const wordFillsRef = useRef([])
   const wordFillRef = useRef(null)
   const chordsListRef = useRef(null)
   const lyrSegsRef = useRef(null)
@@ -831,6 +833,20 @@ export default function StudioView({ source, onClose }) {
             if (w !== lastWordIdxRef.current) {
               lastWordIdxRef.current = w
               setActiveWordIdx(w)
+            }
+            // enchimento contínuo: cada palavra é revelada por dentro conforme
+            // é cantada (sem palavra medida, o verso inteiro enche linear)
+            if (seg) {
+              const kws = seg.words?.length ? seg.words : [{ t0: seg.t0, t1: seg.t1 }]
+              const fills = wordFillsRef.current
+              for (let k = 0; k < kws.length; k++) {
+                const el = fills[k]
+                if (!el) continue
+                const kw = kws[k]
+                const dur = Math.max(0.09, (kw.t1 ?? kw.t0) - kw.t0)
+                const p = Math.max(0, Math.min(1, (t + 0.06 - kw.t0) / dur))
+                el.style.clipPath = `inset(0 ${((1 - p) * 100).toFixed(1)}% 0 0)`
+              }
             }
           }
           if ((p.playing || draggingRef.current) && ts - lastState > 250) {
@@ -1195,6 +1211,9 @@ export default function StudioView({ source, onClose }) {
     setPasteOpen(false)
     await window.mptrix.studio.lyricsSave({ key: session.key, segments: segs })
   }
+
+  // trocou de verso? limpa as cópias do verso anterior
+  useEffect(() => { wordFillsRef.current = [] }, [activeLyrIdx])
 
   // Verso ativo: rolagem suave acompanhando a música
   useEffect(() => {
@@ -2581,18 +2600,24 @@ export default function StudioView({ source, onClose }) {
                             </div>
                           ) : (
                             <div className="lyr-text">
-                              {s.words?.length
-                                ? s.words.map((w, k) => (
+                              {st === 'now' ? (
+                                // KARAOKÊ: cada palavra leva uma cópia lima por
+                                // cima, revelada da esquerda pra direita no
+                                // ritmo do canto (enche por dentro, sílaba a
+                                // sílaba, em vez de trocar de palavra seco)
+                                (s.words?.length ? s.words : [{ t0: s.t0, t1: s.t1, text: s.text }]).map((w, k) => (
+                                  <span className="kw" key={k}>
+                                    <span className="kw-base">{w.text}</span>
                                     <span
-                                      key={k}
-                                      className={
-                                        st !== 'now' ? 'lyr-w'
-                                          : k === activeWordIdx ? 'lyr-w singing'
-                                            : k < activeWordIdx ? 'lyr-w sung'
-                                              : 'lyr-w'
-                                      }
-                                    >{w.text} </span>
-                                  ))
+                                      className="kw-fill"
+                                      aria-hidden="true"
+                                      ref={(el) => { wordFillsRef.current[k] = el }}
+                                    >{w.text}</span>
+                                    <span className="kw-gap"> </span>
+                                  </span>
+                                ))
+                              ) : s.words?.length
+                                ? s.words.map((w, k) => <span key={k} className="lyr-w">{w.text} </span>)
                                 : s.text}
                             </div>
                           )}

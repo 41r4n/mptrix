@@ -6826,3 +6826,29 @@ body.studio-open .zoom-chip {
   animation: recado-sai 0.26s ease-in forwards;
   pointer-events: none;
 }
+
+/* ---------- Karaokê de enchimento: a palavra fica verde por dentro ---------- */
+.kw {
+  position: relative;
+  display: inline-block;
+  white-space: pre;
+}
+
+.kw-base {
+  color: inherit;
+}
+
+.kw-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(182, 255, 59, 0.45);
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+  white-space: pre;
+}
+
+.kw-gap {
+  white-space: pre;
+}
