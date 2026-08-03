@@ -2474,7 +2474,11 @@ export default function StudioView({ source, onClose }) {
                 {chords === 'loading' && (
                   <div className="chords-empty">
                     <div className="studio-spinner small" />
-                    <span className="muted">Lendo a harmonia das faixas… (~1 min, só na primeira vez)</span>
+                    <span className="muted">
+                      Lendo a harmonia das faixas… leva mais ou menos
+                      {session?.duration ? ` ${Math.max(2, Math.round((session.duration * 1.6) / 60))} min` : ' o tempo da música e meio'} nesta máquina,
+                      e só na primeira vez. Pode deixar tocando ou fechar o painel — continua por baixo.
+                    </span>
                   </div>
                 )}
                 {chords?.error && <div className="chords-empty muted">⚠ {chords.error}</div>}
