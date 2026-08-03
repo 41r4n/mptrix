@@ -319,11 +319,16 @@ const NON_HARMONIC = new Set([
   'trumpet', 'trombone', 'french-horn', 'tuba', 'clarinet', 'oboe',
   'bassoon', 'double-bass', 'dobro'
 ])
+// Sobe quando o detector muda. Cifra guardada com versão antiga se refaz
+// sozinha na primeira abertura — senão a pessoa continuaria vendo o resultado
+// velho sem saber, que é pior do que esperar.
+const CHORDS_V = 2
+
 export async function detectChords({ key, ffmpegPath, force = false }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
   if (!meta) throw new Error('Sessão não encontrada.')
-  if (meta.chords && !force) return meta.chords
+  if (meta.chords && !force && meta.chords.v === CHORDS_V) return meta.chords
 
   const harm = stemsOf(meta)
     .filter((s) => !NON_HARMONIC.has(s))
@@ -360,7 +365,7 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
   })
 
   const m2 = readMeta(dir)
-  m2.chords = { at: new Date().toISOString(), list: out.chords || [] }
+  m2.chords = { at: new Date().toISOString(), v: CHORDS_V, list: out.chords || [], key: out.key || null }
   writeMeta(dir, m2)
   return m2.chords
 }
