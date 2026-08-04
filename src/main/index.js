@@ -370,6 +370,10 @@ app.whenReady().then(() => {
     if (!teste.ok) return teste
     const r = setChaveNuvem(chave)
     if (!r.ok) return r
+    // Liga aqui, não numa segunda chamada da tela: quem se deu ao trabalho de
+    // colar a chave quer usar a nuvem, e um "ligar" separado é um passo a mais
+    // pra dar errado no meio. Desligar continua a um clique.
+    setNuvemLigada(true)
     return { ok: true, conta: teste.conta, estado: getNuvem() }
   })
 

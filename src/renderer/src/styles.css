@@ -6956,11 +6956,21 @@ body.studio-open .zoom-chip {
 
 .nuvem-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.nuvem-chave-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
+/* Escolha de duas: os dois lados sempre a vista, o aceso e o que vale.
+   Botao que alterna e mostra o estado atual mente pro dedo -- lido como
+   ordem, ele desliga justo quem queria ligar. */
+.nuvem-escolha {
+  display: inline-flex;
   border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
   background: var(--bg-inset);
+}
+
+.nuvem-escolha button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
   color: var(--muted);
   font-family: var(--font-ui);
   font-size: 13px;
@@ -6968,10 +6978,13 @@ body.studio-open .zoom-chip {
   cursor: pointer;
 }
 
-.nuvem-chave-btn.on {
+.nuvem-escolha button + button { border-left: 1px solid var(--border); }
+.nuvem-escolha button:hover:not(.on) { color: var(--text-2); background: rgba(255, 255, 255, 0.03); }
+
+.nuvem-escolha button.on {
   background: var(--accent);
-  border-color: var(--accent);
-  color: #0b0c0f; /* texto sobre lima é SEMPRE escuro */
+  color: #0b0c0f; /* texto sobre lima e SEMPRE escuro */
+  cursor: default;
 }
 
 .nuvem-hud { justify-content: flex-start; padding: 2px 0; }

@@ -108,14 +108,28 @@ export default function NuvemConfig() {
 
           {estado.temChave && (
             <>
+              {/* Escolha entre duas, não um botão que alterna. Antes o botão
+                  mostrava o estado ("Usando a nuvem"), e isso se lê como
+                  ORDEM: quem clicava achando que estava mandando usar a nuvem
+                  na verdade desligava. Aqui os dois lados ficam à vista e o
+                  aceso é o que vale — não dá pra errar o que o clique faz. */}
               <div className="nuvem-linha">
-                <button
-                  className={`nuvem-chave-btn ${estado.ligada ? 'on' : ''}`}
-                  onClick={alternar}
-                  aria-pressed={estado.ligada}
-                >
-                  {estado.ligada ? 'Usando a nuvem' : 'Usando este computador'}
-                </button>
+                <div className="nuvem-escolha" role="group" aria-label="Onde separar">
+                  <button
+                    className={!estado.ligada ? 'on' : ''}
+                    onClick={() => estado.ligada && alternar()}
+                    aria-pressed={!estado.ligada}
+                  >
+                    Neste computador
+                  </button>
+                  <button
+                    className={estado.ligada ? 'on' : ''}
+                    onClick={() => !estado.ligada && alternar()}
+                    aria-pressed={estado.ligada}
+                  >
+                    Na nuvem
+                  </button>
+                </div>
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>
               </div>
 
