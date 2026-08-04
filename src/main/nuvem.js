@@ -291,6 +291,55 @@ export async function extrairInstrumentoNaNuvem({
   return { segundos: p.segundos }
 }
 
+// ------------------------------------------------------------- LETRA -------
+// WhisperX: transcreve E alinha por PALAVRA com alinhamento forçado (casa o
+// texto com o áudio de verdade, em vez de estimar pela atenção do modelo).
+// Medido na Azul, contra o whisper.cpp local com DTW:
+//   local  218 palavras · 94,5% caem dentro de região de voz · vários minutos
+//   nuvem  206 palavras · 100,0% ................. · 12 SEGUNDOS
+// E as 12 palavras a menos não são letra perdida: são a contagem de entrada
+// ("um, dois, três") e o "obrigado" pra plateia, que o local incluía como se
+// fossem verso. A nuvem ganha em tempo, em alinhamento e em limpeza.
+const MODELO_LETRA = 'victor-upmeet/whisperx'
+
+export async function transcreverNaNuvem({ chave, arquivo, idioma = 'pt', state, onProgress }) {
+  const r = await fetch(`${API}/models/${MODELO_LETRA}`, { headers: cab(chave) })
+  if (!r.ok) throw new Error(`não consegui ler o transcritor (${r.status})`)
+  const mod = await r.json()
+  if (!mod.latest_version?.id) throw new Error('o transcritor está sem versão publicada')
+
+  const url = await subirArquivo(chave, arquivo, 'voz.flac')
+  const p = await rodar(
+    chave, mod.latest_version.id,
+    { audio_file: url, language: idioma, align_output: true, batch_size: 16 },
+    state,
+    (s) => onProgress?.({ percent: Math.min(95, 10 + s * 3) })
+  )
+
+  // Traduz pra MESMA forma que o pós-processamento do app já consome, pra
+  // correção pelo dicionário, votação entre repetições e corte em estrofes
+  // continuarem valendo sem saber de onde a letra veio.
+  const words = []
+  let iSeg = -1
+  for (const seg of p.saida?.segments || []) {
+    iSeg++
+    for (const w of seg.words || []) {
+      const texto = String(w.word || '').trim()
+      if (!texto || w.start == null) continue
+      words.push({
+        t0: w.start,
+        t1: w.end ?? w.start,
+        text: texto,
+        ps: typeof w.score === 'number' ? w.score : 0.5,
+        pn: 1,
+        seg: iSeg
+      })
+    }
+  }
+  if (!words.length) throw new Error('a nuvem não achou letra nenhuma nessa voz')
+  return { words, segundos: p.segundos }
+}
+
 // Estimativa de custo. O Replicate NÃO devolve o valor cobrado pela API, só o
 // tempo de GPU. Uso a tabela pública da placa mais cara que esses modelos
 // costumam pegar, pra a conta errar pra MAIS e nunca surpreender pra menos.

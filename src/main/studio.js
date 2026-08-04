@@ -518,7 +518,9 @@ function carregarLexicoUmaVez() {
 
 // Sobe quando o encaixe muda. Letra gravada com versão antiga se refaz sozinha
 // na primeira abertura — o usuário não tem que pedir nem saber que existiu.
-const LYRICS_V = 7
+// v8: transcricao e alinhamento na nuvem (WhisperX). Sobe a versao pra quem ja
+// tem musica pronta receber o alinhamento melhor sem pedir nada.
+const LYRICS_V = 8
 
 export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgress }) {
   const dir = join(STEMS_DIR, key)
@@ -529,11 +531,44 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
   const vocals = join(dir, 'base', 'vocals.flac')
   if (!existsSync(vocals)) throw new Error('Faixa de voz não encontrada nessa sessão.')
 
-  const { exe, model } = await ensureWhisper()
-  const wav = join(dir, 'lyrics_in.wav')
-  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', vocals, '-ac', '1', '-ar', '16000', wav], {})
-  const outBase = join(dir, 'lyrics_out')
+  // NUVEM PRIMEIRO. Medido na Azul: 12 segundos contra varios minutos, com
+  // alinhamento MELHOR (100% das palavras caem dentro de regiao de voz, contra
+  // 94,5% do local) e mais limpo -- a nuvem descarta a contagem de entrada e o
+  // "obrigado" pra plateia, que o local transcrevia como se fossem verso.
+  let words = null
+  if (usarNuvem()) {
+    try {
+      const { transcreverNaNuvem } = await import('./nuvem.js')
+      onProgress?.({ percent: 5, nuvem: true })
+      const r = await transcreverNaNuvem({
+        chave: lerChaveNuvem(),
+        arquivo: vocals,
+        state: {},
+        onProgress: (pr) => onProgress?.({ ...pr, nuvem: true })
+      })
+      words = r.words
+      somarGastoNuvem(r.segundos)
+    } catch (err) {
+      // Mesma regra da separacao: nao faz minutos de processador escondido
+      // quando a pessoa pediu nuvem. Falhar aqui custa um clique.
+      throw new Error(
+        `A nuvem nao conseguiu transcrever: ${err.message}. Nada foi perdido — ` +
+        'da pra tentar de novo. Se preferir fazer neste computador, troque para ' +
+        '"Neste computador" na Separacao na nuvem.'
+      )
+    }
+  }
+
+  // Só o caminho LOCAL precisa de arquivo temporário; com a nuvem as palavras
+  // já chegaram prontas e não há wav nem json pra limpar depois.
+  let wav = null
+  let outBase = null
   try {
+    if (!words) {
+    const { exe, model } = await ensureWhisper()
+    wav = join(dir, 'lyrics_in.wav')
+    await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', vocals, '-ac', '1', '-ar', '16000', wav], {})
+    outBase = join(dir, 'lyrics_out')
     await new Promise((resolve, reject) => {
       const threads = freeMemMB() > 3072 ? '6' : '4'
       const child = spawn(
@@ -573,7 +608,7 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     // medido: 84% já cai em cima da voz, erro médio de 85ms. Cada palavra guarda
     // de qual SEGMENTO do whisper ela veio — com o modelo large-v3-turbo esses
     // segmentos já são os versos da letra, um por linha.
-    const words = []
+    words = []
     let iSeg = -1
     for (const s of j.transcription || []) {
       iSeg++
@@ -615,6 +650,8 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
       words.splice(i, fim - i + 1)
       i--
     }
+
+    } // fim do caminho local
 
     // ENCAIXE POR FRASE: a voz isolada diz exatamente onde tem canto e onde tem
     // silêncio. Cada palavra é atribuída à frase cantada mais próxima, na ordem.
@@ -833,8 +870,8 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
     writeMeta(dir, m2)
     return m2.lyrics
   } finally {
-    rmSync(wav, { force: true })
-    rmSync(`${outBase}.json`, { force: true })
+    if (wav) rmSync(wav, { force: true })
+    if (outBase) rmSync(`${outBase}.json`, { force: true })
   }
 }
 
