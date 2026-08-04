@@ -1456,7 +1456,9 @@ export default function StudioView({ source, onClose }) {
         setExtractJob(null)
         setScout(null) // refaz a lista (instantâneo, vem do cache)
         await reloadSession(s.session)
-        setExportMsg('✓ Faixas novas adicionadas à música!')
+        // "✓ tudo certo" com instrumento faltando seria mentira — se a nuvem
+        // falhou em algum, é ISSO que a pessoa precisa ler
+        setExportMsg(s.aviso ? `⚠ ${s.aviso}` : '✓ Faixas novas adicionadas à música!')
       } else if (s.state === 'error') {
         setExtractJob(null)
         setExportMsg(`⚠ ${s.error}`)
