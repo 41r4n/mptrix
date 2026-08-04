@@ -2057,6 +2057,7 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
       }
 
 
+      const falhasNuvem = []
       for (const instId of wanted) {
         const spec = SPECIALISTS[instId]
 
@@ -2097,21 +2098,18 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             naNuvem = true
           } catch (err) {
             if (state.cancelled) throw err
-            // NÃO cai pro processador escondido. Aprendi na pele: a nuvem
-            // falhou no órgão da Samurai, o app começou a extração local sem
-            // avisar direito, e uma tarefa de 47 MINUTOS travou a máquina do
-            // dono. "Plano B" que come o computador inteiro não é plano B —
-            // quem escolheu "Na nuvem" escolheu não esperar isso.
-            //
-            // Falhar aqui é reversível: a chave continua guardada, a música
-            // continua no lugar, e é um clique pra tentar de novo. Encher o
-            // processador por 47 minutos não é reversível: o computador para.
-            throw new Error(
-              `A nuvem não conseguiu extrair ${spec.label}: ${err.message}. ` +
-              'Nada foi perdido — dá pra tentar de novo. Se preferir fazer neste ' +
-              'computador mesmo, troque para "Neste computador" na Separação na nuvem ' +
-              `(leva uns ${Math.max(5, Math.ceil((duration / 60) * 9.7))} minutos por instrumento).`
-            )
+            // NÃO cai pro processador escondido (47 min travariam a máquina —
+            // já travaram), e um instrumento falhando NÃO derruba os outros:
+            // um soluço de API num deles cancelava o lote inteiro de quatro.
+            // Falhou, anota, avisa e segue pro próximo. O que faltou continua
+            // na lista pra tentar de novo com um clique.
+            falhasNuvem.push(spec.label)
+            onStatus({
+              id, state: 'running', nuvem: 'falhou',
+              aviso: `Nuvem: ${spec.label} falhou (${err.message}). Seguindo com os próximos — dá pra tentar esse de novo depois.`
+            })
+            step += defs.length
+            continue
           }
         }
 
@@ -2281,7 +2279,12 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
 
       rmSync(workRoot, { recursive: true, force: true })
       touchSession(dir)
-      onStatus({ id, state: 'done', session: sessionPayload(key, readMeta(dir)) })
+      onStatus({
+        id, state: 'done', session: sessionPayload(key, readMeta(dir)),
+        // o resumo do que a nuvem não entregou — os que saíram JÁ estão na
+        // música; os que faltaram continuam na lista pra tentar de novo
+        ...(falhasNuvem.length ? { aviso: `A nuvem falhou em: ${falhasNuvem.join(', ')}. O resto foi feito — marca de novo só o que faltou.` } : {})
+      })
     } catch (err) {
       // workRoot fica no lugar: pedaços prontos permitem retomar de onde parou
       if (state.cancelled) onStatus({ id, state: 'cancelled' })

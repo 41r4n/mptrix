@@ -34,6 +34,34 @@ const LIMITE_PROCESSING_MS = 10 * 60 * 1000
 
 const cab = (chave) => ({ Authorization: `Bearer ${chave}` })
 
+// Fala com a API esperando JSON — e aguenta os soluços dela. No meio de uma
+// extração o Replicate respondeu uma página HTML de erro (502) e o "<!DOCTYPE"
+// derrubou o lote INTEIRO de quatro instrumentos por causa de um soluço de
+// segundos. Resposta que não é JSON e erro 5xx/429 são transitórios: espera e
+// tenta de novo. Erro 4xx com corpo JSON é real e sobe na hora.
+async function pedirJson(url, opts, tentativas = 3) {
+  let ultima
+  for (let i = 0; i < tentativas; i++) {
+    if (i) await new Promise((s) => setTimeout(s, 4000 * i))
+    let r
+    try {
+      r = await fetch(url, opts)
+    } catch (e) {
+      ultima = e // rede caiu no meio — transitório
+      continue
+    }
+    const texto = await r.text()
+    let j = null
+    try { j = JSON.parse(texto) } catch { /* veio HTML */ }
+    if (j !== null && r.ok) return j
+    if (j !== null && r.status < 500 && r.status !== 429) {
+      throw new Error(j.detail || `o Replicate recusou (${r.status})`)
+    }
+    ultima = new Error(j?.detail || `o Replicate respondeu ${r.status}${j === null ? ' (não-JSON)' : ''}`)
+  }
+  throw ultima
+}
+
 /** A chave serve? Devolve o nome da conta ou o motivo da recusa. */
 export async function testarChave(chave) {
   if (!chave || !/^r8_[A-Za-z0-9]{20,}$/.test(chave.trim())) {
@@ -54,18 +82,30 @@ export async function testarChave(chave) {
 async function subirArquivo(chave, caminho, nome) {
   const { readFile } = await import('fs/promises')
   const dados = await readFile(caminho)
-  const fd = new FormData()
-  fd.append('content', new Blob([dados]), nome)
-  const r = await fetch(`${API}/files`, { method: 'POST', headers: cab(chave), body: fd })
-  if (!r.ok) throw new Error(`falha ao enviar o áudio (${r.status})`)
-  const j = await r.json()
-  return j.urls.get
+  let ultima
+  for (let i = 0; i < 3; i++) {
+    if (i) await new Promise((s) => setTimeout(s, 4000 * i))
+    // o FormData é reconstruído a cada tentativa — corpo consumido não se reusa
+    const fd = new FormData()
+    fd.append('content', new Blob([dados]), nome)
+    try {
+      const r = await fetch(`${API}/files`, { method: 'POST', headers: cab(chave), body: fd })
+      if (r.ok) {
+        const j = await r.json()
+        return j.urls.get
+      }
+      if (r.status < 500 && r.status !== 429) throw new Error(`falha ao enviar o áudio (${r.status})`)
+      ultima = new Error(`falha ao enviar o áudio (${r.status})`)
+    } catch (e) {
+      if (/falha ao enviar/.test(String(e.message)) && !/50\d|429/.test(String(e.message))) throw e
+      ultima = e
+    }
+  }
+  throw ultima
 }
 
 async function versaoAtual(chave) {
-  const r = await fetch(`${API}/models/${MODELO}`, { headers: cab(chave) })
-  if (!r.ok) throw new Error(`não consegui ler o modelo (${r.status})`)
-  const j = await r.json()
+  const j = await pedirJson(`${API}/models/${MODELO}`, { headers: cab(chave) })
   if (!j.latest_version?.id) throw new Error('o modelo está sem versão publicada')
   return j.latest_version.id
 }
@@ -75,13 +115,11 @@ async function versaoAtual(chave) {
  * onTick(segundos) é chamado a cada consulta pra a barra andar.
  */
 async function rodar(chave, versao, input, state, onTick) {
-  const r = await fetch(`${API}/predictions`, {
+  const criada = await pedirJson(`${API}/predictions`, {
     method: 'POST',
     headers: { ...cab(chave), 'Content-Type': 'application/json' },
     body: JSON.stringify({ version: versao, input })
   })
-  const criada = await r.json()
-  if (!r.ok) throw new Error(criada?.detail || `o Replicate recusou o pedido (${r.status})`)
 
   const t0 = Date.now()
   let p = criada
@@ -101,8 +139,9 @@ async function rodar(chave, versao, input, state, onTick) {
         : 'a fila da nuvem demorou demais (mais de 25 min só pra começar)')
     }
     await new Promise((s) => setTimeout(s, 3000))
-    const rr = await fetch(`${API}/predictions/${p.id}`, { headers: cab(chave) })
-    p = await rr.json()
+    try {
+      p = await pedirJson(`${API}/predictions/${p.id}`, { headers: cab(chave) })
+    } catch { /* soluço no poll não mata a predição — ela segue lá; consulta de novo */ }
     onTick?.((Date.now() - t0) / 1000)
   }
   if (p.status !== 'succeeded') {
@@ -271,12 +310,11 @@ export async function extrairInstrumentoNaNuvem({
   let mod = null
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     if (state?.cancelled) throw new Error('cancelado')
-    const r = await fetch(`${API}/models/${MODELO_INST}`, { headers: cab(chave) })
-    if (r.ok) {
-      mod = await r.json()
+    try {
+      mod = await pedirJson(`${API}/models/${MODELO_INST}`, { headers: cab(chave) })
       if (mod.latest_version?.id) break
       mod = null
-    }
+    } catch { mod = null }
     if (tentativa < 2) await new Promise((s) => setTimeout(s, 8000))
   }
   if (!mod) throw new Error('o extrator está sem versão publicada (tentei 3 vezes)')
@@ -322,9 +360,7 @@ export async function extrairInstrumentoNaNuvem({
 const MODELO_LETRA = 'victor-upmeet/whisperx'
 
 export async function transcreverNaNuvem({ chave, arquivo, idioma = 'pt', state, onProgress }) {
-  const r = await fetch(`${API}/models/${MODELO_LETRA}`, { headers: cab(chave) })
-  if (!r.ok) throw new Error(`não consegui ler o transcritor (${r.status})`)
-  const mod = await r.json()
+  const mod = await pedirJson(`${API}/models/${MODELO_LETRA}`, { headers: cab(chave) })
   if (!mod.latest_version?.id) throw new Error('o transcritor está sem versão publicada')
 
   const url = await subirArquivo(chave, arquivo, 'voz.flac')
@@ -379,9 +415,7 @@ export async function transcreverNaNuvem({ chave, arquivo, idioma = 'pt', state,
 const MODELO_CROMA = '41r4n/mptrix-croma'
 
 export async function cromaNaNuvem({ chave, harmonia, baixo, destino, state, onProgress }) {
-  const r = await fetch(`${API}/models/${MODELO_CROMA}`, { headers: cab(chave) })
-  if (!r.ok) throw new Error(`não consegui ler o modelo de croma (${r.status})`)
-  const mod = await r.json()
+  const mod = await pedirJson(`${API}/models/${MODELO_CROMA}`, { headers: cab(chave) })
   if (!mod.latest_version?.id) throw new Error('a croma está sem versão publicada')
 
   const entrada = { harmonia: await subirArquivo(chave, harmonia, 'harmonia.wav') }
