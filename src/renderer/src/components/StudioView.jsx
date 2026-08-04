@@ -52,7 +52,19 @@ const STEM_META = {
 }
 
 // Minutos de processamento por minuto de música (medido nesta máquina)
+// Minutos de trabalho por minuto de música. Estes são do PROCESSADOR: um
+// especialista custa 9,7x a duração da música (4,8 min de música = 47 min).
 const PROC_FACTOR = 9.7
+
+// E estes são da GPU alugada, MEDIDOS na Azul (4min20):
+//   base ....... 78s de relógio  -> 0,30x  (arredondo pra cima)
+//   especialista 85s com contêiner quente -> 0,33x (idem)
+// A partida a frio é cobrada à parte porque não escala com a música: é o tempo
+// de subir a imagem com CUDA, e só a PRIMEIRA da sessão paga.
+const NUVEM_BASE = 0.35
+const NUVEM_ESP = 0.4
+const NUVEM_GP = 0.35
+const NUVEM_PARTIDA = 3
 
 // Escala verde do design system — cor por stem (canônicos fixos; extras
 // ciclam a escala pela ordem em que aparecem na sessão)
@@ -587,6 +599,12 @@ export default function StudioView({ source, onClose }) {
   const [error, setError] = useState(null)
   const [session, setSession] = useState(null)
   const [model, setModel] = useState(source.model || 'htdemucs')
+  // A conta do tempo muda de casa quando a separação é na nuvem — sem isso a
+  // tela prometia 166 minutos pra um trabalho de 8, que é pior que não estimar
+  const [naNuvem, setNaNuvem] = useState(false)
+  useEffect(() => {
+    window.mptrix.nuvem?.estado().then((n) => setNaNuvem(!!(n?.ligada && n?.temChave))).catch(() => {})
+  }, [])
 
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
@@ -2141,15 +2159,27 @@ export default function StudioView({ source, onClose }) {
       {phase === 'plan' && plan && (() => {
         // Qualidade máxima sempre: base refinada (~4× o normal) e instrumentos
         // cobrindo a música inteira — os tempos refletem o trabalho completo
-        const baseMin = Math.max(4, Math.ceil((plan.duration / 60) * 3.8))
-        const gpMin = Math.max(2, Math.ceil((plan.duration / 60) * 1.2))
+        const minutos = plan.duration / 60
+        const baseMin = naNuvem
+          ? Math.max(1, Math.ceil(minutos * NUVEM_BASE))
+          : Math.max(4, Math.ceil(minutos * 3.8))
+        const gpMin = naNuvem
+          ? Math.max(1, Math.ceil(minutos * NUVEM_GP))
+          : Math.max(2, Math.ceil(minutos * 1.2))
         const isGp = (inst) => inst === 'guitar' || inst === 'piano'
         const itemMinutes = (inst) =>
-          isGp(inst) ? gpMin : Math.max(5, Math.ceil((plan.duration / 60) * PROC_FACTOR))
+          isGp(inst)
+            ? gpMin
+            : naNuvem
+              ? Math.max(1, Math.ceil(minutos * NUVEM_ESP))
+              : Math.max(5, Math.ceil(minutos * PROC_FACTOR))
         const gpSelCount = [...planSel].filter(isGp).length
         // guitarra e teclado saem do mesmo passo: o tempo deles conta UMA vez
+        // A partida a frio entra uma vez só: é o tempo de subir a imagem com
+        // CUDA, não escala com a música e as extrações seguintes não pagam
         const totalMin = baseMin + (gpSelCount ? gpMin : 0) +
-          [...planSel].filter((i) => !isGp(i)).reduce((acc, i) => acc + itemMinutes(i), 0)
+          [...planSel].filter((i) => !isGp(i)).reduce((acc, i) => acc + itemMinutes(i), 0) +
+          (naNuvem ? NUVEM_PARTIDA : 0)
         const BASE_ALL = [
           ['vocals', '🎤', 'Voz'], ['drums', '🥁', 'Bateria'],
           ['bass', '🎸', 'Baixo'], ['other', '🎼', 'Outros']
@@ -2299,7 +2329,11 @@ export default function StudioView({ source, onClose }) {
               <div className="studio-plan-footer2">
                 <div className="studio-plan-total">
                   <span className="studio-plan-total-value">~{totalMin} min</span>
-                  <span className="studio-plan-total-label">tempo total estimado</span>
+                  {/* diz de ONDE vem o número: ver "8 min" sem saber por que
+                      não ajuda ninguém a confiar nele */}
+                  <span className={`studio-plan-total-label${naNuvem ? ' na-nuvem' : ''}`}>
+                    {naNuvem ? 'tempo estimado · na nuvem' : 'tempo total estimado'}
+                  </span>
                 </div>
                 <button className="btn-primary" onClick={confirmPlan}>Separar agora</button>
               </div>
@@ -2734,9 +2768,15 @@ export default function StudioView({ source, onClose }) {
               const items = [...gpOffers, ...(scout.detections || [])]
               // Edição rápida não tem faixas separadas — extração não se aplica
               if (session.model === 'quick') return null
-              const gpMin = Math.max(2, Math.ceil((session.duration / 60) * 1.2))
+              const gpMin = naNuvem
+                ? Math.max(1, Math.ceil((session.duration / 60) * NUVEM_GP))
+                : Math.max(2, Math.ceil((session.duration / 60) * 1.2))
               const itemMinutes = (inst) =>
-                isGp(inst) ? gpMin : Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
+                isGp(inst)
+                  ? gpMin
+                  : naNuvem
+                    ? Math.max(1, Math.ceil((session.duration / 60) * NUVEM_ESP))
+                    : Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
               const gpSelCount = [...extractSel].filter(isGp).length
               const totalMin = (gpSelCount ? gpMin : 0) +
                 [...extractSel].filter((i) => !isGp(i)).reduce((acc, i) => acc + itemMinutes(i), 0)

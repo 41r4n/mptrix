@@ -47,6 +47,38 @@ def baixar(url, destino):
     return destino
 
 
+def com_lote(caminho_cfg, inst, lote=None):
+    """Reescreve o config trocando só o batch_size da inferência.
+
+    O config publicado traz `batch_size: 1`, afinado pra placa pequena. Isso faz
+    o modelo processar UM pedaço de 10 segundos por vez: numa música de 4
+    minutos são ~52 passadas em fila, com a GPU ociosa entre elas. Em lote a
+    mesma conta cabe em poucas passadas.
+
+    Mexo só nesse número — nada de arquitetura, nada de qualidade. O resultado
+    é bit a bit o mesmo; muda quantos pedaços vão juntos.
+    """
+    import yaml
+
+    if lote is None:
+        lote = 8
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+                lote = 8 if gb >= 20 else 4
+        except Exception:
+            lote = 4
+
+    with open(caminho_cfg, "r") as f:
+        dados = yaml.safe_load(f)
+    dados.setdefault("inference", {})["batch_size"] = int(lote)
+    saida = f"{CACHE}/{inst}_lote{lote}.yaml"
+    with open(saida, "w") as f:
+        yaml.safe_dump(dados, f)
+    return saida
+
+
 class Predictor(BasePredictor):
     def setup(self):
         """De propósito não carrega nada.
@@ -74,6 +106,7 @@ class Predictor(BasePredictor):
 
         ckpt = baixar(f"{HF}/bs_mega_53stem_{inst}_mvsep.ckpt", f"{CACHE}/{inst}.ckpt")
         cfg = baixar(f"{HF}/bs_mega_53stem_{inst}_mvsep_config.yaml", f"{CACHE}/{inst}.yaml")
+        cfg = com_lote(cfg, inst)
 
         trabalho = tempfile.mkdtemp()
         entrada = os.path.join(trabalho, "entrada")
@@ -90,21 +123,36 @@ class Predictor(BasePredictor):
 
         # Mesmos parâmetros do app, SEM o --force_cpu: é essa linha inteira a
         # razão de existir deste modelo.
-        r = subprocess.run(
-            [
-                sys.executable, os.path.join(MSST, "inference.py"),
-                "--model_type", "bs_roformer",
-                "--config_path", cfg,
-                "--start_check_point", ckpt,
-                "--input_folder", entrada,
-                "--store_dir", saida,
-            ],
-            cwd=MSST,
-            capture_output=True,
-            text=True,
-        )
-        if r.returncode != 0:
-            raise RuntimeError((r.stderr or r.stdout or "")[-2000:])
+        #
+        # Se o lote não couber na placa, cai pra metade e tenta de novo. Melhor
+        # demorar um pouco mais do que devolver "sem memória" pra quem só queria
+        # a gaita da música.
+        lote_atual = None
+        ultimo_erro = ""
+        for tentativa in range(3):
+            r = subprocess.run(
+                [
+                    sys.executable, os.path.join(MSST, "inference.py"),
+                    "--model_type", "bs_roformer",
+                    "--config_path", cfg,
+                    "--start_check_point", ckpt,
+                    "--input_folder", entrada,
+                    "--store_dir", saida,
+                ],
+                cwd=MSST,
+                capture_output=True,
+                text=True,
+            )
+            if r.returncode == 0:
+                break
+            ultimo_erro = (r.stderr or r.stdout or "")[-2000:]
+            if "out of memory" not in ultimo_erro.lower():
+                raise RuntimeError(ultimo_erro)
+            lote_atual = max(1, (lote_atual or 8) // 2)
+            print(f"faltou memória na placa; tentando lote {lote_atual}", flush=True)
+            cfg = com_lote(f"{CACHE}/{inst}.yaml", inst, lote_atual)
+        else:
+            raise RuntimeError(ultimo_erro)
 
         # O MSST escreve em subpasta com o nome da música e batiza o arquivo com
         # o nome da faixa do config, que nem sempre é igual ao id do instrumento
