@@ -245,10 +245,22 @@ const MODELO_INST = '41r4n/mptrix-instrumentos'
 export async function extrairInstrumentoNaNuvem({
   chave, instrumento, arquivo, destino, state, onProgress, ffmpegPath, run, workDir
 }) {
-  const r = await fetch(`${API}/models/${MODELO_INST}`, { headers: cab(chave) })
-  if (!r.ok) throw new Error(`não consegui ler o extrator (${r.status})`)
-  const mod = await r.json()
-  if (!mod.latest_version?.id) throw new Error('o extrator está sem versão publicada')
+  // Enquanto uma versão nova está sendo publicada, o modelo fica alguns
+  // segundos sem `latest_version` e a chamada falha por nada. Aconteceu de
+  // verdade: derrubou a extração do órgão no meio. Espera e tenta de novo —
+  // é uma janela curta, não um defeito permanente.
+  let mod = null
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    if (state?.cancelled) throw new Error('cancelado')
+    const r = await fetch(`${API}/models/${MODELO_INST}`, { headers: cab(chave) })
+    if (r.ok) {
+      mod = await r.json()
+      if (mod.latest_version?.id) break
+      mod = null
+    }
+    if (tentativa < 2) await new Promise((s) => setTimeout(s, 8000))
+  }
+  if (!mod) throw new Error('o extrator está sem versão publicada (tentei 3 vezes)')
 
   // FLAC pra subir: o mix já descontado é WAV de ~46MB, e o envio pesa tanto
   // quanto o processamento numa conexão comum

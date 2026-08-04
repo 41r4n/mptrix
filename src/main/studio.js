@@ -1984,7 +1984,21 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             naNuvem = true
           } catch (err) {
             if (state.cancelled) throw err
-            onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Extraindo aqui mesmo.` })
+            // NÃO cai pro processador escondido. Aprendi na pele: a nuvem
+            // falhou no órgão da Samurai, o app começou a extração local sem
+            // avisar direito, e uma tarefa de 47 MINUTOS travou a máquina do
+            // dono. "Plano B" que come o computador inteiro não é plano B —
+            // quem escolheu "Na nuvem" escolheu não esperar isso.
+            //
+            // Falhar aqui é reversível: a chave continua guardada, a música
+            // continua no lugar, e é um clique pra tentar de novo. Encher o
+            // processador por 47 minutos não é reversível: o computador para.
+            throw new Error(
+              `A nuvem não conseguiu extrair ${spec.label}: ${err.message}. ` +
+              'Nada foi perdido — dá pra tentar de novo. Se preferir fazer neste ' +
+              'computador mesmo, troque para "Neste computador" na Separação na nuvem ' +
+              `(leva uns ${Math.max(5, Math.ceil((duration / 60) * 9.7))} minutos por instrumento).`
+            )
           }
         }
 
