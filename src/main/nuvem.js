@@ -340,6 +340,42 @@ export async function transcreverNaNuvem({ chave, arquivo, idioma = 'pt', state,
   return { words, segundos: p.segundos }
 }
 
+// ------------------------------------------------------------- CROMA -------
+// A parte CARA do detector de acordes, e só ela. Medido: o detector local leva
+// 450s numa música de 4min20, e 300s são uma chamada só — o LogSpectrum do
+// essentia.js, a 431ms por quadro, porque a ponte JS/WASM reconstrói a tabela
+// a cada quadro. Nativo, configurado uma vez, custa ~1ms.
+//
+// A INTELIGÊNCIA dos acordes não vem pra cá: gabaritos, tonalidade, Viterbi,
+// votação entre repetições e inversão pelo baixo continuam no chords.cjs, no
+// computador do usuário. Este pedaço devolve só os números que a etapa cara
+// produzia.
+//
+// A croma daqui NÃO é idêntica à do WASM (são versões diferentes do essentia:
+// 68% dos quadros concordam na nota mais forte). Exigir igualdade era critério
+// meu mal escolhido — o que não pode piorar é o ACORDE. Medido nas duas
+// músicas de referência, com o detector inteiro rodando:
+//   Azul  53,7% -> 54,4%   (croma: 300s -> 22s)
+//   Vaso  45,0% -> 46,3%   (detector inteiro: 669s -> 42s)
+const MODELO_CROMA = '41r4n/mptrix-croma'
+
+export async function cromaNaNuvem({ chave, harmonia, baixo, destino, state, onProgress }) {
+  const r = await fetch(`${API}/models/${MODELO_CROMA}`, { headers: cab(chave) })
+  if (!r.ok) throw new Error(`não consegui ler o modelo de croma (${r.status})`)
+  const mod = await r.json()
+  if (!mod.latest_version?.id) throw new Error('a croma está sem versão publicada')
+
+  const entrada = { harmonia: await subirArquivo(chave, harmonia, 'harmonia.wav') }
+  if (baixo) entrada.baixo = await subirArquivo(chave, baixo, 'baixo.flac')
+
+  const p = await rodar(chave, mod.latest_version.id, entrada, state,
+    (s) => onProgress?.(Math.min(95, 10 + s * 2)))
+
+  const { writeFile } = await import('fs/promises')
+  await writeFile(destino, p.saida)
+  return { segundos: p.segundos }
+}
+
 // Estimativa de custo. O Replicate NÃO devolve o valor cobrado pela API, só o
 // tempo de GPU. Uso a tabela pública da placa mais cara que esses modelos
 // costumam pegar, pra a conta errar pra MAIS e nunca surpreender pra menos.

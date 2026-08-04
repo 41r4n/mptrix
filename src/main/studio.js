@@ -344,11 +344,55 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
   const drumsP = join(dir, 'base', 'drums.flac')
 
   const state = {}
+
+  // CROMA NA NUVEM. É 300 dos 450 segundos do detector, e o custo não é conta:
+  // é a ponte JS/WASM reconstruindo a tabela do LogSpectrum a cada quadro. A
+  // lógica dos acordes NÃO muda de lugar -- só os números que alimentam ela.
+  // Medido nas duas músicas de referência, com o detector inteiro: a cifra sai
+  // igual ou melhor (Azul 53,7%->54,4%, Vaso 45,0%->46,3%) em 42s no lugar de
+  // 669s. Falhando, faz local mesmo: são minutos, não os 47 da extração, e
+  // ficar sem cifra é pior que esperar.
+  let cromaPronta = null
+  if (usarNuvem()) {
+    const mixHarm = join(dir, 'croma_mix.wav')
+    const destino = join(dir, 'croma_nuvem.json')
+    try {
+      const { cromaNaNuvem } = await import('./nuvem.js')
+      // o chords.cjs soma as faixas harmônicas internamente; pra subir uma só,
+      // a soma é feita aqui com o mesmo amix, sem normalizar
+      const args = ['-y', '-loglevel', 'error']
+      for (const h of harm) args.push('-i', h)
+      args.push(...(harm.length > 1 ? ['-filter_complex', `amix=inputs=${harm.length}:normalize=0`] : []),
+        '-ac', '1', '-ar', '44100', mixHarm)
+      await run(ffmpegPath, args, state)
+      const rc = await cromaNaNuvem({
+        chave: lerChaveNuvem(),
+        harmonia: mixHarm,
+        baixo: existsSync(bassP) ? bassP : null,
+        destino,
+        state
+      })
+      somarGastoNuvem(rc.segundos)
+      cromaPronta = destino
+    } catch (err) {
+      if (state.cancelled) throw err
+    } finally {
+      rmSync(mixHarm, { force: true })
+    }
+  }
+
   const out = await new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
       [chordsScriptPath(), ffmpegPath, existsSync(bassP) ? bassP : '-', existsSync(drumsP) ? drumsP : '-', ...harm],
-      { windowsHide: true, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
+      {
+        windowsHide: true,
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: '1',
+          ...(cromaPronta ? { MPTRIX_CROMA: cromaPronta } : {})
+        }
+      }
     )
     state.child = child
     let o = ''
@@ -366,6 +410,8 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
       }
     })
   })
+
+  if (cromaPronta) rmSync(cromaPronta, { force: true })
 
   const m2 = readMeta(dir)
   m2.chords = { at: new Date().toISOString(), v: CHORDS_V, list: out.chords || [], key: out.key || null }

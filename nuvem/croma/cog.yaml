@@ -1,0 +1,21 @@
+# Croma do MPTrix: a parte cara do detector de acordes, rodando com essentia
+# NATIVO em vez de WASM.
+#
+# SEM GPU de proposito -- isto e DSP, nao rede neural. O ganho vem de configurar
+# o algoritmo UMA vez e reusar em todos os quadros, coisa que a ponte JS/WASM do
+# essentia.js nao deixa fazer: la ele reconstroi a tabela a cada quadro e cobra
+# 431ms por quadro, 300 dos 450 segundos da musica inteira.
+build:
+  gpu: false
+  python_version: "3.10"
+  # So o essencial. A primeira tentativa listava libavcodec58/libtag1v5 e
+  # companhia e o apt-get falhou: sao nomes de outra versao do Ubuntu. E nem
+  # eram necessarios -- o pacote do essentia no PyPI ja vem com as dependencias
+  # embutidas.
+  system_packages:
+    - "ffmpeg"
+    - "libsndfile1"
+  python_packages:
+    - "numpy==1.26.4"
+    - "essentia==2.1b6.dev1110"
+predict: "predict.py:Predictor"

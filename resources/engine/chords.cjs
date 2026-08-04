@@ -179,7 +179,19 @@ const NNLS_FRAME = 16384
 const NNLS_HOP = 16384
 const frames = [] // {t, chroma, rms}
 const bassPcs = [] // {t, pc} quando o baixo canta com confiança
-{
+
+// CROMA PRONTA (da nuvem). Esta etapa é 300 dos 450 segundos do detector, e o
+// custo não é conta: é a ponte JS/WASM reconstruindo a tabela do LogSpectrum a
+// cada quadro, 431ms por vez. Com essentia nativo, configurado uma vez, a mesma
+// coisa custa ~1ms. Quando os números chegam prontos, o passo inteiro é pulado
+// — e TODA a lógica daqui pra baixo (gabaritos, tonalidade, Viterbi, votação
+// entre repetições, inversão pelo baixo) continua exatamente igual.
+const CROMA_PRONTA = process.env.MPTRIX_CROMA
+if (CROMA_PRONTA && fs.existsSync(CROMA_PRONTA)) {
+  const pronto = JSON.parse(fs.readFileSync(CROMA_PRONTA, 'utf8'))
+  for (const f of pronto.frames || []) frames.push(f)
+  for (const b of pronto.bassPcs || []) bassPcs.push(b)
+} else {
   const mat = new (require('./essentia-wasm.umd.js').VectorVectorFloat)()
   const locais = []
   let meanT = null
@@ -222,7 +234,7 @@ const bassPcs = [] // {t, pc} quando o baixo canta com confiança
 
 // O baixo isolado continua vindo do PitchYin: ele dá a NOTA cantada, não a
 // energia por classe — é o que decide inversão e desempata gêmeo enârmonico
-if (bass) {
+if (bass && !bassPcs.length) {
   const BHOP = Math.round(SR * 0.125)
   const nb = Math.floor((bass.length - BASS_FRAME) / BHOP)
   for (let i = 0; i < nb; i++) {
