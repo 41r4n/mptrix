@@ -2239,20 +2239,55 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         await subtractInto(orig, gpWav)
         const pctBase = (step / totalSteps) * 100
         const pctSpan = (gpUnits / totalSteps) * 100
-        await run(
-          PYTHON_PATH,
-          ['-m', 'demucs', '-n', 'htdemucs_6s', '-d', 'cpu', '--segment', '6', '-o', join(workRoot, 'gp_out'), gpWav],
-          state,
-          (line) => {
-            const m = line.match(/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/)
-            if (m) {
-              const raw = Math.max(0, Math.min(100, (parseFloat(m[1]) / parseFloat(m[2])) * 100))
-              onProgress({ id, stage: 'extracting', instrument: gpWanted[0], label: gpLabel, percent: Math.round(pctBase + (raw * pctSpan) / 100) })
-            }
-          },
-          engEnv
-        )
-        const gpStemDir = join(workRoot, 'gp_out', 'htdemucs_6s', 'other')
+        let gpStemDir = join(workRoot, 'gp_out', 'htdemucs_6s', 'other')
+        let gpOk = true
+        if (usarNuvem()) {
+          // O ÚLTIMO passo pesado que ainda rodava aqui: um Demucs local de
+          // ~3GB que estourou a memória da máquina de 6GB no meio de um lote e
+          // derrubou o que faltava. Mesma regra dos especialistas: a nuvem
+          // falhou? anota, avisa e segue — nada de Demucs local escondido.
+          try {
+            const { gpNaNuvem } = await import('./nuvem.js')
+            const alvoDir = join(workRoot, 'gp_nuvem')
+            mkdirSync(alvoDir, { recursive: true })
+            const rg = await gpNaNuvem({
+              chave: lerChaveNuvem(),
+              arquivo: gpWav,
+              quais: gpWanted,
+              destinoDir: alvoDir,
+              ffmpegPath,
+              run,
+              workDir: workRoot,
+              state,
+              onProgress: (pct) => onProgress({
+                id, stage: 'extracting', instrument: gpWanted[0], label: gpLabel, nuvem: true,
+                percent: Math.round(pctBase + (pct * pctSpan) / 100)
+              })
+            })
+            somarGastoNuvem(rg.segundos)
+            gpStemDir = alvoDir
+          } catch (err) {
+            if (state.cancelled) throw err
+            gpOk = false
+            falhasNuvem.push(gpLabel)
+            onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${gpLabel} falhou (${err.message}). Dá pra tentar de novo depois.` })
+          }
+        } else {
+          await run(
+            PYTHON_PATH,
+            ['-m', 'demucs', '-n', 'htdemucs_6s', '-d', 'cpu', '--segment', '6', '-o', join(workRoot, 'gp_out'), gpWav],
+            state,
+            (line) => {
+              const m = line.match(/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/)
+              if (m) {
+                const raw = Math.max(0, Math.min(100, (parseFloat(m[1]) / parseFloat(m[2])) * 100))
+                onProgress({ id, stage: 'extracting', instrument: gpWanted[0], label: gpLabel, percent: Math.round(pctBase + (raw * pctSpan) / 100) })
+              }
+            },
+            engEnv
+          )
+        }
+        if (gpOk) {
         onProgress({ id, stage: 'converting', instrument: gpWanted[0], label: gpLabel, percent: Math.round(((step + gpUnits) / totalSteps) * 100) })
         const m2 = readMeta(dir)
         const arr = stemsOf(m2).filter((s) => !['other', ...gpWanted].includes(s))
@@ -2271,6 +2306,7 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
           for (const s of gpWanted) delete m2.scout.gp[s === 'guitar' ? 'guitar' : 'piano']
         }
         writeMeta(dir, m2)
+        }
         step += gpUnits
       }
 

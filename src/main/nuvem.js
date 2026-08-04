@@ -429,6 +429,45 @@ export async function cromaNaNuvem({ chave, harmonia, baixo, destino, state, onP
   return { segundos: p.segundos }
 }
 
+// ------------------------------------------- GUITARRA/PIANO (6 faixas) -----
+// Uma passada do htdemucs_6s sobre o "outros" — o MESMO passo que o app fazia
+// localmente. Era o ÚLTIMO trabalho pesado que ainda rodava na máquina do
+// usuário: um Demucs de ~3GB numa máquina de 6GB, que estourou a memória no
+// meio de um lote e derrubou o que faltava. Na GPU são segundos.
+export async function gpNaNuvem({ chave, arquivo, quais, destinoDir, ffmpegPath, run, workDir, state, onProgress }) {
+  const versao = await versaoAtual(chave)
+
+  // o wav do "outros" tem ~50MB; em FLAC cai pela metade sem perder nada
+  let envio = arquivo
+  if (ffmpegPath && run && workDir) {
+    const flac = join(workDir, 'gp_envio.flac')
+    try {
+      await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', arquivo, '-compression_level', '8', flac], state)
+      envio = flac
+    } catch { /* vai o wav mesmo */ }
+  }
+
+  const url = await subirArquivo(chave, envio, 'outros.flac')
+  const p = await rodar(
+    chave, versao,
+    { audio: url, model: 'htdemucs_6s', output_format: 'flac', shifts: 1 },
+    state,
+    (s) => onProgress?.(Math.min(95, 5 + s * 1.2))
+  )
+
+  // baixa só o que foi pedido, os dois ao mesmo tempo. O nome sai .wav porque
+  // é o que o passo seguinte do app espera ler — o ffmpeg identifica o formato
+  // pelo conteúdo, não pela extensão, então o FLAC dentro não atrapalha.
+  const arquivos = {}
+  await Promise.all((quais || []).map(async (q) => {
+    if (!p.saida?.[q]) throw new Error(`a nuvem não devolveu a faixa de ${q}`)
+    const destino = join(destinoDir, `${q}.wav`)
+    await baixar(p.saida[q], destino)
+    arquivos[q] = destino
+  }))
+  return { arquivos, segundos: p.segundos }
+}
+
 // Estimativa de custo. O Replicate NÃO devolve o valor cobrado pela API, só o
 // tempo de GPU. Uso a tabela pública da placa mais cara que esses modelos
 // costumam pegar, pra a conta errar pra MAIS e nunca surpreender pra menos.
