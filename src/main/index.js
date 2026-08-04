@@ -11,6 +11,7 @@ import {
   getCachedSession,
   startStudioJob,
   startExtractJob,
+  startAutoExtract,
   startPlanJob,
   startPolishJob,
   unpolishStem,
@@ -1328,6 +1329,21 @@ app.whenReady().then(() => {
     } catch (err) {
       return { error: err.message }
     }
+  })
+
+  // Colheita automática: separa tudo que existir, sem cardápio
+  ipcMain.handle('studio:autoExtract', (_e, { key }) => {
+    heavyJobStart()
+    const job = startAutoExtract({
+      key,
+      ffmpegPath: FFMPEG_PATH,
+      onProgress: (p) => send('studio:progress', p),
+      onStatus: (s) => {
+        send('studio:status', s)
+        if (s.state !== 'running') heavyJobEnd()
+      }
+    })
+    return job
   })
 
   ipcMain.handle('studio:extract', (_e, { key, instruments }) => {

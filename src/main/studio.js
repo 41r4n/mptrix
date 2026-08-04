@@ -2347,6 +2347,95 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
   return handle
 }
 
+// ---------- COLHEITA AUTOMÁTICA: separa tudo que existir, sem perguntar -----
+// Decisão de produto do dono: ninguém quer caçar instrumento em cardápio. O
+// MPTrix separa tudo que conseguir provar que existe e mostra o resultado —
+// no máximo conta o que procurou e não achou.
+//
+// O que torna isso viável: o ouvido da máquina é RUIM de nomear e ÓTIMO de
+// medir. O faro erra (dobro "76%" veio vazio); a balança não erra (-67dB é
+// silêncio, -23dB é gaita). Então o sistema tenta os candidatos plausíveis e
+// deixa a balança decidir o que vira faixa. Quem erra trabalha escondido;
+// o usuário só vê o que é real. Fantasma custa centavos — e centavos custam
+// menos que a atenção de quem só queria a música pronta.
+//
+// Só roda com a nuvem ligada: no processador cada tentativa custa 47 minutos
+// da máquina do usuário, e aí testar fantasma deixa de ser barato.
+const FAMILIAS = {
+  brass: ['trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
+  strings: ['violin', 'viola', 'cello', 'double-bass'],
+  woodwind: ['flute', 'clarinet', 'oboe', 'bassoon']
+}
+const AUTO_CORTE = 0.35   // abaixo disso nem o teste vale os centavos
+const AUTO_POR_RODADA = 4 // teto de custo por rodada
+const AUTO_RODADAS = 2    // a 2ª colhe o que o véu da 1ª escondia
+
+function escolherCandidatos(scout, meta) {
+  const ja = new Set(stemsOf(meta))
+  let lista = (scout?.detections || [])
+    .filter((d) => SPECIALISTS[d.instrument] && !ja.has(d.instrument) && d.score >= AUTO_CORTE)
+  // A seção engole os solistas da família: cinco narizes apontando pro mesmo
+  // naipe não são cinco instrumentos. Só sobrevive solista bem mais forte que
+  // a própria seção.
+  for (const [secao, membros] of Object.entries(FAMILIAS)) {
+    const sec = lista.find((d) => d.instrument === secao)
+    if (sec) lista = lista.filter((d) => !membros.includes(d.instrument) || d.score > sec.score + 0.15)
+  }
+  const inst = lista.sort((a, b) => b.score - a.score).slice(0, AUTO_POR_RODADA).map((d) => d.instrument)
+  // guitarra/teclado entram pelos mesmos cortes que a tela de escolha usava
+  if ((scout?.gp?.guitar?.score || 0) >= 0.2 && !ja.has('guitar')) inst.push('guitar')
+  if ((scout?.gp?.piano?.score || 0) >= 0.15 && !ja.has('piano')) inst.push('piano')
+  return inst
+}
+
+export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
+  const id = randomUUID()
+  ;(async () => {
+    try {
+      const dir = join(STEMS_DIR, key)
+      const meta0 = readMeta(dir)
+      if (!meta0) throw new Error('Sessão não encontrada.')
+      // idempotente: música já colhida não colhe de novo a cada abertura
+      if (meta0.autoHarvest?.done) { onStatus({ id, state: 'done', auto: true, jaColhida: true }); return }
+      if (!usarNuvem()) { onStatus({ id, state: 'done', auto: true, pulado: 'nuvem desligada' }); return }
+
+      const procurados = []
+      for (let rodada = 1; rodada <= AUTO_RODADAS; rodada++) {
+        if (!usarNuvem()) break // teto de gasto batido no meio: para educadamente
+        onStatus({ id, state: 'running', auto: true, rodada, fase: 'farejando' })
+        // 1ª rodada aproveita faro em cache; as seguintes refarejam o "outros"
+        // limpo — é onde o véu levanta e instrumento escondido aparece
+        const scout = await scoutSession({ key, force: rodada > 1 })
+        const candidatos = escolherCandidatos(scout, readMeta(dir))
+        if (!candidatos.length) break
+        procurados.push(...candidatos)
+        onStatus({ id, state: 'running', auto: true, rodada, fase: 'separando', alvos: candidatos })
+        const fim = await new Promise((res) => {
+          startExtractJob({
+            key,
+            instruments: candidatos,
+            ffmpegPath,
+            onProgress: (p) => onProgress?.({ ...p, auto: true, autoId: id, rodada }),
+            onStatus: (st) => {
+              if (st.state !== 'running') res(st)
+              else onStatus?.({ ...st, auto: true, autoId: id })
+            }
+          })
+        })
+        if (fim.state !== 'done') break // erro de verdade: não insiste às cegas
+      }
+
+      const m = readMeta(dir)
+      m.autoHarvest = { done: true, at: new Date().toISOString(), procurados }
+      writeMeta(dir, m)
+      onStatus({ id, state: 'done', auto: true, session: sessionPayload(key, m), procurados })
+    } catch (err) {
+      onStatus({ id, state: 'error', auto: true, error: err.message })
+    }
+  })()
+  return { id }
+}
+
 // ---------- Polir faixa: remove vazamento/ruído de um stem já separado ----------
 
 const POLISH_MODEL = {

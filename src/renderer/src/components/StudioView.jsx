@@ -673,6 +673,7 @@ export default function StudioView({ source, onClose }) {
   const timerElRef = useRef(null)
   const seekElRef = useRef(null)
   const [extractJob, setExtractJob] = useState(null) // {id, label, stage, percent}
+  const [autoJob, setAutoJob] = useState(null) // colheita automática: {id, fase, alvos, label}
   const [exportingSong, setExportingSong] = useState(false)
   const [plan, setPlan] = useState(null) // catálogo da pré-análise
   const [planSel, setPlanSel] = useState(() => new Set())
@@ -972,6 +973,29 @@ export default function StudioView({ source, onClose }) {
     })
     return off
   }, [session, extractJob, polishJob, reloadSession])
+
+  // Colheita automática: acompanha os eventos dela (id próprio + eventos dos
+  // trabalhos internos marcados com auto:true) e resume no painel
+  useEffect(() => {
+    const offS = window.mptrix.studio.onStatus((st) => {
+      if (!st.auto) return
+      if (st.state === 'done' || st.state === 'error') {
+        setAutoJob(null)
+        if (st.state === 'done' && st.procurados?.length) {
+          setScout(null) // refaz a lista (vem do cache, instantâneo)
+          setExportMsg(`✓ Colhi sozinho: testei ${st.procurados.length} instrumento(s). O que era real está nas pistas.`)
+        }
+        if (st.state === 'error') setExportMsg(`⚠ Colheita parou: ${st.error}`)
+      } else if (st.state === 'running') {
+        setAutoJob((a) => ({ ...(a || {}), id: st.autoId || st.id, fase: st.fase || a?.fase, alvos: st.alvos || a?.alvos, rodada: st.rodada }))
+      }
+    })
+    const offP = window.mptrix.studio.onProgress((pr) => {
+      if (!pr.auto) return
+      setAutoJob((a) => ({ ...(a || {}), id: pr.autoId, fase: 'separando', label: pr.label, percent: pr.percent }))
+    })
+    return () => { offS?.(); offP?.() }
+  }, [])
 
   // Marca no body que o estúdio está aberto (a lupinha sobe pra não cobrir o transporte)
   useEffect(() => {
@@ -1657,7 +1681,16 @@ export default function StudioView({ source, onClose }) {
       // Escolhas feitas no catálogo: dispara a extração automática dos extras
       const choices = planChoicesRef.current
       planChoicesRef.current = null
-      if (choices?.length && aliveRef.current) {
+      if (choices === 'auto' || !choices) {
+        // Colheita automática: com a nuvem ligada, TODA sessão (nova ou
+        // reaberta) passa por ela. O motor é idempotente — música já colhida
+        // responde "já colhi" na hora e nada roda de novo.
+        const nv = await window.mptrix.nuvem?.estado().catch(() => null)
+        if (nv?.ligada && nv?.temChave && aliveRef.current) {
+          const r = await window.mptrix.studio.autoExtract({ key: sess.key })
+          if (r?.id) setAutoJob({ id: r.id, fase: 'farejando' })
+        }
+      } else if (choices?.length && aliveRef.current) {
         const r = await window.mptrix.studio.extract({ key: sess.key, instruments: choices })
         if (r?.error) setExportMsg(`⚠ ${r.error}`)
         else setExtractJob({ id: r.id, stage: 'preparing', label: '', percent: 0 })
@@ -1743,6 +1776,18 @@ export default function StudioView({ source, onClose }) {
       const cached = cachedFt || await window.mptrix.studio.cached({ path: source.path, model: 'htdemucs' })
       if (cached) {
         await startSession(cached)
+        return
+      }
+
+      // MÃO BEIJADA: com a nuvem ligada não existe cardápio. Separa direto e
+      // a colheita automática (lá embaixo, pós-sessão) extrai tudo que provar
+      // que existe. O catálogo interativo fica pro caminho local, onde cada
+      // tentativa custa ~47 min da máquina e escolher É controle de custo.
+      const nvPlan = await window.mptrix.nuvem?.estado().catch(() => null)
+      if (nvPlan?.ligada && nvPlan?.temChave) {
+        planChoicesRef.current = 'auto'
+        setPhase('starting')
+        separateRef.current?.()
         return
       }
 
@@ -2762,7 +2807,17 @@ export default function StudioView({ source, onClose }) {
               </div>
             )}
 
-            {scout && scout !== 'loading' && !extractJob && (() => {
+            {naNuvem && autoJob && (
+              <div className="studio-scout studio-scout-loading">
+                <div className="studio-spinner small" />
+                <span className="muted">
+                  {autoJob.fase === 'farejando'
+                    ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
+                    : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
+                </span>
+              </div>
+            )}
+            {!naNuvem && scout && scout !== 'loading' && !extractJob && (() => {
               const isGp = (inst) => inst === 'guitar' || inst === 'piano'
               const gpData = scout.gp || null
               const missingGp = session.model === 'quick'

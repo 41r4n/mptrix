@@ -115,6 +115,7 @@ const api = {
     lyricsSave: (opts) => ipcRenderer.invoke('studio:lyricsSave', opts),
     lyricsGroups: (opts) => ipcRenderer.invoke('studio:lyricsGroups', opts),
     extract: (opts) => ipcRenderer.invoke('studio:extract', opts),
+    autoExtract: (opts) => ipcRenderer.invoke('studio:autoExtract', opts),
     cached: (opts) => ipcRenderer.invoke('studio:cached', opts),
     plan: (opts) => ipcRenderer.invoke('studio:plan', opts),
     memory: (opts) => ipcRenderer.invoke('studio:memory', opts),
