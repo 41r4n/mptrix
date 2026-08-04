@@ -1,0 +1,44 @@
+# Extracao de INSTRUMENTO na nuvem: BS-RoFormer do catalogo de 53 instrumentos
+# (MVSep Mega), rodando em GPU.
+#
+# POR QUE ISSO EXISTE: separar a banda base ja foi pra nuvem e caiu de 7min30
+# pra 1min18. Mas numa musica como a Samurai, com gaita, dobro e orgao, os
+# instrumentos EXTRAS custam 47 minutos CADA no processador -- 141 dos 166
+# minutos totais. A nuvem so resolve o problema de verdade se pegar esses.
+#
+# Nenhum modelo publico do Replicate roda esses pesos, entao aqui eu publico.
+# Ja fui recusado duas vezes hoje ("manifest invalid" com Python 3.8; imagem
+# de +15GB que sumiu sozinha da API), entao a imagem e MAGRA de proposito:
+build:
+  gpu: true
+  python_version: "3.10"
+  system_packages:
+    - "ffmpeg"
+    - "libsndfile1"
+    - "git"
+  # Só o que a INFERENCIA do bs_roformer precisa. O requirements.txt do MSST
+  # tem 24 pacotes (asteroid, transformers, timm, demucs, pedalboard...) porque
+  # ele tambem TREINA. Os modelos sao importados dentro do if do tipo, entao
+  # nada disso entra no caminho do bs_roformer -- e cada pacote a menos e
+  # imagem menor, que e exatamente o que fez a tentativa anterior morrer.
+  python_packages:
+    - "torch==2.1.2"
+    - "torchaudio==2.1.2"
+    - "numpy==1.26.4"
+    - "scipy==1.11.4"
+    - "soundfile==0.12.1"
+    - "librosa==0.10.1"
+    - "einops==0.8.1"
+    - "beartype==0.14.1"
+    - "rotary_embedding_torch==0.3.5"
+    - "ml_collections==0.1.1"
+    - "omegaconf==2.2.3"
+    - "pyyaml==6.0.1"
+    - "tqdm==4.66.1"
+    - "matplotlib==3.8.2"
+    - "requests==2.31.0"
+  run:
+    # Commit EXATO do que ja roda na maquina do usuario. "ultima versao" aqui
+    # seria trocar um resultado conhecido por um desconhecido de graca.
+    - git clone https://github.com/ZFTurbo/Music-Source-Separation-Training.git /msst && cd /msst && git checkout 83d495d
+predict: "predict.py:Predictor"

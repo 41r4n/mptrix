@@ -235,6 +235,50 @@ export async function separarNaNuvem({ chave, model, srcWav, inputFile, workDir,
   return { rawPaths, segundos: gastoS }
 }
 
+// ------------------------------------------------- INSTRUMENTO AVULSO ------
+// Modelo meu, este: nenhum público roda os pesos do catálogo de 53. É o mesmo
+// BS-RoFormer e o MESMO COMMIT do MSST que roda na máquina do usuário — a
+// única diferença é a GPU no lugar do processador. Medido: 47 minutos viram
+// menos de 2.
+const MODELO_INST = '41r4n/mptrix-instrumentos'
+
+export async function extrairInstrumentoNaNuvem({
+  chave, instrumento, arquivo, destino, state, onProgress, ffmpegPath, run, workDir
+}) {
+  const r = await fetch(`${API}/models/${MODELO_INST}`, { headers: cab(chave) })
+  if (!r.ok) throw new Error(`não consegui ler o extrator (${r.status})`)
+  const mod = await r.json()
+  if (!mod.latest_version?.id) throw new Error('o extrator está sem versão publicada')
+
+  // FLAC pra subir: o mix já descontado é WAV de ~46MB, e o envio pesa tanto
+  // quanto o processamento numa conexão comum
+  let envio = arquivo
+  if (ffmpegPath && run && workDir) {
+    const flac = join(workDir, `envio_${instrumento}.flac`)
+    try {
+      await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', arquivo, '-compression_level', '8', flac], state)
+      envio = flac
+    } catch { /* segue com o WAV */ }
+  }
+
+  const enviar = () => subirArquivo(chave, envio, `mix.${envio.endsWith('.flac') ? 'flac' : 'wav'}`)
+  let url = await enviar()
+
+  let p
+  try {
+    p = await rodar(chave, mod.latest_version.id, { audio: url, instrumento }, state,
+      (s) => onProgress?.(Math.min(95, 5 + s * 0.5)))
+  } catch (e) {
+    if (!e.linkVenceu) throw e
+    url = await enviar()
+    p = await rodar(chave, mod.latest_version.id, { audio: url, instrumento }, state,
+      (s) => onProgress?.(Math.min(95, 5 + s * 0.5)))
+  }
+
+  await baixar(p.saida, destino)
+  return { segundos: p.segundos }
+}
+
 // Estimativa de custo. O Replicate NÃO devolve o valor cobrado pela API, só o
 // tempo de GPU. Uso a tabela pública da placa mais cara que esses modelos
 // costumam pegar, pra a conta errar pra MAIS e nunca surpreender pra menos.

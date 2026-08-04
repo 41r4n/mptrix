@@ -1946,16 +1946,56 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
 
       for (const instId of wanted) {
         const spec = SPECIALISTS[instId]
-        onProgress({ id, stage: 'downloading-model', instrument: instId, label: spec.label, percent: Math.round((step / totalSteps) * 100) })
-        const { ckpt, cfg } = await ensureSpecialist(instId)
 
         // Atualiza o material de trabalho: mix menos o que já foi reivindicado
         await subtractInto(meta.sourceFile, mixWav)
 
+        const defs = pieceDefsFor[instId]
+        let outPieces = []
+
+        // NUVEM PRIMEIRO. Aqui está o grosso da espera: no processador cada
+        // instrumento custa ~47 minutos, e numa música com gaita, dobro e
+        // órgão isso vira 141 dos 166 minutos totais. Na GPU o mesmo trabalho
+        // leva menos de 2. Vem antes do `ensureSpecialist` de propósito: se vai
+        // rodar na nuvem, não faz sentido baixar 77MB de modelo pra cá.
+        let naNuvem = false
+        if (usarNuvem()) {
+          try {
+            const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
+            const alvo = join(workRoot, `${instId}_nuvem.wav`)
+            onProgress({ id, stage: 'extracting', instrument: instId, label: spec.label, nuvem: true, percent: Math.round((step / totalSteps) * 100) })
+            const r = await extrairInstrumentoNaNuvem({
+              chave: lerChaveNuvem(),
+              instrumento: spec.file,
+              arquivo: mixWav,
+              destino: alvo,
+              state,
+              ffmpegPath,
+              run,
+              workDir: workRoot,
+              onProgress: (pct) => onProgress({
+                id, stage: 'extracting', instrument: instId, label: spec.label, nuvem: true,
+                percent: Math.round(((step + pct / 100) / totalSteps) * 100)
+              })
+            })
+            somarGastoNuvem(r.segundos)
+            outPieces = [{ file: alvo, start: 0 }]
+            step += defs.length
+            naNuvem = true
+          } catch (err) {
+            if (state.cancelled) throw err
+            onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Extraindo aqui mesmo.` })
+          }
+        }
+
+        if (naNuvem) {
+          // faixa pronta, pula o caminho local inteiro
+        } else {
+        onProgress({ id, stage: 'downloading-model', instrument: instId, label: spec.label, percent: Math.round((step / totalSteps) * 100) })
+        const { ckpt, cfg } = await ensureSpecialist(instId)
+
         // Processa só os pedaços onde o instrumento toca (ou tudo, se ele
         // estiver presente na música inteira) — cada pedaço num processo novo
-        const defs = pieceDefsFor[instId]
-        const outPieces = []
         for (let pi = 0; pi < defs.length; pi++) {
           if (state.cancelled) throw new Error('cancelado')
           const pd = defs[pi]
@@ -2013,6 +2053,7 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
           outPieces.push({ file: piece, start: Math.round(pd.start) })
           step++
         }
+        }
 
         // Monta a faixa completa (pedaços no lugar certo, silêncio no resto)
         onProgress({ id, stage: 'converting', instrument: instId, label: spec.label, percent: Math.round((step / totalSteps) * 100) })
@@ -2020,6 +2061,11 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         for (let pi = 0; pi < defs.length; pi++) {
           rmSync(join(workRoot, `${instId}_p${pi}.wav`), { force: true })
         }
+        // O workRoot não é limpo de propósito (pedaço pronto é reaproveitado se
+        // a extração for interrompida), mas o arquivo da nuvem já virou FLAC —
+        // são 87MB por instrumento que não servem mais pra nada
+        rmSync(join(workRoot, `${instId}_nuvem.wav`), { force: true })
+        rmSync(join(workRoot, `envio_${spec.file}.flac`), { force: true })
 
         // 3. Atualiza a sessão: nova faixa entra antes de "outros"
         // Mede o que o especialista realmente encontrou — faixa quase-muda
