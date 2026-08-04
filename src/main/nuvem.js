@@ -18,10 +18,19 @@ import { pipeline } from 'stream/promises'
 const API = 'https://api.replicate.com/v1'
 const MODELO = 'ryan5453/demucs'
 
-// Quanto tempo esperar por uma predição antes de desistir. Separação de música
-// longa numa fila cheia pode passar de 2 minutos; além disso é sintoma de
-// problema, não de fila.
-const LIMITE_MS = 8 * 60 * 1000
+// Quanto esperar antes de desistir — em DUAS fases, porque são esperas de
+// natureza diferente:
+//
+// "starting" é o Replicate puxando a imagem pra uma máquina. Depois que eu
+// republico o modelo, o PRIMEIRO carregamento da imagem nova (CUDA, gigabytes)
+// pode passar tranquilamente de 8 minutos — e foi exatamente assim que um
+// limite único de 8 min cancelou uma extração que estava quase pronta pra
+// começar. Carregamento não é sintoma de problema, é fila: espera larga.
+//
+// "processing" é o modelo trabalhando de verdade. Aí sim demora demais É
+// sintoma: nenhuma extração nossa passa de ~3 min de trabalho real.
+const LIMITE_STARTING_MS = 25 * 60 * 1000
+const LIMITE_PROCESSING_MS = 10 * 60 * 1000
 
 const cab = (chave) => ({ Authorization: `Bearer ${chave}` })
 
@@ -82,9 +91,14 @@ async function rodar(chave, versao, input, state, onTick) {
       fetch(`${API}/predictions/${p.id}/cancel`, { method: 'POST', headers: cab(chave) }).catch(() => {})
       throw new Error('cancelado')
     }
-    if (Date.now() - t0 > LIMITE_MS) {
+    const trabalhando = p.status === 'processing' || p.started_at
+    const limite = trabalhando ? LIMITE_PROCESSING_MS : LIMITE_STARTING_MS
+    const desde = trabalhando && p.started_at ? Date.parse(p.started_at) : t0
+    if (Date.now() - desde > limite) {
       fetch(`${API}/predictions/${p.id}/cancel`, { method: 'POST', headers: cab(chave) }).catch(() => {})
-      throw new Error('a nuvem demorou demais')
+      throw new Error(trabalhando
+        ? 'a nuvem travou no meio do trabalho'
+        : 'a fila da nuvem demorou demais (mais de 25 min só pra começar)')
     }
     await new Promise((s) => setTimeout(s, 3000))
     const rr = await fetch(`${API}/predictions/${p.id}`, { headers: cab(chave) })
