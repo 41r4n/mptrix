@@ -1570,9 +1570,38 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
       const sampleWav = join(work, 'amostra.wav')
       await run(ffmpegPath, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', sampleWav], state)
 
-      // 3. Separação base SÓ das amostras (~2 min)
+      // 3. Separação base SÓ das amostras (~2 min no processador)
       onProgress({ id, stage: 'separating', percent: 0 })
-      await run(
+
+      // Na nuvem são segundos. Aqui, ao contrário da extração de instrumento,
+      // a queda pro local É aceitável: são 2 minutos limitados, não 47, e esta
+      // é a PRIMEIRA tela — travar aqui deixaria a pessoa sem nem saber o que
+      // tem na música dela. Custo limitado vale mais que bloqueio total.
+      let stemDoPlano = null
+      if (usarNuvem()) {
+        try {
+          const { separarNaNuvem } = await import('./nuvem.js')
+          mkdirSync(join(work, 'sep'), { recursive: true })
+          const rn = await separarNaNuvem({
+            chave: lerChaveNuvem(),
+            model: 'htdemucs',
+            srcWav: sampleWav,
+            inputFile: sampleWav,
+            workDir: join(work, 'sep'),
+            ffmpegPath,
+            state,
+            run,
+            onProgress: (pr) => onProgress({ id, ...pr, nuvem: true })
+          })
+          somarGastoNuvem(rn.segundos)
+          stemDoPlano = rn.rawPaths
+        } catch (err) {
+          if (state.cancelled) throw err
+          onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Farejando aqui mesmo (uns 2 minutos).` })
+        }
+      }
+
+      if (!stemDoPlano) await run(
         PYTHON_PATH,
         ['-m', 'demucs', '-n', 'htdemucs', '-d', 'cpu', '--segment', '6', '-o', join(work, 'sep'), sampleWav],
         state,
@@ -1590,10 +1619,11 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
       //    que NÃO existe nessa música (o catálogo só promete o que tem)
       onProgress({ id, stage: 'scouting', percent: 92 })
       const sepDir = join(work, 'sep', 'htdemucs', 'amostra')
+      const faixaDo = (stem) => stemDoPlano?.[stem] || join(sepDir, `${stem}.wav`)
       const baseInfo = {}
       for (const stem of ['vocals', 'drums', 'bass', 'other']) {
         let mean = -99
-        await run(ffmpegPath, ['-i', join(sepDir, `${stem}.wav`), '-af', 'volumedetect', '-f', 'null', '-'], state, (line) => {
+        await run(ffmpegPath, ['-i', faixaDo(stem), '-af', 'volumedetect', '-f', 'null', '-'], state, (line) => {
           const m = line.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
           if (m) mean = parseFloat(m[1])
         })
@@ -1602,7 +1632,7 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
 
       // 5. Olheiro escuta o "outros" das amostras
       onProgress({ id, stage: 'scouting', percent: 95 })
-      const scoutOut = await runScoutScript(join(sepDir, 'other.wav'), state)
+      const scoutOut = await runScoutScript(faixaDo('other'), state)
 
       // Converte posição na amostra -> posição real na música
       const toReal = (atSample) => {
