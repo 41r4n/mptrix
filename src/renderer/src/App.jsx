@@ -6,6 +6,7 @@ import HistoryList from './components/HistoryList.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
 import UpdateFooter from './components/UpdateFooter.jsx'
 import ShareApp from './components/ShareApp.jsx'
+import NuvemConfig from './components/NuvemConfig.jsx'
 import { UpdatesProvider } from './contexts/UpdatesContext.jsx'
 
 // Lupinha: controle de tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0 também
@@ -140,6 +141,8 @@ export default function App() {
           <button className="btn-secondary" onClick={pickFolder}>Mudar…</button>
         </div>
       </section>
+
+      <NuvemConfig />
 
       <section>
         <h2>O que você quer baixar?</h2>

@@ -6852,3 +6852,141 @@ body.studio-open .zoom-chip {
 .kw-gap {
   white-space: pre;
 }
+
+/* ------------------------------------------------------- NUVEM (config) ---
+   Recolhida por padrão: é ajuste avançado, não pode competir com o que a
+   pessoa veio fazer. Só a cabeça fica visível, e ela diz o estado sem clique. */
+.nuvem {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elev);
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.nuvem-cabeca {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.nuvem-cabeca:hover { background: rgba(255, 255, 255, 0.03); }
+
+.nuvem-titulo { font-size: 14px; font-weight: 600; }
+
+/* selo de estado: cor + halo carregam a informação, sem forma de botão */
+.nuvem-selo {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.nuvem-selo.on {
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(182, 255, 59, 0.5);
+}
+
+.nuvem-seta { margin-left: auto; color: var(--muted-2); font-size: 10px; }
+
+.nuvem-corpo {
+  padding: 4px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.nuvem-texto {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.nuvem-texto strong { color: var(--text-2); font-weight: 600; }
+.nuvem-texto.miudo { font-size: 11.5px; color: var(--muted-2); }
+.nuvem-texto.aviso { color: var(--warn); }
+
+.nuvem-chave { display: flex; gap: 8px; }
+
+.nuvem-campo {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-inset);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.nuvem-campo:focus {
+  outline: none;
+  border-color: rgba(182, 255, 59, 0.45);
+}
+
+.nuvem-campo:disabled { opacity: 0.45; }
+.nuvem-campo.curto { flex: 0 0 88px; text-align: right; }
+
+.nuvem-link {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.nuvem-link:hover { color: var(--accent); }
+
+.nuvem-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.nuvem-chave-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nuvem-chave-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b0c0f; /* texto sobre lima é SEMPRE escuro */
+}
+
+.nuvem-hud { justify-content: flex-start; padding: 2px 0; }
+.nuvem-hud .hud-cell:first-child { padding-left: 0; }
+
+.nuvem-teto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.nuvem-unidade { font-size: 11px; color: var(--muted-2); }
+
+.nuvem-recado { margin: 0; font-size: 12.5px; }
+.nuvem-recado.ok { color: var(--accent); }
+.nuvem-recado.erro { color: var(--warn); }

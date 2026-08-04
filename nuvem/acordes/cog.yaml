@@ -7,23 +7,39 @@
 # setima, diminuto e meio-diminuto, que e exatamente o que a cifra da Azul pede
 # e o que o madmom (so maior/menor) NAO daria.
 build:
-  gpu: true
-  cuda: "11.8"
-  python_version: "3.10"
+  # SEM GPU, de proposito. O BTC e um transformer pequeno; o trabalho pesado
+  # dele e a extracao de caracteristicas do audio, que roda em processador de
+  # qualquer jeito. Com CUDA a imagem passava de 15GB e o Replicate DESCARTOU a
+  # versao depois de aceita-la -- a predicao ficava esperando eternamente por
+  # uma versao que tinha deixado de existir. Sem CUDA a imagem cai pra ~2GB,
+  # sobe rapido, e ainda custa menos por segundo.
+  gpu: false
+  # Python 3.8 pra caber a librosa da epoca. Com a librosa 0.9 o BTC respondia
+  # "sem acorde" em 253 dos 260 segundos da musica: as features saiam com media
+  # -6,1 e desvio 3,1 onde o treino tinha -2,2 e 1,7. Testei normalizar pela
+  # propria musica e o resultado foi IDENTICO -- prova de que nao e escala, e a
+  # forma do espectro. A librosa mudou a normalizacao do CQT por frequencia
+  # depois de 2019, e isso nenhum ajuste global conserta: so a versao da epoca.
+  python_version: "3.8"
   system_packages:
     - "ffmpeg"
     - "libsndfile1"
     - "git"
   python_packages:
-    - "torch==2.0.1"
-    - "numpy==1.23.5"
-    - "librosa==0.9.2"
-    - "numba==0.56.4"
-    - "soundfile==0.12.1"
-    - "pyyaml==6.0"
-    - "pandas==1.5.3"
-    - "mir_eval==0.7"
-    - "pretty_midi==0.2.10"
+    # pilha coerente de 2019-2020; numba/llvmlite presos porque a librosa 0.7
+    # nao roda com os novos, e numpy preso porque numba 0.48 nao aceita 1.20+
+    - "numpy==1.19.5"
+    - "llvmlite==0.31.0"
+    - "numba==0.48.0"
+    - "librosa==0.7.2"
+    - "torch==1.8.1"
+    - "soundfile==0.10.3.post1"
+    - "pyyaml==5.4.1"
+    - "pandas==1.1.5"
+    - "mir_eval==0.6"
+    - "pretty_midi==0.2.9"
+    - "audioread==2.1.9"
+    - "resampy==0.2.2"
   run:
     # o codigo E os pesos vivem no mesmo repositorio (test/*.pt)
     - git clone --depth 1 https://github.com/jayg996/BTC-ISMIR19.git /btc

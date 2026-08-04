@@ -94,6 +94,13 @@ function attachContextMenu(window) {
   })
 }
 import {
+  getNuvem,
+  podeGuardarChave,
+  setChaveNuvem,
+  lerChaveNuvem,
+  setNuvemLigada,
+  setTetoNuvem,
+  zerarGastoNuvem,
   getSettings,
   setDownloadDir,
   getHistory,
@@ -345,6 +352,35 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('settings:setDownloadDir', (_e, dir) => setDownloadDir(dir))
+
+  // ------------------------------------------------------------- NUVEM ----
+  // A chave NUNCA volta pra interface — nem mascarada. A tela só sabe se
+  // existe uma chave guardada, não qual é.
+  ipcMain.handle('nuvem:estado', () => ({ ...getNuvem(), podeGuardar: podeGuardarChave() }))
+
+  ipcMain.handle('nuvem:testar', async (_e, chave) => {
+    const { testarChave } = await import('./nuvem.js')
+    // sem chave nova = testa a que já está guardada
+    return testarChave(chave || lerChaveNuvem())
+  })
+
+  ipcMain.handle('nuvem:salvarChave', async (_e, chave) => {
+    const { testarChave } = await import('./nuvem.js')
+    const teste = await testarChave(chave)
+    if (!teste.ok) return teste
+    const r = setChaveNuvem(chave)
+    if (!r.ok) return r
+    return { ok: true, conta: teste.conta, estado: getNuvem() }
+  })
+
+  ipcMain.handle('nuvem:apagarChave', () => {
+    setChaveNuvem(null)
+    return getNuvem()
+  })
+
+  ipcMain.handle('nuvem:ligar', (_e, v) => setNuvemLigada(v))
+  ipcMain.handle('nuvem:teto', (_e, centavos) => setTetoNuvem(centavos))
+  ipcMain.handle('nuvem:zerarGasto', () => zerarGastoNuvem())
 
   ipcMain.handle('history:get', () => getHistory())
 

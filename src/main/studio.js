@@ -1,5 +1,6 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
+import { usarNuvem, lerChaveNuvem, somarGastoNuvem } from './store.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -1192,7 +1193,40 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
 
       onProgress({ id, stage: 'separating', percent: 0 })
       const rawPaths = {}
-      if (model === 'quick') {
+
+      // NUVEM (opcional). Só entra se o usuário ligou, pôs a chave e o modelo
+      // é de separação de verdade. Qualquer tropeço cai na separação local:
+      // ninguém pode ficar sem a música porque a internet caiu ou o crédito
+      // acabou. Por isso o `catch` não propaga — ele avisa e segue.
+      let feitoNaNuvem = false
+      if (model !== 'quick' && usarNuvem()) {
+        try {
+          const { separarNaNuvem } = await import('./nuvem.js')
+          mkdirSync(workDir, { recursive: true })
+          onStatus({ id, state: 'running', nuvem: 'começando' })
+          const r = await separarNaNuvem({
+            chave: lerChaveNuvem(),
+            model,
+            srcWav,
+            inputFile,
+            workDir,
+            ffmpegPath,
+            state,
+            run,
+            onProgress: (p) => onProgress({ id, ...p, nuvem: true })
+          })
+          Object.assign(rawPaths, r.rawPaths)
+          somarGastoNuvem(r.segundos)
+          feitoNaNuvem = true
+        } catch (err) {
+          if (state.cancelled) throw err
+          onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Separando aqui mesmo.` })
+        }
+      }
+
+      if (feitoNaNuvem) {
+        // pula a separação local — as faixas já estão em rawPaths
+      } else if (model === 'quick') {
         // Edição rápida: sem separação — a música inteira vira uma faixa única
         rawPaths.song = srcWav
       } else if (model === 'htdemucs_6s') {

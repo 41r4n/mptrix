@@ -20,6 +20,18 @@ const api = {
     setDownloadDir: (dir) => ipcRenderer.invoke('settings:setDownloadDir', dir)
   },
 
+  // Separação na nuvem. Repare que não existe um "getChave": a chave entra e
+  // nunca mais sai pra cá — a interface só pergunta SE existe uma.
+  nuvem: {
+    estado: () => ipcRenderer.invoke('nuvem:estado'),
+    testar: (chave) => ipcRenderer.invoke('nuvem:testar', chave),
+    salvarChave: (chave) => ipcRenderer.invoke('nuvem:salvarChave', chave),
+    apagarChave: () => ipcRenderer.invoke('nuvem:apagarChave'),
+    ligar: (v) => ipcRenderer.invoke('nuvem:ligar', v),
+    teto: (centavos) => ipcRenderer.invoke('nuvem:teto', centavos),
+    zerarGasto: () => ipcRenderer.invoke('nuvem:zerarGasto')
+  },
+
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath),
