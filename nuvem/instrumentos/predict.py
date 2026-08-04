@@ -48,20 +48,22 @@ def baixar(url, destino):
 
 
 def com_lote(caminho_cfg, inst, lote=None):
-    """Reescreve o config trocando só o batch_size da inferência.
+    """Troca só o batch_size da inferência, por TEXTO.
 
-    O config publicado traz `batch_size: 1`, afinado pra placa pequena. Isso faz
-    o modelo processar UM pedaço de 10 segundos por vez: numa música de 4
-    minutos são ~52 passadas em fila, com a GPU ociosa entre elas. Em lote a
-    mesma conta cabe em poucas passadas.
+    O config publicado traz `batch_size: 1`, afinado pra placa pequena: o modelo
+    processa UM pedaço de 10 segundos por vez, e numa música de 4 minutos são
+    ~52 passadas em fila com a GPU ociosa entre elas.
 
-    Mexo só nesse número — nada de arquitetura, nada de qualidade. O resultado
-    é bit a bit o mesmo; muda quantos pedaços vão juntos.
+    NÃO uso leitor de YAML aqui, e isso é de propósito. Tentei com yaml.safe_load
+    e quebrou de verdade, em produção: os configs do catálogo guardam tipos do
+    Python (`!!python/tuple`) que o leitor seguro recusa, e a extração da gaita
+    morreu com "could not determine a constructor". Usar um leitor permissivo
+    resolveria o erro e criaria outro risco — reescrever o arquivo inteiro pode
+    mudar campo que eu nem sei que existe. Uma linha é o que precisa mudar,
+    então mudo uma linha e o resto do arquivo passa intacto.
     """
-    import yaml
-
     if lote is None:
-        lote = 8
+        lote = 4
         try:
             import torch
             if torch.cuda.is_available():
@@ -71,11 +73,28 @@ def com_lote(caminho_cfg, inst, lote=None):
             lote = 4
 
     with open(caminho_cfg, "r") as f:
-        dados = yaml.safe_load(f)
-    dados.setdefault("inference", {})["batch_size"] = int(lote)
+        linhas = f.readlines()
+
+    # só o batch_size que está DENTRO de "inference:" -- o de treino, se
+    # existir, não é da minha conta
+    dentro = False
+    mexeu = False
+    for i, linha in enumerate(linhas):
+        sem_recuo = linha.lstrip()
+        if not linha.startswith((" ", "	")) and sem_recuo.rstrip().endswith(":"):
+            dentro = sem_recuo.startswith("inference:")
+            continue
+        if dentro and sem_recuo.startswith("batch_size:"):
+            recuo = linha[: len(linha) - len(sem_recuo)]
+            linhas[i] = recuo + "batch_size: " + str(int(lote)) + "\n"
+            mexeu = True
+            break
+    if not mexeu:
+        return caminho_cfg  # sem esse campo, segue com o original
+
     saida = f"{CACHE}/{inst}_lote{lote}.yaml"
     with open(saida, "w") as f:
-        yaml.safe_dump(dados, f)
+        f.writelines(linhas)
     return saida
 
 
