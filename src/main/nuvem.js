@@ -254,7 +254,12 @@ export async function separarNaNuvem({ chave, model, srcWav, inputFile, workDir,
 // BS-RoFormer e o MESMO COMMIT do MSST que roda na máquina do usuário — a
 // única diferença é a GPU no lugar do processador. Medido: 47 minutos viram
 // menos de 2.
-const MODELO_INST = '41r4n/mptrix-instrumentos'
+// O "2" no nome nao e versao de codigo -- e implantacao nova no Replicate. A
+// original travou depois de um republish: toda predicao (de QUALQUER versao,
+// inclusive a que rodava de manha) ficava em "starting" pra sempre, enquanto
+// modelos publicos subiam em 9s. Implantacao zerada resolve; a antiga fica
+// como esta, morta, de testemunha.
+const MODELO_INST = '41r4n/mptrix-instrumentos2'
 
 export async function extrairInstrumentoNaNuvem({
   chave, instrumento, arquivo, destino, state, onProgress, ffmpegPath, run, workDir
