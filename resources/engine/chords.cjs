@@ -263,6 +263,7 @@ if (!ticks || ticks.length < 8) {
 const nBeats = ticks.length - 1
 const beatMeta = [] // {t, end, silent}
 const scoreMat = [] // [batida][template] = pontuação
+const beatChroma = [] // croma normalizada de cada batida, pra achar repetição
 for (let b = 0; b < nBeats; b++) {
   const t0 = ticks[b]
   const t1 = ticks[b + 1]
@@ -270,6 +271,7 @@ for (let b = 0; b < nBeats; b++) {
   if (!inBeat.length) {
     beatMeta.push({ t: t0, end: t1, silent: true })
     scoreMat.push(null)
+    beatChroma.push(null)
     continue
   }
   // Soma simples dos quadros da batida. TENTEI mediana numa janela de duas
@@ -299,12 +301,107 @@ for (let b = 0; b < nBeats; b++) {
   }
   beatMeta.push({ t: t0, end: t1, silent: false })
   scoreMat.push(row)
+  const norma = Math.hypot(...chroma) || 1
+  beatChroma.push(chroma.map((v) => v / norma))
+}
+
+// ---------- Passo 3c: VOTO ENTRE AS REPETIÇÕES ----------
+// Música popular repete: a Azul roda o mesmo ciclo de quatro acordes dezenas de
+// vezes. O detector tratava cada volta como se fosse a primeira, e respondia
+// diferente a cada uma — acertava Ab7 Gm7 C#o Dm7 no meio e errava os mesmos
+// dois na introdução, onde o arranjo ao vivo é mais esparso. Cada repetição é
+// uma testemunha do mesmo trecho: onde o áudio está sujo, as voltas limpas
+// emprestam evidência.
+//
+// A comparação é por CONTEXTO (a batida e as vizinhas), não pela batida
+// sozinha. Isso é o que impede a votação de confirmar o próprio erro: uma
+// batida em que a croma saiu errada acha, sozinha, outras batidas igualmente
+// erradas. Ancorada na progressão em volta, ela acha a MESMA passagem da
+// música — mesmo quando a croma dela está ruim.
+const CTX = 3              // batidas de cada lado no contexto
+const VIZINHOS = 6         // quantas repetições votam
+const FOLGA = 4                               // vizinhança imediata é o mesmo acorde, não repetição
+const PESO_REP = 0.5      // peso da média das repetições
+const MIN_PARECIDO = 0.82
+// Misturar repetições ACHATA a diferença entre os candidatos, e o Viterbi cobra
+// pedágio fixo pra trocar de acorde: achatado, ele troca de menos e funde
+// mudanças reais (93 acordes onde a música tem 122). Devolver ao trecho a
+// mesma amplitude que ele tinha antes mantém o pedágio calibrado — a votação
+// corrige QUEM ganha sem mexer em QUANTO ele ganha.
+
+if (nBeats > 40) {
+  // vetor de contexto: croma das batidas [b-CTX, b+CTX] emendadas
+  const ctxVec = []
+  for (let b = 0; b < nBeats; b++) {
+    if (!beatChroma[b]) { ctxVec.push(null); continue }
+    const v = []
+    let ok = true
+    for (let d = -CTX; d <= CTX; d++) {
+      const c = beatChroma[b + d]
+      if (!c) { ok = false; break }
+      v.push(...c)
+    }
+    ctxVec.push(ok ? v : null)
+  }
+
+  const original = scoreMat.map((r) => (r ? r.slice() : null))
+  let mexidas = 0
+  for (let b = 0; b < nBeats; b++) {
+    if (!ctxVec[b] || !scoreMat[b]) continue
+    // acha as batidas mais parecidas em outro ponto da música
+    const cand = []
+    for (let j = 0; j < nBeats; j++) {
+      if (Math.abs(j - b) < FOLGA || !ctxVec[j] || !original[j]) continue
+      let dot = 0
+      for (let i = 0; i < ctxVec[b].length; i++) dot += ctxVec[b][i] * ctxVec[j][i]
+      const sim = dot / (2 * CTX + 1) // vetores já normalizados por batida
+      if (sim >= MIN_PARECIDO) cand.push({ j, sim })
+    }
+    if (cand.length < 2) continue
+    cand.sort((x, y) => y.sim - x.sim)
+    const usar = cand.slice(0, VIZINHOS)
+
+    const media = new Array(TEMPLATES.length).fill(0)
+    let soma = 0
+    for (const { j, sim } of usar) {
+      const w = sim
+      for (let k = 0; k < media.length; k++) media[k] += w * original[j][k]
+      soma += w
+    }
+    const mistura = new Array(media.length)
+    for (let k = 0; k < media.length; k++) {
+      mistura[k] = (1 - PESO_REP) * original[b][k] + PESO_REP * (media[k] / soma)
+    }
+    {
+      const desvio = (v) => {
+        const m = v.reduce((s, x) => s + x, 0) / v.length
+        return Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / v.length) || 1e-9
+      }
+      const mediaDe = (v) => v.reduce((s, x) => s + x, 0) / v.length
+      const dAntes = desvio(original[b])
+      const dDepois = desvio(mistura)
+      const mDepois = mediaDe(mistura)
+      const ganho = dAntes / dDepois
+      for (let k = 0; k < mistura.length; k++) mistura[k] = mDepois + (mistura[k] - mDepois) * ganho
+    }
+    for (let k = 0; k < mistura.length; k++) scoreMat[b][k] = mistura[k]
+    mexidas++
+  }
+  if (process.env.MPTRIX_DEBUG) {
+    process.stderr.write(`repetição: ${mexidas}/${nBeats} batidas receberam voto de outras voltas\n`)
+  }
 }
 
 // ---------- Passo 3b: INÉRCIA MUSICAL (Viterbi) ----------
 // Trocar de acorde custa caro (0.22): a troca só acontece quando a evidência
 // sustenta — é o que separa harmonia real de tremeliques de uma batida
 const SWITCH = 0.32
+
+// TENTEI pedágio que varia com a "novidade harmônica": barato onde o áudio
+// mostra virada, caro onde a harmonia está sustentada, média intacta. A ideia
+// era recuperar os acordes de passagem sem afrouxar tudo. MEDIU PIOR: 52,5%
+// contra 56,5%. Curioso — acertou o NÚMERO de acordes na mosca (122, igual à
+// cifra) e errou ONDE pô-los. Achar o ponto de virada é mais difícil que supus.
 const K = TEMPLATES.length
 let prev = new Array(K).fill(0)
 const back = []

@@ -322,7 +322,9 @@ const NON_HARMONIC = new Set([
 // Sobe quando o detector muda. Cifra guardada com versão antiga se refaz
 // sozinha na primeira abertura — senão a pessoa continuaria vendo o resultado
 // velho sem saber, que é pior do que esperar.
-const CHORDS_V = 2
+// v3: votação entre repetições. Sobe a versão pra que quem já tem música
+// processada receba a cifra melhor sem reimportar nada.
+const CHORDS_V = 3
 
 export async function detectChords({ key, ffmpegPath, force = false }) {
   const dir = join(STEMS_DIR, key)
