@@ -2057,26 +2057,26 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
       }
 
 
-      for (const instId of wanted) {
-        const spec = SPECIALISTS[instId]
-
-        // Atualiza o material de trabalho: mix menos o que já foi reivindicado
-        await subtractInto(meta.sourceFile, mixWav)
-
-        const defs = pieceDefsFor[instId]
-        let outPieces = []
-
-        // NUVEM PRIMEIRO. Aqui está o grosso da espera: no processador cada
-        // instrumento custa ~47 minutos, e numa música com gaita, dobro e
-        // órgão isso vira 141 dos 166 minutos totais. Na GPU o mesmo trabalho
-        // leva menos de 2. Vem antes do `ensureSpecialist` de propósito: se vai
-        // rodar na nuvem, não faz sentido baixar 77MB de modelo pra cá.
-        let naNuvem = false
-        if (usarNuvem()) {
-          try {
-            const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
+      // TODOS DE UMA VEZ, na nuvem. Em fila cada instrumento espera o anterior
+      // terminar; sao passadas independentes numa GPU alugada e nao ha motivo
+      // nenhum pra isso. Uma musica com gaita, dobro e orgao termina no tempo
+      // de UM em vez de tres.
+      //
+      // O preco: a cadeia de reivindicacao nao vale aqui. Em fila, o segundo
+      // instrumento enxerga a musica JA sem o primeiro, e som nenhum e
+      // reivindicado duas vezes. Todos juntos, cada um olha o mesmo material.
+      // Na pratica isso so morde em faros parecidos (violino + cordas,
+      // violao + guitarra) -- e pra ESSE caso a tela ja avisa antes de marcar.
+      // Instrumentos diferentes de verdade nao disputam o mesmo som.
+      const prontosDaNuvem = {}
+      if (usarNuvem() && wanted.length) {
+        try {
+          const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
+          await subtractInto(meta.sourceFile, mixWav)
+          let terminados = 0
+          const feitos = await Promise.all(wanted.map(async (instId) => {
+            const spec = SPECIALISTS[instId]
             const alvo = join(workRoot, `${instId}_nuvem.wav`)
-            onProgress({ id, stage: 'extracting', instrument: instId, label: spec.label, nuvem: true, percent: Math.round((step / totalSteps) * 100) })
             const r = await extrairInstrumentoNaNuvem({
               chave: lerChaveNuvem(),
               instrumento: spec.file,
@@ -2086,33 +2086,43 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
               ffmpegPath,
               run,
               workDir: workRoot,
-              onProgress: (pct) => onProgress({
-                id, stage: 'extracting', instrument: instId, label: spec.label, nuvem: true,
-                percent: Math.round(((step + pct / 100) / totalSteps) * 100)
+              onProgress: () => onProgress({
+                id, stage: 'extracting', label: spec.label, instrument: instId, nuvem: true,
+                percent: Math.round((terminados / wanted.length) * 90)
               })
             })
+            terminados++
             somarGastoNuvem(r.segundos)
-            outPieces = [{ file: alvo, start: 0 }]
-            step += defs.length
-            naNuvem = true
-          } catch (err) {
-            if (state.cancelled) throw err
-            // NÃO cai pro processador escondido. Aprendi na pele: a nuvem
-            // falhou no órgão da Samurai, o app começou a extração local sem
-            // avisar direito, e uma tarefa de 47 MINUTOS travou a máquina do
-            // dono. "Plano B" que come o computador inteiro não é plano B —
-            // quem escolheu "Na nuvem" escolheu não esperar isso.
-            //
-            // Falhar aqui é reversível: a chave continua guardada, a música
-            // continua no lugar, e é um clique pra tentar de novo. Encher o
-            // processador por 47 minutos não é reversível: o computador para.
-            throw new Error(
-              `A nuvem não conseguiu extrair ${spec.label}: ${err.message}. ` +
-              'Nada foi perdido — dá pra tentar de novo. Se preferir fazer neste ' +
-              'computador mesmo, troque para "Neste computador" na Separação na nuvem ' +
-              `(leva uns ${Math.max(5, Math.ceil((duration / 60) * 9.7))} minutos por instrumento).`
-            )
-          }
+            return { instId, alvo }
+          }))
+          for (const f of feitos) prontosDaNuvem[f.instId] = f.alvo
+        } catch (err) {
+          if (state.cancelled) throw err
+          throw new Error(
+            `A nuvem nao conseguiu extrair: ${err.message}. Nada foi perdido — ` +
+            'da pra tentar de novo. Se preferir fazer neste computador, troque para ' +
+            `"Neste computador" na Separacao na nuvem (leva uns ${Math.max(5, Math.ceil((duration / 60) * 9.7))} minutos por instrumento).`
+          )
+        }
+      }
+
+      for (const instId of wanted) {
+        const spec = SPECIALISTS[instId]
+
+        // Atualiza o material de trabalho: mix menos o que já foi reivindicado.
+        // Quem ja veio da nuvem nao precisa: o audio dele esta pronto.
+        if (!prontosDaNuvem[instId]) await subtractInto(meta.sourceFile, mixWav)
+
+        const defs = pieceDefsFor[instId]
+        let outPieces = []
+
+        // A nuvem ja entregou este instrumento la em cima, com todos os
+        // outros ao mesmo tempo. Aqui so recebe o arquivo pronto.
+        let naNuvem = false
+        if (prontosDaNuvem[instId]) {
+          outPieces = [{ file: prontosDaNuvem[instId], start: 0 }]
+          step += defs.length
+          naNuvem = true
         }
 
         if (naNuvem) {
