@@ -1591,7 +1591,11 @@ export default function StudioView({ source, onClose }) {
   const redoTrack = async (stem) => {
     if (!session || extractJob) return
     const meta = STEM_META[stem] || { label: stem }
-    const min = Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
+    // com a nuvem ligada a conta é outra — prometer 47 min aqui faria a pessoa
+    // desistir de refazer uma faixa que na verdade custa ~2 min
+    const min = naNuvem
+      ? Math.max(2, Math.ceil((session.duration / 60) * NUVEM_ESP) + NUVEM_PARTIDA)
+      : Math.max(5, Math.ceil((session.duration / 60) * PROC_FACTOR))
     const ok = window.confirm(
       `Refazer a faixa de ${meta.label} do zero?\n\nEla será apagada (o som volta pra "Outros") e extraída de novo, sem aproveitar nada da rodada anterior (~${min} min).`
     )
