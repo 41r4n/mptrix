@@ -485,7 +485,18 @@ function createStemPlayer() {
         el.preservesPitch = true
         el.playbackRate = this.tempoRate
         el.onloadedmetadata = () => resolve()
-        el.onerror = () => reject(new Error(`Não consegui carregar a faixa "${stem}"`))
+        // A colheita reescreve arquivos com o estúdio aberto; uma carga pode
+        // pegar o arquivo no MEIO da reescrita. Antes isso matava a faixa em
+        // silêncio. Uma re-tentativa 900ms depois resolve o caso comum.
+        let retentou = false
+        el.onerror = () => {
+          if (!retentou) {
+            retentou = true
+            setTimeout(() => { el.src = urlFor(stem) + '&r=1'; el.load() }, 900)
+          } else {
+            reject(new Error(`Não consegui carregar a faixa "${stem}"`))
+          }
+        }
         el.src = urlFor(stem)
         this.els[stem] = el
       })))
@@ -714,8 +725,12 @@ export default function StudioView({ source, onClose }) {
     return playerRef.current
   }, [])
 
+  // O carimbo ?v= muda a cada carga. Sem ele, o "outros" reconstruído pela
+  // colheita era servido do CACHE com o conteúdo antigo — você isolava uma
+  // faixa e ouvia instrumento que já tinha saído dela. O protocolo stems://
+  // ignora a query, então só o cache enxerga a diferença.
   const stemUrl = useCallback((sessKey, variant, format) =>
-    (stem) => `stems://s/${sessKey}/${variant}/${stem}.${format}`, [])
+    (stem) => `stems://s/${sessKey}/${variant}/${stem}.${format}?v=${Date.now()}`, [])
 
   const pause = useCallback(() => {
     const p = playerRef.current
@@ -955,7 +970,20 @@ export default function StudioView({ source, onClose }) {
       p.applyGains({ ...m.volumes }, m.muted, m.solo)
       p.seek(pos)
       if (wasPlaying && aliveRef.current) await p.play(pos)
-    } catch {}
+    } catch {
+      // engolir a falha deixava o tocador meio-carregado e faixas mudas sem
+      // explicação; espera os arquivos assentarem e tenta UMA vez de novo
+      await new Promise((r) => setTimeout(r, 1500))
+      try {
+        await p.load(audibleStems(sess), stemUrl(sess.key, 'base', 'flac'), 0)
+        const m = mixerRef.current
+        p.applyGains({ ...m.volumes }, m.muted, m.solo)
+        p.seek(pos)
+        if (wasPlaying && aliveRef.current) await p.play(pos)
+      } catch (e2) {
+        setExportMsg(`⚠ Uma faixa não carregou (${e2.message}). Feche e abra a música de novo.`)
+      }
+    }
   }, [stemUrl])
 
   // Reconector: se um trabalho terminar "órfão" (a tela recarregou no meio e
