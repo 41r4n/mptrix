@@ -2380,6 +2380,11 @@ function escolherCandidatos(scout, meta) {
   for (const [secao, membros] of Object.entries(FAMILIAS)) {
     const sec = lista.find((d) => d.instrument === secao)
     if (sec) lista = lista.filter((d) => !membros.includes(d.instrument) || d.score > sec.score + 0.15)
+    // E se a seção JÁ FOI extraída, os solistas somem de vez: o conteúdo deles
+    // está DENTRO da faixa da seção. O que o faro ainda cheira depois é o eco
+    // do naipe que saiu — na prática, trombone "38%" logo após os Metais.
+    // Extrair isso seria pagar duas vezes pra colher resíduo.
+    if (ja.has(secao)) lista = lista.filter((d) => !membros.includes(d.instrument))
   }
   const inst = lista.sort((a, b) => b.score - a.score).slice(0, AUTO_POR_RODADA).map((d) => d.instrument)
   // guitarra/teclado entram pelos mesmos cortes que a tela de escolha usava
@@ -2411,7 +2416,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         procurados.push(...candidatos)
         onStatus({ id, state: 'running', auto: true, rodada, fase: 'separando', alvos: candidatos })
         const fim = await new Promise((res) => {
-          startExtractJob({
+          const h = startExtractJob({
             key,
             instruments: candidatos,
             ffmpegPath,
@@ -2421,6 +2426,9 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
               else onStatus?.({ ...st, auto: true, autoId: id })
             }
           })
+          // já existe extração rodando pra essa música: o handle gêmeo volta na
+          // hora e NUNCA emite status — sem isso o laço esperaria pra sempre
+          if (h?.twin) res({ state: 'twin' })
         })
         if (fim.state !== 'done') break // erro de verdade: não insiste às cegas
       }
