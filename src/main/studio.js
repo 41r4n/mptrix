@@ -1841,16 +1841,21 @@ async function rebuildOther(dir, ffmpegPath, state) {
   if (!extracted.length) return
   const orig = join(dir, 'base', 'other_orig.flac')
   if (!existsSync(orig)) copyFileSync(join(dir, 'base', 'other.flac'), orig)
-  const args = ['-y', '-loglevel', 'error', '-i', orig]
-  const inverts = []
-  extracted.forEach((inst, i) => {
-    args.push('-i', join(dir, 'base', `${inst}.flac`))
-    inverts.push(`[${i + 1}:a]volume=-1[i${i}]`)
-  })
-  const mixIn = ['[0:a]', ...extracted.map((_, i) => `[i${i}]`)].join('')
-  args.push('-filter_complex', `${inverts.join(';')};${mixIn}amix=inputs=${extracted.length + 1}:normalize=0[a]`,
-    '-map', '[a]', '-compression_level', '5', join(dir, 'base', 'other.flac'))
-  await run(ffmpegPath, args, state)
+  // CANCELADOR MEDIDO, não subtração cega. A gaita foi extraída do MIX
+  // inteiro, mas o "outros" só continha PARTE dela (o resto o separador de voz
+  // tinha levado). Subtrair 1,0x de quem só tem 0,5x INSERE o instrumento
+  // invertido — e invertido soa igualzinho. Era por isso que a gaita
+  // continuava "limpinha" dentro do Outros. O cancelador mede quanto de cada
+  // faixa extraída existe DENTRO do outros, janela a janela, e subtrai só isso.
+  const tmp = join(dir, 'base', 'other_limpo_tmp.flac')
+  await run(
+    process.execPath,
+    [limpaVazamentoPath(), ffmpegPath, orig, tmp, ...extracted.map((inst) => join(dir, 'base', `${inst}.flac`))],
+    state, null,
+    { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
+  )
+  rmSync(join(dir, 'base', 'other.flac'), { force: true })
+  renameSync(tmp, join(dir, 'base', 'other.flac'))
   const m2 = readMeta(dir)
   m2.otherCleanFor = extracted.slice().sort().join(',')
   writeMeta(dir, m2)
