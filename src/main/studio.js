@@ -1863,6 +1863,14 @@ async function rebuildOther(dir, ffmpegPath, state) {
 
 // FISCAL DE ABERTURA: se o app caiu antes do desconto (queda de energia no meio
 // de uma fila), a sessão abre inconsistente — aqui ela se conserta sozinha.
+// Versão da limpeza de vazamento. Subiu pra 1 quando a subtração cega virou
+// cancelador medido: sessão marcada com menos que isso foi construída com a
+// matemática velha (que INSERIA instrumento invertido no "outros" e deixava a
+// voz suja) e se conserta sozinha na abertura — os _orig guardados garantem
+// que refazer nunca degrada. É o mesmo contrato das versões de letra e cifra:
+// melhoria de motor alcança TODA música já processada, sem reimportar nada.
+const LIMPEZA_V = 1
+
 export async function repairSession({ key, ffmpegPath }) {
   const dir = join(STEMS_DIR, key)
   const meta = readMeta(dir)
@@ -1870,8 +1878,13 @@ export async function repairSession({ key, ffmpegPath }) {
   const want = meta.extracted
     .filter((i) => existsSync(join(dir, 'base', `${i}.flac`)))
     .sort().join(',')
-  if (!want || meta.otherCleanFor === want) return false
+  const desatualizada = (meta.limpezaV || 0) < LIMPEZA_V
+  if (!want || (meta.otherCleanFor === want && !desatualizada)) return false
   await rebuildOther(dir, ffmpegPath, {})
+  await cleanVocalsBleed(dir, ffmpegPath, {})
+  const m2 = readMeta(dir)
+  m2.limpezaV = LIMPEZA_V
+  writeMeta(dir, m2)
   return true
 }
 
@@ -2330,6 +2343,11 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
       // extraída; onde α dá zero, a voz passa intocada. Sempre a partir do
       // original guardado, então rodar de novo nunca degrada.
       await cleanVocalsBleed(dir, ffmpegPath, state)
+      {
+        const mLv = readMeta(dir)
+        mLv.limpezaV = LIMPEZA_V
+        writeMeta(dir, mLv)
+      }
 
       rmSync(workRoot, { recursive: true, force: true })
       touchSession(dir)
