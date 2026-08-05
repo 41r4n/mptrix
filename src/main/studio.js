@@ -60,6 +60,11 @@ function analyzeScriptPath() {
   return join(__dirname, '../../resources/engine/analyze.cjs')
 }
 
+function limpaVazamentoPath() {
+  if (app.isPackaged) return join(process.resourcesPath, 'engine', 'limpa_vazamento.cjs')
+  return join(__dirname, '../../resources/engine/limpa_vazamento.cjs')
+}
+
 function chordsScriptPath() {
   if (app.isPackaged) {
     return join(process.resourcesPath, 'engine', 'chords.cjs')
@@ -2313,6 +2318,14 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
       // 4. Fechamento: garante o "outros" limpo (cobre também guitarra/piano)
       await rebuildOther(dir, ffmpegPath, state)
 
+      // E a VOZ também é vítima de reivindicação: o separador de voz puxa pra
+      // dentro dela o que soa parecido — gaita entra com correlação de até
+      // 0,99 (medido na Samurai; é o instrumento mais "voz" que existe). O
+      // cancelador subtrai de vocals só a fração medida de cada faixa
+      // extraída; onde α dá zero, a voz passa intocada. Sempre a partir do
+      // original guardado, então rodar de novo nunca degrada.
+      await cleanVocalsBleed(dir, ffmpegPath, state)
+
       rmSync(workRoot, { recursive: true, force: true })
       touchSession(dir)
       onStatus({
@@ -2442,6 +2455,30 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
     }
   })()
   return { id }
+}
+
+async function cleanVocalsBleed(dir, ffmpegPath, state) {
+  const meta = readMeta(dir)
+  const voc = join(dir, 'base', 'vocals.flac')
+  if (!meta || !existsSync(voc)) return
+  const claims = (meta.extracted || [])
+    .map((s2) => join(dir, 'base', `${s2}.flac`))
+    .filter((p2) => existsSync(p2))
+  const orig = join(dir, 'base', 'vocals_orig.flac')
+  if (!claims.length) {
+    if (existsSync(orig)) copyFileSync(orig, voc)
+    return
+  }
+  if (!existsSync(orig)) copyFileSync(voc, orig)
+  const tmp = join(dir, 'base', 'vocals_limpa_tmp.flac')
+  await run(
+    process.execPath,
+    [limpaVazamentoPath(), ffmpegPath, orig, tmp, ...claims],
+    state, null,
+    { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
+  )
+  rmSync(voc, { force: true })
+  renameSync(tmp, voc)
 }
 
 // ---------- Polir faixa: remove vazamento/ruído de um stem já separado ----------
