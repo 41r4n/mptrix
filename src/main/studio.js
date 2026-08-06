@@ -11,6 +11,7 @@ import {
   statSync,
   readFileSync,
   writeFileSync,
+  appendFileSync,
   rmSync,
   readdirSync,
   renameSync,
@@ -160,6 +161,15 @@ function metaPathOf(dir) {
  * `maxRetries` é do próprio Node e existe exatamente pra isso. E o try/catch
  * fecha a regra: lixo que não sai não é motivo pra perder trabalho pronto.
  */
+// Diário da dissecação: registro do que o motor DECIDIU, não só do que fez.
+// Sem isso, entender por que um trecho não virou confissão vira adivinhação —
+// e adivinhar em cima do dinheiro do usuário não é aceitável.
+function diario(dir, linha) {
+  try {
+    appendFileSync(join(dir, 'dissec.log'), `${new Date().toISOString()} ${linha}\n`)
+  } catch { /* diário não pode derrubar trabalho */ }
+}
+
 function apagarPasta(p) {
   try {
     rmSync(p, { recursive: true, force: true, maxRetries: 12, retryDelay: 250 })
@@ -3219,6 +3229,8 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         // medição, não dá pra afirmar que não sobrou som sem dono.
         if (!mediuEnergia) truncouAlgoNaMedicao = true
 
+        diario(dir, `rodada ${rodada}: cheiros=${cheiros.length} spots=${spots.length} (semCheiro=${semCheiro}) orfaos=${orfaos} mediuEnergia=${mediuEnergia}`)
+        for (const s of spots) diario(dir, `  spot at=${s.at} semCheiro=${!!s.semCheiro} suspeitos=${s.suspeitos.length}`)
         // Só é fim quando não cheira NEM sobra som concentrado sem dono
         if (!spots.length && !truncouAlgoNaMedicao) { convergiu = true; break }
         if (!spots.length) break
@@ -3245,6 +3257,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             })
           })
           progresso.procurados.push(...r.sondados)
+          diario(dir, `  interroguei ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} dono=${r.dono || '-'} truncado=${r.truncado} vazio=${!!r.vazio} semTeto=${!!r.semTeto}`)
           if (r.truncado) truncouAlgo = true
           // sem dinheiro nem pra UMA pergunta: parar aqui e dizer por quê. Sem
           // isso a dissecação seguia varrendo trechos e rodadas em falso,
