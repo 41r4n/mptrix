@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
-import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem } from './store.js'
+import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos } from './store.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -2451,7 +2451,15 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
 // horário — som que existe nunca mais é engolido em silêncio.
 //
 // Só roda com a nuvem ligada: no processador cada sonda custaria 47 minutos.
-const DISSEC_V = 2 // versão do motor: subiu = música antiga refaz a dissecação ao abrir
+// Versão do motor: subiu = música antiga refaz a dissecação ao abrir.
+// 3: sintetizador virou primo de cordas/metais/madeiras (o pad disfarçado da
+//    Samurai) e as sondas de um trecho passaram a ser feitas em paralelo.
+const DISSEC_V = 3
+// A partir desta versão o registro de sondas tem a forma {inst, ini, fim}. Ele
+// SOBREVIVE à subida do motor de propósito: "já perguntei pro violino às 1:22"
+// continua verdade, e o parentesco novo (sintetizador) entra na fila sem
+// repagar as perguntas velhas.
+const SONDAS_V = 2
 
 // Seção engole os solistas: Metais extraído deixa eco de trombone/trompete no
 // faro — interrogar isso seria pagar pra colher resíduo. Regra conquistada a suor.
@@ -2467,7 +2475,14 @@ const FAMILIAS = {
 const TIMBRES = [
   ['organ', 'keys', 'synth', 'accordion', 'flute', 'harmonica', 'digital-piano'],
   ['brass', 'trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
-  ['strings', 'violin', 'viola', 'cello', 'double-bass'],
+  // synth/keys entram nas CORDAS por MEDIÇÃO, não por teoria: na Samurai a
+  // dissecação confessou som forte (-26,7 dB) em 1:22 e 3:32 que o faro chamou
+  // de "violino"; os cinco especialistas de corda vieram vazios e o de
+  // SINTETIZADOR arrancou o grosso (sobrou -35,8 dB). Pad de sintetizador
+  // imitando cordas é o disfarce mais comum que existe em música gravada.
+  // Só aqui — espalhar o sintetizador por todos os grupos faria um cheiro dele
+  // virar região de 26 candidatos, e aí a conta de centavos explode por teoria.
+  ['strings', 'violin', 'viola', 'cello', 'double-bass', 'synth', 'keys'],
   ['clarinet', 'oboe', 'bassoon', 'woodwind', 'flute'],
   ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'harp', 'harpsichord', 'sitar'],
   ['bells', 'glockenspiel', 'marimba', 'wind-chimes'],
@@ -2479,6 +2494,7 @@ const CHEIRO_MIN = 0.12      // lanterna, não juiz: acima disso o trecho merece
 const SPOTS_POR_RODADA = 4   // trechos interrogados por rodada, mais cheirosos primeiro
 const SONDAS_POR_SPOT = 6    // teto de centavos por interrogatório
 const DISSEC_RODADAS = 3     // tirar um som levanta o véu do de baixo
+const SEGUNDOS_POR_SONDA = 45 // medido: sonda de clipe de 40s custa 27–46s de GPU
 
 // Decodifica pra mono f32 (mesma régua do limpa_vazamento) pra pesar e comparar
 async function decodificarMono(ffmpegPath, audio, workDir, tag, state) {
@@ -2504,6 +2520,25 @@ function pesarCanal(canal) {
     if (db > pico) pico = db
   }
   return { vivos, pico }
+}
+
+// O especialista TIROU alguma coisa do clipe, ou só devolveu o que recebeu?
+// Passagem direta soa como reivindicação perfeita — muito som, correlação alta —
+// mas não separou nada: seria uma faixa idêntica ao "outros". A prova é o
+// resíduo: clipe menos o que ele levou. Se sobrou quase silêncio, ele levou
+// tudo, e "tudo" não é instrumento nenhum.
+function sobrouAlgo(clipe, extraido, margemDb = 20) {
+  const n = Math.min(clipe.length, extraido.length)
+  let ec = 0
+  let er = 0
+  for (let i = 0; i < n; i++) {
+    ec += clipe[i] * clipe[i]
+    const d = clipe[i] - extraido[i]
+    er += d * d
+  }
+  if (ec <= 0) return false
+  const db = 10 * Math.log10((er + 1e-20) / ec)
+  return db > -margemDb
 }
 
 // Guarda anti-eco: fração das janelas (onde a sonda tem som) que são iguais a
@@ -2572,7 +2607,18 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // usuário por abertura (um deles simultâneo ao olheiro da tela, no mesmo
   // arquivo) — carga local pesada pra decidir só quem pergunta primeiro.
   const nota = (i) => notas?.[i] || 0
-  const fila = candidatos.sort((a, b) => nota(b) - nota(a)).slice(0, SONDAS_POR_SPOT)
+  const ordenados = candidatos.sort((a, b) => nota(b) - nota(a))
+  // O lote inteiro sai de uma vez, então o teto de gasto precisa ser conferido
+  // ANTES pro lote INTEIRO — em série ele era reavaliado a cada sonda e parava
+  // na hora exata. Sem isso, um lote de 6 podia passar do teto por 5 sondas.
+  const nv = getNuvem()
+  if (nv.tetoCentavos > 0) {
+    const sobra = nv.tetoCentavos - estimativaCentavos(nv.segundosGastos)
+    const cabem = Math.floor(sobra / estimativaCentavos(SEGUNDOS_POR_SONDA))
+    if (cabem <= 0) return { dono: null, sondados: [], palpite: null, truncado: true }
+    ordenados.length = Math.min(ordenados.length, cabem)
+  }
+  const fila = ordenados.slice(0, SONDAS_POR_SPOT)
   const palpite = fila[0] || suspeitos[0] || null
 
   // Faixas existentes no mesmo trecho, pro teste do eco. Preguiçoso de
@@ -2600,9 +2646,19 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // confessar "não tem dono" — a pergunta nem chegou a ser feita até o fim.
   let truncado = fila.length < candidatos.length
   try {
-    for (const inst of fila) {
-      if (state.cancelled || !usarNuvem()) { truncado = true; break }
-      aoSondar?.(inst)
+    if (state.cancelled || !usarNuvem()) return { dono: null, sondados, palpite, truncado: true }
+    aoSondar?.(fila)
+
+    // TODAS AS PERGUNTAS DE UMA VEZ. A regra do dono — "não faz tudo junto,
+    // compromete a qualidade" — vale pra EXTRAÇÃO, onde cada instrumento
+    // precisa ser descontado antes do próximo. Aqui é o contrário: as sondas
+    // leem o MESMO clipe congelado e nenhuma depende da outra, então perguntar
+    // em paralelo não muda resposta nenhuma. Em série eram ~5 minutos por
+    // trecho; juntas, ~45 segundos, pelos mesmos centavos.
+    const respostas = await Promise.all(fila.map(async (inst) => {
+      // cada sonda com seu próprio slot de subprocesso: `state.child` é um só, e
+      // com 6 ffmpeg ao mesmo tempo o cancelar só alcançava o último
+      const est = { get cancelled() { return state.cancelled }, child: null }
       const saida = join(workRoot, `sonda_${inst}.flac`)
       try {
         const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
@@ -2611,7 +2667,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
           instrumento: SPECIALISTS[inst].file,
           arquivo: clipe,
           destino: saida,
-          state,
+          state: est,
           ffmpegPath,
           run,
           workDir: workRoot
@@ -2620,29 +2676,59 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
       } catch (e) {
         // GPU queimada por uma sonda que morreu no meio ainda é dinheiro gasto
         if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos)
-        // Sonda que não completou NÃO vira veto: o registro só nasce depois de
-        // a nuvem responder. Antes eu anotava a sonda ANTES de fazê-la, e um
-        // cancelamento no meio gravava "já perguntei" pra uma pergunta que
-        // ninguém ouviu — o veto injusto voltando pela porta do cancelamento.
-        if (state.cancelled) { truncado = true; throw e }
-        truncado = true
-        continue // falhou; esse par (instrumento, trecho) volta pra fila depois
+        // Sonda que não completou NÃO vira veto: quem não foi ouvido continua
+        // na fila. Uma falhar não derruba as outras — elas já estão em voo.
+        return { inst, falhou: true }
       }
-      const canal = await decodificarMono(ffmpegPath, saida, workRoot, `p_${inst}`, state)
-      rmSync(saida, { force: true })
-      const { vivos, pico } = pesarCanal(canal)
-      // registro do veto só DEPOIS de pesar: se o arquivo não abrir, ninguém
-      // ouviu resposta nenhuma e a pergunta continua de pé
-      sondados.push(inst)
-      sondas.push({ inst, ini: trecho.ini, fim: trecho.fim })
-      if (vivos < 3 || pico <= -35) continue // balança: veio vazio
-      if ((await carregarVizinhos()).some((v) => fracaoEco(canal, v) > 0.4)) continue // eco de faixa existente
-      return { dono: inst, sondados, palpite, truncado: false }
+      try {
+        const canal = await decodificarMono(ffmpegPath, saida, workRoot, `p_${inst}`, est)
+        const { vivos, pico } = pesarCanal(canal)
+        return { inst, canal, vivos, pico }
+      } catch {
+        return { inst, falhou: true } // arquivo não abriu: ninguém ouviu resposta
+      } finally {
+        try { rmSync(saida, { force: true }) } catch { /* some no fim junto com a bancada */ }
+      }
+    }))
+
+    // A balança separa quem trouxe som de quem veio vazio
+    const comSom = respostas.filter((r) => !r.falhou && r.vivos >= 3 && r.pico > -35)
+
+    // VETO É SÓ PRA QUEM DISSE "NÃO TEM NADA AQUI". Quem reivindicou respondeu
+    // o contrário — e pode perder a vez pra um reivindicante mais forte nesta
+    // rodada. Marcá-lo como respondido apagaria o cheiro dele nas rodadas
+    // seguintes: som provado sumindo sem virar faixa nem confissão.
+    for (const r of respostas) {
+      if (r.falhou) { truncado = true; continue }
+      sondados.push(r.inst)
+      if (!comSom.includes(r)) sondas.push({ inst: r.inst, ini: trecho.ini, fim: trecho.fim })
     }
+    // registro ANTES de desistir por cancelamento: sonda paga é resposta paga,
+    // e o lote agora é 6x maior do que era em série
+    if (state.cancelled) throw new Error('cancelado')
+    if (!comSom.length) return { dono: null, sondados, palpite, truncado }
+
+    // Eco de faixa que já existe não é descoberta, é a mesma coisa com outro nome
+    const viz = await carregarVizinhos()
+    let validos = comSom.filter((r) => !viz.some((v) => fracaoEco(r.canal, v) > 0.4))
+
+    // GUARDA ANTI-PASSAGEM: modelo que devolve o clipe quase inteiro não separou
+    // nada — só passou o som adiante. Isso venceria qualquer disputa por
+    // "quantidade de som", e o teste de eco não pega porque ele compara com as
+    // faixas existentes e o "outros" (de onde o clipe saiu) fica de fora de
+    // propósito. Aqui a pergunta é outra: o que ele TIROU do clipe?
+    const doClipe = await decodificarMono(ffmpegPath, clipe, workRoot, 'clipe', state)
+    validos = validos.filter((r) => sobrouAlgo(doClipe, r.canal))
+    if (!validos.length) return { dono: null, sondados, palpite, truncado }
+
+    // Entre os que reivindicaram, quem manda é a ORDEM DA LANTERNA — não o
+    // tamanho. Ordenar por "mais segundos de som" elegia sempre o modelo de
+    // seção (que por construção cobre mais tempo que qualquer solista dela).
+    validos.sort((a, b) => fila.indexOf(a.inst) - fila.indexOf(b.inst))
+    return { dono: validos[0].inst, sondados, palpite, truncado: false }
   } finally {
     try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
   }
-  return { dono: null, sondados, palpite, truncado }
 }
 
 // Vacina anti-gêmeo da dissecação — a mesma doutrina do activeExtracts, mas
@@ -2695,7 +2781,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
     // Carregado ANTES do try: um erro logo no começo não pode fazer o gravar()
     // do catch apagar sondas já pagas em tentativas anteriores.
     const metaInicial = readMeta(dir)
-    const anterior = (metaInicial?.autoHarvest?.v || 0) >= DISSEC_V ? metaInicial.autoHarvest : null
+    const anterior = (metaInicial?.autoHarvest?.v || 0) >= SONDAS_V ? metaInicial.autoHarvest : null
     const progresso = {
       procurados: [...(anterior?.procurados || [])],
       semDono: [...(anterior?.semDono || [])],
@@ -2886,9 +2972,9 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           const r = await interrogarTrecho({
             dir, workRoot, ffmpegPath, trecho, at: spot.at, dur,
             suspeitos: spot.suspeitos, sondas, jaDonos: donos, notas, state,
-            aoSondar: (i) => onStatus({
+            aoSondar: (lista) => onStatus({
               id, state: 'running', auto: true, rodada, fase: 'interrogando', trecho,
-              sondando: SPECIALISTS[i]?.label || i
+              sondando: lista.map((i) => SPECIALISTS[i]?.label || i).join(', ')
             })
           })
           progresso.procurados.push(...r.sondados)

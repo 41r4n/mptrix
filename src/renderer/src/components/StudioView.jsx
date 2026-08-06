@@ -2909,7 +2909,7 @@ export default function StudioView({ source, onClose }) {
                   {autoJob.fase === 'pesando'
                     ? `Dissecando a música… procurando o que ainda tem som${autoJob.rodada > 1 ? ` (${autoJob.rodada}ª camada)` : ''}`
                     : autoJob.fase === 'interrogando'
-                      ? `Interrogando um som em ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)}${autoJob.sondando ? ` — será ${autoJob.sondando}?` : '…'}`
+                      ? `Interrogando um som em ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)}${autoJob.sondando ? ` — perguntando pra ${autoJob.sondando}` : '…'}`
                       : autoJob.fase === 'farejando'
                         ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
                         : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
