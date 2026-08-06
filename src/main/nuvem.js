@@ -123,20 +123,30 @@ async function rodar(chave, versao, input, state, onTick) {
 
   const t0 = Date.now()
   let p = criada
+  // GPU já queimada antes de a predição morrer também é dinheiro. Sem isso, um
+  // cancelamento ou um travamento gastava sem o contador (e o teto) andar.
+  const segundosQueimados = () => {
+    if (!p.started_at) return 0
+    return Math.max(0, Math.round((Date.now() - Date.parse(p.started_at)) / 1000))
+  }
   while (p.status === 'starting' || p.status === 'processing') {
     if (state?.cancelled) {
       // não deixa rodando (e cobrando) uma separação que ninguém mais quer
       fetch(`${API}/predictions/${p.id}/cancel`, { method: 'POST', headers: cab(chave) }).catch(() => {})
-      throw new Error('cancelado')
+      const e = new Error('cancelado')
+      e.segundosGastos = segundosQueimados()
+      throw e
     }
     const trabalhando = p.status === 'processing' || p.started_at
     const limite = trabalhando ? LIMITE_PROCESSING_MS : LIMITE_STARTING_MS
     const desde = trabalhando && p.started_at ? Date.parse(p.started_at) : t0
     if (Date.now() - desde > limite) {
       fetch(`${API}/predictions/${p.id}/cancel`, { method: 'POST', headers: cab(chave) }).catch(() => {})
-      throw new Error(trabalhando
+      const e = new Error(trabalhando
         ? 'a nuvem travou no meio do trabalho'
         : 'a fila da nuvem demorou demais (mais de 25 min só pra começar)')
+      e.segundosGastos = segundosQueimados()
+      throw e
     }
     await new Promise((s) => setTimeout(s, 3000))
     try {
@@ -152,6 +162,7 @@ async function rodar(chave, versao, input, state, onTick) {
     // terminar em "403 Forbidden ...?expiry=". Marco pra quem chamou reenviar.
     const err = new Error(msg.includes('403') ? 'o link do áudio venceu antes de a nuvem começar' : msg)
     err.linkVenceu = /403|expiry/i.test(msg)
+    err.segundosGastos = p.metrics?.predict_time || segundosQueimados()
     throw err
   }
   return { saida: p.output, segundos: p.metrics?.predict_time || 0 }

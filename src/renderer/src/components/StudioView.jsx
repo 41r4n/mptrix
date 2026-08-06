@@ -702,6 +702,7 @@ export default function StudioView({ source, onClose }) {
   const memPrevPhaseRef = useRef('starting')
 
   const jobRef = useRef(null)
+  const autoJobRef = useRef(null) // dissecação em voo: cancelada ao fechar a música
   const playerRef = useRef(null)
   const rafRef = useRef(null)
   const aliveRef = useRef(true)
@@ -1007,15 +1008,49 @@ export default function StudioView({ source, onClose }) {
   useEffect(() => {
     const offS = window.mptrix.studio.onStatus((st) => {
       if (!st.auto) return
-      if (st.state === 'done' || st.state === 'error') {
+      if (st.state !== 'running') {
+        // Só o status da dissecação DESTA música mexe no painel: o "done" de uma
+        // música fechada antes chegava aqui, zerava o acompanhamento da atual
+        // (deixando-a sem quem a cancele) e dava recado de uma música na tela de
+        // outra. Sem dissecação nossa em voo, status final não é assunto nosso.
+        const meuId = st.autoId || st.id
+        if (!autoJobRef.current || (meuId && meuId !== autoJobRef.current)) return
         setAutoJob(null)
-        if (st.state === 'done' && st.procurados?.length) {
-          setScout(null) // refaz a lista (vem do cache, instantâneo)
-          setExportMsg(`✓ Colhi sozinho: testei ${st.procurados.length} instrumento(s). O que era real está nas pistas.`)
+        autoJobRef.current = null
+        // Adota SÓ a confissão do status final — é o que a tela precisa e não
+        // existe em nenhum outro lugar. Trocar a sessão inteira aqui mudaria a
+        // lista de faixas sem o tocador carregar as novas; quem faz isso direito
+        // é o reconector, que recarrega a música.
+        if (st.session?.key && st.session.autoHarvest) {
+          setSession((s) => (s && s.key === st.session.key ? { ...s, autoHarvest: st.session.autoHarvest } : s))
         }
-        if (st.state === 'error') setExportMsg(`⚠ Colheita parou: ${st.error}`)
+        if (st.state === 'done' && (st.procurados?.length || st.semDono?.length || st.parou)) {
+          setScout(null) // refaz a lista (vem do cache, instantâneo)
+          const confissao = st.semDono?.length
+            ? ` ⚠ Sobrou som sem dono em ${st.semDono.map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`).join(', ')} — ouvi algo aí, mas nenhum especialista reivindicou.`
+            : ''
+          const parou = st.parou === 'nuvem-indisponivel'
+            ? ' Parei porque a nuvem ficou indisponível (teto de gasto ou chave) — continuo de onde parei quando ela voltar.'
+            : st.parou ? ` Parei antes do fim (${st.parou}) — continuo na próxima abertura.` : ''
+          // só diz "dissequei" quando o motor realmente varreu tudo; senão a
+          // mensagem seria mentira e a próxima abertura continuaria o trabalho
+          const cabeca = st.completo
+            ? `✓ Dissequei a música inteira: interroguei ${st.procurados?.length || 0} suspeito(s). O que era real está nas pistas.`
+            : `Separei o que deu por enquanto (${st.procurados?.length || 0} suspeito(s) interrogados) — continuo na próxima abertura.`
+          setExportMsg(`${cabeca}${confissao}${parou}`)
+        }
+        if (st.state === 'error') setExportMsg(`⚠ Dissecação parou: ${st.error}`)
       } else if (st.state === 'running') {
-        setAutoJob((a) => ({ ...(a || {}), id: st.autoId || st.id, fase: st.fase || a?.fase, alvos: st.alvos || a?.alvos, rodada: st.rodada }))
+        // evento atrasado de OUTRA música não pode instalar um acompanhamento
+        // que ninguém consegue limpar depois
+        const meuId = st.autoId || st.id
+        if (autoJobRef.current && meuId && meuId !== autoJobRef.current) return
+        setAutoJob((a) => ({
+          ...(a || {}), id: meuId, fase: st.fase || a?.fase,
+          alvos: st.alvos || a?.alvos, rodada: st.rodada,
+          trecho: st.trecho || (st.fase === 'interrogando' ? a?.trecho : null),
+          sondando: st.sondando || null
+        }))
       }
     })
     const offP = window.mptrix.studio.onProgress((pr) => {
@@ -1482,10 +1517,14 @@ export default function StudioView({ source, onClose }) {
     return sel
   }
 
-  // Olheiro: depois que a sessão abre, procura instrumentos raros no "outros"
+  // Olheiro: depois que a sessão abre, procura instrumentos raros no "outros".
+  // Com a nuvem ligada NÃO roda: o cardápio que ele alimenta nem aparece (quem
+  // decide é a dissecação), e ele é uma rede neural pesada rodando aqui — duas
+  // vezes, já que a dissecação fareja o mesmo arquivo ao mesmo tempo.
   useEffect(() => {
     if (phase !== 'ready' || !session || scout !== null) return
     if (!session.stems.includes('other')) return
+    if (naNuvem) { setScout({ detections: [] }); return }
     setScout('loading')
     window.mptrix.studio.scout({ key: session.key }).then((res) => {
       if (!aliveRef.current) return
@@ -1644,6 +1683,13 @@ export default function StudioView({ source, onClose }) {
   // Refazer faixa: apaga a extraída (som volta pro "outros") e extrai do zero
   const redoTrack = async (stem) => {
     if (!session || extractJob) return
+    // Durante a dissecação o pedido seria adotado pela extração DELA (vacina
+    // anti-gêmeo) e o instrumento pedido nunca sairia — só que a faixa já teria
+    // sido apagada. Melhor não deixar começar do que apagar e não devolver.
+    if (autoJob) {
+      setExportMsg('⚠ O MPTRIX está dissecando a música agora. Espere terminar pra refazer uma faixa.')
+      return
+    }
     const meta = STEM_META[stem] || { label: stem }
     // com a nuvem ligada a conta é outra — prometer 47 min aqui faria a pessoa
     // desistir de refazer uma faixa que na verdade custa ~2 min
@@ -1716,7 +1762,14 @@ export default function StudioView({ source, onClose }) {
         const nv = await window.mptrix.nuvem?.estado().catch(() => null)
         if (nv?.ligada && nv?.temChave && aliveRef.current) {
           const r = await window.mptrix.studio.autoExtract({ key: sess.key })
-          if (r?.id) setAutoJob({ id: r.id, fase: 'farejando' })
+          // guardado no ref pra que fechar a música pare a dissecação (senão
+          // ela segue pagando sondas de uma música que ninguém está ouvindo).
+          // Se a tela morreu enquanto o pedido ia e voltava, cancela na hora —
+          // senão a dissecação ficaria viva sem ninguém pra desligá-la.
+          if (r?.id) {
+            if (!aliveRef.current) window.mptrix.studio.cancel(r.id)
+            else { autoJobRef.current = r.id; setAutoJob({ id: r.id, fase: 'pesando' }) }
+          }
         }
       } else if (choices?.length && aliveRef.current) {
         const r = await window.mptrix.studio.extract({ key: sess.key, instruments: choices })
@@ -1876,6 +1929,9 @@ export default function StudioView({ source, onClose }) {
       offProgress?.()
       offStatus?.()
       if (jobRef.current) window.mptrix.studio.cancel(jobRef.current)
+      // dissecação em voo morre com a música: sem isso ela segue interrogando
+      // (e pagando sondas) uma música que o usuário já fechou
+      if (autoJobRef.current) { window.mptrix.studio.cancel(autoJobRef.current); autoJobRef.current = null }
       playerRef.current?.dispose()
       playerRef.current = null
     }
@@ -2497,7 +2553,7 @@ export default function StudioView({ source, onClose }) {
                         >
                           <span className="solo-glyph">{isSolo ? '■' : '▶'}</span>
                         </button>
-                        {(session.extracted || []).includes(stem) && !extractJob && (
+                        {(session.extracted || []).includes(stem) && !extractJob && !autoJob && (
                           <button
                             className="rail-ghost"
                             onClick={() => redoTrack(stem)}
@@ -2758,6 +2814,17 @@ export default function StudioView({ source, onClose }) {
                 ))}
               </div>
             )}
+            {/* CONFISSÃO — fora do painel Extrair de propósito: prestar contas do
+                som que o sistema não conseguiu nomear é obrigação, não detalhe
+                escondido atrás de um painel que nasce fechado. Aparece também
+                com a nuvem desligada: o registro é da música, não da conexão. */}
+            {!autoJob && (session?.autoHarvest?.semDono?.length || 0) > 0 && (
+              <div className="studio-absent muted">
+                Som sem dono: {session.autoHarvest.semDono
+                  .map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
+                  .join(' · ')} — tem som aí que eu não consegui nomear.
+              </div>
+            )}
             {/* Painel Extrair: olheiro, lupa e arsenal moram aqui, ao lado da mesa */}
             {showExtract && (
             <aside className="chords-panel extract-panel">
@@ -2839,9 +2906,13 @@ export default function StudioView({ source, onClose }) {
               <div className="studio-scout studio-scout-loading">
                 <div className="studio-spinner small" />
                 <span className="muted">
-                  {autoJob.fase === 'farejando'
-                    ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
-                    : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
+                  {autoJob.fase === 'pesando'
+                    ? `Dissecando a música… procurando o que ainda tem som${autoJob.rodada > 1 ? ` (${autoJob.rodada}ª camada)` : ''}`
+                    : autoJob.fase === 'interrogando'
+                      ? `Interrogando um som em ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)}${autoJob.sondando ? ` — será ${autoJob.sondando}?` : '…'}`
+                      : autoJob.fase === 'farejando'
+                        ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
+                        : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
                 </span>
               </div>
             )}

@@ -1331,7 +1331,7 @@ app.whenReady().then(() => {
     }
   })
 
-  // Colheita automática: separa tudo que existir, sem cardápio
+  // Dissecação completa: acha e separa todo som da música, sem cardápio
   ipcMain.handle('studio:autoExtract', (_e, { key }) => {
     heavyJobStart()
     const job = startAutoExtract({
@@ -1340,10 +1340,21 @@ app.whenReady().then(() => {
       onProgress: (p) => send('studio:progress', p),
       onStatus: (s) => {
         send('studio:status', s)
-        if (s.state !== 'running') heavyJobEnd()
+        if (s.state !== 'running') {
+          activeStudioJobs.delete(s.id)
+          heavyJobEnd()
+        }
       }
     })
-    return job
+    if (job.twin) {
+      // Vacina anti-gêmeo: essa música já está sendo dissecada — a tela adota
+      // a que está rodando em vez de pagar sondas em dobro
+      heavyJobEnd()
+      return { id: job.id }
+    }
+    // registrado pra que fechar a música (studio:cancel) pare de gastar
+    activeStudioJobs.set(job.id, job.cancel)
+    return { id: job.id }
   })
 
   ipcMain.handle('studio:extract', (_e, { key, instruments }) => {

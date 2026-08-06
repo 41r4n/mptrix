@@ -110,9 +110,17 @@ export function setTetoNuvem(centavos) {
   return getNuvem()
 }
 
-export function somarGastoNuvem(segundos) {
+/**
+ * Contabiliza trabalho feito na nuvem. Os SEGUNDOS somam sempre (é o que
+ * alimenta o teto de gasto). Já o contador de MÚSICAS só avança quando o
+ * trabalho é a separação de uma música nova — sem isso o placar mente: uma
+ * dissecação sozinha faz dezenas de chamadas (sondas de 40s, especialistas,
+ * letra, cifra) e o painel diria "37 músicas" pra quem separou três, com um
+ * "por música" que despenca pro preço de uma sonda.
+ */
+export function somarGastoNuvem(segundos, { contaMusica = false } = {}) {
   store.set('nuvem.segundosGastos', (store.get('nuvem.segundosGastos') || 0) + (segundos || 0))
-  store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
+  if (contaMusica) store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
   return getNuvem()
 }
 

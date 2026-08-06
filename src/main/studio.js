@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
-import { usarNuvem, lerChaveNuvem, somarGastoNuvem } from './store.js'
+import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem } from './store.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -188,7 +188,9 @@ function sessionPayload(key, meta) {
     polished: meta.polished || {},
     variants: Object.keys(meta.variants || {}),
     // Faixas que nasceram de extração — são as que podem ser refeitas
-    extracted: meta.extracted || []
+    extracted: meta.extracted || [],
+    // A dissecação presta contas: inclusive dos sons que não conseguiu nomear
+    autoHarvest: meta.autoHarvest || null
   }
 }
 
@@ -1287,6 +1289,15 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
       // ninguém pode ficar sem a música porque a internet caiu ou o crédito
       // acabou. Por isso o `catch` não propaga — ele avisa e segue.
       let feitoNaNuvem = false
+      // Teto queimado com a nuvem LIGADA: a separação ainda acontece aqui (o
+      // usuário não pode ficar sem a música), mas não pode ser em silêncio —
+      // ele escolheu nuvem e vai esperar minutos em vez de segundos.
+      if (model !== 'quick' && !usarNuvem() && getNuvem().ligada && getNuvem().temChave) {
+        onStatus({
+          id, state: 'running', nuvem: 'teto',
+          aviso: 'Teto de gasto da nuvem atingido — separando neste computador (mais devagar). Dá pra aumentar o teto nas configurações.'
+        })
+      }
       if (model !== 'quick' && usarNuvem()) {
         try {
           const { separarNaNuvem } = await import('./nuvem.js')
@@ -1304,7 +1315,10 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
             onProgress: (p) => onProgress({ id, ...p, nuvem: true })
           })
           Object.assign(rawPaths, r.rawPaths)
-          somarGastoNuvem(r.segundos)
+          // única chamada que conta como "música feita" no placar: é a
+          // separação da música em si. O resto (sondas, especialistas, letra,
+          // cifra) soma segundos mas não inventa músicas.
+          somarGastoNuvem(r.segundos, { contaMusica: true })
           feitoNaNuvem = true
         } catch (err) {
           if (state.cancelled) throw err
@@ -2010,7 +2024,13 @@ const activeExtracts = new Map()
 // Extrai instrumentos raros de uma sessão já separada. Processa a música em
 // pedaços de 2 min, cada um num processo novo — à prova dos travamentos de
 // memória que uma passada única causa em máquinas de 6-8GB.
-export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onStatus }) {
+// `nuvemObrigatoria`: trabalho que o USUÁRIO não pediu (a dissecação automática)
+// nunca pode cair no processador local. Checar o teto só na largada do lote não
+// bastava: cada instrumento extraído na nuvem soma gasto, então o teto podia
+// estourar DENTRO do lote e o instrumento nº 2 ia pra CPU — 47 minutos que
+// ninguém pediu, sem botão de parar. Aqui a regra é por instrumento: sem nuvem,
+// pula e avisa.
+export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onStatus, nuvemObrigatoria = false }) {
   const twin = activeExtracts.get(key)
   if (twin) return { ...twin, twin: true }
 
@@ -2134,6 +2154,16 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             step += defs.length
             continue
           }
+        } else if (nuvemObrigatoria) {
+          // teto estourou no meio do próprio lote (ou a chave sumiu): pular é a
+          // única saída honesta — o caminho local aqui seria sequestro da máquina
+          falhasNuvem.push(spec.label)
+          onStatus({
+            id, state: 'running', nuvem: 'falhou',
+            aviso: `Nuvem indisponível (teto de gasto ou chave): ${spec.label} ficou pra depois.`
+          })
+          step += defs.length
+          continue
         }
 
         if (naNuvem) {
@@ -2295,6 +2325,15 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
             falhasNuvem.push(gpLabel)
             onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${gpLabel} falhou (${err.message}). Dá pra tentar de novo depois.` })
           }
+        } else if (nuvemObrigatoria) {
+          // o Demucs local de ~3GB já derrubou a máquina de 6GB uma vez; sem
+          // nuvem esse passo espera, não sequestra o computador
+          gpOk = false
+          falhasNuvem.push(gpLabel)
+          onStatus({
+            id, state: 'running', nuvem: 'falhou',
+            aviso: `Nuvem indisponível (teto de gasto ou chave): ${gpLabel} ficou pra depois.`
+          })
         } else {
           await run(
             PYTHON_PATH,
@@ -2318,7 +2357,17 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         for (const s of gpWanted) {
           await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', join(gpStemDir, `${s}.wav`), '-compression_level', '5', join(dir, 'base', `${s}.flac`)], state)
           m2.stemInfo = m2.stemInfo || {}
-          m2.stemInfo[s] = { present: true }
+          // Mesma balança dos especialistas: antes era present:true na fé, e
+          // música sem teclado ganhava uma pista muda
+          let gpMean = -99
+          let gpMax = -99
+          await run(ffmpegPath, ['-i', join(dir, 'base', `${s}.flac`), '-af', 'volumedetect', '-f', 'null', '-'], state, (line) => {
+            const mm = line.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+            if (mm) gpMean = parseFloat(mm[1])
+            const mx = line.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+            if (mx) gpMax = parseFloat(mx[1])
+          })
+          m2.stemInfo[s] = { present: gpMean > -48 || gpMax > -35, mean: gpMean, max: gpMax }
         }
         if (bi >= 0) arr.splice(bi + 1, 0, ...gpWanted)
         else arr.push(...gpWanted)
@@ -2383,101 +2432,555 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
   return handle
 }
 
-// ---------- COLHEITA AUTOMÁTICA: separa tudo que existir, sem perguntar -----
-// Decisão de produto do dono: ninguém quer caçar instrumento em cardápio. O
-// MPTrix separa tudo que conseguir provar que existe e mostra o resultado —
-// no máximo conta o que procurou e não achou.
+// ---------- DISSECAÇÃO COMPLETA: o separador presta contas da música toda ----
+// Decisão de produto do dono (2026-08-05): "o separador é separador — ele vai
+// na música e disseca POR COMPLETO. Achar TODAS as faixas é responsabilidade
+// do sistema, não do usuário. Nome é o que menos importa."
 //
-// O que torna isso viável: o ouvido da máquina é RUIM de nomear e ÓTIMO de
-// medir. O faro erra (dobro "76%" veio vazio); a balança não erra (-67dB é
-// silêncio, -23dB é gaita). Então o sistema tenta os candidatos plausíveis e
-// deixa a balança decidir o que vira faixa. Quem erra trabalha escondido;
-// o usuário só vê o que é real. Fantasma custa centavos — e centavos custam
-// menos que a atenção de quem só queria a música pronta.
+// O detector NÃO decide mais o que existe. A flauta da Samurai é o caso de
+// estudo do porquê: o faro cheirou "órgão 0.46", o especialista de órgão veio
+// vazio e o motor antigo declarou "fantasma" — era uma flauta fantasiada de
+// órgão, achada pelo OUVIDO DO DONO. O erro não foi cheirar errado (máquina
+// nomeia mal, sempre nomeou); foi MORRER NO PRIMEIRO NOME.
 //
-// Só roda com a nuvem ligada: no processador cada tentativa custa 47 minutos
-// da máquina do usuário, e aí testar fantasma deixa de ser barato.
+// O motor novo: o cheiro é só a LANTERNA (aponta onde olhar e quem chamar
+// primeiro). Quem decide é a BALANÇA: corta-se o trecho suspeito, especialistas
+// sondam o clipe (centavos, segundos) — o suspeito e os primos de timbre dele,
+// um por um, até alguém reivindicar de verdade. Quem reivindica extrai a
+// música INTEIRA. E o que ninguém reivindicar é CONFESSADO na tela com o
+// horário — som que existe nunca mais é engolido em silêncio.
+//
+// Só roda com a nuvem ligada: no processador cada sonda custaria 47 minutos.
+const DISSEC_V = 2 // versão do motor: subiu = música antiga refaz a dissecação ao abrir
+
+// Seção engole os solistas: Metais extraído deixa eco de trombone/trompete no
+// faro — interrogar isso seria pagar pra colher resíduo. Regra conquistada a suor.
 const FAMILIAS = {
   brass: ['trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
   strings: ['violin', 'viola', 'cello', 'double-bass'],
   woodwind: ['flute', 'clarinet', 'oboe', 'bassoon']
 }
-const AUTO_CORTE = 0.35   // abaixo disso nem o teste vale os centavos
-const AUTO_POR_RODADA = 4 // teto de custo por rodada
-const AUTO_RODADAS = 2    // a 2ª colhe o que o véu da 1ª escondia
 
-function escolherCandidatos(scout, meta) {
-  const ja = new Set(stemsOf(meta))
-  let lista = (scout?.detections || [])
-    .filter((d) => SPECIALISTS[d.instrument] && !ja.has(d.instrument) && d.score >= AUTO_CORTE)
-  // A seção engole os solistas da família: cinco narizes apontando pro mesmo
-  // naipe não são cinco instrumentos. Só sobrevive solista bem mais forte que
-  // a própria seção.
-  for (const [secao, membros] of Object.entries(FAMILIAS)) {
-    const sec = lista.find((d) => d.instrument === secao)
-    if (sec) lista = lista.filter((d) => !membros.includes(d.instrument) || d.score > sec.score + 0.15)
-    // E se a seção JÁ FOI extraída, os solistas somem de vez: o conteúdo deles
-    // está DENTRO da faixa da seção. O que o faro ainda cheira depois é o eco
-    // do naipe que saiu — na prática, trombone "38%" logo após os Metais.
-    // Extrair isso seria pagar duas vezes pra colher resíduo.
-    if (ja.has(secao)) lista = lista.filter((d) => !membros.includes(d.instrument))
-  }
-  const inst = lista.sort((a, b) => b.score - a.score).slice(0, AUTO_POR_RODADA).map((d) => d.instrument)
-  // guitarra/teclado entram pelos mesmos cortes que a tela de escolha usava
-  if ((scout?.gp?.guitar?.score || 0) >= 0.2 && !ja.has('guitar')) inst.push('guitar')
-  if ((scout?.gp?.piano?.score || 0) >= 0.15 && !ja.has('piano')) inst.push('piano')
-  return inst
+// Primos de timbre: quem confunde com quem. É o antídoto do "morre no primeiro
+// nome" — órgão que testa vazio manda sondar o resto do grupo dos sustentados
+// (foi exatamente o caminho que teria achado a flauta sozinho).
+const TIMBRES = [
+  ['organ', 'keys', 'synth', 'accordion', 'flute', 'harmonica', 'digital-piano'],
+  ['brass', 'trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
+  ['strings', 'violin', 'viola', 'cello', 'double-bass'],
+  ['clarinet', 'oboe', 'bassoon', 'woodwind', 'flute'],
+  ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'harp', 'harpsichord', 'sitar'],
+  ['bells', 'glockenspiel', 'marimba', 'wind-chimes'],
+  ['percussion', 'timpani', 'congas', 'tambourine', 'triangle']
+]
+const grupoDeTimbre = (inst) => TIMBRES.filter((g) => g.includes(inst)).flat()
+
+const CHEIRO_MIN = 0.12      // lanterna, não juiz: acima disso o trecho merece interrogatório
+const SPOTS_POR_RODADA = 4   // trechos interrogados por rodada, mais cheirosos primeiro
+const SONDAS_POR_SPOT = 6    // teto de centavos por interrogatório
+const DISSEC_RODADAS = 3     // tirar um som levanta o véu do de baixo
+
+// Decodifica pra mono f32 (mesma régua do limpa_vazamento) pra pesar e comparar
+async function decodificarMono(ffmpegPath, audio, workDir, tag, state) {
+  const tmp = join(workDir, `mono_${tag}.pcm`)
+  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', audio, '-ac', '1', '-ar', '44100', '-f', 'f32le', tmp], state)
+  const buf = readFileSync(tmp)
+  rmSync(tmp, { force: true })
+  return new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4)
 }
 
-export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
-  const id = randomUUID()
-  ;(async () => {
-    try {
-      const dir = join(STEMS_DIR, key)
-      const meta0 = readMeta(dir)
-      if (!meta0) throw new Error('Sessão não encontrada.')
-      // idempotente: música já colhida não colhe de novo a cada abertura
-      if (meta0.autoHarvest?.done) { onStatus({ id, state: 'done', auto: true, jaColhida: true }); return }
-      if (!usarNuvem()) { onStatus({ id, state: 'done', auto: true, pulado: 'nuvem desligada' }); return }
+// Balança da sonda: segundos com som de verdade e pico. Vazio não reivindica.
+function pesarCanal(canal) {
+  const SR = 44100
+  let vivos = 0
+  let pico = -99
+  for (let s = 0; s * SR < canal.length; s++) {
+    let e = 0
+    const ini = s * SR
+    const fim = Math.min(canal.length, ini + SR)
+    for (let i = ini; i < fim; i++) e += canal[i] * canal[i]
+    const db = 20 * Math.log10(Math.sqrt(e / (fim - ini)) + 1e-12)
+    if (db > -45) vivos++
+    if (db > pico) pico = db
+  }
+  return { vivos, pico }
+}
 
-      const procurados = []
-      for (let rodada = 1; rodada <= AUTO_RODADAS; rodada++) {
-        if (!usarNuvem()) break // teto de gasto batido no meio: para educadamente
-        onStatus({ id, state: 'running', auto: true, rodada, fase: 'farejando' })
-        // 1ª rodada aproveita faro em cache; as seguintes refarejam o "outros"
-        // limpo — é onde o véu levanta e instrumento escondido aparece
-        const scout = await scoutSession({ key, force: rodada > 1 })
-        const candidatos = escolherCandidatos(scout, readMeta(dir))
-        if (!candidatos.length) break
-        procurados.push(...candidatos)
-        onStatus({ id, state: 'running', auto: true, rodada, fase: 'separando', alvos: candidatos })
-        const fim = await new Promise((res) => {
-          const h = startExtractJob({
-            key,
-            instruments: candidatos,
-            ffmpegPath,
-            onProgress: (p) => onProgress?.({ ...p, auto: true, autoId: id, rodada }),
-            onStatus: (st) => {
-              if (st.state !== 'running') res(st)
-              else onStatus?.({ ...st, auto: true, autoId: id })
-            }
-          })
-          // já existe extração rodando pra essa música: o handle gêmeo volta na
-          // hora e NUNCA emite status — sem isso o laço esperaria pra sempre
-          if (h?.twin) res({ state: 'twin' })
+// Guarda anti-eco: fração das janelas (onde a sonda tem som) que são iguais a
+// uma faixa que JÁ existe. Sonda de flauta no mix cru "achava" a gaita (66%) —
+// eco não é descoberta, é a mesma faixa com outro nome.
+function fracaoEco(sonda, faixa) {
+  const J = 4096
+  const n = Math.min(sonda.length, faixa.length)
+  let comSom = 0
+  let ecos = 0
+  for (let ini = 0; ini + J <= n; ini += J) {
+    let aa = 0
+    let bb = 0
+    let ab = 0
+    for (let i = ini; i < ini + J; i++) { aa += sonda[i] * sonda[i]; bb += faixa[i] * faixa[i]; ab += sonda[i] * faixa[i] }
+    if (Math.sqrt(aa / J) < 1e-4) continue
+    comSom++
+    if (ab / (Math.sqrt(aa * bb) + 1e-12) > 0.5) ecos++
+  }
+  return comSom ? ecos / comSom : 0
+}
+
+// Sonda paga é resposta guardada — MAS SÓ PRA AQUELE PEDAÇO DA MÚSICA. Veto
+// global era o "morre no primeiro nome" renascendo: flauta sondada vazia em
+// 0:40 (onde ela não toca) calaria o cheiro real dela em 3:00, e o trecho nem
+// viraria confissão. Cada sonda vale só dentro da janela onde foi feita.
+// `span` existe porque o cheiro do farejador não é um instante: é uma janela de
+// 10s começando em `t`. Só vale como respondido o cheiro coberto por INTEIRO —
+// mas a janela é aparada pelo FIM DA MÚSICA. Sem essa aparagem, cheiro nos
+// últimos 10 segundos era impossível de responder (o clipe termina junto com a
+// música, então `t+10 <= fim` nunca fechava): as mesmas sondas eram repagas a
+// cada rodada e a cada abertura, pra sempre, e a música nunca convergia.
+const jaSondou = (sondas, inst, t, span = 0, dur = Infinity) =>
+  sondas.some((s) => s.inst === inst && t >= s.ini && Math.min(t + span, dur) <= s.fim)
+
+// Um cheiro só morre quando NÃO SOBROU NINGUÉM pra chamar naquele pedaço. Se o
+// interrogatório de lá foi cortado no meio (teto, cancelamento, falha de API),
+// os candidatos que não chegaram a ser sondados ainda merecem a vez — antes,
+// bastava o instrumento do cheiro ter sido sondado pra região inteira calar.
+function regiaoEsgotada(sondas, inst, at, ja, dur) {
+  return [...new Set([inst, ...grupoDeTimbre(inst)])]
+    .filter((i) => SPECIALISTS[i] && !ja.has(i))
+    .every((i) => jaSondou(sondas, i, at, 10, dur))
+}
+
+// Interrogatório de um trecho: sondas baratas no clipe até alguém reivindicar.
+// Devolve o dono (ou null), quem foi sondado e o melhor palpite pra confissão.
+async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, suspeitos, sondas, jaDonos, notas, state, aoSondar }) {
+  const meta = readMeta(dir)
+  const ja = new Set([...stemsOf(meta), ...(meta?.extracted || []), ...(jaDonos || [])])
+  // MESMA RÉGUA do portão lá fora (regiaoEsgotada): ali o cheiro é medido em
+  // `at` com janela de 10s. Medir aqui pelo meio do clipe fazia o spot passar no
+  // portão e chegar vazio — trecho interrogado sem ninguém pra chamar, e o som
+  // sumia sem virar faixa nem confissão.
+  const candidatos = [...new Set([...suspeitos, ...suspeitos.flatMap(grupoDeTimbre)])]
+    .filter((i) => SPECIALISTS[i] && !ja.has(i) && !jaSondou(sondas, i, at, 10, dur))
+  if (!candidatos.length) return { dono: null, sondados: [], palpite: null, vazio: true, truncado: true }
+
+  const outros = join(dir, 'base', 'other.flac')
+  const clipe = join(workRoot, `trecho_${trecho.ini}.flac`)
+  const durClipe = trecho.fim - trecho.ini
+  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', outros, clipe], state)
+
+  // A ordem da fila vem do faro que a RODADA já fez na música inteira. Farejar
+  // cada clipe de novo custava até 12 processos de rede neural na máquina do
+  // usuário por abertura (um deles simultâneo ao olheiro da tela, no mesmo
+  // arquivo) — carga local pesada pra decidir só quem pergunta primeiro.
+  const nota = (i) => notas?.[i] || 0
+  const fila = candidatos.sort((a, b) => nota(b) - nota(a)).slice(0, SONDAS_POR_SPOT)
+  const palpite = fila[0] || suspeitos[0] || null
+
+  // Faixas existentes no mesmo trecho, pro teste do eco. Preguiçoso de
+  // propósito: só decodifica quando uma sonda traz som de verdade — a maioria
+  // volta vazia e não precisa de comparação nenhuma.
+  let vizinhos = null
+  const carregarVizinhos = async () => {
+    if (vizinhos) return vizinhos
+    vizinhos = []
+    for (const s of stemsOf(meta)) {
+      if (s === 'other') continue
+      const f = join(dir, 'base', `${s}.flac`)
+      if (!existsSync(f)) continue
+      const cl = join(workRoot, `viz_${s}.flac`)
+      await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', f, cl], state)
+      vizinhos.push(await decodificarMono(ffmpegPath, cl, workRoot, `viz_${s}`, state))
+      rmSync(cl, { force: true })
+    }
+    return vizinhos
+  }
+
+  const sondados = []
+  // Interrogatório cortado no meio (teto, cancelamento) não é o mesmo que
+  // interrogatório concluído sem culpado: no primeiro caso ninguém pode
+  // confessar "não tem dono" — a pergunta nem chegou a ser feita até o fim.
+  let truncado = fila.length < candidatos.length
+  try {
+    for (const inst of fila) {
+      if (state.cancelled || !usarNuvem()) { truncado = true; break }
+      aoSondar?.(inst)
+      const saida = join(workRoot, `sonda_${inst}.flac`)
+      try {
+        const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
+        const r = await extrairInstrumentoNaNuvem({
+          chave: lerChaveNuvem(),
+          instrumento: SPECIALISTS[inst].file,
+          arquivo: clipe,
+          destino: saida,
+          state,
+          ffmpegPath,
+          run,
+          workDir: workRoot
         })
-        if (fim.state !== 'done') break // erro de verdade: não insiste às cegas
+        somarGastoNuvem(r.segundos) // segundos contam pro teto; "música" não
+      } catch (e) {
+        // GPU queimada por uma sonda que morreu no meio ainda é dinheiro gasto
+        if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos)
+        // Sonda que não completou NÃO vira veto: o registro só nasce depois de
+        // a nuvem responder. Antes eu anotava a sonda ANTES de fazê-la, e um
+        // cancelamento no meio gravava "já perguntei" pra uma pergunta que
+        // ninguém ouviu — o veto injusto voltando pela porta do cancelamento.
+        if (state.cancelled) { truncado = true; throw e }
+        truncado = true
+        continue // falhou; esse par (instrumento, trecho) volta pra fila depois
+      }
+      const canal = await decodificarMono(ffmpegPath, saida, workRoot, `p_${inst}`, state)
+      rmSync(saida, { force: true })
+      const { vivos, pico } = pesarCanal(canal)
+      // registro do veto só DEPOIS de pesar: se o arquivo não abrir, ninguém
+      // ouviu resposta nenhuma e a pergunta continua de pé
+      sondados.push(inst)
+      sondas.push({ inst, ini: trecho.ini, fim: trecho.fim })
+      if (vivos < 3 || pico <= -35) continue // balança: veio vazio
+      if ((await carregarVizinhos()).some((v) => fracaoEco(canal, v) > 0.4)) continue // eco de faixa existente
+      return { dono: inst, sondados, palpite, truncado: false }
+    }
+  } finally {
+    try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
+  }
+  return { dono: null, sondados, palpite, truncado }
+}
+
+// Vacina anti-gêmeo da dissecação — a mesma doutrina do activeExtracts, mas
+// aqui o motivo é DINHEIRO: fechar e reabrir a música durante o interrogatório
+// largava duas dissecações pagando sondas pros MESMOS instrumentos, e as duas
+// escrevendo nos mesmos arquivos da bancada (balança lida de arquivo pela
+// metade = reivindicação errada = extração inteira no alvo errado).
+const activeAutos = new Map()
+
+export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
+  const gemeo = activeAutos.get(key)
+  // gêmeo só é adotado enquanto está VIVO: adotar um job nos estertores faria a
+  // tela esperar por um status que já passou, e a dissecação de verdade seria
+  // pulada em silêncio
+  if (gemeo?.vivo) return { ...gemeo, twin: true }
+
+  const id = randomUUID()
+  const state = { cancelled: false, child: null }
+  // Só a extração que ESTA dissecação começou morre junto com ela. Cancelar
+  // "qualquer extração dessa música" matava também a que o usuário pediu no
+  // botão ↻ — fechar a tela não pode derrubar trabalho que ele mandou fazer.
+  const filha = { atual: null }
+  const handle = {
+    id,
+    vivo: true,
+    cancel: () => {
+      state.cancelled = true
+      // some da adoção NA HORA: o job pode levar segundos pra desenrolar (poll
+      // da nuvem de 3s), e reabrir a música nessa janela adotava um moribundo —
+      // a música ficava sem dissecação nenhuma, em silêncio
+      handle.vivo = false
+      try { state.child?.kill() } catch {}
+      try { filha.atual?.cancel?.() } catch {}
+    }
+  }
+  activeAutos.set(key, handle)
+
+  ;(async () => {
+    // Respiro: sem ele os retornos curtos (música já dissecada, edição rápida)
+    // emitem o "done" ANTES de o invoke devolver o id — a tela então marcava a
+    // dissecação como viva depois de ela ter acabado, e o rodinha ficava
+    // girando pra sempre. Mesmo truque do startExtractJob.
+    await new Promise((r) => setTimeout(r, 250))
+    const dir = join(STEMS_DIR, key)
+    const workRoot = join(dir, 'dissec_work')
+    // Estado do progresso: escrito no fim, seja qual for a saída. `done` só
+    // vira true quando a dissecação CONVERGE (nada mais cheira / rodadas
+    // esgotadas). Parar por teto, erro ou cancelamento grava done:false com o
+    // que já foi sondado — a próxima abertura retoma sem re-pagar as sondas.
+    // Carregado ANTES do try: um erro logo no começo não pode fazer o gravar()
+    // do catch apagar sondas já pagas em tentativas anteriores.
+    const metaInicial = readMeta(dir)
+    const anterior = (metaInicial?.autoHarvest?.v || 0) >= DISSEC_V ? metaInicial.autoHarvest : null
+    const progresso = {
+      procurados: [...(anterior?.procurados || [])],
+      semDono: [...(anterior?.semDono || [])],
+      sondas: [...(anterior?.sondas || [])]
+    }
+    let convergiu = false
+    let motivoParada = null
+    const gravar = () => {
+      const m = readMeta(dir)
+      if (!m) return null
+      m.autoHarvest = {
+        done: convergiu, v: DISSEC_V, at: new Date().toISOString(),
+        ...(motivoParada ? { parou: motivoParada } : {}),
+        procurados: [...new Set(progresso.procurados)],
+        semDono: progresso.semDono,
+        sondas: progresso.sondas
+      }
+      writeMeta(dir, m)
+      return m
+    }
+    // Um job emite UM status final. Sem essa trava, um tropeço dentro do
+    // fechar() (disco travado no writeMeta) caía no catch e a tela recebia dois
+    // finais — ou nenhum, se o tropeço fosse antes do onStatus.
+    let fechado = false
+    const fechar = (extra = {}) => {
+      if (fechado) return
+      fechado = true
+      try { rmSync(workRoot, { recursive: true, force: true }) } catch { /* lixo de bancada não derruba o aviso */ }
+      let m = null
+      try { m = gravar() } catch { /* o aviso sai mesmo se o disco recusar */ }
+      onStatus({
+        id, state: state.cancelled ? 'cancelled' : 'done', auto: true,
+        ...(m ? { session: sessionPayload(key, m) } : {}),
+        // `completo` é a diferença entre "acabei" e "parei aqui": sem isso a
+        // tela dizia "✓ Dissequei a música" pra uma dissecação que vai refazer
+        // trabalho na próxima abertura
+        completo: convergiu,
+        procurados: [...new Set(progresso.procurados)], semDono: progresso.semDono,
+        ...(motivoParada ? { parou: motivoParada } : {}), ...extra
+      })
+    }
+
+    try {
+      const meta0 = metaInicial
+      if (!meta0) throw new Error('Sessão não encontrada.')
+      // Idempotente POR VERSÃO: música dissecada pelo motor atual não repete a
+      // cada abertura; motor melhorou (DISSEC_V subiu) = o acervo inteiro
+      // re-disseca sozinho na abertura — mesmo contrato da letra e da cifra.
+      if (meta0.autoHarvest?.done && (meta0.autoHarvest.v || 1) >= DISSEC_V) {
+        onStatus({ id, state: 'done', auto: true, jaColhida: true }); return
+      }
+      if (!usarNuvem()) { onStatus({ id, state: 'done', auto: true, pulado: 'nuvem desligada' }); return }
+      if (meta0.model === 'quick') { onStatus({ id, state: 'done', auto: true, pulado: 'edição rápida' }); return }
+
+      mkdirSync(workRoot, { recursive: true })
+      // Retomada: sonda já paga numa tentativa anterior não se repete — mas o
+      // registro guarda ONDE ela foi feita, então o mesmo instrumento pode (e
+      // deve) ser sondado noutro trecho da música.
+      const sondas = progresso.sondas
+
+      // Uma extração só vai pro startExtractJob com a nuvem VIVA — e lá dentro
+      // `nuvemObrigatoria` repete a checagem INSTRUMENTO A INSTRUMENTO. Checar
+      // só na largada do lote não bastava: cada extração soma gasto, então o
+      // teto podia estourar no meio e o instrumento seguinte ia pra CPU (47 min
+      // que ninguém pediu, sem botão de parar).
+      const esperarExtracao = (alvos) => new Promise((res) => {
+        if (state.cancelled) return res({ state: 'cancelled' })
+        if (!usarNuvem()) return res({ state: 'sem-nuvem' })
+        const h = startExtractJob({
+          key,
+          instruments: alvos,
+          ffmpegPath,
+          nuvemObrigatoria: true,
+          onProgress: (p) => onProgress?.({ ...p, auto: true, autoId: id }),
+          onStatus: (st) => {
+            if (st.state !== 'running') {
+              filha.atual = null
+              // Repassa o final SEM a marca `auto`: quem espera por esse id na
+              // tela (um ↻ Refazer que foi adotado como gêmeo, ou o reconector
+              // que traz as faixas novas) precisa ver o fim. Engolir isso
+              // deixava a rodinha do usuário girando pra sempre.
+              onStatus?.({ ...st })
+              res(st)
+            } else onStatus?.({ ...st, auto: true, autoId: id })
+          }
+        })
+        // já existe extração rodando pra essa música: o handle gêmeo volta na
+        // hora e NUNCA emite status — sem isso o laço esperaria pra sempre
+        if (h?.twin) res({ state: 'twin' })
+        else filha.atual = h
+      })
+
+      // O que a extração REALMENTE entregou. A nuvem pode falhar num
+      // instrumento e o trabalho ainda terminar 'done' com aviso — perguntar ao
+      // disco é a única resposta honesta.
+      const entregues = (alvos) => {
+        const m = readMeta(dir)
+        const tem = new Set([...stemsOf(m), ...(m?.extracted || [])])
+        return alvos.filter((a) => !tem.has(a))
+      }
+      const rotuloParada = (st) => st.state === 'sem-nuvem' ? 'nuvem-indisponivel'
+        : st.state === 'twin' ? 'outra extração estava rodando'
+          : st.state === 'cancelled' ? 'cancelado' : (st.error || 'a extração falhou')
+
+      // Guitarra/teclado saem SEMPRE que faltam: uma passada custa centavos e a
+      // balança esconde o que vier vazio. Faro decidindo "se tem guitarra" era
+      // o detector mandando — e detector não manda mais.
+      const faltamGp = ['guitar', 'piano'].filter((s) => !stemsOf(meta0).includes(s))
+      if (faltamGp.length) {
+        onStatus({ id, state: 'running', auto: true, fase: 'separando', alvos: faltamGp })
+        const fim = await esperarExtracao(faltamGp)
+        if (fim.state !== 'done') {
+          // inclusive 'twin': seguir daqui seria sondar clipes de um "outros"
+          // que a outra extração está reescrevendo debaixo do nosso pé
+          motivoParada = rotuloParada(fim)
+          fechar(); return
+        }
+        const faltaramGp = entregues(faltamGp)
+        if (faltaramGp.length) {
+          // 'done' com aviso: a nuvem não entregou. Sem isso a música saía
+          // carimbada de "dissecada por completo" sem guitarra nem teclado.
+          motivoParada = fim.aviso || `a nuvem não entregou: ${faltaramGp.join(', ')}`
+          fechar(); return
+        }
+        progresso.procurados.push(...faltamGp)
       }
 
-      const m = readMeta(dir)
-      m.autoHarvest = { done: true, at: new Date().toISOString(), procurados }
-      writeMeta(dir, m)
-      onStatus({ id, state: 'done', auto: true, session: sessionPayload(key, m), procurados })
+      for (let rodada = 1; rodada <= DISSEC_RODADAS; rodada++) {
+        if (state.cancelled) { motivoParada = 'cancelado'; break }
+        if (!usarNuvem()) { motivoParada = 'nuvem-indisponivel'; break }
+        onStatus({ id, state: 'running', auto: true, rodada, fase: 'pesando' })
+        const outros = join(dir, 'base', 'other.flac')
+        if (!existsSync(outros)) { motivoParada = 'sem faixa "outros"'; break }
+
+        // A lanterna varre o "outros" limpo da rodada: cada cheiro (mesmo
+        // fraco — 0.12, não 0.35) vira um TRECHO a interrogar. O véu levantado
+        // pela rodada anterior é o que deixa a camada de baixo aparecer.
+        let faro = null
+        try { faro = await runScoutScript(outros, state) } catch (e) { motivoParada = `o farejador falhou (${e.message})`; break }
+        const meta = readMeta(dir)
+        if (!meta) { motivoParada = 'sessão sumiu do disco'; break }
+        const dur = Math.round(meta.duration || 300)
+        const ja = new Set([...stemsOf(meta), ...(meta.extracted || [])])
+        let cheiros = Object.entries(faro?.arsenal || {})
+          .map(([inst, v]) => ({ inst, score: v?.score ?? v ?? 0, at: v?.at ?? 0 }))
+          // o cheiro só morre quando NÃO SOBROU NINGUÉM pra chamar naquele
+          // pedaço — interrogatório cortado no meio deixa candidatos na fila
+          .filter((c) => c.score >= CHEIRO_MIN && SPECIALISTS[c.inst] && !ja.has(c.inst) && !regiaoEsgotada(sondas, c.inst, c.at, ja, dur))
+        // Seção JÁ EXTRAÍDA E COM SOM silencia o eco dos solistas dela. Se a
+        // seção saiu MUDA, ela não engoliu ninguém — calar os solistas ali era
+        // apagar o cheiro de um som que continua na música, sem nem confessar.
+        const notas = Object.fromEntries(cheiros.map((c) => [c.inst, c.score]))
+        for (const [secao, membros] of Object.entries(FAMILIAS)) {
+          const info = meta.stemInfo?.[secao]
+          if (ja.has(secao) && info?.present !== false) cheiros = cheiros.filter((c) => !membros.includes(c.inst))
+        }
+        cheiros.sort((a, b) => b.score - a.score)
+
+        // Cheiros vizinhos no tempo são o MESMO som com nomes diferentes: viram
+        // um interrogatório só, com todos como suspeitos. A janela de junção é
+        // ASSIMÉTRICA porque o clipe é [âncora-8, âncora+32] e o cheiro marca o
+        // INÍCIO de uma janela de 10s — juntar alguém 20s ATRÁS da âncora o
+        // sondaria num clipe onde o som dele nem toca (sonda vazia = veto
+        // injusto, o "morre no primeiro nome" voltando pela porta dos fundos).
+        const spots = []
+        let orfaos = 0 // cheiros que não couberam no teto da rodada
+        for (const c of cheiros) {
+          const perto = spots.find((s) => c.at >= s.at - 8 && c.at + 10 <= s.at + 32)
+          if (perto) { perto.suspeitos.push(c.inst); continue }
+          if (spots.length < SPOTS_POR_RODADA) spots.push({ at: c.at, suspeitos: [c.inst] })
+          else orfaos++
+        }
+        if (!spots.length) { convergiu = true; break } // nada mais cheira: acabou de verdade
+
+        const donos = []
+        const trechosDoDono = {}
+        // Interrogatório que não foi até o fim (teto no meio, fila maior que o
+        // limite de sondas, região já esgotada) impede declarar convergência:
+        // ficou pergunta sem fazer, e som sem resposta não pode virar silêncio.
+        let truncouAlgo = false
+        for (const spot of spots) {
+          if (state.cancelled) { motivoParada = 'cancelado'; break }
+          if (!usarNuvem()) { motivoParada = 'nuvem-indisponivel'; break }
+          // música curta: o clipe é a música toda, nunca um começo negativo
+          const ini = Math.max(0, Math.min(Math.round(spot.at) - 8, Math.max(0, dur - 40)))
+          const trecho = { ini, fim: Math.min(dur, ini + 40) }
+          onStatus({ id, state: 'running', auto: true, rodada, fase: 'interrogando', trecho })
+          const r = await interrogarTrecho({
+            dir, workRoot, ffmpegPath, trecho, at: spot.at, dur,
+            suspeitos: spot.suspeitos, sondas, jaDonos: donos, notas, state,
+            aoSondar: (i) => onStatus({
+              id, state: 'running', auto: true, rodada, fase: 'interrogando', trecho,
+              sondando: SPECIALISTS[i]?.label || i
+            })
+          })
+          progresso.procurados.push(...r.sondados)
+          if (r.truncado) truncouAlgo = true
+          // sonda paga vai pro disco AGORA: fechar o app (ou faltar luz) no meio
+          // da dissecação não pode jogar fora o que já foi pago
+          try { gravar() } catch { /* segue; o fechar() grava de novo */ }
+          if (r.dono) {
+            if (!donos.includes(r.dono)) donos.push(r.dono)
+            // um mesmo instrumento pode reivindicar em dois trechos da rodada;
+            // guardar só o último faria o desfazer soltar o trecho errado
+            ;(trechosDoDono[r.dono] = trechosDoDono[r.dono] || []).push(trecho)
+            // achou dono aqui: confissão desse pedaço perde a validade
+            progresso.semDono = progresso.semDono.filter((s) => s.fim <= trecho.ini || s.ini >= trecho.fim)
+          } else if (r.sondados.length && !r.truncado) {
+            // CONFISSÃO: interroguei ATÉ O FIM e ninguém reivindicou. O som
+            // existe — o usuário fica sabendo ONDE, com o palpite de quem seria.
+            // Interrogatório cortado no meio (teto, cancelamento, falha de API)
+            // NÃO confessa: a pergunta não chegou a ser feita por inteiro.
+            if (!progresso.semDono.some((s) => s.ini === trecho.ini)) {
+              progresso.semDono.push({
+                ini: trecho.ini, fim: trecho.fim,
+                palpite: r.palpite ? (SPECIALISTS[r.palpite]?.label || r.palpite) : null
+              })
+            }
+          }
+        }
+
+        if (!donos.length) {
+          // Rodada sem dono só é convergência se ela foi INTEIRA: nenhum
+          // interrogatório cortado no meio e nenhum cheiro deixado fora do teto.
+          // Sobrando qualquer um dos dois, ainda há pergunta a fazer — a próxima
+          // rodada os promove (os já sondados estão vetados na região).
+          if (motivoParada) break
+          if ((orfaos || truncouAlgo) && rodada < DISSEC_RODADAS) continue
+          if (!orfaos && !truncouAlgo) convergiu = true
+          break
+        }
+        onStatus({ id, state: 'running', auto: true, rodada, fase: 'separando', alvos: donos })
+        const fim = await esperarExtracao(donos)
+        // Instrumento COMPROVADO pela sonda que não virou faixa não pode sumir:
+        // a sonda dele já foi paga, então o registro DAQUELE TRECHO é apagado e
+        // a próxima rodada/abertura tenta de novo. Vale pro erro inteiro E pro
+        // sucesso PARCIAL — a nuvem pode falhar num instrumento e o job ainda
+        // terminar 'done' com aviso; sem isso o dono provado sumia em silêncio
+        // com a música carimbada de "dissecada por completo".
+        const faltaram = entregues(donos)
+        for (const d of faltaram) {
+          const inicios = new Set((trechosDoDono[d] || []).map((t) => t.ini))
+          for (let i = sondas.length - 1; i >= 0; i--) {
+            if (sondas[i].inst === d && inicios.has(sondas[i].ini)) sondas.splice(i, 1)
+          }
+        }
+        if (fim.state !== 'done') { motivoParada = rotuloParada(fim); break }
+        if (faltaram.length) {
+          motivoParada = fim.aviso || `a nuvem não entregou: ${faltaram.map((d) => SPECIALISTS[d]?.label || d).join(', ')}`
+          break
+        }
+        // Dono provado pela sonda que a extração devolveu MUDO: a sonda OUVIU o
+        // som naquele trecho, mas o especialista não conseguiu isolá-lo na
+        // música inteira e a balança escondeu a faixa. Isso não pode virar
+        // "não tinha nada" — o som existe, então vira confissão.
+        {
+          const mDep = readMeta(dir)
+          for (const d of donos) {
+            if (mDep?.stemInfo?.[d]?.present !== false) continue
+            for (const t of trechosDoDono[d] || []) {
+              if (!progresso.semDono.some((s) => s.ini === t.ini)) {
+                progresso.semDono.push({ ini: t.ini, fim: t.fim, palpite: SPECIALISTS[d]?.label || d })
+              }
+            }
+          }
+        }
+        // Extraiu nesta rodada = o véu levantou e a camada de baixo ainda não
+        // foi farejada. Nunca é fim: a música fica done:false e a próxima
+        // abertura continua de onde parou (sem repagar as sondas já feitas).
+      }
+
+      fechar()
     } catch (err) {
-      onStatus({ id, state: 'error', auto: true, error: err.message })
+      try { rmSync(workRoot, { recursive: true, force: true }) } catch { /* lixo de bancada não engole o aviso */ }
+      // grava o que já foi pago mesmo quando dá erro — done:false, pra retomar
+      motivoParada = motivoParada || (state.cancelled ? 'cancelado' : err.message)
+      try { gravar() } catch { /* disco cheio/travado: o aviso ainda tem que sair */ }
+      if (state.cancelled) onStatus({ id, state: 'cancelled', auto: true })
+      else onStatus({ id, state: 'error', auto: true, error: err.message })
+    } finally {
+      handle.vivo = false
+      activeAutos.delete(key)
     }
   })()
-  return { id }
+  return handle
 }
 
 async function cleanVocalsBleed(dir, ffmpegPath, state) {
