@@ -2530,13 +2530,24 @@ function pesarCanal(canal) {
 function sobrouAlgo(clipe, extraido, margemDb = 20) {
   const n = Math.min(clipe.length, extraido.length)
   let ec = 0
+  let ee = 0
+  let ce = 0
   let er = 0
   for (let i = 0; i < n; i++) {
     ec += clipe[i] * clipe[i]
+    ee += extraido[i] * extraido[i]
+    ce += clipe[i] * extraido[i]
     const d = clipe[i] - extraido[i]
     er += d * d
   }
   if (ec <= 0) return false
+  // Sósia com o volume mexido também é passagem direta: devolver o clipe a 70%
+  // deixa resíduo de -10 dB e escaparia da conta de energia. A forma de onda
+  // entrega — cópia escalada tem correlação ~1 com a entrada. O limiar é alto
+  // (0,995) de propósito: instrumento que domina 95% do trecho já dá ~0,975, e
+  // esse é legítimo.
+  const corr = ce / (Math.sqrt(ec * ee) + 1e-20)
+  if (corr > 0.995) return false
   const db = 10 * Math.log10((er + 1e-20) / ec)
   return db > -margemDb
 }
@@ -2597,29 +2608,37 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     .filter((i) => SPECIALISTS[i] && !ja.has(i) && !jaSondou(sondas, i, at, 10, dur))
   if (!candidatos.length) return { dono: null, sondados: [], palpite: null, vazio: true, truncado: true }
 
-  const outros = join(dir, 'base', 'other.flac')
-  const clipe = join(workRoot, `trecho_${trecho.ini}.flac`)
-  const durClipe = trecho.fim - trecho.ini
-  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', outros, clipe], state)
-
   // A ordem da fila vem do faro que a RODADA já fez na música inteira. Farejar
   // cada clipe de novo custava até 12 processos de rede neural na máquina do
   // usuário por abertura (um deles simultâneo ao olheiro da tela, no mesmo
   // arquivo) — carga local pesada pra decidir só quem pergunta primeiro.
   const nota = (i) => notas?.[i] || 0
-  const ordenados = candidatos.sort((a, b) => nota(b) - nota(a))
-  // O lote inteiro sai de uma vez, então o teto de gasto precisa ser conferido
-  // ANTES pro lote INTEIRO — em série ele era reavaliado a cada sonda e parava
-  // na hora exata. Sem isso, um lote de 6 podia passar do teto por 5 sondas.
+  // `total` é lido ANTES de qualquer aparagem: sort() ordena no MESMO array, e
+  // encolher a cópia encolhia o original — o sinal de "ficou pergunta sem
+  // fazer" se apagava sozinho, e o trecho cortado por falta de dinheiro virava
+  // confissão como se tivesse sido interrogado até o fim (e carimbava a música
+  // de dissecada pra sempre). Era o pesadelo do sintetizador voltando pela
+  // porta do teto de gasto.
+  const total = candidatos.length
+  const ordenados = [...candidatos].sort((a, b) => nota(b) - nota(a))
+  // O lote inteiro sai de uma vez, então o teto de gasto é conferido ANTES pro
+  // lote INTEIRO — em série ele era reavaliado a cada sonda e parava na hora
+  // exata. Sem isso, um lote de 6 podia passar do teto por 5 sondas. E vem
+  // antes de cortar o clipe: sem dinheiro pra perguntar, nem o ffmpeg roda.
   const nv = getNuvem()
   if (nv.tetoCentavos > 0) {
     const sobra = nv.tetoCentavos - estimativaCentavos(nv.segundosGastos)
     const cabem = Math.floor(sobra / estimativaCentavos(SEGUNDOS_POR_SONDA))
-    if (cabem <= 0) return { dono: null, sondados: [], palpite: null, truncado: true }
+    if (cabem <= 0) return { dono: null, sondados: [], palpite: null, truncado: true, semTeto: true }
     ordenados.length = Math.min(ordenados.length, cabem)
   }
   const fila = ordenados.slice(0, SONDAS_POR_SPOT)
   const palpite = fila[0] || suspeitos[0] || null
+
+  const outros = join(dir, 'base', 'other.flac')
+  const clipe = join(workRoot, `trecho_${trecho.ini}.flac`)
+  const durClipe = trecho.fim - trecho.ini
+  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', outros, clipe], state)
 
   // Faixas existentes no mesmo trecho, pro teste do eco. Preguiçoso de
   // propósito: só decodifica quando uma sonda traz som de verdade — a maioria
@@ -2644,7 +2663,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // Interrogatório cortado no meio (teto, cancelamento) não é o mesmo que
   // interrogatório concluído sem culpado: no primeiro caso ninguém pode
   // confessar "não tem dono" — a pergunta nem chegou a ser feita até o fim.
-  let truncado = fila.length < candidatos.length
+  let truncado = fila.length < total
   try {
     if (state.cancelled || !usarNuvem()) return { dono: null, sondados, palpite, truncado: true }
     aoSondar?.(fila)
@@ -2656,9 +2675,19 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // em paralelo não muda resposta nenhuma. Em série eram ~5 minutos por
     // trecho; juntas, ~45 segundos, pelos mesmos centavos.
     const respostas = await Promise.all(fila.map(async (inst) => {
-      // cada sonda com seu próprio slot de subprocesso: `state.child` é um só, e
-      // com 6 ffmpeg ao mesmo tempo o cancelar só alcançava o último
-      const est = { get cancelled() { return state.cancelled }, child: null }
+      // Cada sonda com seu próprio slot de subprocesso: `state.child` é um só,
+      // e com 6 ffmpeg ao mesmo tempo o cancelar alcançava só o último. Os
+      // subprocessos vão pra um conjunto no estado do pai, senão o cancelar
+      // deixa de alcançar TODOS (era um, virou nenhum).
+      const est = {
+        _c: null,
+        get cancelled() { return state.cancelled },
+        get child() { return this._c },
+        set child(c) {
+          this._c = c
+          if (c) { (state.netos = state.netos || new Set()).add(c); c.on?.('close', () => state.netos?.delete(c)) }
+        }
+      }
       const saida = join(workRoot, `sonda_${inst}.flac`)
       try {
         const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
@@ -2681,7 +2710,10 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
         return { inst, falhou: true }
       }
       try {
-        const canal = await decodificarMono(ffmpegPath, saida, workRoot, `p_${inst}`, est)
+        // decodifica com estado NEUTRO de propósito: a sonda já foi paga e
+        // baixada, e um cancelamento pegando essa janela de ~1 segundo jogaria
+        // a resposta fora — na próxima abertura ela seria comprada de novo
+        const canal = await decodificarMono(ffmpegPath, saida, workRoot, `p_${inst}`, { cancelled: false, child: null })
         const { vivos, pico } = pesarCanal(canal)
         return { inst, canal, vivos, pico }
       } catch {
@@ -2691,40 +2723,53 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
       }
     }))
 
+    const responderam = respostas.filter((r) => !r.falhou)
+    if (responderam.length < respostas.length) truncado = true
+    sondados.push(...responderam.map((r) => r.inst))
     // A balança separa quem trouxe som de quem veio vazio
-    const comSom = respostas.filter((r) => !r.falhou && r.vivos >= 3 && r.pico > -35)
+    const comSom = responderam.filter((r) => r.vivos >= 3 && r.pico > -35)
 
-    // VETO É SÓ PRA QUEM DISSE "NÃO TEM NADA AQUI". Quem reivindicou respondeu
-    // o contrário — e pode perder a vez pra um reivindicante mais forte nesta
-    // rodada. Marcá-lo como respondido apagaria o cheiro dele nas rodadas
-    // seguintes: som provado sumindo sem virar faixa nem confissão.
-    for (const r of respostas) {
-      if (r.falhou) { truncado = true; continue }
-      sondados.push(r.inst)
-      if (!comSom.includes(r)) sondas.push({ inst: r.inst, ini: trecho.ini, fim: trecho.fim })
+    // O QUE VIRA VETO, exatamente: só quem deu uma resposta DEFINITIVA de que
+    // não há instrumento novo ali — veio vazio, veio eco de faixa que já existe,
+    // ou veio passando o clipe adiante sem separar nada. Quem reivindicou de
+    // verdade e só perdeu a vez pra outro NÃO é vetado: na rodada seguinte, com
+    // o vencedor já extraído, é a vez dele.
+    //
+    // Não registrar os reprovados era laço de dinheiro: o cheiro daquele pedaço
+    // nunca morria, o trecho ocupava uma vaga pra sempre, a música nunca
+    // convergia e a MESMA sonda era comprada de novo em toda rodada e em toda
+    // abertura.
+    const registrar = (lista) => {
+      for (const r of lista) sondas.push({ inst: r.inst, ini: trecho.ini, fim: trecho.fim })
     }
+    const negaram = responderam.filter((r) => !comSom.includes(r))
+
     // registro ANTES de desistir por cancelamento: sonda paga é resposta paga,
     // e o lote agora é 6x maior do que era em série
-    if (state.cancelled) throw new Error('cancelado')
-    if (!comSom.length) return { dono: null, sondados, palpite, truncado }
+    if (state.cancelled) { registrar(negaram); throw new Error('cancelado') }
+    if (!comSom.length) { registrar(negaram); return { dono: null, sondados, palpite, truncado } }
 
     // Eco de faixa que já existe não é descoberta, é a mesma coisa com outro nome
     const viz = await carregarVizinhos()
-    let validos = comSom.filter((r) => !viz.some((v) => fracaoEco(r.canal, v) > 0.4))
-
     // GUARDA ANTI-PASSAGEM: modelo que devolve o clipe quase inteiro não separou
     // nada — só passou o som adiante. Isso venceria qualquer disputa por
     // "quantidade de som", e o teste de eco não pega porque ele compara com as
     // faixas existentes e o "outros" (de onde o clipe saiu) fica de fora de
     // propósito. Aqui a pergunta é outra: o que ele TIROU do clipe?
     const doClipe = await decodificarMono(ffmpegPath, clipe, workRoot, 'clipe', state)
-    validos = validos.filter((r) => sobrouAlgo(doClipe, r.canal))
+    const validos = comSom.filter((r) =>
+      !viz.some((v) => fracaoEco(r.canal, v) > 0.4) && sobrouAlgo(doClipe, r.canal))
+    const reprovados = comSom.filter((r) => !validos.includes(r))
+    registrar([...negaram, ...reprovados])
     if (!validos.length) return { dono: null, sondados, palpite, truncado }
 
     // Entre os que reivindicaram, quem manda é a ORDEM DA LANTERNA — não o
     // tamanho. Ordenar por "mais segundos de som" elegia sempre o modelo de
     // seção (que por construção cobre mais tempo que qualquer solista dela).
     validos.sort((a, b) => fila.indexOf(a.inst) - fila.indexOf(b.inst))
+    // o vencedor também é registrado: se a extração dele falhar, quem desfaz o
+    // registro é o rollback lá em cima, que sabe distinguir os dois casos
+    registrar([validos[0]])
     return { dono: validos[0].inst, sondados, palpite, truncado: false }
   } finally {
     try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
@@ -2761,6 +2806,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
       // a música ficava sem dissecação nenhuma, em silêncio
       handle.vivo = false
       try { state.child?.kill() } catch {}
+      for (const n of state.netos || []) { try { n.kill() } catch {} } // ffmpeg das sondas paralelas
       try { filha.atual?.cancel?.() } catch {}
     }
   }
@@ -2979,6 +3025,10 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           })
           progresso.procurados.push(...r.sondados)
           if (r.truncado) truncouAlgo = true
+          // sem dinheiro nem pra UMA pergunta: parar aqui e dizer por quê. Sem
+          // isso a dissecação seguia varrendo trechos e rodadas em falso,
+          // rodando o farejador três vezes por abertura pra nada.
+          if (r.semTeto) { motivoParada = 'nuvem-indisponivel'; break }
           // sonda paga vai pro disco AGORA: fechar o app (ou faltar luz) no meio
           // da dissecação não pode jogar fora o que já foi pago
           try { gravar() } catch { /* segue; o fechar() grava de novo */ }
