@@ -1,6 +1,22 @@
 import { spawn } from 'child_process'
 import { randomUUID } from 'crypto'
 
+// MOTOR DE JAVASCRIPT PRO BAIXADOR.
+//
+// O YouTube manda um desafio em JavaScript que precisa ser resolvido pra os
+// endereços das faixas aparecerem. Sem resolver, o yt-dlp acha o vídeo, lê o
+// título, e devolve "No video formats found" — que a tela traduzia como
+// "vídeo privado ou requer login". Não era nada disso: o vídeo mais público do
+// YouTube (o primeiro da história do site) falhava igual.
+//
+// O yt-dlp já traz o solucionador embutido, mas só procura o Deno por padrão.
+// Em vez de exigir que a pessoa instale um interpretador, usamos o motor que o
+// MPTRIX JÁ TEM: o próprio executável do app roda como Node quando recebe
+// ELECTRON_RUN_AS_NODE=1 (mesmo truque do cancelador de vazamento). Assim
+// funciona em qualquer máquina onde o app roda, sem instalar nada.
+const jsArgs = () => ['--js-runtimes', `node:${process.execPath}`]
+const jsEnv = () => ({ ...process.env, ELECTRON_RUN_AS_NODE: '1' })
+
 export const PRESETS = {
   music: {
     id: 'music',
@@ -241,6 +257,15 @@ function classifyError(stderr, code) {
   if (!text && code !== 0) return 'O download falhou. Tente novamente.'
   if (text.includes('is not a valid url') || text.includes('unsupported url')) return 'Link inválido. Cole um link do YouTube.'
   if (text.includes('video unavailable') || text.includes('this video is unavailable')) return 'Vídeo indisponível.'
+  // Estes dois vinham disfarçados de "vídeo privado" e mandavam a pessoa caçar
+  // problema onde não havia: o vídeo está público, quem travou foi o YouTube
+  // exigindo que o baixador resolva um desafio em JavaScript.
+  if (text.includes('no video formats found') || text.includes('js runtime') || text.includes('n challenge')) {
+    return 'O YouTube exigiu um desafio que o baixador não conseguiu resolver. Feche e abra o MPTRIX; se insistir, atualize o yt-dlp nas configurações.'
+  }
+  if (text.includes('sign in to confirm')) {
+    return 'O YouTube pediu confirmação de que você não é robô. Tente de novo em alguns minutos.'
+  }
   if (text.includes('private video') || text.includes('sign in')) return 'Vídeo privado ou requer login.'
   if (text.includes('age') && text.includes('restrict')) return 'Vídeo com restrição de idade.'
   if (text.includes('http error 4')) return 'Vídeo não encontrado (erro 4xx).'
@@ -275,6 +300,7 @@ export function probePlaylist({ ytDlpPath, url, timeoutMs = 45000 }) {
     if (!trimmedUrl) return reject(new Error('Cole um link primeiro.'))
 
     const args = [
+      ...jsArgs(),
       '--flat-playlist',
       '--dump-single-json',
       '--no-warnings',
@@ -286,6 +312,7 @@ export function probePlaylist({ ytDlpPath, url, timeoutMs = 45000 }) {
 
     const child = spawn(ytDlpPath, args, {
       windowsHide: true,
+      env: jsEnv(),
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
@@ -350,6 +377,7 @@ export function probeVideo({ ytDlpPath, url, timeoutMs = 25000 }) {
     if (!trimmedUrl) return reject(new Error('Cole um link primeiro.'))
 
     const args = [
+      ...jsArgs(),
       '--dump-single-json',
       '--no-warnings',
       '--no-call-home',
@@ -360,6 +388,7 @@ export function probeVideo({ ytDlpPath, url, timeoutMs = 25000 }) {
 
     const child = spawn(ytDlpPath, args, {
       windowsHide: true,
+      env: jsEnv(),
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
@@ -407,6 +436,7 @@ export function probeVideoMaxHeight({ ytDlpPath, url, timeoutMs = 20000 }) {
     if (!trimmedUrl) return resolve(null)
 
     const args = [
+      ...jsArgs(),
       '--dump-single-json',
       '--no-warnings',
       '--no-call-home',
@@ -417,6 +447,7 @@ export function probeVideoMaxHeight({ ytDlpPath, url, timeoutMs = 20000 }) {
 
     const child = spawn(ytDlpPath, args, {
       windowsHide: true,
+      env: jsEnv(),
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
@@ -557,6 +588,7 @@ export function startDownload({
     : preset.args
 
   const args = [
+    ...jsArgs(),
     '--ffmpeg-location', ffmpegPath,
     '--newline',
     '--no-colors',
@@ -573,6 +605,7 @@ export function startDownload({
 
   const child = spawn(ytDlpPath, args, {
     windowsHide: true,
+    env: jsEnv(),
     stdio: ['ignore', 'pipe', 'pipe']
   })
 
