@@ -14,7 +14,20 @@ import { randomUUID } from 'crypto'
 // MPTRIX JÁ TEM: o próprio executável do app roda como Node quando recebe
 // ELECTRON_RUN_AS_NODE=1 (mesmo truque do cancelador de vazamento). Assim
 // funciona em qualquer máquina onde o app roda, sem instalar nada.
-const jsArgs = () => ['--js-runtimes', `node:${process.execPath}`]
+// RESERVA DE CLIENTE. O YouTube às vezes exige "confirme que não é robô" —
+// acontece por excesso de pedidos do mesmo lugar, e é temporário. Quando isso
+// bate, o caminho normal morre inteiro. O cliente `android` costuma passar
+// mesmo assim, só que entregando um fluxo único de 360p (áudio de ~128 kbps
+// em vez do áudio puro de alta taxa).
+//
+// A ordem importa: `default` primeiro, então em tempo normal a escolha continua
+// sendo a melhor qualidade disponível — o android só entra na conta quando o
+// principal não trouxe nada. Baixar pior é ruim; não baixar é pior ainda.
+const CLIENTES = 'default,android'
+const jsArgs = () => [
+  '--js-runtimes', `node:${process.execPath}`,
+  '--extractor-args', `youtube:player_client=${CLIENTES}`
+]
 const jsEnv = () => ({ ...process.env, ELECTRON_RUN_AS_NODE: '1' })
 
 export const PRESETS = {
