@@ -2776,6 +2776,36 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   }
 }
 
+// Confissão é uma afirmação sobre a música DE AGORA: "tem som aqui e eu não
+// sei de quem é". Quando uma extração posterior leva esse som (o sintetizador
+// da Samurai levou o de 1:22, que caiu de -26,7 para -33,2 dB no "outros"), a
+// confissão venceu — deixá-la na tela é apontar pra um som que já tem dono.
+// Roda a cada abertura, inclusive nas músicas já dissecadas.
+const CONFISSAO_MIN_DB = -32
+
+async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
+  if (!semDono?.length) return []
+  const outros = join(dir, 'base', 'other.flac')
+  if (!existsSync(outros)) return semDono
+  const vivas = []
+  for (const c of semDono) {
+    let mean = -99
+    try {
+      await run(
+        ffmpegPath,
+        ['-ss', String(c.ini), '-t', String(Math.max(1, c.fim - c.ini)), '-i', outros, '-af', 'volumedetect', '-f', 'null', '-'],
+        state,
+        (linha) => {
+          const mm = linha.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+          if (mm) mean = parseFloat(mm[1])
+        }
+      )
+    } catch { vivas.push(c); continue } // não deu pra medir: na dúvida, mantém
+    if (mean > CONFISSAO_MIN_DB) vivas.push({ ...c, db: mean })
+  }
+  return vivas
+}
+
 // Vacina anti-gêmeo da dissecação — a mesma doutrina do activeExtracts, mas
 // aqui o motivo é DINHEIRO: fechar e reabrir a música durante o interrogatório
 // largava duas dissecações pagando sondas pros MESMOS instrumentos, e as duas
@@ -2877,6 +2907,20 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
       // cada abertura; motor melhorou (DISSEC_V subiu) = o acervo inteiro
       // re-disseca sozinho na abertura — mesmo contrato da letra e da cifra.
       if (meta0.autoHarvest?.done && (meta0.autoHarvest.v || 1) >= DISSEC_V) {
+        // Música já dissecada ainda precisa de uma coisa: conferir se as
+        // confissões continuam de pé. Um som confessado numa rodada pode ter
+        // ganhado dono numa extração posterior — aí o aviso tem que sair.
+        const vivas = await revalidarConfissoes(dir, ffmpegPath, progresso.semDono, state)
+        if (vivas.length !== progresso.semDono.length) {
+          progresso.semDono = vivas
+          convergiu = true
+          const m = gravar()
+          onStatus({
+            id, state: 'done', auto: true, jaColhida: true, completo: true,
+            ...(m ? { session: sessionPayload(key, m) } : {}), semDono: vivas
+          })
+          return
+        }
         onStatus({ id, state: 'done', auto: true, jaColhida: true }); return
       }
       if (!usarNuvem()) { onStatus({ id, state: 'done', auto: true, pulado: 'nuvem desligada' }); return }
@@ -3045,8 +3089,20 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             // Interrogatório cortado no meio (teto, cancelamento, falha de API)
             // NÃO confessa: a pergunta não chegou a ser feita por inteiro.
             if (!progresso.semDono.some((s) => s.ini === trecho.ini)) {
+              // guarda a medida do trecho: é ela que permite conferir depois se
+              // a confissão ainda vale ou se o som já ganhou dono
+              let db = -99
+              try {
+                await run(ffmpegPath, [
+                  '-ss', String(trecho.ini), '-t', String(trecho.fim - trecho.ini),
+                  '-i', join(dir, 'base', 'other.flac'), '-af', 'volumedetect', '-f', 'null', '-'
+                ], state, (linha) => {
+                  const mm = linha.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+                  if (mm) db = parseFloat(mm[1])
+                })
+              } catch { /* sem medida, a confissão ainda vale */ }
               progresso.semDono.push({
-                ini: trecho.ini, fim: trecho.fim,
+                ini: trecho.ini, fim: trecho.fim, db,
                 palpite: r.palpite ? (SPECIALISTS[r.palpite]?.label || r.palpite) : null
               })
             }
@@ -3098,6 +3154,9 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             }
           }
         }
+        // A faixa nova saiu do "outros": confissão que apontava justamente esse
+        // som perdeu a validade e some da tela.
+        progresso.semDono = await revalidarConfissoes(dir, ffmpegPath, progresso.semDono, state)
         // Extraiu nesta rodada = o véu levantou e a camada de baixo ainda não
         // foi farejada. Nunca é fim: a música fica done:false e a próxima
         // abertura continua de onde parou (sem repagar as sondas já feitas).
