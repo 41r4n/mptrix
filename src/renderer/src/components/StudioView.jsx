@@ -2643,10 +2643,13 @@ export default function StudioView({ source, onClose }) {
                 {chords === 'loading' && (
                   <div className="chords-empty">
                     <div className="studio-spinner small" />
+                    {/* Com a nuvem ligada o trabalho NÃO é nesta máquina — dizer
+                        "6 min nesta máquina" enquanto a nuvem processa é mentira
+                        que faz a pessoa achar que o computador travou. */}
                     <span className="muted">
-                      Lendo a harmonia das faixas… leva mais ou menos
-                      {session?.duration ? ` ${Math.max(2, Math.round((session.duration * 1.6) / 60))} min` : ' o tempo da música e meio'} nesta máquina,
-                      e só na primeira vez. Pode deixar tocando ou fechar o painel — continua por baixo.
+                      {naNuvem
+                        ? 'Lendo a harmonia das faixas na nuvem… costuma levar menos de 1 min, mas se a máquina de lá estiver fria pode passar de 5. É só na primeira vez. Pode deixar tocando ou fechar o painel — continua por baixo.'
+                        : `Lendo a harmonia das faixas… leva mais ou menos${session?.duration ? ` ${Math.max(2, Math.round((session.duration * 1.6) / 60))} min` : ' o tempo da música e meio'} nesta máquina, e só na primeira vez. Pode deixar tocando ou fechar o painel — continua por baixo.`}
                     </span>
                   </div>
                 )}

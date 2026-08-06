@@ -2478,9 +2478,13 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
 //
 // Só roda com a nuvem ligada: no processador cada sonda custaria 47 minutos.
 // Versão do motor: subiu = música antiga refaz a dissecação ao abrir.
-// 3: sintetizador virou primo de cordas/metais/madeiras (o pad disfarçado da
-//    Samurai) e as sondas de um trecho passaram a ser feitas em paralelo.
-const DISSEC_V = 3
+// 3: sintetizador virou primo de cordas (o pad disfarçado da Samurai) e as
+//    sondas de um trecho passaram a ser feitas em paralelo.
+// 4: energia do "outros" também abre interrogatório. Antes só o cheiro abria,
+//    e som que o faro não reconhece sumia sem faixa E sem confissão — buraco
+//    que contradizia a doutrina inteira. Medido na Girlfriend: som concentrado
+//    em 1:01–1:21 que nunca tinha sido perguntado.
+const DISSEC_V = 4
 // A partir desta versão o registro de sondas tem a forma {inst, ini, fim}. Ele
 // SOBREVIVE à subida do motor de propósito: "já perguntei pro violino às 1:22"
 // continua verdade, e o parentesco novo (sintetizador) entra na fila sem
@@ -2520,7 +2524,65 @@ const CHEIRO_MIN = 0.12      // lanterna, não juiz: acima disso o trecho merece
 const SPOTS_POR_RODADA = 4   // trechos interrogados por rodada, mais cheirosos primeiro
 const SONDAS_POR_SPOT = 6    // teto de centavos por interrogatório
 const DISSEC_RODADAS = 3     // tirar um som levanta o véu do de baixo
+const ORFAOS_POR_RODADA = 2  // trechos com som mas SEM cheiro, por rodada
+const CLIPE_S = 40           // tamanho do pedaço que vai pra sonda
 const SEGUNDOS_POR_SONDA = 45 // medido: sonda de clipe de 40s custa 27–46s de GPU
+
+// ONDE AINDA TEM SOM SEM DONO — a pergunta que não depende de nomear nada.
+//
+// O gatilho do interrogatório era só o CHEIRO do farejador. Isso deixava um
+// buraco que contradiz a doutrina inteira: som que o faro não cheira nunca é
+// interrogado, então não vira faixa NEM confissão — some calado. Medido na
+// Girlfriend: três concentrações de som no "outros", e a de 1:01–1:21 nunca
+// tinha sido perguntada porque nada cheirou lá.
+//
+// Aqui a pergunta é outra, e não precisa de nome nenhum: onde o som se
+// CONCENTRA acima da linha de base da própria música? Vazamento e sobra são
+// finos e espalhados; instrumento de verdade faz corcova. A régua é relativa
+// (cada música tem seu próprio piso) com um chão absoluto pra não caçar
+// silêncio.
+const DESTAQUE_DB = 4      // quanto a região precisa subir acima da base da música
+const CHAO_DB = -45        // abaixo disso é sussurro, não vale os centavos
+const REGIAO_MIN_S = 6     // corcova curta demais é batida, não instrumento
+const REGIAO_BURACO_S = 3  // respiro dentro da mesma frase não parte a região
+
+async function regioesComSom(ffmpegPath, arquivo, workDir, state) {
+  const canal = await decodificarMono(ffmpegPath, arquivo, workDir, 'perfil', state)
+  const SR = 44100
+  const porSeg = []
+  for (let s = 0; s * SR < canal.length; s++) {
+    let e = 0
+    const ini = s * SR
+    const fim = Math.min(canal.length, ini + SR)
+    for (let i = ini; i < fim; i++) e += canal[i] * canal[i]
+    porSeg.push(20 * Math.log10(Math.sqrt(e / Math.max(1, fim - ini)) + 1e-12))
+  }
+  if (porSeg.length < REGIAO_MIN_S) return []
+  const ordenado = [...porSeg].sort((a, b) => a - b)
+  const base = ordenado[Math.floor(ordenado.length / 2)]
+  const alvo = Math.max(base + DESTAQUE_DB, CHAO_DB)
+
+  const regs = []
+  let ini = -1
+  let buraco = 0
+  for (let i = 0; i <= porSeg.length; i++) {
+    const alto = i < porSeg.length && porSeg[i] >= alvo
+    if (alto) { if (ini < 0) ini = i; buraco = 0; continue }
+    if (ini < 0) continue
+    buraco++
+    if (buraco > REGIAO_BURACO_S || i >= porSeg.length) {
+      const fim = i - buraco
+      if (fim - ini + 1 >= REGIAO_MIN_S) {
+        let soma = 0
+        for (let k = ini; k <= fim; k++) soma += porSeg[k]
+        regs.push({ ini, fim, db: soma / (fim - ini + 1) })
+      }
+      ini = -1
+      buraco = 0
+    }
+  }
+  return regs.sort((a, b) => b.db - a.db)
+}
 
 // Decodifica pra mono f32 (mesma régua do limpa_vazamento) pra pesar e comparar
 async function decodificarMono(ffmpegPath, audio, workDir, tag, state) {
@@ -2623,14 +2685,18 @@ function regiaoEsgotada(sondas, inst, at, ja, dur) {
 
 // Interrogatório de um trecho: sondas baratas no clipe até alguém reivindicar.
 // Devolve o dono (ou null), quem foi sondado e o melhor palpite pra confissão.
-async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, suspeitos, sondas, jaDonos, notas, state, aoSondar }) {
+async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, suspeitos, semPrimos, sondas, jaDonos, notas, state, aoSondar }) {
   const meta = readMeta(dir)
   const ja = new Set([...stemsOf(meta), ...(meta?.extracted || []), ...(jaDonos || [])])
   // MESMA RÉGUA do portão lá fora (regiaoEsgotada): ali o cheiro é medido em
   // `at` com janela de 10s. Medir aqui pelo meio do clipe fazia o spot passar no
   // portão e chegar vazio — trecho interrogado sem ninguém pra chamar, e o som
   // sumia sem virar faixa nem confissão.
-  const candidatos = [...new Set([...suspeitos, ...suspeitos.flatMap(grupoDeTimbre)])]
+  // Trecho aberto por CHEIRO começa num nome e puxa os primos de timbre (é o
+  // antídoto do "morre no primeiro nome"). Trecho aberto por ENERGIA não tem
+  // nome nenhum: a lista já chega pronta e ordenada, e puxar primos só
+  // encheria a fila de gente pior colocada.
+  const candidatos = (semPrimos ? [...new Set(suspeitos)] : [...new Set([...suspeitos, ...suspeitos.flatMap(grupoDeTimbre)])])
     .filter((i) => SPECIALISTS[i] && !ja.has(i) && !jaSondou(sondas, i, at, 10, dur))
   if (!candidatos.length) return { dono: null, sondados: [], palpite: null, vazio: true, truncado: true }
 
@@ -2807,7 +2873,13 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
 // da Samurai levou o de 1:22, que caiu de -26,7 para -33,2 dB no "outros"), a
 // confissão venceu — deixá-la na tela é apontar pra um som que já tem dono.
 // Roda a cada abertura, inclusive nas músicas já dissecadas.
-const CONFISSAO_MIN_DB = -32
+// A pergunta certa não é "esse trecho é alto?" e sim "o som saiu daqui?". Corte
+// fixo em -32 dB reprovava injustamente confissão de som fraco mas real: a
+// Girlfriend confessa em -38 dB, e o app apagaria o próprio aviso na abertura
+// seguinte. O que denuncia som que ganhou dono é a QUEDA — a Samurai caiu de
+// -26,7 pra -33,2 quando o sintetizador levou o dela.
+const CONFISSAO_QUEDA_DB = 4   // caiu mais que isso = alguém levou o som
+const CONFISSAO_CHAO_DB = -50  // abaixo disso não sobrou nada audível
 
 async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
   if (!semDono?.length) return []
@@ -2827,7 +2899,10 @@ async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
         }
       )
     } catch { vivas.push(c); continue } // não deu pra medir: na dúvida, mantém
-    if (mean > CONFISSAO_MIN_DB) vivas.push({ ...c, db: mean })
+    if (mean <= CONFISSAO_CHAO_DB) continue // virou silêncio
+    // registro velho não tem a medida de origem: cai na régua absoluta antiga
+    if (c.db == null) { if (mean > -32) vivas.push({ ...c, db: mean }); continue }
+    if (mean > c.db - CONFISSAO_QUEDA_DB) vivas.push({ ...c, db: mean })
   }
   return vivas
 }
@@ -3064,20 +3139,80 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         // injusto, o "morre no primeiro nome" voltando pela porta dos fundos).
         const spots = []
         let orfaos = 0 // cheiros que não couberam no teto da rodada
+        let truncouAlgoNaMedicao = false
         for (const c of cheiros) {
           const perto = spots.find((s) => c.at >= s.at - 8 && c.at + 10 <= s.at + 32)
           if (perto) { perto.suspeitos.push(c.inst); continue }
           if (spots.length < SPOTS_POR_RODADA) spots.push({ at: c.at, suspeitos: [c.inst] })
           else orfaos++
         }
-        if (!spots.length) { convergiu = true; break } // nada mais cheira: acabou de verdade
+
+        // SOM SEM CHEIRO TAMBÉM É PERGUNTA. Até aqui só o faro abria
+        // interrogatório, e som que ele não reconhece sumia calado — sem faixa
+        // e sem confissão. Agora a energia do "outros" também abre: onde o som
+        // se concentra acima da linha de base da música, alguém vai ser
+        // perguntado, mesmo que nada cheire ali.
+        let semCheiro = 0
+        let mediuEnergia = false
+        try {
+          const regs = await regioesComSom(ffmpegPath, outros, workRoot, state)
+          mediuEnergia = true
+          // Região MAIOR que o clipe vira vários pedaços com âncora própria. Sem
+          // isso, uma corcova de 110s era perguntada só nos 40s do começo: os
+          // outros 70s não viravam faixa nem confissão (o buraco renascendo
+          // dentro do conserto), e o motor nunca convergia porque a região
+          // continuava aparecendo pra sempre.
+          const pedacos = []
+          for (const r of regs) {
+            for (let ini = r.ini; ini <= r.fim; ini += CLIPE_S) {
+              pedacos.push({ at: ini, db: r.db, fimReg: r.fim })
+              if (r.fim - ini <= CLIPE_S) break
+            }
+          }
+          for (const p of pedacos) {
+            // já coberto por um cheiro? é o mesmo trecho com outro nome
+            if (spots.some((s) => p.at >= s.at - 8 && p.at <= s.at + 32)) continue
+            // já confessado? a pergunta foi feita e a resposta foi "não sei
+            // quem é". Insistir aqui era o que fazia UMA música comer 466 dos
+            // 500 centavos do teto: o mesmo trecho moendo o catálogo inteiro,
+            // 6 especialistas por rodada, pro mesmo desfecho.
+            if (progresso.semDono.some((c) => p.at >= c.ini - 8 && p.at <= c.fim)) continue
+            // MESMA CHAVE do portão de dentro (`at` com janela de 10s): medir
+            // aqui pelo meio da região e lá pelo início fazia os dois discordarem
+            const candidatos = Object.keys(SPECIALISTS)
+              .filter((i) => !ja.has(i) && !jaSondou(sondas, i, p.at, 10, dur))
+            if (!candidatos.length) continue
+            if (semCheiro >= ORFAOS_POR_RODADA) { orfaos++; continue }
+            // Sem nome pra começar, quem ordena a fila é o faro da música toda:
+            // palpite fraco continua melhor que ordem alfabética. A lista vai
+            // INTEIRA — quem corta em SONDAS_POR_SPOT é o interrogatório, que
+            // precisa saber quantos ficaram de fora pra marcar "truncado".
+            let fila = candidatos.sort((a, b) => (notas[b] || 0) - (notas[a] || 0))
+            // seção já extraída e com som engole os solistas dela também aqui:
+            // sem isso a fila abria com o eco do naipe que já saiu
+            for (const [secao, membros] of Object.entries(FAMILIAS)) {
+              const info = meta.stemInfo?.[secao]
+              if (ja.has(secao) && info?.present !== false) fila = fila.filter((i) => !membros.includes(i))
+            }
+            if (!fila.length) continue
+            spots.push({ at: p.at, suspeitos: fila, semCheiro: true, db: p.db })
+            semCheiro++
+          }
+        } catch { /* medição falhou — tratado abaixo */ }
+        // Falhar em medir NÃO pode virar "dissequei por completo": sem a
+        // medição, não dá pra afirmar que não sobrou som sem dono.
+        if (!mediuEnergia) truncouAlgoNaMedicao = true
+
+        // Só é fim quando não cheira NEM sobra som concentrado sem dono
+        if (!spots.length && !truncouAlgoNaMedicao) { convergiu = true; break }
+        if (!spots.length) break
 
         const donos = []
         const trechosDoDono = {}
         // Interrogatório que não foi até o fim (teto no meio, fila maior que o
         // limite de sondas, região já esgotada) impede declarar convergência:
         // ficou pergunta sem fazer, e som sem resposta não pode virar silêncio.
-        let truncouAlgo = false
+        let truncouAlgo = truncouAlgoNaMedicao
         for (const spot of spots) {
           if (state.cancelled) { motivoParada = 'cancelado'; break }
           if (!usarNuvem()) { motivoParada = 'nuvem-indisponivel'; break }
@@ -3087,7 +3222,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           onStatus({ id, state: 'running', auto: true, rodada, fase: 'interrogando', trecho })
           const r = await interrogarTrecho({
             dir, workRoot, ffmpegPath, trecho, at: spot.at, dur,
-            suspeitos: spot.suspeitos, sondas, jaDonos: donos, notas, state,
+            suspeitos: spot.suspeitos, semPrimos: !!spot.semCheiro, sondas, jaDonos: donos, notas, state,
             aoSondar: (lista) => onStatus({
               id, state: 'running', auto: true, rodada, fase: 'interrogando', trecho,
               sondando: lista.map((i) => SPECIALISTS[i]?.label || i).join(', ')
@@ -3129,7 +3264,12 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
               } catch { /* sem medida, a confissão ainda vale */ }
               progresso.semDono.push({
                 ini: trecho.ini, fim: trecho.fim, db,
-                palpite: r.palpite ? (SPECIALISTS[r.palpite]?.label || r.palpite) : null
+                // Trecho aberto por CHEIRO tem palpite de verdade: o faro
+                // apontou alguém ali. Trecho aberto por ENERGIA não tem — a
+                // fila veio da nota geral da música, então dizer "parece
+                // Metais" seria inventar evidência que não existe. Melhor
+                // admitir que não faço ideia do que é.
+                palpite: (!spot.semCheiro && r.palpite) ? (SPECIALISTS[r.palpite]?.label || r.palpite) : null
               })
             }
           }
