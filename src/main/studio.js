@@ -2711,17 +2711,19 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // confissão como se tivesse sido interrogado até o fim (e carimbava a música
   // de dissecada pra sempre). Era o pesadelo do sintetizador voltando pela
   // porta do teto de gasto.
-  const total = candidatos.length
+  // (a contagem total nao decide mais nada: o teto de perguntas e desenho, nao interrupcao)
   const ordenados = [...candidatos].sort((a, b) => nota(b) - nota(a))
   // O lote inteiro sai de uma vez, então o teto de gasto é conferido ANTES pro
   // lote INTEIRO — em série ele era reavaliado a cada sonda e parava na hora
   // exata. Sem isso, um lote de 6 podia passar do teto por 5 sondas. E vem
   // antes de cortar o clipe: sem dinheiro pra perguntar, nem o ffmpeg roda.
   const nv = getNuvem()
+  let cortadoPorDinheiro = false
   if (nv.tetoCentavos > 0) {
     const sobra = nv.tetoCentavos - estimativaCentavos(nv.segundosGastos)
     const cabem = Math.floor(sobra / estimativaCentavos(SEGUNDOS_POR_SONDA))
     if (cabem <= 0) return { dono: null, sondados: [], palpite: null, truncado: true, semTeto: true }
+    if (cabem < Math.min(ordenados.length, SONDAS_POR_SPOT)) cortadoPorDinheiro = true
     ordenados.length = Math.min(ordenados.length, cabem)
   }
   const fila = ordenados.slice(0, SONDAS_POR_SPOT)
@@ -2755,7 +2757,16 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // Interrogatório cortado no meio (teto, cancelamento) não é o mesmo que
   // interrogatório concluído sem culpado: no primeiro caso ninguém pode
   // confessar "não tem dono" — a pergunta nem chegou a ser feita até o fim.
-  let truncado = fila.length < total
+  // TRUNCADO = a pergunta foi CORTADA por algo de fora (dinheiro acabou,
+  // usuário cancelou, a nuvem falhou). O teto de 6 perguntas por trecho NÃO é
+  // interrupção, é o desenho: pergunto aos 6 mais prováveis e, se ninguém
+  // reivindicar, isso É a resposta — confesso e fecho o trecho.
+  //
+  // Tratar o teto como interrupção custou caro de verdade: na Girlfriend o
+  // motor fez 32 perguntas em dois trechos, nenhum deles fechou, NENHUMA
+  // confissão foi gravada, e o trecho de 1:01 nunca chegou a ser perguntado
+  // porque os dois trechos abertos ocupavam as vagas todas as rodadas.
+  let truncado = cortadoPorDinheiro
   try {
     if (state.cancelled || !usarNuvem()) return { dono: null, sondados, palpite, truncado: true }
     aoSondar?.(fila)
@@ -3120,7 +3131,12 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           .map(([inst, v]) => ({ inst, score: v?.score ?? v ?? 0, at: v?.at ?? 0 }))
           // o cheiro só morre quando NÃO SOBROU NINGUÉM pra chamar naquele
           // pedaço — interrogatório cortado no meio deixa candidatos na fila
-          .filter((c) => c.score >= CHEIRO_MIN && SPECIALISTS[c.inst] && !ja.has(c.inst) && !regiaoEsgotada(sondas, c.inst, c.at, ja, dur))
+          .filter((c) => c.score >= CHEIRO_MIN && SPECIALISTS[c.inst] && !ja.has(c.inst)
+            && !regiaoEsgotada(sondas, c.inst, c.at, ja, dur)
+            // trecho já confessado não reabre: a pergunta foi feita e a
+            // resposta foi "tem som, não sei de quem". Reabrir era moer o
+            // catálogo inteiro no mesmo pedaço, 6 especialistas por rodada.
+            && !progresso.semDono.some((s) => c.at >= s.ini - 8 && c.at <= s.fim))
         // Seção JÁ EXTRAÍDA E COM SOM silencia o eco dos solistas dela. Se a
         // seção saiu MUDA, ela não engoliu ninguém — calar os solistas ali era
         // apagar o cheiro de um som que continua na música, sem nem confessar.
