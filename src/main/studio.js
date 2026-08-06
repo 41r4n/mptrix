@@ -149,6 +149,26 @@ function metaPathOf(dir) {
   return join(dir, 'meta.json')
 }
 
+/**
+ * Apaga uma pasta de rascunho sem nunca derrubar quem chamou.
+ *
+ * No Windows, o arquivo que um processo filho acabou de ler continua preso por
+ * um instante depois que ele morre — o ffmpeg sai, o `unlink` vem logo atrás e
+ * leva EBUSY. Aconteceu de verdade: a separação da Girlfriend terminou inteira
+ * e o app mostrou "algo deu errado" porque não conseguiu apagar um rascunho.
+ *
+ * `maxRetries` é do próprio Node e existe exatamente pra isso. E o try/catch
+ * fecha a regra: lixo que não sai não é motivo pra perder trabalho pronto.
+ */
+function apagarPasta(p) {
+  try {
+    rmSync(p, { recursive: true, force: true, maxRetries: 12, retryDelay: 250 })
+    return true
+  } catch {
+    return false
+  }
+}
+
 function readMeta(dir) {
   try {
     return JSON.parse(readFileSync(metaPathOf(dir), 'utf8'))
@@ -1382,8 +1402,14 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
         const present = mean == null || mean > -48 || (max != null && max > -20)
         stemInfo[stem] = { mean, max, present }
       }
-      rmSync(workDir, { recursive: true, force: true })
-      rmSync(srcWav, { force: true })
+      // Tirar o lixo NUNCA pode derrubar o trabalho pronto. No Windows o
+      // arquivo que o ffmpeg acabou de ler fica preso por um instante depois
+      // que o processo morre (EBUSY), e apagar a bancada estourava — jogando
+      // fora uma separação que tinha dado certo. Agora insiste um pouco e, se
+      // mesmo assim não der, segue em frente: sobra uma pasta de rascunho, que
+      // a próxima separação da mesma música limpa.
+      apagarPasta(workDir)
+      try { rmSync(srcWav, { force: true }) } catch { /* rascunho, não trabalho */ }
 
       const meta = {
         key,
@@ -1592,7 +1618,7 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
       }
 
       work = join(plansDir, `work_${fp}`)
-      rmSync(work, { recursive: true, force: true })
+      apagarPasta(work)
       mkdirSync(work, { recursive: true })
 
       // 1. Duração (só o cabeçalho — rápido)
@@ -1733,7 +1759,7 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
         createdAt: new Date().toISOString()
       }
       writeFileSync(planPath, JSON.stringify(plan, null, 2))
-      rmSync(work, { recursive: true, force: true })
+      apagarPasta(work)
       onStatus({ id, state: 'done', plan })
     } catch (err) {
       try { if (work) rmSync(work, { recursive: true, force: true }) } catch {}
@@ -2002,7 +2028,7 @@ export async function redoStem({ key, instrument, ffmpegPath }) {
   const workRoot = join(dir, 'extract_work')
   if (existsSync(workRoot)) {
     for (const f of readdirSync(workRoot)) {
-      if (f.startsWith(`${instrument}_p`)) rmSync(join(workRoot, f), { recursive: true, force: true })
+      if (f.startsWith(`${instrument}_p`)) apagarPasta(join(workRoot, f))
     }
   }
   meta.extracted = meta.extracted.filter((i) => i !== instrument)
@@ -2188,8 +2214,8 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
           // Bancada exclusiva por pedaço — dois trabalhos nunca dividem pasta
           const segIn = join(workRoot, `${instId}_p${pi}_in`)
           const segOut = join(workRoot, `${instId}_p${pi}_out`)
-          rmSync(segIn, { recursive: true, force: true })
-          rmSync(segOut, { recursive: true, force: true })
+          apagarPasta(segIn)
+          apagarPasta(segOut)
           mkdirSync(segIn, { recursive: true })
           await run(ffmpegPath, [
             '-y', '-loglevel', 'error', '-ss', String(Math.round(pd.start)), '-t', String(Math.ceil(pd.len)),
@@ -2226,8 +2252,8 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
           if (!outFiles.length) throw new Error(`Especialista não produziu saída pro pedaço ${pi + 1}`)
           const piece = join(workRoot, `${instId}_p${pi}.wav`)
           copyFileSync(join(segOut, 'seg', outFiles[0]), piece)
-          rmSync(segIn, { recursive: true, force: true })
-          rmSync(segOut, { recursive: true, force: true })
+          apagarPasta(segIn)
+          apagarPasta(segOut)
           outPieces.push({ file: piece, start: Math.round(pd.start) })
           step++
         }
@@ -2398,7 +2424,7 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
         writeMeta(dir, mLv)
       }
 
-      rmSync(workRoot, { recursive: true, force: true })
+      apagarPasta(workRoot)
       touchSession(dir)
       onStatus({
         id, state: 'done', session: sessionPayload(key, readMeta(dir)),
@@ -2654,7 +2680,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
       const cl = join(workRoot, `viz_${s}.flac`)
       await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', f, cl], state)
       vizinhos.push(await decodificarMono(ffmpegPath, cl, workRoot, `viz_${s}`, state))
-      rmSync(cl, { force: true })
+      try { rmSync(cl, { force: true }) } catch { /* preso pelo ffmpeg que acabou de sair; some com a bancada */ }
     }
     return vizinhos
   }
@@ -3262,8 +3288,8 @@ export function startPolishJob({ key, stem, ffmpegPath, onProgress, onStatus }) 
         }
         const segIn = join(workRoot, 'one_in')
         const segOut = join(workRoot, 'one_out')
-        rmSync(segIn, { recursive: true, force: true })
-        rmSync(segOut, { recursive: true, force: true })
+        apagarPasta(segIn)
+        apagarPasta(segOut)
         mkdirSync(segIn, { recursive: true })
         await run(ffmpegPath, [
           '-y', '-loglevel', 'error', '-ss', String(Math.round(pd.start)), '-t', String(Math.ceil(pd.len)),
@@ -3302,7 +3328,7 @@ export function startPolishJob({ key, stem, ffmpegPath, onProgress, onStatus }) 
       m2.polished[stem] = true
       m2.lastUsedAt = new Date().toISOString()
       writeMeta(dir, m2)
-      rmSync(workRoot, { recursive: true, force: true })
+      apagarPasta(workRoot)
       onStatus({ id, state: 'done', session: sessionPayload(key, readMeta(dir)) })
     } catch (err) {
       // workRoot fica no lugar: pedaços prontos permitem retomar de onde parou
@@ -3431,7 +3457,7 @@ export async function exportSong({ key, pitch = 0, tempo = 100, targetDir, ffmpe
     await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', outWav, '-b:a', '320k', target], state)
     return target
   } finally {
-    rmSync(work, { recursive: true, force: true })
+    apagarPasta(work)
   }
 }
 
