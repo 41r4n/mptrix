@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
-import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos } from './store.js'
+import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos } from './store.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -409,7 +409,7 @@ export async function detectChords({ key, ffmpegPath, force = false }) {
         destino,
         state
       })
-      somarGastoNuvem(rc.segundos)
+      somarGastoNuvem(rc.segundos, { maquina: 'cpu' })
       cromaPronta = destino
     } catch (err) {
       if (state.cancelled) throw err
@@ -630,8 +630,9 @@ export async function transcribeLyrics({ key, ffmpegPath, force = false, onProgr
         onProgress: (pr) => onProgress?.({ ...pr, nuvem: true })
       })
       words = r.words
-      somarGastoNuvem(r.segundos)
+      somarGastoNuvem(r.segundos, { maquina: 'a100' })
     } catch (err) {
+      if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'a100' }) // GPU queimada antes de morrer tambem e dinheiro
       // Mesma regra da separacao: nao faz minutos de processador escondido
       // quando a pessoa pediu nuvem. Falhar aqui custa um clique.
       throw new Error(
@@ -1348,9 +1349,10 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
           // única chamada que conta como "música feita" no placar: é a
           // separação da música em si. O resto (sondas, especialistas, letra,
           // cifra) soma segundos mas não inventa músicas.
-          somarGastoNuvem(r.segundos, { contaMusica: true })
+          somarGastoNuvem(r.segundos, { contaMusica: true, maquina: 'a100' })
           feitoNaNuvem = true
         } catch (err) {
+          if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'a100' }) // GPU queimada antes de morrer tambem e dinheiro
           if (state.cancelled) throw err
           onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Separando aqui mesmo.` })
         }
@@ -1694,9 +1696,10 @@ export function startPlanJob({ inputFile, ffmpegPath, onProgress, onStatus }) {
             run,
             onProgress: (pr) => onProgress({ id, ...pr, nuvem: true })
           })
-          somarGastoNuvem(rn.segundos)
+          somarGastoNuvem(rn.segundos, { maquina: 'a100' })
           stemDoPlano = rn.rawPaths
         } catch (err) {
+          if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'a100' }) // GPU queimada antes de morrer tambem e dinheiro
           if (state.cancelled) throw err
           onStatus({ id, state: 'running', nuvem: 'falhou', aviso: `Nuvem: ${err.message}. Farejando aqui mesmo (uns 2 minutos).` })
         }
@@ -2171,11 +2174,12 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
                 percent: Math.round(((step + pct / 100) / totalSteps) * 100)
               })
             })
-            somarGastoNuvem(r.segundos)
+            somarGastoNuvem(r.segundos, { maquina: 'gpu' })
             outPieces = [{ file: alvo, start: 0 }]
             step += defs.length
             naNuvem = true
           } catch (err) {
+            if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'gpu' }) // GPU queimada antes de morrer tambem e dinheiro
             if (state.cancelled) throw err
             // NÃO cai pro processador escondido (47 min travariam a máquina —
             // já travaram), e um instrumento falhando NÃO derruba os outros:
@@ -2353,9 +2357,10 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
                 percent: Math.round(pctBase + (pct * pctSpan) / 100)
               })
             })
-            somarGastoNuvem(rg.segundos)
+            somarGastoNuvem(rg.segundos, { maquina: 'a100' })
             gpStemDir = alvoDir
           } catch (err) {
+            if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'a100' }) // GPU queimada antes de morrer tambem e dinheiro
             if (state.cancelled) throw err
             gpOk = false
             falhasNuvem.push(gpLabel)
@@ -2730,7 +2735,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   const nv = getNuvem()
   let cortadoPorDinheiro = false
   if (nv.tetoCentavos > 0) {
-    const sobra = nv.tetoCentavos - estimativaCentavos(nv.segundosGastos)
+    const sobra = nv.tetoCentavos - gastoCentavos()
     const cabem = Math.floor(sobra / estimativaCentavos(SEGUNDOS_POR_SONDA))
     if (cabem <= 0) return { dono: null, sondados: [], palpite: null, truncado: true, semTeto: true }
     if (cabem < Math.min(ordenados.length, SONDAS_POR_SPOT)) cortadoPorDinheiro = true
@@ -2814,10 +2819,10 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
           run,
           workDir: workRoot
         })
-        somarGastoNuvem(r.segundos) // segundos contam pro teto; "música" não
+        somarGastoNuvem(r.segundos, { maquina: 'gpu' }) // segundos contam pro teto; "música" não
       } catch (e) {
         // GPU queimada por uma sonda que morreu no meio ainda é dinheiro gasto
-        if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos)
+        if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos, { maquina: 'gpu' })
         // Sonda que não completou NÃO vira veto: quem não foi ouvido continua
         // na fila. Uma falhar não derruba as outras — elas já estão em voo.
         return { inst, falhou: true }

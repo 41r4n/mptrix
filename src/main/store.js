@@ -63,6 +63,10 @@ export function getNuvem() {
     ligada: !!n.ligada,
     temChave: !!n.chave,
     segundosGastos: n.segundosGastos || 0,
+    // gasto de verdade, pelo preço da máquina que fez cada trabalho
+    centavosGastos: n.centavosGastos != null
+      ? Math.round(n.centavosGastos * 100) / 100
+      : Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100,
     musicasFeitas: n.musicasFeitas || 0,
     tetoCentavos: n.tetoCentavos ?? 500
   }
@@ -118,8 +122,16 @@ export function setTetoNuvem(centavos) {
  * letra, cifra) e o painel diria "37 músicas" pra quem separou três, com um
  * "por música" que despenca pro preço de uma sonda.
  */
-export function somarGastoNuvem(segundos, { contaMusica = false } = {}) {
+export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu' } = {}) {
   store.set('nuvem.segundosGastos', (store.get('nuvem.segundosGastos') || 0) + (segundos || 0))
+  // O que manda no teto é o CENTAVO, medido pelo preço da máquina que fez o
+  // trabalho — não mais um chute de pior caso igual pra tudo.
+  const preco = PRECO_POR_SEGUNDO[maquina] ?? PRECO_POR_SEGUNDO.gpu
+  const custo = (segundos || 0) * preco * 100 * (MAQUINA_PRIVADA[maquina] ? MARGEM_PRIVADO : 1)
+  // A base é `gastoCentavos()`, não zero: conta antiga só tinha segundos, e
+  // começar do zero apagaria todo o histórico no primeiro gasto novo — o teto
+  // voltaria a achar que o crédito está intacto.
+  store.set('nuvem.centavosGastos', gastoCentavos() + custo)
   if (contaMusica) store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
   return getNuvem()
 }
@@ -132,17 +144,60 @@ export function somarGastoNuvem(segundos, { contaMusica = false } = {}) {
 export function usarNuvem() {
   const n = getNuvem()
   if (!n.ligada || !n.temChave) return false
-  if (n.tetoCentavos > 0 && estimativaCentavos(n.segundosGastos) >= n.tetoCentavos) return false
+  if (n.tetoCentavos > 0 && gastoCentavos() >= n.tetoCentavos) return false
   return true
 }
 
-// mesma tabela do módulo da nuvem; fica aqui pra o teto não depender dele
-export function estimativaCentavos(segundos) {
-  return Math.round((segundos || 0) * 0.0014 * 100 * 100) / 100
+// PREÇO POR SEGUNDO, do jeito que o Replicate cobra de verdade.
+//
+// O contador antigo usava 0,0014 $/s pra TUDO. Eu achava que era um "pior caso
+// chutado" — não era: é o preço EXATO do demucs e do WhisperX, que rodam em
+// A100. O erro estava noutro lugar: o grosso dos segundos vem das sondas, que
+// rodam no nosso modelo em T4, seis vezes mais barato. Por isso o app dizia
+// US$ 4,42 quando a fatura real era ~US$ 1, e o teto travou a dissecação com o
+// crédito quase intacto. A correção não é baratear tudo — é cobrar de cada
+// trabalho o preço da máquina que ele usou.
+// Conferido nas páginas dos modelos, não chutado:
+//   ryan5453/demucs ......... "runs on Nvidia A100 (40GB)"  -> 0,0014 $/s
+//   victor-upmeet/whisperx .. "runs on Nvidia A100 (80GB)"  -> 0,0014 $/s
+//   41r4n/mptrix-instrumentos2 (nosso, T4)                   -> 0,000225 $/s
+//   41r4n/mptrix-croma (nosso, CPU)                          -> 0,0001 $/s
+const PRECO_POR_SEGUNDO = {
+  cpu: 0.0001,
+  gpu: 0.000225,   // T4 — sondas e especialistas (o grosso dos segundos)
+  a100: 0.0014     // separação base, guitarra/teclado, prévia e letra
+}
+
+// MARGEM DOS MODELOS PRÓPRIOS. O Replicate cobra modelo PÚBLICO só pelo tempo
+// de trabalho, mas modelo PRIVADO (os nossos dois) cobra também o tempo que a
+// máquina passa ligando e ocioso — e `predict_time`, que é o que a gente
+// recebe, não conta nada disso. Sem margem, a conta do app fica menor que a
+// fatura, e subestimar é justamente o que o teto existe pra impedir.
+const MARGEM_PRIVADO = 1.4
+const MAQUINA_PRIVADA = { gpu: true, cpu: true }
+
+/** Quanto já foi gasto, em centavos de dólar. */
+export function gastoCentavos() {
+  const n = store.get('nuvem') || {}
+  if (n.centavosGastos != null) return Math.round(n.centavosGastos * 100) / 100
+  // Conta antiga só tinha segundos. Converte pela MÉDIA medida na conta do
+  // dono (93% dos segundos em T4, o resto em A100): 0,000307 $/s.
+  return Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100
+}
+
+/**
+ * Quanto CUSTARIA esse tanto de segundos na máquina indicada — com a mesma
+ * margem que o somador aplica, senão "cabem 6 sondas" mente na hora de decidir.
+ */
+export function estimativaCentavos(segundos, maquina = 'gpu') {
+  const p = PRECO_POR_SEGUNDO[maquina] ?? PRECO_POR_SEGUNDO.gpu
+  const m = MAQUINA_PRIVADA[maquina] ? MARGEM_PRIVADO : 1
+  return Math.round((segundos || 0) * p * 100 * m * 100) / 100
 }
 
 export function zerarGastoNuvem() {
   store.set('nuvem.segundosGastos', 0)
+  store.set('nuvem.centavosGastos', 0)
   store.set('nuvem.musicasFeitas', 0)
   return getNuvem()
 }

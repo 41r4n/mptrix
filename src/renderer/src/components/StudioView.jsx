@@ -1929,9 +1929,16 @@ export default function StudioView({ source, onClose }) {
       offProgress?.()
       offStatus?.()
       if (jobRef.current) window.mptrix.studio.cancel(jobRef.current)
-      // dissecação em voo morre com a música: sem isso ela segue interrogando
-      // (e pagando sondas) uma música que o usuário já fechou
-      if (autoJobRef.current) { window.mptrix.studio.cancel(autoJobRef.current); autoJobRef.current = null }
+      // A DISSECAÇÃO SOBREVIVE AO FECHAR DA MÚSICA — de propósito.
+      //
+      // Antes ela morria junto, pra não gastar às escondidas. Mas isso obrigava
+      // o dono a ficar de babá numa tela por meia hora, que é o oposto do "de
+      // mão beijada" que o app promete: ele quer mandar dissecar e ir fazer
+      // outra coisa. O freio contra gasto escondido continua existindo e é
+      // melhor: o teto de gasto (agora medido pelo preço real da máquina) e o
+      // botão de parar no painel. Quem reabre a música adota a que está
+      // rodando, então nada é pago em dobro.
+      autoJobRef.current = null
       playerRef.current?.dispose()
       playerRef.current = null
     }
@@ -2916,6 +2923,25 @@ export default function StudioView({ source, onClose }) {
                       : autoJob.fase === 'farejando'
                         ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
                         : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
+                </span>
+                {/* A dissecação continua mesmo se você sair da música, então
+                    precisa existir um jeito de mandar parar. Sem isso, o único
+                    freio seria o teto de gasto. */}
+                <button
+                  className="btn-secondary btn-small"
+                  onClick={async () => {
+                    await window.mptrix.studio.cancel(autoJob.id)
+                    setAutoJob(null)
+                    autoJobRef.current = null
+                    setExportMsg('Dissecação parada. O que já foi perguntado está guardado — continua quando você abrir a música de novo.')
+                  }}
+                >parar</button>
+              </div>
+            )}
+            {naNuvem && !autoJob && (session?.autoHarvest?.done === false) && (
+              <div className="studio-scout">
+                <span className="muted">
+                  Essa música ainda tem trecho pra investigar — continuo na próxima vez que você abrir.
                 </span>
               </div>
             )}

@@ -9,10 +9,6 @@ import { useEffect, useState } from 'react'
 
 const PAINEL_CHAVES = 'https://replicate.com/account/api-tokens'
 
-function centavosDolar(segundos) {
-  return Math.round((segundos || 0) * 0.0014 * 100 * 100) / 100
-}
-
 export default function NuvemConfig() {
   const [estado, setEstado] = useState(null)
   const [chave, setChave] = useState('')
@@ -25,7 +21,8 @@ export default function NuvemConfig() {
 
   if (!estado) return null
 
-  const gastoC = centavosDolar(estado.segundosGastos)
+  // gasto real, calculado no processo principal pelo preço de cada máquina
+  const gastoC = estado.centavosGastos || 0
   const porMusica = estado.musicasFeitas ? gastoC / estado.musicasFeitas : 0
 
   const guardar = async () => {
@@ -151,8 +148,9 @@ export default function NuvemConfig() {
               </div>
 
               <p className="nuvem-texto miudo">
-                Estimativa por cima, pela placa mais cara — o valor certo aparece no
-                painel do Replicate, em Billing. Quando o gasto chegar ao teto, o MPTRIX
+                Conta estimada pelo preço da máquina que fez cada trabalho, com uma folga
+                pros modelos próprios (a nuvem cobra o tempo de ligar deles). O valor
+                exato aparece no painel do Replicate, em Billing. Quando o gasto chegar ao teto, o MPTRIX
                 volta a separar aqui sozinho, sem avisar você depois do estrago.
               </p>
 

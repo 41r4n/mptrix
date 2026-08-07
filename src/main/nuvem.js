@@ -481,12 +481,7 @@ export async function gpNaNuvem({ chave, arquivo, quais, destinoDir, ffmpegPath,
 
 // Estimativa de custo. O Replicate NÃO devolve o valor cobrado pela API, só o
 // tempo de GPU. Uso a tabela pública da placa mais cara que esses modelos
-// costumam pegar, pra a conta errar pra MAIS e nunca surpreender pra menos.
-// O valor exato aparece no painel do Replicate, em Billing.
-const DOLAR_POR_SEGUNDO = 0.0014
-
-export function estimarCentavos(segundos) {
-  return Math.round(segundos * DOLAR_POR_SEGUNDO * 100 * 100) / 100
-}
+// (a conta de centavos mora em store.js, com o preço de cada máquina — uma
+//  cópia só, pra não existir duas verdades sobre o dinheiro do usuário)
 
 export { MODELO }
