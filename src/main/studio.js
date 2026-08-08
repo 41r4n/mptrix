@@ -1959,15 +1959,75 @@ async function rebuildOther(dir, ffmpegPath, state) {
 // melhoria de motor alcança TODA música já processada, sem reimportar nada.
 const LIMPEZA_V = 1
 
+// AUTOCURA: faixa que está no disco e o registro não conhece.
+//
+// Extrair um especialista são DOIS fatos separados — o arquivo em `base/` e a
+// linha no registro da música. Entre um e outro cabe queda de luz, app fechado
+// à força, processo morto. Quando cai nessa fresta, o som existe e o app não
+// sabe: a faixa não aparece na mesa, e — o que dói mais — a próxima dissecação
+// COMPRA TUDO DE NOVO, porque o motor decide quem interrogar olhando o
+// registro, nunca a pasta.
+//
+// Aconteceu na Oceano: seis faixas pagas, inteiras, nenhuma registrada.
+//
+// Aqui a PASTA manda. Todo .flac de especialista que o registro não cita é
+// adotado com a MESMA balança da extração — inclusive a prateleira, senão faixa
+// quase-muda entra na mesa se passando por instrumento.
+async function adotarOrfaos(dir, ffmpegPath) {
+  const meta = readMeta(dir)
+  if (!meta) return 0
+  const conhecidas = new Set([...stemsOf(meta), ...(meta.extracted || [])])
+  let orfas
+  try {
+    orfas = readdirSync(join(dir, 'base'))
+      .filter((n) => n.endsWith('.flac'))
+      .map((n) => n.slice(0, -5))
+      .filter((id) => SPECIALISTS[id] && !conhecidas.has(id))
+  } catch { return 0 }
+  if (!orfas.length) return 0
+
+  let adotadas = 0
+  for (const id of orfas) {
+    let mean = -99
+    let max = -99
+    try {
+      await run(ffmpegPath, ['-i', join(dir, 'base', `${id}.flac`), '-af', 'volumedetect', '-f', 'null', '-'], {}, (linha) => {
+        const mm = linha.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+        if (mm) mean = parseFloat(mm[1])
+        const mx = linha.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+        if (mx) max = parseFloat(mx[1])
+      })
+    } catch { continue } // não deu pra medir agora: continua órfã e tenta na próxima abertura
+    const m = readMeta(dir)
+    if (!m) return adotadas
+    const stems = stemsOf(m).filter((s) => s !== id && s !== 'other')
+    stems.push(id, 'other')
+    m.stems = stems
+    m.stemInfo = m.stemInfo || {}
+    // MESMA régua da extração (não uma parecida): presente por média audível OU
+    // por pico real, e prateleira pra evidência fraca
+    const present = mean > -48 || max > -35
+    m.stemInfo[id] = { present, mean, max, shelved: present && mean <= -42 }
+    m.extracted = [...new Set([...(m.extracted || []), id])]
+    writeMeta(dir, m)
+    diario(dir, `adotei faixa órfã: ${id} (média ${mean} dB, pico ${max} dB)`)
+    adotadas++
+  }
+  // quem desconta do "outros" é o fiscal aqui embaixo: com a faixa registrada,
+  // a assinatura de limpeza muda sozinha e a reconstrução acontece
+  return adotadas
+}
+
 export async function repairSession({ key, ffmpegPath }) {
   const dir = join(STEMS_DIR, key)
+  const adotadas = await adotarOrfaos(dir, ffmpegPath)
   const meta = readMeta(dir)
-  if (!meta?.extracted?.length) return false
+  if (!meta?.extracted?.length) return adotadas > 0
   const want = meta.extracted
     .filter((i) => existsSync(join(dir, 'base', `${i}.flac`)))
     .sort().join(',')
   const desatualizada = (meta.limpezaV || 0) < LIMPEZA_V
-  if (!want || (meta.otherCleanFor === want && !desatualizada)) return false
+  if (!want || (meta.otherCleanFor === want && !desatualizada)) return adotadas > 0
   await rebuildOther(dir, ffmpegPath, {})
   await cleanVocalsBleed(dir, ffmpegPath, {})
   const m2 = readMeta(dir)
@@ -3347,8 +3407,12 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           // rodando o farejador três vezes por abertura pra nada.
           if (r.semTeto) { motivoParada = 'nuvem-indisponivel'; break }
           // sonda paga vai pro disco AGORA: fechar o app (ou faltar luz) no meio
-          // da dissecação não pode jogar fora o que já foi pago
-          try { gravar() } catch { /* segue; o fechar() grava de novo */ }
+          // da dissecação não pode jogar fora o que já foi pago.
+          // Falhar aqui EM SILÊNCIO era o pior dos mundos: o motor seguia
+          // comprando sondas achando que estava guardando, e no fim do dia o
+          // registro voltava vazio sem ninguém saber por quê. Se o disco recusar,
+          // fica escrito.
+          try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR o progresso: ${e?.message || e}`) }
           if (r.dono) {
             if (!donos.includes(r.dono)) donos.push(r.dono)
             // um mesmo instrumento pode reivindicar em dois trechos da rodada;
@@ -3457,7 +3521,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
       try { rmSync(workRoot, { recursive: true, force: true }) } catch { /* lixo de bancada não engole o aviso */ }
       // grava o que já foi pago mesmo quando dá erro — done:false, pra retomar
       motivoParada = motivoParada || (state.cancelled ? 'cancelado' : err.message)
-      try { gravar() } catch { /* disco cheio/travado: o aviso ainda tem que sair */ }
+      try { gravar() } catch (e) { diario(dir, `NAO CONSEGUI GRAVAR na saída: ${e?.message || e}`) }
       if (state.cancelled) onStatus({ id, state: 'cancelled', auto: true })
       else onStatus({ id, state: 'error', auto: true, error: err.message })
     } finally {
