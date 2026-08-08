@@ -110,16 +110,72 @@ async function versaoAtual(chave) {
   return j.latest_version.id
 }
 
+// PORTÃO DE CRIAÇÃO — uma de cada vez, no ritmo que a conta aguenta.
+//
+// O Replicate limita quem tem MENOS DE US$ 5 de saldo a "6 requests per minute
+// with a burst of 1". Rajada de 1 quer dizer UMA POR VEZ. Como a dissecação
+// dispara as 6 sondas de um trecho juntas, 4 ou 5 voltavam recusadas na hora —
+// e sonda recusada deixava o trecho sem resposta e sem confissão. Era isso, e
+// só isso, que fazia a Girlfriend ficar muda em 0:53–1:33: não era engasgo da
+// nuvem nem defeito do modelo, era regra de conta com saldo baixo.
+//
+// A correção não é fixar um ritmo lento pra todo mundo (conta com saldo tem
+// limite folgado e não merece pagar por isso): é enfileirar as criações e só
+// desacelerar QUANDO a nuvem reclamar, no tempo que ela mesma pedir.
+let filaCriacao = Promise.resolve()
+let livreEm = 0
+
+const esperarAte = (t) => {
+  const falta = t - Date.now()
+  return falta > 0 ? new Promise((s) => setTimeout(s, falta)) : Promise.resolve()
+}
+
+async function criarPredicao(chave, versao, input, state) {
+  const minha = filaCriacao.then(async () => {
+    let ultima
+    for (let i = 0; i < 6; i++) {
+      if (state?.cancelled) throw new Error('cancelado')
+      await esperarAte(livreEm)
+      let r
+      try {
+        r = await fetch(`${API}/predictions`, {
+          method: 'POST',
+          headers: { ...cab(chave), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ version: versao, input }),
+          // sem isso um fetch pendurado tranca a fila inteira das outras sondas
+          signal: AbortSignal.timeout(60000)
+        })
+      } catch (e) { ultima = e; livreEm = Date.now() + 4000 * (i + 1); continue }
+      const texto = await r.text()
+      let j = null
+      try { j = JSON.parse(texto) } catch { /* veio HTML de erro */ }
+      if (r.ok && j) { livreEm = Date.now() + 300; return j }
+      if (r.status === 429) {
+        // a própria recusa diz quando libera ("resets in ~7s") — obedecer isso
+        // é o que transforma 6 recusas em 6 respostas
+        const cab429 = Number(r.headers.get('retry-after'))
+        const dito = Number(/resets? in ~?(\d+)/i.exec(j?.detail || texto)?.[1])
+        livreEm = Date.now() + ((cab429 || dito || 10) + 1) * 1000
+        ultima = new Error('a nuvem pediu pra esperar (limite de pedidos por minuto)')
+        continue
+      }
+      if (j !== null && r.status < 500) throw new Error(j.detail || `o Replicate recusou (${r.status})`)
+      ultima = new Error(`o Replicate respondeu ${r.status}${j === null ? ' (não-JSON)' : ''}`)
+      livreEm = Date.now() + 4000 * (i + 1)
+    }
+    throw ultima
+  })
+  // a fila não pode morrer com o erro de uma sonda — as outras ainda esperam vez
+  filaCriacao = minha.then(() => {}, () => {})
+  return minha
+}
+
 /**
  * Roda uma predição e espera terminar.
  * onTick(segundos) é chamado a cada consulta pra a barra andar.
  */
 async function rodar(chave, versao, input, state, onTick) {
-  const criada = await pedirJson(`${API}/predictions`, {
-    method: 'POST',
-    headers: { ...cab(chave), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ version: versao, input })
-  })
+  const criada = await criarPredicao(chave, versao, input, state)
 
   const t0 = Date.now()
   let p = criada
