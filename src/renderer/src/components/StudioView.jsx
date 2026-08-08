@@ -1026,9 +1026,15 @@ export default function StudioView({ source, onClose }) {
         }
         if (st.state === 'done' && (st.procurados?.length || st.semDono?.length || st.parou)) {
           setScout(null) // refaz a lista (vem do cache, instantâneo)
-          const confissao = st.semDono?.length
-            ? ` ⚠ Sobrou som sem dono em ${st.semDono.map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`).join(', ')} — ouvi algo aí, mas nenhum especialista reivindicou.`
-            : ''
+          const trechos = (l) => l.map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`).join(', ')
+          const orfas = (st.semDono || []).filter((r) => !r.pendente)
+          const pendentes = (st.semDono || []).filter((r) => r.pendente)
+          const confissao = (orfas.length
+            ? ` ⚠ Sobrou som sem dono em ${trechos(orfas)} — ouvi algo aí, mas nenhum especialista reivindicou.`
+            : '')
+            + (pendentes.length
+              ? ` ⚠ Faltou perguntar em ${trechos(pendentes)} — a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.`
+              : '')
           const parou = st.parou === 'nuvem-indisponivel'
             ? ' Parei porque a nuvem ficou indisponível (teto de gasto ou chave) — continuo de onde parei quando ela voltar.'
             : st.parou ? ` Parei antes do fim (${st.parou}) — continuo na próxima abertura.` : ''
@@ -2828,13 +2834,33 @@ export default function StudioView({ source, onClose }) {
                 som que o sistema não conseguiu nomear é obrigação, não detalhe
                 escondido atrás de um painel que nasce fechado. Aparece também
                 com a nuvem desligada: o registro é da música, não da conexão. */}
-            {!autoJob && (session?.autoHarvest?.semDono?.length || 0) > 0 && (
-              <div className="studio-absent muted">
-                Som sem dono: {session.autoHarvest.semDono
-                  .map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
-                  .join(' · ')} — tem som aí que eu não consegui nomear.
-              </div>
-            )}
+            {!autoJob && (session?.autoHarvest?.semDono?.length || 0) > 0 && (() => {
+              // Duas dívidas diferentes, ditas com palavras diferentes: "ninguém
+              // reivindicou" é veredito; "faltou perguntar" é trabalho por fazer.
+              // Misturar as duas numa frase só faria o usuário achar que o motor
+              // já desistiu de um trecho que ele ainda vai reabrir.
+              const lista = session.autoHarvest.semDono
+              const orfas = lista.filter((r) => !r.pendente)
+              const pendentes = lista.filter((r) => r.pendente)
+              const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`
+              return (
+                <>
+                  {orfas.length > 0 && (
+                    <div className="studio-absent muted">
+                      Som sem dono: {orfas
+                        .map((r) => `${faixa(r)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
+                        .join(' · ')} — tem som aí que eu não consegui nomear.
+                    </div>
+                  )}
+                  {pendentes.length > 0 && (
+                    <div className="studio-absent muted">
+                      Faltou perguntar: {pendentes.map(faixa).join(' · ')} — tem som aí, mas
+                      a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             {/* Painel Extrair: olheiro, lupa e arsenal moram aqui, ao lado da mesa */}
             {showExtract && (
             <aside className="chords-panel extract-panel">

@@ -2792,7 +2792,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // leem o MESMO clipe congelado e nenhuma depende da outra, então perguntar
     // em paralelo não muda resposta nenhuma. Em série eram ~5 minutos por
     // trecho; juntas, ~45 segundos, pelos mesmos centavos.
-    const respostas = await Promise.all(fila.map(async (inst) => {
+    const perguntar = async (inst) => {
       // Cada sonda com seu próprio slot de subprocesso: `state.child` é um só,
       // e com 6 ffmpeg ao mesmo tempo o cancelar alcançava só o último. Os
       // subprocessos vão pra um conjunto no estado do pai, senão o cancelar
@@ -2825,7 +2825,9 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
         if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos, { maquina: 'gpu' })
         // Sonda que não completou NÃO vira veto: quem não foi ouvido continua
         // na fila. Uma falhar não derruba as outras — elas já estão em voo.
-        return { inst, falhou: true }
+        // O MOTIVO viaja junto: sem ele, "sondados=2 de 6" no diário não dizia
+        // nada e a causa da perda ficava fora do alcance de qualquer conserto.
+        return { inst, falhou: true, erro: e?.message || 'morreu sem dizer por quê' }
       }
       try {
         // decodifica com estado NEUTRO de propósito: a sonda já foi paga e
@@ -2835,14 +2837,44 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
         const { vivos, pico } = pesarCanal(canal)
         return { inst, canal, vivos, pico }
       } catch {
-        return { inst, falhou: true } // arquivo não abriu: ninguém ouviu resposta
+        return { inst, falhou: true, erro: 'o arquivo da resposta não abriu' }
       } finally {
         try { rmSync(saida, { force: true }) } catch { /* some no fim junto com a bancada */ }
       }
-    }))
+    }
+
+    let respostas = await Promise.all(fila.map(perguntar))
+
+    // SEGUNDA CHAMADA. Pergunta perdida no caminho não é resposta nenhuma: ela
+    // marca o trecho como interrompido, e trecho interrompido NÃO CONFESSA —
+    // o motor fica mudo sobre um som que ele mesmo ouviu. Foi o que aconteceu
+    // na Girlfriend: saíam 6 perguntas, voltavam 2, e 0:53–1:33 nunca virou
+    // aviso nenhum. Pior, as 4 perdidas voltam pra fila e se perdem de novo na
+    // rodada seguinte — a lista de suspeitos andava de 2 em 2 (24, 22, 20) e a
+    // música não fechava nunca. Insistir uma vez custa uma sonda e devolve o
+    // trecho pro caminho normal.
+    const perdidas = respostas.filter((r) => r.falhou)
+    if (perdidas.length) {
+      for (const r of perdidas) diario(dir, `    perdi ${r.inst}: ${r.erro}`)
+      // não insiste sem dinheiro nem depois do cancelar — e dá um respiro, que
+      // o palpite mais provável é engasgo de nuvem recebendo 6 pedidos juntos
+      if (!state.cancelled && usarNuvem()) {
+        await new Promise((s) => setTimeout(s, 5000))
+        aoSondar?.(perdidas.map((r) => r.inst)) // a tela mostra quem está sendo refeito
+        const segunda = await Promise.all(perdidas.map((r) => perguntar(r.inst)))
+        const porInst = new Map(segunda.map((r) => [r.inst, r]))
+        respostas = respostas.map((r) => (r.falhou && porInst.has(r.inst) ? porInst.get(r.inst) : r))
+        for (const r of segunda) {
+          diario(dir, r.falhou ? `    perdi de novo ${r.inst}: ${r.erro}` : `    ${r.inst} respondeu na segunda`)
+        }
+      }
+    }
 
     const responderam = respostas.filter((r) => !r.falhou)
-    if (responderam.length < respostas.length) truncado = true
+    // quem se perdeu DE VEZ: é isso que impede a confissão, e é isso que o
+    // trecho pendente mostra pro usuário em vez de silêncio
+    const sumiram = respostas.filter((r) => r.falhou).map((r) => r.inst)
+    if (sumiram.length) truncado = true
     sondados.push(...responderam.map((r) => r.inst))
     // A balança separa quem trouxe som de quem veio vazio
     const comSom = responderam.filter((r) => r.vivos >= 3 && r.pico > -35)
@@ -2865,7 +2897,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // registro ANTES de desistir por cancelamento: sonda paga é resposta paga,
     // e o lote agora é 6x maior do que era em série
     if (state.cancelled) { registrar(negaram); throw new Error('cancelado') }
-    if (!comSom.length) { registrar(negaram); return { dono: null, sondados, palpite, truncado } }
+    if (!comSom.length) { registrar(negaram); return { dono: null, sondados, palpite, truncado, sumiram } }
 
     // Eco de faixa que já existe não é descoberta, é a mesma coisa com outro nome
     const viz = await carregarVizinhos()
@@ -2879,7 +2911,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
       !viz.some((v) => fracaoEco(r.canal, v) > 0.4) && sobrouAlgo(doClipe, r.canal))
     const reprovados = comSom.filter((r) => !validos.includes(r))
     registrar([...negaram, ...reprovados])
-    if (!validos.length) return { dono: null, sondados, palpite, truncado }
+    if (!validos.length) return { dono: null, sondados, palpite, truncado, sumiram }
 
     // Entre os que reivindicaram, quem manda é a ORDEM DA LANTERNA — não o
     // tamanho. Ordenar por "mais segundos de som" elegia sempre o modelo de
@@ -3151,7 +3183,10 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             // trecho já confessado não reabre: a pergunta foi feita e a
             // resposta foi "tem som, não sei de quem". Reabrir era moer o
             // catálogo inteiro no mesmo pedaço, 6 especialistas por rodada.
-            && !progresso.semDono.some((s) => c.at >= s.ini - 8 && c.at <= s.fim))
+            // PENDÊNCIA é o oposto disso — ali a pergunta NÃO foi feita até o
+            // fim, então o trecho tem que reabrir. Fechar por causa dela seria
+            // transformar uma falha de rede em veredito permanente.
+            && !progresso.semDono.some((s) => !s.pendente && c.at >= s.ini - 8 && c.at <= s.fim))
         // Seção JÁ EXTRAÍDA E COM SOM silencia o eco dos solistas dela. Se a
         // seção saiu MUDA, ela não engoliu ninguém — calar os solistas ali era
         // apagar o cheiro de um som que continua na música, sem nem confessar.
@@ -3207,7 +3242,9 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             // quem é". Insistir aqui era o que fazia UMA música comer 466 dos
             // 500 centavos do teto: o mesmo trecho moendo o catálogo inteiro,
             // 6 especialistas por rodada, pro mesmo desfecho.
-            if (progresso.semDono.some((c) => p.at >= c.ini - 8 && p.at <= c.fim)) continue
+            // (pendência não conta: lá a pergunta ficou pela metade, então o
+            // trecho continua na fila até ser perguntado até o fim)
+            if (progresso.semDono.some((c) => !c.pendente && p.at >= c.ini - 8 && p.at <= c.fim)) continue
             // MESMA CHAVE do portão de dentro (`at` com janela de 10s): medir
             // aqui pelo meio da região e lá pelo início fazia os dois discordarem
             const candidatos = Object.keys(SPECIALISTS)
@@ -3262,7 +3299,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             })
           })
           progresso.procurados.push(...r.sondados)
-          diario(dir, `  interroguei ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} dono=${r.dono || '-'} truncado=${r.truncado} vazio=${!!r.vazio} semTeto=${!!r.semTeto}`)
+          diario(dir, `  interroguei ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} perdi=${r.sumiram?.length || 0} dono=${r.dono || '-'} truncado=${r.truncado} vazio=${!!r.vazio} semTeto=${!!r.semTeto}`)
           if (r.truncado) truncouAlgo = true
           // sem dinheiro nem pra UMA pergunta: parar aqui e dizer por quê. Sem
           // isso a dissecação seguia varrendo trechos e rodadas em falso,
@@ -3278,11 +3315,22 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             ;(trechosDoDono[r.dono] = trechosDoDono[r.dono] || []).push(trecho)
             // achou dono aqui: confissão desse pedaço perde a validade
             progresso.semDono = progresso.semDono.filter((s) => s.fim <= trecho.ini || s.ini >= trecho.fim)
-          } else if (r.sondados.length && !r.truncado) {
-            // CONFISSÃO: interroguei ATÉ O FIM e ninguém reivindicou. O som
-            // existe — o usuário fica sabendo ONDE, com o palpite de quem seria.
-            // Interrogatório cortado no meio (teto, cancelamento, falha de API)
-            // NÃO confessa: a pergunta não chegou a ser feita por inteiro.
+          } else if (r.sumiram?.length || (r.sondados.length && !r.truncado)) {
+            // Dois registros diferentes, e os DOIS aparecem pro usuário:
+            //
+            // CONFISSÃO — interroguei ATÉ O FIM e ninguém reivindicou. O som
+            // existe; o usuário fica sabendo ONDE, com o palpite de quem seria.
+            //
+            // PENDÊNCIA — perguntas se perderam mesmo depois da segunda chamada.
+            // Não é a mesma afirmação ("ninguém quis" é conclusão; "não consegui
+            // perguntar" é dívida), por isso o texto é outro e o trecho continua
+            // sendo reaberto nas próximas rodadas. Mas CALAR não é opção: o motor
+            // ouviu som ali. Era assim que a Girlfriend ficava muda em 0:53–1:33
+            // — o único jeito de o usuário descobrir era pelo próprio ouvido.
+            const pendente = !!r.sumiram?.length
+            // dívida velha do mesmo trecho sai da frente: ou virou confissão de
+            // verdade agora, ou é a mesma dívida com contagem nova
+            progresso.semDono = progresso.semDono.filter((s) => !(s.pendente && s.ini === trecho.ini))
             if (!progresso.semDono.some((s) => s.ini === trecho.ini)) {
               // guarda a medida do trecho: é ela que permite conferir depois se
               // a confissão ainda vale ou se o som já ganhou dono
@@ -3298,6 +3346,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
               } catch { /* sem medida, a confissão ainda vale */ }
               progresso.semDono.push({
                 ini: trecho.ini, fim: trecho.fim, db,
+                ...(pendente ? { pendente: true, faltou: r.sumiram.length } : {}),
                 // Trecho aberto por CHEIRO tem palpite de verdade: o faro
                 // apontou alguém ali. Trecho aberto por ENERGIA não tem — a
                 // fila veio da nota geral da música, então dizer "parece
