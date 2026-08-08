@@ -173,16 +173,31 @@ const PRECO_POR_SEGUNDO = {
 // máquina passa ligando e ocioso — e `predict_time`, que é o que a gente
 // recebe, não conta nada disso. Sem margem, a conta do app fica menor que a
 // fatura, e subestimar é justamente o que o teto existe pra impedir.
-const MARGEM_PRIVADO = 1.4
+//
+// 3,19x NÃO É CHUTE — é medição contra a fatura de verdade. O painel do
+// Replicate mostrou US$ 6,43 de uso no mês; somando o `predict_time` de todas
+// as 235 chamadas pelo preço de cada máquina dá US$ 2,60. A diferença, US$ 3,83,
+// é máquina ligando e esperando. Descontando os modelos públicos (US$ 0,84,
+// esses são exatos), sobra 3,19x em cima do que os nossos reportam. Eu tinha
+// posto 1,4x de dedo — errava a conta em mais da metade, e o teto de gasto
+// deixava passar mais que o dobro do que devia.
+//
+// A razão é alta porque o grosso das chamadas são SONDAS CURTAS (~38s de
+// trabalho): o tempo de ligar é custo fixo por chamada, então quanto mais curta
+// a chamada, mais pesa. Numa extração longa a proporção cairia — mas a
+// dissecação é feita de sondas curtas, e é ela que gasta.
+const MARGEM_PRIVADO = 3.19
 const MAQUINA_PRIVADA = { gpu: true, cpu: true }
 
 /** Quanto já foi gasto, em centavos de dólar. */
 export function gastoCentavos() {
   const n = store.get('nuvem') || {}
   if (n.centavosGastos != null) return Math.round(n.centavosGastos * 100) / 100
-  // Conta antiga só tinha segundos. Converte pela MÉDIA medida na conta do
-  // dono (93% dos segundos em T4, o resto em A100): 0,000307 $/s.
-  return Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100
+  // Conta antiga só tinha segundos. Converte pela MÉDIA REAL medida contra a
+  // fatura: US$ 6,43 de uso em 8.547 segundos de trabalho = 0,000752 $/s.
+  // (Antes eu usava 0,000307, calculado só pelo preço das máquinas — de novo
+  // sem contar o tempo de ligar, que é metade da conta.)
+  return Math.round((n.segundosGastos || 0) * 0.000752 * 100 * 100) / 100
 }
 
 /**
