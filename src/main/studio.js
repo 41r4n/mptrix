@@ -2031,13 +2031,30 @@ async function adotarOrfaos(dir, ffmpegPath) {
   return adotadas
 }
 
-export async function repairSession({ key, ffmpegPath }) {
-  const dir = join(STEMS_DIR, key)
-  // Dissecação viva na mesma música = bancada ocupada. O fiscal mexendo no
-  // "outros" e no registro NO MEIO de uma extração dela é corrida de escrita —
-  // os dois lendo e gravando os mesmos arquivos. O conserto espera a vez:
-  // roda na próxima abertura, com a bancada livre.
-  if (activeAutos.get(key)?.vivo) return false
+// Fiscal em andamento por música: as DUAS portas de abertura chamam o fiscal,
+// e na Oceano elas chamaram JUNTAS — duas adoções simultâneas, dois canceladores
+// brigando pelo mesmo arquivo temporário. Quem chega com o fiscal já
+// trabalhando espera O MESMO serviço terminar, em vez de abrir outro.
+const activeRepairs = new Map()
+
+export function repairSession({ key, ffmpegPath }) {
+  const emCurso = activeRepairs.get(key)
+  if (emCurso) return emCurso
+  const p = (async () => {
+    const dir = join(STEMS_DIR, key)
+    // Dissecação viva na mesma música = bancada ocupada. O fiscal mexendo no
+    // "outros" e no registro NO MEIO de uma extração dela é corrida de escrita —
+    // os dois lendo e gravando os mesmos arquivos. O conserto espera a vez:
+    // roda na próxima abertura, com a bancada livre.
+    if (activeAutos.get(key)?.vivo) return false
+    return repararDeVerdade(dir, key, ffmpegPath)
+  })()
+  activeRepairs.set(key, p)
+  p.then(() => activeRepairs.delete(key), () => activeRepairs.delete(key))
+  return p
+}
+
+async function repararDeVerdade(dir, key, ffmpegPath) {
   const adotadas = await adotarOrfaos(dir, ffmpegPath)
   const meta = readMeta(dir)
   if (!meta?.extracted?.length) return adotadas > 0
