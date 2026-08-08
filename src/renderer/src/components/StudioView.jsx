@@ -1022,7 +1022,7 @@ export default function StudioView({ source, onClose }) {
         }
         if (st.state === 'done' && (st.procurados?.length || st.semDono?.length || st.parou)) {
           setScout(null) // refaz a lista (vem do cache, instantâneo)
-          const trechos = (l) => l.map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`).join(', ')
+          const trechos = (l) => l.map((r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.fonte ? ` dentro de ${STEM_META[r.fonte]?.label || r.fonte}` : ''}`).join(', ')
           const orfas = (st.semDono || []).filter((r) => !r.pendente)
           const pendentes = (st.semDono || []).filter((r) => r.pendente)
           const confissao = (orfas.length
@@ -1051,6 +1051,7 @@ export default function StudioView({ source, onClose }) {
           ...(a || {}), id: meuId, fase: st.fase || a?.fase,
           alvos: st.alvos || a?.alvos, rodada: st.rodada,
           trecho: st.trecho || (st.fase === 'interrogando' ? a?.trecho : null),
+          alvoRevista: st.alvoRevista || (st.fase === 'revistando' ? a?.alvoRevista : null),
           sondando: st.sondando || null
         }))
       }
@@ -2838,7 +2839,9 @@ export default function StudioView({ source, onClose }) {
               const lista = session.autoHarvest.semDono
               const orfas = lista.filter((r) => !r.pendente)
               const pendentes = lista.filter((r) => r.pendente)
-              const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}`
+              // confissão da revista aponta pra DENTRO de uma faixa — dizer só o
+              // tempo mandaria o ouvido procurar na música inteira
+              const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.fonte ? ` dentro de ${STEM_META[r.fonte]?.label || r.fonte}` : ''}`
               return (
                 <>
                   {orfas.length > 0 && (
@@ -2942,9 +2945,11 @@ export default function StudioView({ source, onClose }) {
                     ? `Dissecando a música… procurando o que ainda tem som${autoJob.rodada > 1 ? ` (${autoJob.rodada}ª camada)` : ''}`
                     : autoJob.fase === 'interrogando'
                       ? `Interrogando um som em ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)}${autoJob.sondando ? ` — perguntando pra ${autoJob.sondando}` : '…'}`
-                      : autoJob.fase === 'farejando'
-                        ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
-                        : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
+                      : autoJob.fase === 'revistando'
+                        ? `Revistando a faixa ${STEM_META[autoJob.alvoRevista]?.label || autoJob.alvoRevista} por dentro${autoJob.sondando ? ` — perguntando pra ${autoJob.sondando}` : '…'}`
+                        : autoJob.fase === 'farejando'
+                          ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
+                          : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}
                 </span>
                 {/* A dissecação continua mesmo se você sair da música, então
                     precisa existir um jeito de mandar parar. Sem isso, o único

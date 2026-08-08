@@ -2612,7 +2612,14 @@ export function startExtractJob({ key, instruments, ffmpegPath, onProgress, onSt
 //    e som que o faro não reconhece sumia sem faixa E sem confissão — buraco
 //    que contradizia a doutrina inteira. Medido na Girlfriend: som concentrado
 //    em 1:01–1:21 que nunca tinha sido perguntado.
-const DISSEC_V = 4
+// 5: REVISTA DAS FAIXAS. A dissecação passou a farejar POR DENTRO de cada
+//    faixa-base (voz, bateria, baixo, guitarra, piano) atrás de contrabando —
+//    o separador de base é um ímã por caixas e escondia instrumento inteiro
+//    dentro da caixa errada. Medido na Oceano: um sintetizador de pico -13 dB
+//    morando dentro da guitarra, achado pelo ouvido do dono, não pelo sistema.
+//    Música dissecada pela v4 revisita só a revista: as sondas pagas do
+//    "outros" continuam valendo (SONDAS_V não subiu).
+const DISSEC_V = 5
 // A partir desta versão o registro de sondas tem a forma {inst, ini, fim}. Ele
 // SOBREVIVE à subida do motor de propósito: "já perguntei pro violino às 1:22"
 // continua verdade, e o parentesco novo (sintetizador) entra na fila sem
@@ -2798,22 +2805,27 @@ function fracaoEco(sonda, faixa) {
 // últimos 10 segundos era impossível de responder (o clipe termina junto com a
 // música, então `t+10 <= fim` nunca fechava): as mesmas sondas eram repagas a
 // cada rodada e a cada abertura, pra sempre, e a música nunca convergia.
-const jaSondou = (sondas, inst, t, span = 0, dur = Infinity) =>
-  sondas.some((s) => s.inst === inst && t >= s.ini && Math.min(t + span, dur) <= s.fim)
+// `fonte` separa as perguntas por ORIGEM: sondar o sintetizador no "outros" e
+// sondar o sintetizador DENTRO da guitarra são perguntas diferentes — vetar uma
+// por causa da outra seria calar a revista com a resposta da rua errada.
+// Registro antigo sem fonte é do "outros" (era a única rua que existia).
+const jaSondou = (sondas, inst, t, span = 0, dur = Infinity, fonte = 'other') =>
+  sondas.some((s) => s.inst === inst && (s.fonte || 'other') === fonte
+    && t >= s.ini && Math.min(t + span, dur) <= s.fim)
 
 // Um cheiro só morre quando NÃO SOBROU NINGUÉM pra chamar naquele pedaço. Se o
 // interrogatório de lá foi cortado no meio (teto, cancelamento, falha de API),
 // os candidatos que não chegaram a ser sondados ainda merecem a vez — antes,
 // bastava o instrumento do cheiro ter sido sondado pra região inteira calar.
-function regiaoEsgotada(sondas, inst, at, ja, dur) {
+function regiaoEsgotada(sondas, inst, at, ja, dur, fonte = 'other') {
   return [...new Set([inst, ...grupoDeTimbre(inst)])]
     .filter((i) => SPECIALISTS[i] && !ja.has(i))
-    .every((i) => jaSondou(sondas, i, at, 10, dur))
+    .every((i) => jaSondou(sondas, i, at, 10, dur, fonte))
 }
 
 // Interrogatório de um trecho: sondas baratas no clipe até alguém reivindicar.
 // Devolve o dono (ou null), quem foi sondado e o melhor palpite pra confissão.
-async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, suspeitos, semPrimos, sondas, jaDonos, notas, state, aoSondar }) {
+async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, suspeitos, semPrimos, sondas, jaDonos, notas, state, aoSondar, fonte = 'other' }) {
   const meta = readMeta(dir)
   const ja = new Set([...stemsOf(meta), ...(meta?.extracted || []), ...(jaDonos || [])])
   // MESMA RÉGUA do portão lá fora (regiaoEsgotada): ali o cheiro é medido em
@@ -2825,7 +2837,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   // nome nenhum: a lista já chega pronta e ordenada, e puxar primos só
   // encheria a fila de gente pior colocada.
   const candidatos = (semPrimos ? [...new Set(suspeitos)] : [...new Set([...suspeitos, ...suspeitos.flatMap(grupoDeTimbre)])])
-    .filter((i) => SPECIALISTS[i] && !ja.has(i) && !jaSondou(sondas, i, at, 10, dur))
+    .filter((i) => SPECIALISTS[i] && !ja.has(i) && !jaSondou(sondas, i, at, 10, dur, fonte))
   if (!candidatos.length) return { dono: null, sondados: [], palpite: null, vazio: true, truncado: true }
 
   // A ordem da fila vem do faro que a RODADA já fez na música inteira. Farejar
@@ -2857,10 +2869,12 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
   const fila = ordenados.slice(0, SONDAS_POR_SPOT)
   const palpite = fila[0] || suspeitos[0] || null
 
-  const outros = join(dir, 'base', 'other.flac')
-  const clipe = join(workRoot, `trecho_${trecho.ini}.flac`)
+  // A rua da pergunta: o "outros" na dissecação normal, uma faixa separada na
+  // revista (procurar sintetizador DENTRO da guitarra, por exemplo)
+  const fonteArq = join(dir, 'base', `${fonte}.flac`)
+  const clipe = join(workRoot, `trecho_${fonte}_${trecho.ini}.flac`)
   const durClipe = trecho.fim - trecho.ini
-  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', outros, clipe], state)
+  await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', fonteArq, clipe], state)
 
   // Faixas existentes no mesmo trecho, pro teste do eco. Preguiçoso de
   // propósito: só decodifica quando uma sonda traz som de verdade — a maioria
@@ -2870,7 +2884,12 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     if (vizinhos) return vizinhos
     vizinhos = []
     for (const s of stemsOf(meta)) {
-      if (s === 'other') continue
+      // a RUA de onde o clipe saiu fica de fora de propósito (comparar consigo
+      // mesmo acusaria eco sempre). Na revista, o "outros" também fica de fora:
+      // ele é o saco do que ninguém reivindicou, não uma faixa nomeada — e o
+      // mesmo som pode existir metade na guitarra, metade no outros; vetar a
+      // metade da guitarra por causa da outra metade seria calar a revista.
+      if (s === 'other' || s === fonte) continue
       const f = join(dir, 'base', `${s}.flac`)
       if (!existsSync(f)) continue
       const cl = join(workRoot, `viz_${s}.flac`)
@@ -3003,7 +3022,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // convergia e a MESMA sonda era comprada de novo em toda rodada e em toda
     // abertura.
     const registrar = (lista) => {
-      for (const r of lista) sondas.push({ inst: r.inst, ini: trecho.ini, fim: trecho.fim })
+      for (const r of lista) sondas.push({ inst: r.inst, ini: trecho.ini, fim: trecho.fim, ...(fonte !== 'other' ? { fonte } : {}) })
     }
     const negaram = responderam.filter((r) => !comSom.includes(r))
 
@@ -3045,7 +3064,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // o vencedor também é registrado — MARCADO como dono. Se a extração dele
     // falhar, o rollback lá em cima desfaz; se o APP MORRER antes de ela chegar,
     // é a marca que permite soltar o castigo fantasma na próxima abertura.
-    sondas.push({ inst: eleito.inst, ini: trecho.ini, fim: trecho.fim, dono: true })
+    sondas.push({ inst: eleito.inst, ini: trecho.ini, fim: trecho.fim, dono: true, ...(fonte !== 'other' ? { fonte } : {}) })
     return { dono: eleito.inst, sondados, palpite, truncado: false }
   } finally {
     try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
@@ -3067,15 +3086,17 @@ const CONFISSAO_CHAO_DB = -50  // abaixo disso não sobrou nada audível
 
 async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
   if (!semDono?.length) return []
-  const outros = join(dir, 'base', 'other.flac')
-  if (!existsSync(outros)) return semDono
   const vivas = []
   for (const c of semDono) {
+    // confissão feita na revista aponta pra DENTRO de uma faixa — é lá que se
+    // confere se o som ainda está sem dono, não no "outros"
+    const arq = join(dir, 'base', `${c.fonte || 'other'}.flac`)
+    if (!existsSync(arq)) { vivas.push(c); continue }
     let mean = -99
     try {
       await run(
         ffmpegPath,
-        ['-ss', String(c.ini), '-t', String(Math.max(1, c.fim - c.ini)), '-i', outros, '-af', 'volumedetect', '-f', 'null', '-'],
+        ['-ss', String(c.ini), '-t', String(Math.max(1, c.fim - c.ini)), '-i', arq, '-af', 'volumedetect', '-f', 'null', '-'],
         state,
         (linha) => {
           const mm = linha.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
@@ -3090,6 +3111,102 @@ async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
   }
   return vivas
 }
+
+// EXTRAÇÃO DE DENTRO DE UMA FAIXA (a revista achou contrabando e ele reivindicou).
+// O mesmo contrato da extração normal, com a rua trocada: o especialista roda
+// sobre a FAIXA (guitarra, piano...), a faixa nova nasce registrada com a
+// origem, e a fonte é reconstruída pelo cancelador medido a partir do _orig —
+// nunca subtração cega, nunca sem cópia de segurança.
+async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state }) {
+  const src = join(dir, 'base', `${fonte}.flac`)
+  const destino = join(dir, 'base', `${inst}.flac`)
+  const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
+  try {
+    const r = await extrairInstrumentoNaNuvem({
+      chave: lerChaveNuvem(), instrumento: SPECIALISTS[inst].file,
+      arquivo: src, destino, state, ffmpegPath, run, workDir: workRoot
+    })
+    somarGastoNuvem(r.segundos, { maquina: 'gpu' })
+  } catch (e) {
+    if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos, { maquina: 'gpu' })
+    throw e
+  }
+
+  // a mesma balança da extração normal: quase-mudo não vira faixa
+  let mean = -99
+  let max = -99
+  await run(ffmpegPath, ['-i', destino, '-af', 'volumedetect', '-f', 'null', '-'], state, (l) => {
+    const mm = l.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+    if (mm) mean = parseFloat(mm[1])
+    const mx = l.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+    if (mx) max = parseFloat(mx[1])
+  })
+  const present = mean > -48 || max > -35
+  if (!present) {
+    try { rmSync(destino, { force: true, maxRetries: 12, retryDelay: 250 }) } catch { /* sobra vira órfã; a adoção esconde */ }
+    return { present: false, mean, max }
+  }
+
+  // desconta da fonte: cópia pristina uma vez, cancelador medido sempre a
+  // partir dela — refazer nunca degrada (mesmo contrato do outros)
+  const orig = join(dir, 'base', `${fonte}_orig.flac`)
+  if (!existsSync(orig)) copyFileSync(src, orig)
+  const m0 = readMeta(dir)
+  const claims = [...new Set([
+    ...Object.entries(m0?.stemInfo || {})
+      .filter(([s, i]) => i?.origem === fonte && existsSync(join(dir, 'base', `${s}.flac`)))
+      .map(([s]) => join(dir, 'base', `${s}.flac`)),
+    destino
+  ])]
+  const tmp = join(dir, 'base', `${fonte}_limpo_tmp.flac`)
+  await run(
+    process.execPath,
+    [limpaVazamentoPath(), ffmpegPath, orig, tmp, ...claims],
+    state, null,
+    { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
+  )
+  rmSync(src, { force: true, maxRetries: 12, retryDelay: 250 })
+  renameSync(tmp, src)
+
+  // registra: entra nas pistas antes do "outros", com a origem escrita.
+  // NÃO entra em `extracted` — aquela lista significa "extraído do outros" e
+  // dirige o desconto do outros e o botão refazer; usar ela aqui mandaria o
+  // cancelador procurar na rua errada.
+  const m = readMeta(dir)
+  if (!m) throw new Error('sessão sumiu do disco')
+  const stems = stemsOf(m).filter((s) => s !== inst && s !== 'other')
+  stems.push(inst, 'other')
+  m.stems = stems
+  m.stemInfo = m.stemInfo || {}
+  m.stemInfo[inst] = { present: true, mean, max, shelved: mean <= -42, origem: fonte }
+  // a fonte mudou de conteúdo: a medida dela precisa acompanhar
+  let fMean = -99
+  let fMax = -99
+  try {
+    await run(ffmpegPath, ['-i', src, '-af', 'volumedetect', '-f', 'null', '-'], state, (l) => {
+      const mm = l.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+      if (mm) fMean = parseFloat(mm[1])
+      const mx = l.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+      if (mx) fMax = parseFloat(mx[1])
+    })
+    m.stemInfo[fonte] = { ...(m.stemInfo[fonte] || {}), mean: fMean, max: fMax, present: fMean > -48 || fMax > -35 }
+  } catch { /* medida velha fica valendo */ }
+  writeMeta(dir, m)
+  diario(dir, `  revista: ${inst} saiu de dentro de ${fonte} (média ${mean} dB, pico ${max} dB)`)
+  return { present: true, mean, max }
+}
+
+// O que é SOM DA CASA em cada faixa-base: cheiro disso ali dentro não é
+// contrabando, é a própria faixa. O resto — sintetizador dentro da guitarra,
+// órgão dentro do piano — é o que a revista existe pra achar.
+const SOM_DA_CASA = {
+  vocals: ['vocals'],
+  drums: ['drums', 'percussion', 'timpani', 'congas', 'tambourine', 'triangle'],
+  bass: ['bass', 'double-bass'],
+  guitar: ['guitar', 'acoustic-guitar', 'electric-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'sitar'],
+  piano: ['piano']
+}
+const REVISTAVEIS = Object.keys(SOM_DA_CASA)
 
 // Vacina anti-gêmeo da dissecação — a mesma doutrina do activeExtracts, mas
 // aqui o motivo é DINHEIRO: fechar e reabrir a música durante o interrogatório
@@ -3169,6 +3286,8 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
     }
     let convergiu = false
     let motivoParada = null
+    // faixas já revistadas por dentro — sobrevive a quedas como as sondas
+    const revistadas = new Set(anterior?.revistadas || [])
     const gravar = () => {
       const m = readMeta(dir)
       if (!m) return null
@@ -3177,7 +3296,8 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         ...(motivoParada ? { parou: motivoParada } : {}),
         procurados: [...new Set(progresso.procurados)],
         semDono: progresso.semDono,
-        sondas: progresso.sondas
+        sondas: progresso.sondas,
+        revistadas: [...revistadas]
       }
       writeMeta(dir, m)
       return m
@@ -3336,8 +3456,10 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             // catálogo inteiro no mesmo pedaço, 6 especialistas por rodada.
             // PENDÊNCIA é o oposto disso — ali a pergunta NÃO foi feita até o
             // fim, então o trecho tem que reabrir. Fechar por causa dela seria
-            // transformar uma falha de rede em veredito permanente.
-            && !progresso.semDono.some((s) => !s.pendente && c.at >= s.ini - 8 && c.at <= s.fim))
+            // transformar uma falha de rede em veredito permanente. E confissão
+            // da REVISTA (com fonte) fala de dentro de outra faixa — não tranca
+            // os trechos do "outros".
+            && !progresso.semDono.some((s) => !s.pendente && !s.fonte && c.at >= s.ini - 8 && c.at <= s.fim))
         // Seção JÁ EXTRAÍDA E COM SOM silencia o eco dos solistas dela. Se a
         // seção saiu MUDA, ela não engoliu ninguém — calar os solistas ali era
         // apagar o cheiro de um som que continua na música, sem nem confessar.
@@ -3394,8 +3516,9 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             // 500 centavos do teto: o mesmo trecho moendo o catálogo inteiro,
             // 6 especialistas por rodada, pro mesmo desfecho.
             // (pendência não conta: lá a pergunta ficou pela metade, então o
-            // trecho continua na fila até ser perguntado até o fim)
-            if (progresso.semDono.some((c) => !c.pendente && p.at >= c.ini - 8 && p.at <= c.fim)) continue
+            // trecho continua na fila até ser perguntado até o fim. Confissão
+            // da revista também não: ela fala de dentro de outra faixa)
+            if (progresso.semDono.some((c) => !c.pendente && !c.fonte && p.at >= c.ini - 8 && p.at <= c.fim)) continue
             // MESMA CHAVE do portão de dentro (`at` com janela de 10s): medir
             // aqui pelo meio da região e lá pelo início fazia os dois discordarem
             const candidatos = Object.keys(SPECIALISTS)
@@ -3599,6 +3722,114 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         // Extraiu nesta rodada = o véu levantou e a camada de baixo ainda não
         // foi farejada. Nunca é fim: a música fica done:false e a próxima
         // abertura continua de onde parou (sem repagar as sondas já feitas).
+      }
+
+      // ================== REVISTA DAS FAIXAS ==================
+      // O separador de base é um ímã por caixas: tudo que soa "guitarra-ish"
+      // cai na guitarra — inclusive sintetizador, órgão, o que for. A
+      // dissecação clássica só interroga o "outros", então esse contrabando
+      // ficava invisível pra sempre (na Oceano, um sintetizador INTEIRO morava
+      // dentro da guitarra: pico -13 dB, achado pelo ouvido do dono, não pelo
+      // sistema). A revista fecha esse buraco: fareja POR DENTRO cada
+      // faixa-base, e cheiro que não é som da casa vira interrogatório — com
+      // as mesmas regras de sempre (sonda, balança, eco, dono, confissão).
+      // Farejar é local e grátis; só o interrogatório custa nuvem.
+      if (convergiu && !state.cancelled) {
+        const metaR = readMeta(dir)
+        const durR = Math.round(metaR?.duration || 300)
+        for (const faixa of REVISTAVEIS) {
+          if (revistadas.has(faixa)) continue
+          const arq = join(dir, 'base', `${faixa}.flac`)
+          if (!existsSync(arq)) { revistadas.add(faixa); continue }
+          if (state.cancelled) { motivoParada = 'cancelado'; convergiu = false; break }
+          if (!usarNuvem()) { motivoParada = 'nuvem-indisponivel'; convergiu = false; break }
+          onStatus({ id, state: 'running', auto: true, fase: 'revistando', alvoRevista: faixa })
+          let faroR = null
+          try { faroR = await runScoutScript(arq, state) } catch {
+            // farejar falhou: não dá pra afirmar que a faixa está limpa
+            convergiu = false
+            break
+          }
+          const meta2 = readMeta(dir)
+          const ja2 = new Set([...stemsOf(meta2), ...(meta2?.extracted || [])])
+          const casa = SOM_DA_CASA[faixa] || []
+          const cheirosR = Object.entries(faroR?.arsenal || {})
+            .map(([inst, v]) => [APELIDOS_FARO[inst] || inst, v])
+            .map(([inst, v]) => ({ inst, score: v?.score ?? v ?? 0, at: v?.at ?? 0 }))
+            .filter((c) => c.score >= CHEIRO_MIN && SPECIALISTS[c.inst]
+              && !casa.includes(c.inst) && !ja2.has(c.inst)
+              && !jaSondou(sondas, c.inst, c.at, 10, durR, faixa))
+            .sort((a, b) => b.score - a.score)
+          // mesmo aglutinador da dissecação: cheiros vizinhos são o mesmo som
+          const spotsR = []
+          for (const c of cheirosR) {
+            const perto = spotsR.find((s) => c.at >= s.at - 8 && c.at + 10 <= s.at + 32)
+            if (perto) { perto.suspeitos.push(c.inst); continue }
+            spotsR.push({ at: c.at, suspeitos: [c.inst] })
+          }
+          // teto por faixa por passada: mais que isso fica pra próxima
+          // abertura — a faixa NÃO é marcada como revistada
+          const sobraram = spotsR.length > 2
+          let revistaLimpa = true
+          for (const spot of spotsR.slice(0, 2)) {
+            if (state.cancelled || !usarNuvem()) { revistaLimpa = false; break }
+            const ini = Math.max(0, Math.min(Math.round(spot.at) - 8, Math.max(0, durR - 40)))
+            const trecho = { ini, fim: Math.min(durR, ini + 40) }
+            const notasR = Object.fromEntries(cheirosR.map((c) => [c.inst, c.score]))
+            const r = await interrogarTrecho({
+              dir, workRoot, ffmpegPath, trecho, at: spot.at, dur: durR, fonte: faixa,
+              suspeitos: spot.suspeitos, semPrimos: false, sondas, jaDonos: [], notas: notasR, state,
+              aoSondar: (lista) => onStatus({
+                id, state: 'running', auto: true, fase: 'revistando', alvoRevista: faixa, trecho,
+                sondando: lista.map((i) => SPECIALISTS[i]?.label || i).join(', ')
+              })
+            })
+            progresso.procurados.push(...r.sondados)
+            diario(dir, `  revista ${faixa} ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} perdi=${r.sumiram?.length || 0} dono=${r.dono || '-'} truncado=${r.truncado}`)
+            if (r.semTeto) { motivoParada = 'nuvem-indisponivel'; revistaLimpa = false; break }
+            try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR a revista: ${e?.message || e}`) }
+            if (r.dono) {
+              onStatus({ id, state: 'running', auto: true, fase: 'separando', alvos: [r.dono] })
+              try {
+                const res = await extrairDaFaixa({ dir, fonte: faixa, inst: r.dono, ffmpegPath, workRoot, state })
+                if (!res.present) {
+                  // reivindicou no clipe e veio mudo na música: o som existe,
+                  // só não virou faixa — confessa apontando a rua certa
+                  if (!progresso.semDono.some((s) => s.ini === trecho.ini && s.fonte === faixa)) {
+                    progresso.semDono.push({ ini: trecho.ini, fim: trecho.fim, fonte: faixa, palpite: SPECIALISTS[r.dono]?.label || r.dono })
+                  }
+                }
+              } catch (e) {
+                diario(dir, `  revista: extração de ${r.dono} falhou (${e?.message || e})`)
+                // extração falhou = dívida em aberto; solta o registro de dono
+                // pra próxima abertura perguntar de novo (sem castigo fantasma)
+                for (let i = sondas.length - 1; i >= 0; i--) {
+                  if (sondas[i].inst === r.dono && sondas[i].ini === trecho.ini && sondas[i].fonte === faixa) sondas.splice(i, 1)
+                }
+                revistaLimpa = false
+              }
+            } else if (r.sumiram?.length) {
+              revistaLimpa = false
+              progresso.semDono = progresso.semDono.filter((s) => !(s.pendente && s.ini === trecho.ini && s.fonte === faixa))
+              progresso.semDono.push({ ini: trecho.ini, fim: trecho.fim, fonte: faixa, pendente: true, faltou: r.sumiram.length })
+            } else if (r.sondados.length && !r.truncado) {
+              if (!progresso.semDono.some((s) => s.ini === trecho.ini && s.fonte === faixa)) {
+                const melhor = spot.suspeitos[0]
+                progresso.semDono.push({ ini: trecho.ini, fim: trecho.fim, fonte: faixa, palpite: SPECIALISTS[melhor]?.label || melhor })
+              }
+            } else if (r.truncado && !r.vazio) {
+              revistaLimpa = false
+            }
+          }
+          if (revistaLimpa && !sobraram) revistadas.add(faixa)
+          else convergiu = false
+          try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR a revista: ${e?.message || e}`) }
+        }
+        // revista incompleta nunca carimba a música: fica done:false e a
+        // próxima abertura continua da faixa onde parou
+        if (REVISTAVEIS.some((f) => !revistadas.has(f) && existsSync(join(dir, 'base', `${f}.flac`)))) {
+          if (convergiu) convergiu = false
+        }
       }
 
       fechar()
