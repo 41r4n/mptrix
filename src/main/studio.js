@@ -2003,7 +2003,14 @@ async function adotarOrfaos(dir, ffmpegPath) {
         const mx = linha.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
         if (mx) max = parseFloat(mx[1])
       })
-    } catch { continue } // não deu pra medir agora: continua órfã e tenta na próxima abertura
+    } catch (e) {
+      // não deu pra medir agora: continua órfã e tenta na próxima abertura.
+      // MAS FICA ESCRITO — na Oceano dois órfãos (órgão, sitar) escaparam da
+      // adoção sem deixar rastro nenhum, e sem o motivo no papel não há como
+      // saber se foi arquivo preso, ffmpeg ocupado ou outra coisa.
+      diario(dir, `não consegui medir a órfã ${id}: ${e?.message || e}`)
+      continue
+    }
     const m = readMeta(dir)
     if (!m) return adotadas
     const stems = stemsOf(m).filter((s) => s !== id && s !== 'other')
@@ -3018,10 +3025,22 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // tamanho. Ordenar por "mais segundos de som" elegia sempre o modelo de
     // seção (que por construção cobre mais tempo que qualquer solista dela).
     validos.sort((a, b) => fila.indexOf(a.inst) - fila.indexOf(b.inst))
+    // SOLISTA GANHA DA SEÇÃO. Quando o naipe e um membro dele reivindicam o
+    // MESMO clipe, é o mesmo som com dois nomes — e o nome específico é o
+    // certo. Na Oceano os dois disputaram: Madeiras (seção) venceu um trecho
+    // pela ordem da lanterna, a extração da música inteira voltou em -70,6 dB
+    // (nada), e a Flauta — que reivindicara junto — pegou o som de verdade no
+    // trecho vizinho. Extração de seção comprada à toa, confissão de "parece
+    // Madeiras" apontando um som que a flauta já tinha levado. A seção não é
+    // vetada (reivindicou de verdade): ela só perde a vez pro solista, e se
+    // sobrar naipe depois do solista sair, a próxima rodada é dela.
+    const escolhidos = validos.filter((r) =>
+      !(FAMILIAS[r.inst] && validos.some((o) => FAMILIAS[r.inst].includes(o.inst))))
+    const eleito = (escolhidos[0] || validos[0])
     // o vencedor também é registrado: se a extração dele falhar, quem desfaz o
     // registro é o rollback lá em cima, que sabe distinguir os dois casos
-    registrar([validos[0]])
-    return { dono: validos[0].inst, sondados, palpite, truncado: false }
+    registrar([eleito])
+    return { dono: eleito.inst, sondados, palpite, truncado: false }
   } finally {
     try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
   }
@@ -3503,10 +3522,45 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         // som naquele trecho, mas o especialista não conseguiu isolá-lo na
         // música inteira e a balança escondeu a faixa. Isso não pode virar
         // "não tinha nada" — o som existe, então vira confissão.
+        //
+        // E o veredito é dado NO TRECHO REIVINDICADO, não só na música inteira.
+        // A balança geral tem um furo: uma faixa com eco espalhado pode ter pico
+        // audível em qualquer lugar e passar por "presente" mesmo estando MUDA
+        // exatamente onde a sonda ouviu o som. Faixa muda onde prometeu não
+        // cumpriu a promessa — vira confissão e sai da mesa, seja lá o que o
+        // resto dela contenha.
         {
           const mDep = readMeta(dir)
           for (const d of donos) {
-            if (mDep?.stemInfo?.[d]?.present !== false) continue
+            let mudo = mDep?.stemInfo?.[d]?.present === false
+            if (!mudo && (trechosDoDono[d] || []).length) {
+              // basta UM trecho reivindicado com som de verdade pra faixa valer
+              mudo = true
+              for (const t of trechosDoDono[d] || []) {
+                let mean = -99
+                try {
+                  await run(ffmpegPath, [
+                    '-ss', String(t.ini), '-t', String(Math.max(1, t.fim - t.ini)),
+                    '-i', join(dir, 'base', `${d}.flac`), '-af', 'volumedetect', '-f', 'null', '-'
+                  ], state, (linha) => {
+                    const mm = linha.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+                    if (mm) mean = parseFloat(mm[1])
+                  })
+                } catch { mudo = false; break } // sem medida não se condena ninguém
+                // -45 é chão de segurança: instrumento tocando só 5s dos 40 a
+                // -30 dB ainda dá média ~-39 na janela — passa com folga
+                if (mean > -45) { mudo = false; break }
+              }
+              if (mudo) {
+                diario(dir, `  ${d} veio mudo no trecho que reivindicou — escondo a faixa e confesso`)
+                const m3 = readMeta(dir)
+                if (m3?.stemInfo?.[d]) {
+                  m3.stemInfo[d] = { ...m3.stemInfo[d], present: false }
+                  writeMeta(dir, m3)
+                }
+              }
+            }
+            if (!mudo) continue
             for (const t of trechosDoDono[d] || []) {
               if (!progresso.semDono.some((s) => s.ini === t.ini)) {
                 progresso.semDono.push({ ini: t.ini, fim: t.fim, palpite: SPECIALISTS[d]?.label || d })
