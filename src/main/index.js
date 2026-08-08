@@ -1285,9 +1285,21 @@ app.whenReady().then(() => {
     return { results, freeMB: freeMemMB() }
   })
 
-  ipcMain.handle('studio:cached', (_e, { path: inputFile, model }) => {
+  // O MESMO fiscal do studio:open. Este atalho é a porta de TODA reabertura de
+  // música já separada — e era a porta sem fiscal: faixa órfã no disco (app
+  // morto entre extrair e registrar) nunca era adotada porque a adoção só
+  // morava no caminho que as reaberturas não usam. O fiscal é barato quando não
+  // há nada a fazer (uma listagem de pasta e uma leitura de registro), então
+  // pode rodar até nas consultas de 3s do cão de guarda.
+  ipcMain.handle('studio:cached', async (_e, { path: inputFile, model }) => {
     if (!inputFile || !existsSync(inputFile)) return null
-    return getCachedSession(inputFile, model || 'htdemucs')
+    const cached = getCachedSession(inputFile, model || 'htdemucs')
+    if (!cached) return null
+    try {
+      const repaired = await repairSession({ key: cached.key, ffmpegPath: FFMPEG_PATH })
+      if (repaired) return getCachedSession(inputFile, model || 'htdemucs')
+    } catch { /* sessão utilizável mesmo sem o conserto — melhor abrir que travar */ }
+    return cached
   })
 
   ipcMain.handle('studio:plan', (_e, { path: inputFile, cachedOnly }) => {

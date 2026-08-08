@@ -2033,6 +2033,11 @@ async function adotarOrfaos(dir, ffmpegPath) {
 
 export async function repairSession({ key, ffmpegPath }) {
   const dir = join(STEMS_DIR, key)
+  // Dissecação viva na mesma música = bancada ocupada. O fiscal mexendo no
+  // "outros" e no registro NO MEIO de uma extração dela é corrida de escrita —
+  // os dois lendo e gravando os mesmos arquivos. O conserto espera a vez:
+  // roda na próxima abertura, com a bancada livre.
+  if (activeAutos.get(key)?.vivo) return false
   const adotadas = await adotarOrfaos(dir, ffmpegPath)
   const meta = readMeta(dir)
   if (!meta?.extracted?.length) return adotadas > 0
@@ -3037,9 +3042,10 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     const escolhidos = validos.filter((r) =>
       !(FAMILIAS[r.inst] && validos.some((o) => FAMILIAS[r.inst].includes(o.inst))))
     const eleito = (escolhidos[0] || validos[0])
-    // o vencedor também é registrado: se a extração dele falhar, quem desfaz o
-    // registro é o rollback lá em cima, que sabe distinguir os dois casos
-    registrar([eleito])
+    // o vencedor também é registrado — MARCADO como dono. Se a extração dele
+    // falhar, o rollback lá em cima desfaz; se o APP MORRER antes de ela chegar,
+    // é a marca que permite soltar o castigo fantasma na próxima abertura.
+    sondas.push({ inst: eleito.inst, ini: trecho.ini, fim: trecho.fim, dono: true })
     return { dono: eleito.inst, sondados, palpite, truncado: false }
   } finally {
     try { rmSync(clipe, { force: true }) } catch { /* bancada some no fim de qualquer jeito */ }
@@ -3141,6 +3147,25 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
       procurados: [...(anterior?.procurados || [])],
       semDono: [...(anterior?.semDono || [])],
       sondas: [...(anterior?.sondas || [])]
+    }
+    // CASTIGO FANTASMA: reivindicar e extrair são dois momentos, e o app pode
+    // morrer entre eles. A reivindicação vai pro disco na hora (sonda paga é
+    // registro pago) — mas se a extração nunca chegou, o registro vira um veto
+    // órfão: o sistema acha que o instrumento "já foi perguntado" ali e nunca
+    // mais pergunta. Foi o castigo do sintetizador da Oceano: reivindicou 22-62,
+    // o app caiu, e o Acordeon (primo fraco) levou o trecho no lugar dele.
+    // Registro de VENCEDOR (dono:true) sem faixa correspondente cai aqui — e a
+    // confissão feita enquanto ele estava de castigo cai junto, porque ela
+    // afirma "perguntei a todos" sobre uma pergunta que não foi feita inteira.
+    {
+      const comFaixa = new Set([...stemsOf(metaInicial || {}), ...(metaInicial?.extracted || [])])
+      const fantasmas = progresso.sondas.filter((s) => s.dono && !comFaixa.has(s.inst))
+      if (fantasmas.length) {
+        progresso.sondas = progresso.sondas.filter((s) => !fantasmas.includes(s))
+        progresso.semDono = progresso.semDono.filter((c) =>
+          !fantasmas.some((f) => c.ini < f.fim && c.fim > f.ini))
+        diario(dir, `solto ${fantasmas.length} castigo(s) fantasma: ${fantasmas.map((f) => `${f.inst}@${f.ini}`).join(', ')}`)
+      }
     }
     let convergiu = false
     let motivoParada = null
