@@ -350,7 +350,7 @@ function runAnalyzer(wavFile, ffmpegPath, state) {
 // a harmonia limpa (sem bateria/voz) dá o tipo. Resultado cacheado no meta.
 const NON_HARMONIC = new Set([
   'vocals', 'drums', 'bass', 'percussion', 'timpani', 'tambourine',
-  'congas', 'triangle', 'glockenspiel', 'vibraphone', 'xylophone',
+  'congas', 'triangle', 'glockenspiel',
   // solistas de MELODIA não opinam sobre harmonia — nota de passagem
   // vira tempero errado no acorde (a flauta poluía a leitura da Azul)
   'flute', 'harmonica', 'saxophone', 'violin', 'viola', 'cello',
@@ -1494,18 +1494,14 @@ const SPECIALISTS = {
   mandolin: { label: 'Bandolim', file: 'mandolin' },
   ukulele: { label: 'Ukulele', file: 'ukulele' },
   dobro: { label: 'Dobro (slide)', file: 'dobro' },
-  'steel-guitar': { label: 'Steel guitar', file: 'steel-guitar' },
   sitar: { label: 'Sitar', file: 'sitar' },
   // Teclas
   organ: { label: 'Órgão', file: 'organ' },
   accordion: { label: 'Acordeon', file: 'accordion' },
   synth: { label: 'Sintetizador', file: 'synth' },
-  clavinet: { label: 'Clavinete', file: 'clavinet' },
   harpsichord: { label: 'Cravo', file: 'harpsichord' },
   // Percussão melódica e efeitos
-  marimba: { label: 'Marimba', file: 'marimba' },
-  xylophone: { label: 'Xilofone', file: 'xylophone' },
-  vibraphone: { label: 'Vibrafone', file: 'vibraphone' },
+  marimba: { label: 'Marimba/Xilofone', file: 'marimba' },
   glockenspiel: { label: 'Glockenspiel (sinos)', file: 'glockenspiel' },
   timpani: { label: 'Tímpanos', file: 'timpani' },
   tambourine: { label: 'Pandeirola', file: 'tambourine' },
@@ -1513,30 +1509,40 @@ const SPECIALISTS = {
   congas: { label: 'Congas', file: 'congas' }
 }
 
-// CATÁLOGO DA NUVEM — os nomes que o separador ACEITA de verdade.
+// O QUE FUNCIONA DE VERDADE — e são DUAS peneiras, não uma.
 //
-// O app tinha quatro especialistas que a nuvem não conhece: 'keys',
-// 'digital-piano', 'bells' e 'wind-chimes'. Toda vez que um deles era chamado,
-// a máquina ligava, recusava ("não está no catálogo") e desligava: dinheiro
-// gasto, resposta nenhuma. Pior, a sonda recusada contava como pergunta
-// perdida, e trecho com pergunta perdida NÃO CONFESSA — então esses quatro
-// nomes emudeciam sozinhos qualquer região onde caíssem. Foram 17 chamadas
-// pagas por nada até isto aqui existir.
+// Um nome só separa som quando passa nas duas:
+//   1) está na lista de entradas que o nosso modelo da nuvem aceita (55 nomes);
+//   2) tem PESO publicado no repositório dos 53 stems no HuggingFace.
 //
-// A lista abaixo é a que o próprio modelo devolve na mensagem de recusa. O laço
-// não é decoração: se um dia o modelo mudar e um nome sair do catálogo, o
-// especialista some do arsenal na hora da carga, com aviso — em vez de virar
-// mais uma cobrança silenciosa que ninguém liga ao problema certo.
+// Elas não batem, e foi aí que eu me enganei duas vezes no mesmo dia:
+//   - 'keys', 'digital-piano', 'bells', 'wind-chimes' TÊM peso, mas o nosso
+//     modelo recusa o nome na entrada ("não está no catálogo"). 17 chamadas
+//     pagas terminaram assim.
+//   - 'clavinet', 'steel-guitar', 'vibraphone', 'xylophone' o modelo ACEITA,
+//     mas não existe peso pra baixar: a máquina liga e morre em 404. Eu tinha
+//     acabado de acrescentar esses quatro achando que estava consertando —
+//     estava cavando o mesmo buraco pelo outro lado.
+// Nos dois casos o prejuízo é igual: dinheiro gasto, resposta nenhuma, e o
+// trecho fica marcado como pergunta perdida (que NÃO confessa, e emudece).
+//
+// A lista abaixo é o CRUZAMENTO das duas — os 44 que realmente separam,
+// conferidos contra a API do HuggingFace e contra a recusa do próprio modelo.
+// O laço embaixo não é decoração: nome fora daqui sai do arsenal na carga, com
+// aviso, em vez de virar cobrança silenciosa meses depois.
+//
+// (Os 9 que têm peso e o modelo recusa — keys, bells, digital-piano,
+// wind-chimes, back-vocal, lead-vocal, hh, wind, vocal — são som de verdade que
+// a gente está deixando na mesa. Recuperá-los é republicar o modelo na nuvem
+// com a lista de entrada certa, não mexer aqui.)
 const CATALOGO_NUVEM = new Set([
-  'accordion', 'acoustic-guitar', 'banjo', 'bass', 'bass-guitar', 'bassoon',
-  'bowed_strings', 'brass', 'cello', 'clarinet', 'clavinet', 'congas', 'cymbals',
-  'djembe', 'dobro', 'double-bass', 'drums', 'electric-guitar', 'flute',
-  'french-horn', 'glockenspiel', 'guitar', 'harmonica', 'harp', 'harpsichord',
-  'kick', 'mandolin', 'marimba', 'oboe', 'organ', 'other', 'percussion', 'piano',
-  'sax', 'saxophone', 'shakers', 'sitar', 'snare', 'steel-guitar', 'strings',
+  'accordion', 'acoustic-guitar', 'banjo', 'bass', 'bassoon', 'bowed_strings',
+  'brass', 'cello', 'clarinet', 'congas', 'dobro', 'double-bass', 'drums',
+  'electric-guitar', 'flute', 'french-horn', 'glockenspiel', 'guitar',
+  'harmonica', 'harp', 'harpsichord', 'kick', 'mandolin', 'marimba', 'oboe',
+  'organ', 'percussion', 'piano', 'saxophone', 'sitar', 'snare', 'strings',
   'synth', 'tambourine', 'timpani', 'toms', 'triangle', 'trombone', 'trumpet',
-  'tuba', 'ukulele', 'vibraphone', 'viola', 'violin', 'vocals', 'woodwind',
-  'xylophone'
+  'tuba', 'ukulele', 'viola', 'violin', 'woodwind'
 ])
 for (const [id, s] of Object.entries(SPECIALISTS)) {
   if (CATALOGO_NUVEM.has(s.file)) continue
@@ -2613,7 +2619,7 @@ const FAMILIAS = {
 // nome" — órgão que testa vazio manda sondar o resto do grupo dos sustentados
 // (foi exatamente o caminho que teria achado a flauta sozinho).
 const TIMBRES = [
-  ['organ', 'synth', 'accordion', 'flute', 'harmonica', 'clavinet', 'harpsichord'],
+  ['organ', 'synth', 'accordion', 'flute', 'harmonica', 'harpsichord'],
   ['brass', 'trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
   // synth/keys entram nas CORDAS por MEDIÇÃO, não por teoria: na Samurai a
   // dissecação confessou som forte (-26,7 dB) em 1:22 e 3:32 que o faro chamou
@@ -2624,8 +2630,8 @@ const TIMBRES = [
   // virar região de 26 candidatos, e aí a conta de centavos explode por teoria.
   ['strings', 'violin', 'viola', 'cello', 'double-bass', 'synth'],
   ['clarinet', 'oboe', 'bassoon', 'woodwind', 'flute'],
-  ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'steel-guitar', 'harp', 'harpsichord', 'sitar'],
-  ['glockenspiel', 'vibraphone', 'xylophone', 'marimba'],
+  ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'harp', 'harpsichord', 'sitar'],
+  ['glockenspiel', 'marimba'],
   ['percussion', 'timpani', 'congas', 'tambourine', 'triangle']
 ]
 const grupoDeTimbre = (inst) => TIMBRES.filter((g) => g.includes(inst)).flat()
