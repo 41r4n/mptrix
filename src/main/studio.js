@@ -350,7 +350,7 @@ function runAnalyzer(wavFile, ffmpegPath, state) {
 // a harmonia limpa (sem bateria/voz) dá o tipo. Resultado cacheado no meta.
 const NON_HARMONIC = new Set([
   'vocals', 'drums', 'bass', 'percussion', 'timpani', 'tambourine',
-  'congas', 'triangle', 'bells', 'wind-chimes', 'glockenspiel',
+  'congas', 'triangle', 'glockenspiel', 'vibraphone', 'xylophone',
   // solistas de MELODIA não opinam sobre harmonia — nota de passagem
   // vira tempero errado no acorde (a flauta poluía a leitura da Azul)
   'flute', 'harmonica', 'saxophone', 'violin', 'viola', 'cello',
@@ -1494,24 +1494,59 @@ const SPECIALISTS = {
   mandolin: { label: 'Bandolim', file: 'mandolin' },
   ukulele: { label: 'Ukulele', file: 'ukulele' },
   dobro: { label: 'Dobro (slide)', file: 'dobro' },
+  'steel-guitar': { label: 'Steel guitar', file: 'steel-guitar' },
   sitar: { label: 'Sitar', file: 'sitar' },
   // Teclas
   organ: { label: 'Órgão', file: 'organ' },
   accordion: { label: 'Acordeon', file: 'accordion' },
   synth: { label: 'Sintetizador', file: 'synth' },
-  keys: { label: 'Teclados (geral)', file: 'keys' },
-  'digital-piano': { label: 'Piano digital', file: 'digital-piano' },
+  clavinet: { label: 'Clavinete', file: 'clavinet' },
   harpsichord: { label: 'Cravo', file: 'harpsichord' },
   // Percussão melódica e efeitos
-  marimba: { label: 'Marimba/Xilofone', file: 'marimba' },
-  glockenspiel: { label: 'Glockenspiel', file: 'glockenspiel' },
+  marimba: { label: 'Marimba', file: 'marimba' },
+  xylophone: { label: 'Xilofone', file: 'xylophone' },
+  vibraphone: { label: 'Vibrafone', file: 'vibraphone' },
+  glockenspiel: { label: 'Glockenspiel (sinos)', file: 'glockenspiel' },
   timpani: { label: 'Tímpanos', file: 'timpani' },
-  bells: { label: 'Sinos', file: 'bells' },
-  'wind-chimes': { label: 'Carrilhão de vento', file: 'wind-chimes' },
   tambourine: { label: 'Pandeirola', file: 'tambourine' },
   triangle: { label: 'Triângulo', file: 'triangle' },
   congas: { label: 'Congas', file: 'congas' }
 }
+
+// CATÁLOGO DA NUVEM — os nomes que o separador ACEITA de verdade.
+//
+// O app tinha quatro especialistas que a nuvem não conhece: 'keys',
+// 'digital-piano', 'bells' e 'wind-chimes'. Toda vez que um deles era chamado,
+// a máquina ligava, recusava ("não está no catálogo") e desligava: dinheiro
+// gasto, resposta nenhuma. Pior, a sonda recusada contava como pergunta
+// perdida, e trecho com pergunta perdida NÃO CONFESSA — então esses quatro
+// nomes emudeciam sozinhos qualquer região onde caíssem. Foram 17 chamadas
+// pagas por nada até isto aqui existir.
+//
+// A lista abaixo é a que o próprio modelo devolve na mensagem de recusa. O laço
+// não é decoração: se um dia o modelo mudar e um nome sair do catálogo, o
+// especialista some do arsenal na hora da carga, com aviso — em vez de virar
+// mais uma cobrança silenciosa que ninguém liga ao problema certo.
+const CATALOGO_NUVEM = new Set([
+  'accordion', 'acoustic-guitar', 'banjo', 'bass', 'bass-guitar', 'bassoon',
+  'bowed_strings', 'brass', 'cello', 'clarinet', 'clavinet', 'congas', 'cymbals',
+  'djembe', 'dobro', 'double-bass', 'drums', 'electric-guitar', 'flute',
+  'french-horn', 'glockenspiel', 'guitar', 'harmonica', 'harp', 'harpsichord',
+  'kick', 'mandolin', 'marimba', 'oboe', 'organ', 'other', 'percussion', 'piano',
+  'sax', 'saxophone', 'shakers', 'sitar', 'snare', 'steel-guitar', 'strings',
+  'synth', 'tambourine', 'timpani', 'toms', 'triangle', 'trombone', 'trumpet',
+  'tuba', 'ukulele', 'vibraphone', 'viola', 'violin', 'vocals', 'woodwind',
+  'xylophone'
+])
+for (const [id, s] of Object.entries(SPECIALISTS)) {
+  if (CATALOGO_NUVEM.has(s.file)) continue
+  console.warn(`[arsenal] "${id}" pede "${s.file}", que a nuvem não tem — fora do arsenal pra não gastar à toa`)
+  delete SPECIALISTS[id]
+}
+
+// Nomes que o olheiro ainda usa e o arsenal não tem mais. Sino de orquestra e
+// carrilhão são a mesma família metálica do glockenspiel, que existe de verdade.
+const APELIDOS_FARO = { bells: 'glockenspiel', 'wind-chimes': 'glockenspiel' }
 
 // Minutos de processamento por minuto de música, medido nesta classe de máquina
 const PROC_FACTOR = 9.7
@@ -2518,7 +2553,7 @@ const FAMILIAS = {
 // nome" — órgão que testa vazio manda sondar o resto do grupo dos sustentados
 // (foi exatamente o caminho que teria achado a flauta sozinho).
 const TIMBRES = [
-  ['organ', 'keys', 'synth', 'accordion', 'flute', 'harmonica', 'digital-piano'],
+  ['organ', 'synth', 'accordion', 'flute', 'harmonica', 'clavinet', 'harpsichord'],
   ['brass', 'trumpet', 'trombone', 'french-horn', 'tuba', 'saxophone'],
   // synth/keys entram nas CORDAS por MEDIÇÃO, não por teoria: na Samurai a
   // dissecação confessou som forte (-26,7 dB) em 1:22 e 3:32 que o faro chamou
@@ -2527,10 +2562,10 @@ const TIMBRES = [
   // imitando cordas é o disfarce mais comum que existe em música gravada.
   // Só aqui — espalhar o sintetizador por todos os grupos faria um cheiro dele
   // virar região de 26 candidatos, e aí a conta de centavos explode por teoria.
-  ['strings', 'violin', 'viola', 'cello', 'double-bass', 'synth', 'keys'],
+  ['strings', 'violin', 'viola', 'cello', 'double-bass', 'synth'],
   ['clarinet', 'oboe', 'bassoon', 'woodwind', 'flute'],
-  ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'harp', 'harpsichord', 'sitar'],
-  ['bells', 'glockenspiel', 'marimba', 'wind-chimes'],
+  ['acoustic-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'steel-guitar', 'harp', 'harpsichord', 'sitar'],
+  ['glockenspiel', 'vibraphone', 'xylophone', 'marimba'],
   ['percussion', 'timpani', 'congas', 'tambourine', 'triangle']
 ]
 const grupoDeTimbre = (inst) => TIMBRES.filter((g) => g.includes(inst)).flat()
@@ -3175,6 +3210,12 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         const dur = Math.round(meta.duration || 300)
         const ja = new Set([...stemsOf(meta), ...(meta.extracted || [])])
         let cheiros = Object.entries(faro?.arsenal || {})
+          // O olheiro é um script instalado à parte e ainda cheira dois nomes que
+          // saíram do arsenal por não existirem na nuvem. Descartar o cheiro seria
+          // jogar fora informação boa por causa de um nome; traduzir pro parente
+          // vivo mantém o sino sendo sino. (O gatilho de energia abriria a região
+          // de qualquer jeito, mas aí sem palpite nenhum pra ordenar a fila.)
+          .map(([inst, v]) => [APELIDOS_FARO[inst] || inst, v])
           .map(([inst, v]) => ({ inst, score: v?.score ?? v ?? 0, at: v?.at ?? 0 }))
           // o cheiro só morre quando NÃO SOBROU NINGUÉM pra chamar naquele
           // pedaço — interrogatório cortado no meio deixa candidatos na fila
