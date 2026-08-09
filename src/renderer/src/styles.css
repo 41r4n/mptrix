@@ -4503,6 +4503,38 @@ section h2 {
   z-index: 1;
   width: 100%;
   min-width: 0;
+  /* AGULHA DE LINHA em vez de bola: bola tem centro incerto, linha mira. Custa
+     desenhar a barra por conta -- tirando o controle padrao, o preenchimento
+     lima deixa de vir de graca e passa a ser um degrade cortado na posicao
+     atual (--seek-pct, escrito por quadro junto com o playhead). */
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: 18px;
+  cursor: pointer;
+}
+.seek-wrap .studio-seek::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--seek-pct, 0%),
+    rgba(255, 255, 255, 0.13) var(--seek-pct, 0%) 100%
+  );
+}
+.seek-wrap .studio-seek::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 3px;
+  height: 18px;
+  border-radius: 1.5px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(11, 12, 15, 0.9), var(--glow-playhead, 0 0 10px rgba(182, 255, 59, 0.75));
+  /* centra a linha no trilho de 4px */
+  margin-top: -7px;
+}
+.seek-wrap .studio-seek:hover::-webkit-slider-thumb {
+  background: var(--accent-hover);
 }
 /* O TRECHO MARCADO: uma faixa fina voando por cima do trilho da barra.
    Fica ACIMA e nao em cima do trilho de proposito -- a marcacao e o

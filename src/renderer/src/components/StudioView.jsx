@@ -1052,7 +1052,14 @@ export default function StudioView({ source, onClose }) {
           }
           // só a barra de seek não é reescrita durante o arrasto — senão
           // brigaria com o dedo do usuário
-          if (!draggingRef.current && seekElRef.current) seekElRef.current.value = String(t)
+          if (!draggingRef.current && seekElRef.current) {
+            seekElRef.current.value = String(t)
+            // A agulha virou LINHA, e linha exige desenhar a barra por conta —
+            // o preenchimento lima vinha de graça só no controle padrão. Então
+            // a porcentagem é escrita aqui, no mesmo lugar e do mesmo jeito que
+            // o playhead: uma propriedade no nó, por quadro, sem re-render.
+            seekElRef.current.style.setProperty('--seek-pct', pct)
+          }
           // PULSO DO BPM: o número bate junto com a música. Escrito direto no
           // nó por frame, como o playhead e o timer — nada de re-render por
           // batida. Usa as batidas MEDIDAS, então ele pisca onde a banda toca,
@@ -4176,7 +4183,16 @@ export default function StudioView({ source, onClose }) {
                   ref={seekElRef}
                   onPointerDown={() => { draggingRef.current = true }}
                   onPointerUp={() => { draggingRef.current = false }}
-                  onChange={(e) => seekTo(parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    // durante o arrasto o relógio não escreve (pra não brigar
+                    // com o dedo), então o preenchimento é atualizado aqui —
+                    // senão a barra ficaria parada enquanto a agulha anda
+                    const v = parseFloat(e.target.value)
+                    if (playDuration > 0) {
+                      e.target.style.setProperty('--seek-pct', `${((v / playDuration) * 100).toFixed(2)}%`)
+                    }
+                    seekTo(v)
+                  }}
                 />
               </span>
               <span className="studio-time studio-time-total">{fmtTime(playDuration)}</span>
