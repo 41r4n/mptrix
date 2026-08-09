@@ -7597,3 +7597,288 @@ section h2::after {
   height: 1px;
   background: linear-gradient(to right, var(--border), transparent);
 }
+
+/* ██████████ TELA INICIAL — CONSOLE ██████████
+   Reconstruída do zero. O diagnóstico do dono foi certeiro: "só organizado,
+   mas sem sal nenhum". A causa não era desordem, era FALTA DE ESCALA — tudo
+   entre 10 e 17px, tudo com o mesmo peso, nenhum lugar pro olho bater
+   primeiro. O kit sci-fi que ele escolheu trabalha com título de 96px; era
+   isso que faltava.
+   Nada de cor nova: mesma lima, mesmas superfícies. O que muda é TAMANHO,
+   FORMA (canto cortado, mira) e RITMO (seções numeradas). */
+
+/* corte de canto: a forma-assinatura do kit, como variável pra ser a mesma em
+   todo lugar */
+:root {
+  --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.console {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 34px 30px 26px;
+  margin-bottom: 30px;
+  background: var(--bg-elev);
+  clip-path: var(--corte);
+}
+/* retículas nos cantos: a marca de mira que o kit repete em toda prancheta */
+.console-mira {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent);
+  opacity: 0.55;
+}
+.console-mira.tl { top: 12px; left: 12px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.console-mira.tr { top: 12px; right: 12px; border-top: 1.5px solid; border-right: 1.5px solid; }
+
+.console-marca { display: flex; align-items: center; gap: 16px; }
+.console-marca-texto { display: flex; flex-direction: column; gap: 6px; }
+
+/* A MARCA NO TAMANHO DE UMA MARCA. clamp pra não estourar em janela estreita
+   nem encolher em tela grande. O espaçamento largo é o que dá o ar técnico —
+   e o que aproxima do Nippo do kit sem trocar de fonte. */
+.console-nome {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: clamp(38px, 7vw, 76px);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  text-shadow: 0 0 34px rgba(182, 255, 59, 0.14);
+}
+.console-lema {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  color: var(--muted-2);
+}
+.console-lema i { color: var(--accent); font-style: normal; }
+
+/* --- leitura de instrumento: estado do aparelho, não formulário --- */
+.leitura {
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  border-left: 1px solid var(--border);
+  padding-left: 18px;
+}
+.leitura-linha {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.leitura-linha:last-child { border-bottom: none; }
+.leitura-rot {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--muted-2);
+  width: 62px;
+  flex: none;
+}
+.leitura-val {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leitura-val.aceso { color: var(--accent); text-shadow: 0 0 10px rgba(182, 255, 59, 0.4); }
+.leitura-val.num { font-size: 17px; font-weight: 700; color: var(--text); flex: none; }
+.leitura-sufixo { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; color: var(--muted-2); }
+.leitura-acoes { display: flex; gap: 10px; flex: none; }
+.btn-ghost-min {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+.btn-ghost-min:hover { color: var(--accent); }
+
+/* --- seção numerada: ritmo de console --- */
+.bloco { margin-bottom: 34px; }
+.secao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.secao b {
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.secao::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}
+
+/* --- FAIXA DO ESTÚDIO: o destaque da tela --- */
+.faixa {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  clip-path: var(--corte);
+  overflow: hidden;
+}
+.faixa-fundo {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elev);
+  transition: background 0.18s ease;
+}
+.faixa:hover .faixa-fundo { background: #191c22; }
+.faixa-corpo {
+  position: relative;
+  display: block;
+  padding: 30px 30px 28px;
+  max-width: 620px;
+}
+.faixa-titulo {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: clamp(26px, 3.4vw, 42px);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.faixa-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.faixa-lista i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(182, 255, 59, 0.09);
+  padding: 4px 8px;
+  clip-path: var(--corte-sm);
+}
+.faixa-desc {
+  display: block;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 52ch;
+}
+/* o ícone gigante é marca de fundo: dá peso ao bloco sem competir com o texto */
+.faixa-ico {
+  position: absolute;
+  right: 26px;
+  bottom: -18px;
+  color: var(--accent);
+  opacity: 0.13;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.faixa:hover .faixa-ico { opacity: 0.22; transform: translateY(-6px); }
+
+/* --- grade de formatos: chip com canto cortado e índice --- */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.chip {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  clip-path: var(--corte-sm);
+}
+/* duas camadas: a de baixo faz as vezes de borda (borda some no clip-path), a
+   de cima é a superfície */
+.chip-borda {
+  position: absolute;
+  inset: 0;
+  background: var(--border-control);
+  clip-path: var(--corte-sm);
+  transition: background 0.16s ease;
+}
+.chip:hover .chip-borda { background: var(--accent); }
+.chip-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 1px;
+  padding: 15px 15px 17px;
+  background: var(--bg-elev);
+  clip-path: var(--corte-sm);
+  transition: background 0.16s ease;
+}
+.chip:hover .chip-in { background: #171a20; }
+.chip-topo { display: flex; align-items: center; justify-content: space-between; }
+.chip-num {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.13);
+  transition: color 0.16s ease;
+}
+.chip:hover .chip-num { color: var(--accent); }
+.chip-ico { color: var(--muted-2); display: inline-flex; transition: color 0.16s ease; }
+.chip:hover .chip-ico { color: var(--accent); }
+.chip-nome {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+.chip-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.13em;
+  color: var(--muted-2);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.chip-desc { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.chip.disabled, .chip:disabled { opacity: 0.4; cursor: default; }
+.chip:disabled .chip-borda { background: var(--border-control); }
+
+@media (max-width: 720px) {
+  .console { flex-direction: column; align-items: stretch; }
+  .leitura { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 12px; }
+}
