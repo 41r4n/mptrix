@@ -32,7 +32,7 @@
   --accent-2: #b6ff3b;      /* legado: colapsa no destaque único */
   --accent-dim: rgba(182, 255, 59, 0.14);
   --accent-border: rgba(182, 255, 59, 0.55);
-  --glow-painel: rgba(182, 255, 59, 0.16);  /* respingo da marca lima pra fora do painel */
+  --glow-painel: rgba(182, 255, 59, 0.13);  /* respingo da marca lima pra fora do painel */
   --ok: #4ecb8c;
   --bad: #f87171;
   --warn: #eab308;          /* botão M ativo */
@@ -8172,40 +8172,35 @@ ul.hlib-grid {
    controle #15171C — com fio de contorno em cada peça e a marca lima na quina
    esquerda. Borda em volta de texto = clicável: aqui TUDO clica, então pode. */
 
-/* A CAIXA QUE PROJETA — e a correcao de dois erros meus.
-   1) Eu punha filter: drop-shadow no MESMO elemento que tem clip-path,
-      jurando que o filtro rodava depois do recorte. Roda antes: o navegador
-      filtra e SO ENTAO corta — eu desenhava a sombra e recortava ela fora
-      junto com as quinas. Por isso nao aparecia nada. Sombra precisa de um
-      elemento sem recorte pra viver, e esta caixa e ele.
-   2) Depois empilhei cinco drop-shadow pra alargar o halo, e dava pra ver o
-      FORMATO da sombra. Filtro e corrente: cada drop-shadow usa a saida do
-      anterior como fonte, entao o segundo sombreia a sombra do primeiro, o
-      terceiro sombreia aquilo, e o que era pra ser esfumado virou um bloco
-      solido com borda.
-   Entao a claridade larga saiu do filtro e virou degrade radial, que
-   esmaece por natureza e nao tem contorno. No filtro ficou so o que precisa
-   ser nitido: a aresta acesa e o contato curto.
+/* A CAIXA QUE PROJETA — e o registro de tres erros meus, porque cada um
+   tinha uma causa diferente e vale nao repetir nenhum:
 
-   E claridade, nao sombra, de proposito: num palco #0B0C0F a sombra escura
-   nao tem pra onde escurecer. O respingo lima e puxado pra esquerda, que e
-   o lado onde a marca lima da barra esta — luz refletida da propria peca. */
+   1) Sombra invisivel: eu punha filter: drop-shadow no MESMO elemento que
+      tem clip-path, jurando que o filtro rodava depois do recorte. Roda
+      antes — o navegador filtra e SO ENTAO corta, entao eu desenhava a
+      sombra e recortava ela fora junto com as quinas. Sombra precisa de um
+      elemento sem recorte pra viver: e esta caixa.
+
+   2) Dava pra ver o formato: cinco drop-shadow empilhados. Filtro e
+      corrente — cada um usa a saida do anterior como fonte, entao o segundo
+      sombreia a sombra do primeiro e a coisa vira bloco solido com borda.
+      Uma camada larga so, com alfa baixo, esfuma de verdade.
+
+   3) Virou um quadrado: tentei resolver o (2) com degrade radial num
+      pseudo-elemento, e a elipse era maior que a caixa que a continha —
+      o proprio elemento cortou o degrade em retangulo. Degrade so esmaece
+      se ele terminar DENTRO da propria caixa.
+
+   E claridade, nao escuridao, de proposito: num palco #0B0C0F a sombra
+   escura nao tem pra onde escurecer. O halo puxa pra esquerda porque e o
+   lado onde a marca lima da barra esta — luz refletida da propria peca. */
 .barra-caixa {
   position: relative;
   margin-bottom: 34px;
   filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 0.16))
-    drop-shadow(0 5px 10px rgba(0, 0, 0, 0.9));
-}
-.barra-caixa::before {
-  content: '';
-  position: absolute;
-  inset: -54px -48px -66px -54px;
-  z-index: -1;
-  background:
-    radial-gradient(52% 120% at 24% 52%, var(--glow-painel), transparent 70%),
-    radial-gradient(78% 155% at 56% 58%, rgba(255, 255, 255, 0.055), transparent 72%);
-  pointer-events: none;
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.15))
+    drop-shadow(0 4px 9px rgba(0, 0, 0, 0.85))
+    drop-shadow(-6px 6px 42px var(--glow-painel));
 }
 
 .barra {
