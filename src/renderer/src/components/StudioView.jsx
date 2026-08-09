@@ -3009,6 +3009,8 @@ export default function StudioView({ source, onClose }) {
                       ? `Interrogando um som em ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)}${autoJob.sondando ? ` — perguntando pra ${autoJob.sondando}` : '…'}`
                       : autoJob.fase === 'revistando'
                         ? `Revistando a faixa ${STEM_META[autoJob.alvoRevista]?.label || autoJob.alvoRevista} por dentro${autoJob.sondando ? ` — perguntando pra ${autoJob.sondando}` : '…'}`
+                      : autoJob.fase === 'colhendo'
+                        ? `Separando o som sem dono de ${fmtTime(autoJob.trecho?.ini || 0)}–${fmtTime(autoJob.trecho?.fim || 0)} — esse não tem nome, vai virar pista mesmo assim…`
                         : autoJob.fase === 'farejando'
                           ? `Procurando instrumentos nessa música… ${autoJob.rodada > 1 ? '(2ª passada, com o véu levantado)' : ''}`
                           : `Separando sozinho: ${autoJob.label || (autoJob.alvos || []).join(', ') || '…'}`}

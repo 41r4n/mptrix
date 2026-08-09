@@ -3353,6 +3353,19 @@ export async function isolarTrecho({ key, ini, fim, fonte = 'other', descricao =
       return { ok: false, vazio: true, ...doAlvo }
     }
 
+    // GUARDA ANTI-PASSAGEM, a lição mais cara do dia: modelo grande adora
+    // devolver a entrada inteira com etiqueta nova. Se o "resto" ficou quase
+    // mudo, não houve separação — houve cópia. Instalar isso criaria uma pista
+    // gêmea do "outros" e esvaziaria a original de uma vez.
+    const daFonte = await medir(src)
+    if (r.temResto) {
+      const doResto = await medir(resto)
+      if (doResto.mean < daFonte.mean - 12) {
+        diario(dir, `apontado ${ini}-${fim} em ${fonte}: RECUSEI — levaria a faixa inteira (resto ${doResto.mean} dB vs fonte ${daFonte.mean} dB)`)
+        return { ok: false, passagem: true, ...doAlvo }
+      }
+    }
+
     const apelido = proximoSom(readMeta(dir))
     copyFileSync(alvo, join(dir, 'base', `${apelido}.flac`))
 
@@ -3388,7 +3401,9 @@ export async function isolarTrecho({ key, ini, fim, fonte = 'other', descricao =
         m.stemInfo[fonte] = { ...(m.stemInfo[fonte] || {}), mean: dep.mean, max: dep.max, present: dep.mean > -48 || dep.max > -35 }
       } catch { /* medida velha fica valendo */ }
     }
-    // o som ganhou dono: a confissão que apontava pra cá não vale mais
+    // o som ganhou dono: a confissão que apontava pra cá não vale mais.
+    // (Quando quem chama é a colheita automática, ela sincroniza a MESMA regra
+    // na lista em memória — senão o gravar() dela devolveria a confissão morta.)
     if (m.autoHarvest?.semDono) {
       m.autoHarvest.semDono = m.autoHarvest.semDono.filter((c) =>
         (c.fonte || 'other') !== fonte || c.fim <= ini || c.ini >= fim)
@@ -4058,6 +4073,57 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
         if (REVISTAVEIS.some((f) => !revistadas.has(f) && existsSync(join(dir, 'base', `${f}.flac`)))) {
           if (convergiu) convergiu = false
         }
+      }
+
+      // ============ COLHEITA DOS SONS SEM DONO (sem nome, sozinho) ============
+      // Confessar era meio caminho. O motor já sabe ONDE tem som que ninguém
+      // reivindicou — ele mesmo escreveu o trecho. Pedir pro usuário marcar
+      // aquele pedaço na onda e apertar um botão seria devolver pra ele um
+      // trabalho que o sistema já tem pronto na mão: *"a responsabilidade é do
+      // sistema, não do usuário"*.
+      //
+      // Aqui a confissão vira FAIXA. Sem nome de instrumento, sem catálogo, sem
+      // pergunta: aponta o trecho confessado, a rede separa aquele som e o resto
+      // volta pra fonte. O que era um aviso na tela vira uma pista na mesa.
+      if (convergiu && !state.cancelled) {
+        const paraColher = progresso.semDono.filter((c) => !c.pendente && !c.colhido)
+        // teto por passada: colher é caro (modelo grande) e o resto fica pra
+        // próxima abertura, com a música ainda marcada como não-terminada
+        const COLHEITAS_POR_RODADA = 3
+        for (const c of paraColher.slice(0, COLHEITAS_POR_RODADA)) {
+          if (state.cancelled) { motivoParada = 'cancelado'; convergiu = false; break }
+          if (!usarNuvem()) { motivoParada = 'nuvem-indisponivel'; convergiu = false; break }
+          onStatus({ id, state: 'running', auto: true, fase: 'colhendo', trecho: { ini: c.ini, fim: c.fim } })
+          try {
+            const r = await isolarTrecho({
+              key, ini: c.ini, fim: c.fim, fonte: c.fonte || 'other',
+              descricao: '', ffmpegPath, state
+            })
+            if (r?.ok) {
+              // o som ganhou dono: some da lista de confissões (a mesma regra
+              // que o isolarTrecho já aplicou no registro do disco)
+              progresso.semDono = progresso.semDono.filter((s) =>
+                (s.fonte || 'other') !== (c.fonte || 'other') || s.fim <= c.ini || s.ini >= c.fim)
+            } else {
+              // veio vazio (ou veio a faixa inteira, que dá no mesmo): marcar é
+              // o que impede de comprar a mesma resposta em toda abertura pelo
+              // resto da vida da música. A confissão CONTINUA na tela — o som
+              // existe, o motor é que não conseguiu isolá-lo.
+              c.colhido = true
+              diario(dir, `  colheita ${c.ini}-${c.fim}: ${r?.passagem ? 'devolveu a faixa inteira' : 'nada separável'} — não tento de novo`)
+            }
+          } catch (e) {
+            if (/insufficient credit/i.test(String(e?.message))) {
+              motivoParada = 'sem-credito'; convergiu = false; break
+            }
+            // falha de rede não vira veredito: fica pra próxima abertura
+            diario(dir, `  colheita ${c.ini}-${c.fim} falhou: ${e?.message || e}`)
+            convergiu = false
+            break
+          }
+          try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR a colheita: ${e?.message || e}`) }
+        }
+        if (progresso.semDono.some((c) => !c.pendente && !c.colhido)) convergiu = false
       }
 
       fechar()
