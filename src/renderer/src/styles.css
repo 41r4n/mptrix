@@ -8385,6 +8385,18 @@ ul.hlib-grid {
 /* com filtro ligado ele escreve o recorte e volta a ter largura */
 .barra-btn.so-icone.on { width: auto; padding: 0 12px 0 10px; color: var(--accent); }
 
+/* FAVORITO acende em amarelo, nao em lima. O lima e o destaque UNICO do
+   app — ele significa "o sistema esta agindo" (tocando, separando, filtro
+   ligado). Favorito nao e acao do sistema, e marca do dono, entao pega o
+   amarelo que ja e usado pra dizer "voce mexeu nisso" (mute). */
+.barra-btn.so-icone.estrelado {
+  --fio: rgba(234, 179, 8, 0.55);
+  color: var(--warn);
+  background-color: rgba(234, 179, 8, 0.14);
+  box-shadow: inset 0 0 0 1px var(--fio), inset 0 0 14px rgba(234, 179, 8, 0.12);
+}
+.barra-btn.so-icone.estrelado:hover { background-color: rgba(234, 179, 8, 0.24); color: var(--warn); }
+
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
 /* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
@@ -8426,3 +8438,24 @@ ul.hlib-grid {
   padding-left: 4px;
 }
 .barra-conta b { color: var(--accent); font-size: 12.5px; }
+
+/* --- a marca do favorito no cartao --- */
+.ac.favorito { color: var(--warn); background: rgba(234, 179, 8, 0.18); }
+.ac.favorito:hover { background: var(--warn); color: #0b0c0f; }
+/* selo permanente na capa: favorito existe pra achar de longe, entao ele
+   nao pode depender do mouse chegar perto */
+.hcard-estrela {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--warn);
+  background: rgba(11, 12, 15, 0.8);
+  border-radius: 3px;
+  filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.4));
+  z-index: 1;
+}

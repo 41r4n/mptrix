@@ -182,19 +182,22 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   const [filterType, setFilterType] = useState('all')
   const [periodSelection, setPeriodSelection] = useState({ mode: 'all' })
   const [sortBy, setSortBy] = useState('newest')
+  const [soFavoritos, setSoFavoritos] = useState(false)
 
   const filtered = useMemo(() => {
     const out = history.filter((e) => {
       if (!matchesQuery(e, query.trim())) return false
       if (filterType !== 'all' && e.presetId !== filterType) return false
       if (!matchesPeriod(e.timestamp, periodSelection)) return false
+      if (soFavoritos && !e.favorito) return false
       return true
     })
     return sortEntries(out, sortBy)
-  }, [history, query, filterType, periodSelection, sortBy])
+  }, [history, query, filterType, periodSelection, sortBy, soFavoritos])
+  const totalFavoritos = useMemo(() => history.filter((e) => e.favorito).length, [history])
 
   const periodActive = periodSelection.mode !== 'all'
-  const hasActiveFilters = query.trim() || filterType !== 'all' || periodActive || sortBy !== 'newest'
+  const hasActiveFilters = query.trim() || filterType !== 'all' || periodActive || sortBy !== 'newest' || soFavoritos
 
   if (!history || history.length === 0) {
     return (
@@ -247,6 +250,14 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   const exitSelectionMode = () => {
     setSelectionMode(false)
     setSelectedIds(new Set())
+  }
+
+  // FAVORITO — marca do dono, guardada no registro. Nao mexe em arquivo:
+  // o acervo ja tem 99 itens e sem marcacao a unica forma de reachar uma
+  // musica e lembrar do nome dela.
+  const toggleFavorito = async (entry) => {
+    const r = await window.mptrix.history.favorite(entry.id, !entry.favorito)
+    if (r?.updated) onChange?.(r.updated)
   }
 
   const toggleSelected = (id) => {
@@ -388,6 +399,7 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
     setFilterType('all')
     setPeriodSelection({ mode: 'all' })
     setSortBy('newest')
+    setSoFavoritos(false)
   }
 
   return (
@@ -449,6 +461,23 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
         {/* só aparece quando há o que limpar. Mostra quanto sobrou APENAS se o
             filtro cortou algo — trocar a ordem não corta nada, e "99 de 99"
             seria um número inútil ocupando a barra. */}
+        {/* FAVORITOS no fim dos dois seletores: eles dizem "que tipo" e "em
+            que ordem", e este diz "so os meus" — os tres estreitam a mesma
+            lista. Some quando nao ha nenhum favorito, porque filtro que so
+            pode dar zero e armadilha. */}
+        {totalFavoritos > 0 && (
+          <button
+            className={`barra-btn so-icone ${soFavoritos ? 'on estrelado' : ''}`}
+            onClick={() => setSoFavoritos((v) => !v)}
+            type="button"
+            aria-pressed={soFavoritos}
+            title={soFavoritos ? 'Mostrando só favoritos' : `Ver só favoritos (${totalFavoritos})`}
+          >
+            <Ico nome={soFavoritos ? 'estrelaCheia' : 'estrela'} tamanho={14} />
+            {soFavoritos && <span>{totalFavoritos}</span>}
+          </button>
+        )}
+
         {hasActiveFilters && (
           <button className="barra-btn aviso" onClick={resetFilters} title="Limpar filtros">
             {filtered.length < history.length ? `${filtered.length} de ${history.length} ✕` : 'limpar ✕'}
@@ -517,12 +546,21 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
                   {capas[entry.primaryFile]
                     ? <img src={capas[entry.primaryFile]} alt="" loading="lazy" />
                     : <span className="hcard-semcapa"><Ico nome={entry.presetId} tamanho={30} /></span>}
+                  {/* a marca fica VISIVEL sempre, nao so no hover: favorito
+                      existe pra achar de longe, e um selo que so aparece
+                      quando o mouse chega nao serve pra achar nada */}
+                  {entry.favorito && !selectionMode && (
+                    <span className="hcard-estrela" title="Favorito"><Ico nome="estrelaCheia" tamanho={13} /></span>
+                  )}
                   <span className="hcard-selo">{originBadge(entry)}</span>
                   {selectionMode && (
                     <span className={`hcard-check ${selected ? 'on' : ''}`}>{selected ? '✓' : ''}</span>
                   )}
                   {!selectionMode && (
                     <div className="hcard-acoes">
+                      <button className={`ac ${entry.favorito ? 'favorito' : ''}`} onClick={(e) => { e.stopPropagation(); toggleFavorito(entry) }}
+                        title={entry.favorito ? 'Tirar dos favoritos' : 'Marcar como favorito'}
+                        aria-pressed={!!entry.favorito}><Ico nome={entry.favorito ? 'estrelaCheia' : 'estrela'} tamanho={16} /></button>
                       <button className="ac destaque" onClick={(e) => { e.stopPropagation(); onOpenStudio?.(entry) }} disabled={!entry.primaryFile}
                         title="Abrir no Estúdio (separar instrumentos)"><Ico nome="studio" tamanho={16} /></button>
                       <button className="ac" onClick={(e) => { e.stopPropagation(); onQuickEdit?.(entry) }} disabled={!entry.primaryFile}

@@ -444,6 +444,20 @@ app.whenReady().then(() => {
     return { updated }
   })
 
+  // FAVORITO — so um sinal no registro, nenhum arquivo e tocado. O acervo
+  // cresce sozinho (99 itens hoje) e sem marcacao a unica forma de reachar
+  // uma musica e lembrar do nome dela. E marca do dono, entao ela sobrevive
+  // a renomear, a reordenar e a filtrar.
+  ipcMain.handle('history:favorite', (_e, { id, favorito }) => {
+    const list = getHistory()
+    const entry = list.find((e) => e.id === id)
+    if (!entry) return { error: 'Item não encontrado no histórico.' }
+    const alvo = typeof favorito === 'boolean' ? favorito : !entry.favorito
+    const updated = updateHistoryEntry(id, { favorito: alvo })
+    send('history:changed', updated)
+    return { updated, favorito: alvo }
+  })
+
   ipcMain.handle('video:probe', async (_e, url) => {
     if (!existsSync(YT_DLP_PATH)) {
       return { error: 'yt-dlp.exe não encontrado em resources/bin.' }
