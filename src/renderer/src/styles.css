@@ -8177,19 +8177,29 @@ ul.hlib-grid {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 22px;
+  /* folga embaixo: sombra de 34px de queda precisa de chao pra cair, senao
+     ela desenha em cima do primeiro cartao do acervo */
+  margin-bottom: 30px;
   padding: 9px 12px 9px 16px;
   background: var(--bg-cava);
-  /* fio de contorno + boca escura em cima + labio de luz embaixo: a placa
-     tem espessura. O ultimo e o que mais vende o relevo. */
+  /* fio de contorno + boca fraca em cima + labio de luz embaixo: a placa tem
+     espessura, mas o relevo forte agora e o de FORA. */
   box-shadow:
     inset 0 0 0 1px var(--border),
-    inset 0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 2px 7px rgba(0, 0, 0, 0.55),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   clip-path: var(--corte-sm);
-  /* sombra projetada: box-shadow externo morre no clip-path, filter nao —
-     ele roda depois do recorte e acompanha as quinas cortadas. */
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.65));
+  /* SOMBRA PRA FORA, em tres camadas. Uma so nao aparece: o fundo do app ja
+     e #0B0C0F, entao preto sobre preto tem pouca margem — quem cria a
+     distancia e o empilhamento (contato curto + corpo medio + halo largo),
+     mais um fio de luz na aresta de cima pra placa descolar do fundo.
+     Sai por filter porque box-shadow externo morre no clip-path: o filter
+     roda DEPOIS do recorte e acompanha as quinas cortadas. */
+  filter:
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.055))
+    drop-shadow(0 3px 4px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 16px 26px rgba(0, 0, 0, 0.9))
+    drop-shadow(0 34px 64px rgba(0, 0, 0, 0.7));
 }
 /* marca lima na quina — diz "isto é o painel de comando" sem gastar largura */
 .barra::before {
