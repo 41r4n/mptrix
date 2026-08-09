@@ -11,6 +11,11 @@
   --bg-elev: #15171c;       /* cards, rail das faixas, sheets */
   --bg-elev-2: #1b1e24;     /* derivado: hover/camada acima do card */
   --bg-inset: #0d0f13;      /* ruler, canaletas, transporte */
+  /* MAIS PRETO QUE O APP. A barra de comando afunda em vez de subir: em tela
+     escura, cavar contrasta tão bem quanto levantar, e sem clarear o preto
+     que é a base do app. O contorno e o texto é que fazem a leitura. */
+  --bg-cava: #08090c;       /* chassi da barra de comando */
+  --bg-cava-2: #050609;     /* poço: controle dentro do chassi */
   /* bordas */
   --border: rgba(255, 255, 255, 0.07);
   --border-hair: rgba(255, 255, 255, 0.05);
@@ -8174,7 +8179,7 @@ ul.hlib-grid {
   flex-wrap: wrap;
   margin-bottom: 22px;
   padding: 9px 12px 9px 16px;
-  background: var(--bg-tracks);
+  background: var(--bg-cava);
   box-shadow: inset 0 0 0 1px var(--border);
   clip-path: var(--corte-sm);
 }
@@ -8200,7 +8205,7 @@ ul.hlib-grid {
   max-width: 400px;
   height: 34px;
   padding: 0 10px;
-  background: var(--bg-inset);
+  background: var(--bg-cava-2);
   box-shadow: inset 0 0 0 1px var(--border-control);
   clip-path: var(--corte-sm);
   transition: box-shadow 0.14s ease;
@@ -8248,7 +8253,7 @@ ul.hlib-grid {
 .barra-btn {
   height: 34px;
   padding: 0 12px;
-  background: var(--bg-elev);
+  background: var(--bg-cava-2);
   border: none;
   box-shadow: inset 0 0 0 1px var(--border-control);
   color: var(--text-2);
@@ -8274,7 +8279,7 @@ ul.hlib-grid {
 }
 .barra-sel:hover,
 .barra-btn:hover {
-  background: #1b1e25;
+  background: #0b0d11;
   color: var(--text);
   box-shadow: inset 0 0 0 1px var(--border-strong);
 }
