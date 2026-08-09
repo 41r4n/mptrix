@@ -1,21 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Ico from './Icones.jsx'
 
 // ██████ A RODA ██████
 //
-// Aceno direto ao Omnitrix do Ben 10 Omniverse: o relógio abre uma roleta com
-// as formas em volta e você gira até a que quer. Aqui as "formas" são os
+// Aceno direto ao Omnitrix do Omniverse: o relógio abre uma coroa com as
+// formas em volta e você gira até a que quer. Aqui as "formas" são os
 // formatos de download.
 //
-// Mas ela não é enfeite temático — ela existe porque encurta o caminho. Antes:
-// copiar o link no navegador, voltar pro MPTRIX, abrir BAIXAR, escolher o
-// formato, colar o link, confirmar. O passo de colar é trabalho que o
-// computador já podia fazer sozinho, porque ele sabe o que está na área de
-// transferência. Agora: copiou lá fora, a ampulheta acende aqui, você aponta e
-// escolhe a forma.
+// Ela não é enfeite temático — existe porque encurta o caminho. Antes: copiar
+// o link no navegador, voltar pro MPTRIX, abrir BAIXAR, escolher o formato,
+// colar o link, confirmar. O passo de colar é trabalho que o computador já
+// podia fazer sozinho, porque ele sabe o que está na área de transferência.
+// Agora: copiou lá fora, a ampulheta acende aqui, aponta e escolhe a forma.
 //
-// Por isso ela SÓ aparece quando há link copiado. Roda vazia seria um botão
-// bonito que não faz nada — e o app já tem a aba BAIXAR pro caminho normal.
+// A roda abre NO CENTRO DA TELA, não no canto. Na primeira versão ela nascia
+// grudada no selo e o canto da janela comia um pedaço dela — e, pior, uma
+// coroa de escolha espremida no rodapé não é o gesto do desenho. No Omniverse
+// o relógio TOMA a tela: tudo escurece e sobram as formas. É o que ela faz.
 
 const FORMAS = [
   { id: 'music', rot: 'MP3', sub: 'música' },
@@ -26,14 +27,13 @@ const FORMAS = [
   { id: 'video', rot: 'VÍDEO', sub: 'mp4' }
 ]
 
-const R_EXT = 132   // raio de fora da coroa
-const R_INT = 62    // raio de dentro (o buraco onde mora a ampulheta)
-const CENTRO = 150  // metade do lado do svg
+const R_EXT = 200   // raio de fora da coroa
+const R_INT = 96    // raio de dentro (o buraco onde mora a ampulheta)
+const CENTRO = 220  // metade do lado do svg
 
-// Fatia da coroa em coordenadas do svg. Uma fatia por forma, com uma folga
-// entre elas — sem a folga a roleta vira um anel só e some a leitura de
-// "são seis coisas separadas".
-function fatia(i, total, folgaGrau = 3) {
+// Fatia da coroa. Uma por forma, com folga entre elas — sem a folga a roleta
+// vira um anel só e some a leitura de "são seis coisas separadas".
+function fatia(i, total, folgaGrau = 2.6) {
   const passo = 360 / total
   const ini = (i * passo - 90 + folgaGrau / 2) * (Math.PI / 180)
   const fim = ((i + 1) * passo - 90 - folgaGrau / 2) * (Math.PI / 180)
@@ -56,17 +56,17 @@ export default function Omnitrix({ ligado, onEscolher }) {
   const [link, setLink] = useState(null)
   const [aberta, setAberta] = useState(false)
   const [sobre, setSobre] = useState(null)
-  const fechaRef = useRef(null)
 
   useEffect(() => {
     return window.mptrix.clipboard.onLink((achado) => {
       setLink(achado)
       setAberta(false)
+      setSobre(null)
     })
   }, [])
 
-  // fechar com Esc: roda aberta cobre a tela inteira, e quem abriu sem querer
-  // precisa de uma saída que não exija mirar em nada
+  // Esc fecha: a roda cobre a tela inteira, e quem abriu sem querer precisa de
+  // uma saída que não exija mirar em nada
   useEffect(() => {
     if (!aberta) return
     const aoTeclar = (e) => { if (e.key === 'Escape') setAberta(false) }
@@ -76,72 +76,82 @@ export default function Omnitrix({ ligado, onEscolher }) {
 
   if (!link || !ligado) return null
 
-  // fecha com atraso: a roda abre no ponteiro e o caminho até a fatia passa
-  // por fora do selo. Sem a folga, ela fecharia no meio do gesto.
-  const adiarFechar = () => {
-    clearTimeout(fechaRef.current)
-    fechaRef.current = setTimeout(() => { setAberta(false); setSobre(null) }, 260)
-  }
-  const cancelarFechar = () => clearTimeout(fechaRef.current)
-
   // playlist copiada abre já apontando pro formato de playlist: baixar 40
   // músicas uma a uma seria castigo
   const sugerido = link.playlist ? 'playlist' : 'music'
   const escolhida = FORMAS.find((f) => f.id === (sobre || sugerido))
 
+  const escolher = (id) => {
+    const url = link.url
+    setAberta(false)
+    setLink(null)
+    onEscolher?.(id, url)
+  }
+
   return (
-    <div
-      className={`omni ${aberta ? 'aberta' : ''}`}
-      onMouseEnter={() => { cancelarFechar(); setAberta(true) }}
-      onMouseLeave={adiarFechar}
-    >
-      {aberta && (
-        <svg className="omni-roda" viewBox="0 0 300 300" aria-hidden="true">
-          {FORMAS.map((f, i) => {
-            const ativa = (sobre || sugerido) === f.id
-            const [tx, ty] = meio(i, FORMAS.length, (R_EXT + R_INT) / 2)
-            return (
-              <g
-                key={f.id}
-                className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''}`}
-                onMouseEnter={() => setSobre(f.id)}
-                onClick={() => { setAberta(false); setLink(null); onEscolher?.(f.id, link.url) }}
-                style={{ animationDelay: `${i * 26}ms` }}
-              >
-                <path d={fatia(i, FORMAS.length)} />
-                <text x={tx} y={ty - 3} className="omni-rot">{f.rot}</text>
-                <text x={tx} y={ty + 11} className="omni-sub">{f.sub}</text>
-              </g>
-            )
-          })}
-        </svg>
-      )}
-
-      {/* O SELO: hexágono com a ampulheta, a marca da casa. Fechado ele pulsa
-          pra dizer "achei um link"; aberto ele vira o mostrador do que está
-          sob o ponteiro. */}
-      <button className="omni-selo" type="button" onClick={() => setAberta((v) => !v)}>
-        <span className="omni-hex" aria-hidden="true">
-          <svg viewBox="0 0 24 24" className="omni-ampulheta">
-            <path d="M7 3h10M7 21h10M8 3v3.2c0 1 .4 1.9 1.1 2.6L12 12l-2.9 3.2c-.7.7-1.1 1.6-1.1 2.6V21M16 3v3.2c0 1-.4 1.9-1.1 2.6L12 12l2.9 3.2c.7.7 1.1 1.6 1.1 2.6V21" />
-          </svg>
-        </span>
-        <span className="omni-fala">
-          <b>{aberta ? escolhida.rot : 'link copiado'}</b>
-          <i>{aberta ? escolhida.sub : link.host}</i>
-        </span>
-      </button>
-
-      {!aberta && (
+    <>
+      {/* O SELO: hexágono com a ampulheta. Fechado ele pulsa pra dizer "achei
+          um link" e fica no canto, discreto — quem está no meio de outra
+          coisa não pode ter a tela tomada sem pedir. */}
+      <div className="omni-selo-caixa">
+        <button
+          className="omni-selo"
+          type="button"
+          onMouseEnter={() => setAberta(true)}
+          onClick={() => setAberta(true)}
+        >
+          <span className="omni-hex" aria-hidden="true"><Ico nome="ampulheta" tamanho={20} /></span>
+          <span className="omni-fala">
+            <b>link copiado</b>
+            <i>{link.host}</i>
+          </span>
+        </button>
         <button
           className="omni-x"
           type="button"
           title="Dispensar"
-          onClick={(e) => { e.stopPropagation(); setLink(null) }}
+          onClick={() => setLink(null)}
         >
           <Ico nome="apagar" tamanho={12} />
         </button>
+      </div>
+
+      {aberta && (
+        <div className="omni-palco" onClick={() => setAberta(false)}>
+          <div className="omni-roda-caixa" onClick={(e) => e.stopPropagation()}>
+            <svg className="omni-roda" viewBox="0 0 440 440">
+              {FORMAS.map((f, i) => {
+                const ativa = (sobre || sugerido) === f.id
+                const [tx, ty] = meio(i, FORMAS.length, (R_EXT + R_INT) / 2)
+                return (
+                  <g
+                    key={f.id}
+                    className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''}`}
+                    onMouseEnter={() => setSobre(f.id)}
+                    onClick={() => escolher(f.id)}
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <path d={fatia(i, FORMAS.length)} />
+                    <text x={tx} y={ty - 4} className="omni-rot">{f.rot}</text>
+                    <text x={tx} y={ty + 14} className="omni-sub">{f.sub}</text>
+                  </g>
+                )
+              })}
+            </svg>
+
+            {/* O NÚCLEO: a ampulheta grande no buraco da coroa, como no
+                relógio. Ele não clica — é mostrador: diz o que está sob o
+                ponteiro e de onde veio o link. */}
+            <div className="omni-nucleo" aria-hidden="true">
+              <span className="omni-nucleo-hex"><Ico nome="ampulheta" tamanho={46} /></span>
+              <b>{escolhida.rot}</b>
+              <i>{escolhida.sub}</i>
+            </div>
+
+            <p className="omni-legenda">{link.host} · Esc pra fechar</p>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   )
 }

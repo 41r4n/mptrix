@@ -8675,23 +8675,21 @@ ul.hlib-grid {
    Ela não é enfeite temático: existe porque encurta o caminho. Antes era
    copiar o link lá fora, voltar, abrir BAIXAR, escolher o formato, colar,
    confirmar. Agora é copiar lá fora e apontar aqui. Por isso ela SÓ existe
-   quando há link copiado — roda vazia seria um botão bonito que não faz nada,
-   e a aba BAIXAR já cobre o caminho normal. */
+   quando há link copiado — roda vazia seria um botão bonito que não faz nada.
 
-.omni {
+   A roda abre NO CENTRO. Na primeira versão ela nascia grudada no selo, e o
+   canto da janela comia um pedaço dela — e, pior, uma coroa de escolha
+   espremida no rodapé não é o gesto do desenho. No Omniverse o relógio TOMA a
+   tela: tudo escurece e sobram as formas. */
+
+/* --- o selo, no canto: avisa sem tomar a tela --- */
+.omni-selo-caixa {
   position: fixed;
   right: 26px;
   bottom: 24px;
   z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
 }
-
-/* --- o selo fechado: hexágono + ampulheta + o que foi achado --- */
 .omni-selo {
-  position: relative;
-  z-index: 2;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -8705,7 +8703,7 @@ ul.hlib-grid {
   text-align: left;
   transition: box-shadow 0.16s ease, background-color 0.16s ease;
 }
-.omni-selo:hover { background-color: #0d1015; box-shadow: inset 0 0 0 1px var(--accent), 0 8px 28px rgba(0, 0, 0, 0.8); }
+.omni-selo:hover { background-color: #0d1015; box-shadow: inset 0 0 0 1px var(--accent), 0 8px 28px rgba(0, 0, 0, 0.85); }
 
 .omni-hex {
   flex: none;
@@ -8720,19 +8718,10 @@ ul.hlib-grid {
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   box-shadow: 0 0 18px rgba(182, 255, 59, 0.5);
 }
-.omni-ampulheta {
-  width: 21px;
-  height: 21px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-/* o pulso é o aviso: um selo parado no canto não avisa nada. Ele bate devagar
-   pra chamar sem gritar, e para no hover porque aí já cumpriu a função. */
-.omni:not(.aberta) .omni-hex { animation: omni-bate 2.2s ease-in-out infinite; }
-.omni:hover .omni-hex { animation: none; }
+/* o pulso é o aviso: selo parado no canto não avisa nada. Bate devagar pra
+   chamar sem gritar, e para no hover porque aí já cumpriu a função. */
+.omni-hex { animation: omni-bate 2.2s ease-in-out infinite; }
+.omni-selo:hover .omni-hex { animation: none; }
 @keyframes omni-bate {
   0%, 72%, 100% { box-shadow: 0 0 18px rgba(182, 255, 59, 0.5); }
   84% { box-shadow: 0 0 34px rgba(182, 255, 59, 0.95); }
@@ -8761,7 +8750,6 @@ ul.hlib-grid {
   position: absolute;
   top: -7px;
   right: -7px;
-  z-index: 3;
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -8775,36 +8763,53 @@ ul.hlib-grid {
   opacity: 0;
   transition: opacity 0.14s ease, color 0.14s ease;
 }
-.omni:hover .omni-x { opacity: 1; }
+.omni-selo-caixa:hover .omni-x { opacity: 1; }
 .omni-x:hover { color: var(--bad); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5); }
 
-/* --- a coroa aberta --- */
+/* --- o palco: tudo escurece e sobram as formas --- */
+.omni-palco {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(182, 255, 59, 0.06), transparent 42%), rgba(3, 4, 7, 0.86);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.16s ease;
+}
+.omni-roda-caixa {
+  position: relative;
+  width: 440px;
+  height: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .omni-roda {
   position: absolute;
-  right: -18px;
-  bottom: -18px;
-  width: 300px;
-  height: 300px;
-  pointer-events: none;
+  inset: 0;
+  width: 440px;
+  height: 440px;
   overflow: visible;
-  filter: drop-shadow(0 12px 34px rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 16px 46px rgba(0, 0, 0, 0.9));
 }
 .omni-fatia {
-  pointer-events: auto;
   cursor: pointer;
-  transform-origin: 150px 150px;
-  animation: omni-abre 0.24s cubic-bezier(0.2, 1.3, 0.5, 1) backwards;
+  transform-origin: 220px 220px;
+  animation: omni-abre 0.26s cubic-bezier(0.2, 1.3, 0.5, 1) backwards;
 }
 /* cada fatia entra um pouco depois da anterior: a coroa se DESENHA em vez de
    piscar pronta, que é o que faz ela parecer o relógio abrindo */
 @keyframes omni-abre {
-  from { opacity: 0; transform: scale(0.62) rotate(-14deg); }
+  from { opacity: 0; transform: scale(0.55) rotate(-18deg); }
   to { opacity: 1; transform: none; }
 }
 .omni-fatia path {
   fill: var(--bg-cava);
   stroke: var(--border-control);
-  stroke-width: 1;
+  stroke-width: 1.2;
   transition: fill 0.12s ease, stroke 0.12s ease;
 }
 /* a sugerida já vem apontada: link de playlist abre na playlist, porque
@@ -8815,21 +8820,82 @@ ul.hlib-grid {
 .omni-rot {
   text-anchor: middle;
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.13em;
+  font-size: 14px;
+  letter-spacing: 0.16em;
   fill: var(--text-2);
   pointer-events: none;
 }
 .omni-sub {
   text-anchor: middle;
   font-family: var(--font-mono);
-  font-size: 7.5px;
-  letter-spacing: 0.1em;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
   fill: var(--muted-2);
   pointer-events: none;
 }
 .omni-fatia.on .omni-rot { fill: #0b0c0f; font-weight: 700; }
-.omni-fatia.on .omni-sub { fill: rgba(11, 12, 15, 0.75); }
+.omni-fatia.on .omni-sub { fill: rgba(11, 12, 15, 0.72); }
 
-/* aberta, o selo vira o mostrador do que está sob o ponteiro */
-.omni.aberta .omni-selo { box-shadow: inset 0 0 0 1px var(--accent), 0 0 30px rgba(182, 255, 59, 0.28); }
+/* --- o núcleo: a ampulheta grande no buraco da coroa --- */
+.omni-nucleo {
+  position: relative;
+  z-index: 2;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  background: var(--bg-cava);
+  box-shadow: inset 0 0 0 1px var(--accent-border), 0 0 40px rgba(182, 255, 59, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* mostrador, não botão: não clica, então não pode interceptar o ponteiro
+     que está atravessando pra outra fatia */
+  pointer-events: none;
+  animation: omni-nucleo-entra 0.3s cubic-bezier(0.2, 1.3, 0.5, 1) backwards;
+}
+@keyframes omni-nucleo-entra {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+.omni-nucleo-hex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 70px;
+  margin-bottom: 6px;
+  background: var(--accent);
+  color: #0b0c0f;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 30px rgba(182, 255, 59, 0.55);
+}
+.omni-nucleo b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-weight: 500;
+}
+.omni-nucleo i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--muted-2);
+}
+
+.omni-legenda {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -34px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
