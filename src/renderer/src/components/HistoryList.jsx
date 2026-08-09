@@ -487,15 +487,12 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           </button>
         )}
 
-        {/* SÓ O X. Ele mostrava "2 de 99", e esse número já estava dito duas
-            vezes: o botão de favoritos mostra o 2 e o título do destino
-            mostra o 99. Contagem repetida não vira reforço, vira ruído —
-            e aqui o que a pessoa quer deste botão é desfazer, não ler. */}
-        {hasActiveFilters && (
-          <button className="barra-btn so-icone limpar" onClick={resetFilters} type="button" title="Limpar filtros">
-            <Ico nome="apagar" tamanho={14} />
-          </button>
-        )}
+        {/* NÃO existe botão de "limpar filtros" aqui, e é de propósito: todo
+            controle desta barra se desliga sozinho. A busca tem o × dentro
+            do campo, o período volta pra Sempre no próprio calendário, tipo
+            e ordem voltam pela lista, e o favorito desliga clicando na
+            estrela de novo. Um botão a mais pra desfazer o que já se
+            desfaz é peça ocupando espaço sem trazer poder nenhum. */}
 
         <span className="barra-esticar" />
 

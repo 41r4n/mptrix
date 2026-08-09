@@ -8397,10 +8397,6 @@ ul.hlib-grid {
 }
 .barra-btn.so-icone.estrelado:hover { background-color: rgba(234, 179, 8, 0.24); color: var(--warn); }
 
-/* limpar filtros e desfazer, nao destaque: fica apagado ate o mouse chegar */
-.barra-btn.so-icone.limpar { color: var(--muted-2); }
-.barra-btn.so-icone.limpar:hover { --fio: var(--accent-border); color: var(--accent); }
-
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
 /* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
