@@ -7282,7 +7282,16 @@ body.studio-open .zoom-chip {
 .daw-canvas .daw-gutter > .wave-lane {
   position: sticky;
   left: 0;
-  width: auto;
+  top: 0;
+  /* PRECISA repetir o que a regra `.daw .wave-lane` dava: aquela usava
+     `position: absolute; inset: 0` pra onda preencher a pista, e trocar o
+     position pra sticky (mais especifico) derrubou o preenchimento junto --
+     a onda virou um filete de 36px no rodape da pista. Com sticky o tamanho
+     nao vem de `inset`, vem daqui. */
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
 }
 
 /* so as canaletas das PISTAS ganham largura fixa (a do zoom). A da regua fica
