@@ -4495,6 +4495,8 @@ section h2 {
   min-width: 120px;
   display: flex;
   align-items: center;
+  /* folga em cima pra marcacao do trecho caber sem encostar no que esta acima */
+  padding-top: 9px;
 }
 .seek-wrap .studio-seek {
   position: relative;
@@ -4502,18 +4504,35 @@ section h2 {
   width: 100%;
   min-width: 0;
 }
+/* O trecho NAO pode ser desenhado em cima da parte preenchida da barra: os dois
+   sao lima, entao o progresso passava por cima e engolia a marcacao. Agora ele
+   mora ACIMA do trilho da barra -- faixa solida com brilho, onde nada compete
+   com ela. So os dois tracinhos de inicio/fim descem cruzando o trilho, e eles
+   levam um contorno escuro pra continuarem legiveis sobre o lima do progresso. */
 .seek-loop {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 14px;
-  border-radius: 3px;
-  background: rgba(182, 255, 59, 0.16);
-  border-left: 1px dashed var(--accent);
-  border-right: 1px dashed var(--accent);
+  top: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(182, 255, 59, 0.65);
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
 }
+.seek-loop::before,
+.seek-loop::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  background: var(--accent);
+  /* anel escuro: e o que separa o tracinho do preenchimento lima por baixo */
+  box-shadow: 0 0 0 1.5px var(--bg), 0 0 7px rgba(182, 255, 59, 0.8);
+}
+.seek-loop::before { left: 0; }
+.seek-loop::after { right: 0; }
 
 .studio-time-total {
   color: var(--muted-2);
