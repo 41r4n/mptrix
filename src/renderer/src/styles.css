@@ -4593,6 +4593,38 @@ section h2 {
   line-height: 1;
   align-self: center;
 }
+/* PULSO: o ponto bate junto com a música, na batida MEDIDA da gravação. É o
+   destaque que a informação pede sem virar botão — dado vivo em vez de caixa.
+   Parado ele fica apagado, então nada pisca à toa com a música pausada. */
+.bpm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.22;
+  align-self: center;
+  flex: none;
+}
+.topbar-read.bate .bpm-dot {
+  animation: bpm-bate 0.42s ease-out;
+}
+@keyframes bpm-bate {
+  0% { opacity: 1; transform: scale(1.55); box-shadow: 0 0 12px 2px rgba(182, 255, 59, 0.55); }
+  100% { opacity: 0.22; transform: scale(1); box-shadow: 0 0 0 0 rgba(182, 255, 59, 0); }
+}
+/* o número acompanha o pulso de leve — o brilho respira junto, sem mexer no
+   tamanho (número que muda de tamanho na batida fica ilegível) */
+.topbar-read.bate .topbar-read-value {
+  animation: bpm-brilho 0.42s ease-out;
+}
+@keyframes bpm-brilho {
+  0% { text-shadow: 0 0 18px rgba(182, 255, 59, 0.75); color: #eaffc4; }
+  100% { text-shadow: 0 0 14px rgba(242, 244, 247, 0.28); color: var(--text); }
+}
+/* quem prefere menos movimento na tela não ganha nada piscando */
+@media (prefers-reduced-motion: reduce) {
+  .topbar-read.bate .bpm-dot, .topbar-read.bate .topbar-read-value { animation: none; }
+}
 /* velocidade alterada muda o BPM que se ouve: o sufixo entra em lima porque é
    consequência de um controle mexido, não medida da gravação */
 .topbar-read-suf {

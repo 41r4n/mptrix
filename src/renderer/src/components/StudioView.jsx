@@ -797,6 +797,10 @@ export default function StudioView({ source, onClose }) {
   // metrônomo sem música: bate com a faixa parada, no BPM que a pessoa escolher
   const [metroLivre, setMetroLivre] = useState(false)
   const [metroBpm, setMetroBpm] = useState(90)
+  // pulso do BPM: nó e índice da batida atual, escritos por frame via ref
+  const bpmPulseRef = useRef(null)
+  const bpmBeatRef = useRef(-1)
+  const beatsRef = useRef(null)
   const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
@@ -983,6 +987,34 @@ export default function StudioView({ source, onClose }) {
           // só a barra de seek não é reescrita durante o arrasto — senão
           // brigaria com o dedo do usuário
           if (!draggingRef.current && seekElRef.current) seekElRef.current.value = String(t)
+          // PULSO DO BPM: o número bate junto com a música. Escrito direto no
+          // nó por frame, como o playhead e o timer — nada de re-render por
+          // batida. Usa as batidas MEDIDAS, então ele pisca onde a banda toca,
+          // não onde a média manda.
+          if (bpmPulseRef.current) {
+            const bs = beatsRef.current
+            let i = -1
+            if (bs?.length) {
+              // avança/retrocede a partir do último índice: por frame o salto é
+              // de zero ou uma batida, então isto é O(1) na prática
+              i = bpmBeatRef.current
+              if (i < 0 || i >= bs.length || bs[i] > t || (i + 1 < bs.length && bs[i + 1] <= t)) {
+                let lo = 0
+                let hi = bs.length - 1
+                while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (bs[mid] <= t) lo = mid; else hi = mid - 1 }
+                i = bs[lo] <= t ? lo : -1
+              }
+            }
+            if (i !== bpmBeatRef.current) {
+              bpmBeatRef.current = i
+              const el = bpmPulseRef.current
+              // reinicia a animação: tirar e repor a classe no mesmo frame não
+              // funciona, o navegador precisa de um reflow entre as duas
+              el.classList.remove('bate')
+              void el.offsetWidth
+              if (i >= 0 && p.playing) el.classList.add('bate')
+            }
+          }
           // acorde/verso da vez: decididos por frame, com antecipação de 0.3s
           // e segurando o atual até o próximo começar
           const tt = t + 0.3
@@ -2216,6 +2248,19 @@ export default function StudioView({ source, onClose }) {
     return b
   }, [ritmo, metroMult])
 
+  // o pulso da tela usa as batidas medidas; sem elas, uma grade do BPM ainda
+  // dá o compasso certo pro olho
+  useEffect(() => {
+    if (ritmo.batidas?.length) { beatsRef.current = ritmo.batidas; return }
+    if (ritmo.periodo > 0 && session?.duration) {
+      const g = []
+      for (let t = ritmo.grade?.fase || 0; t < session.duration; t += ritmo.periodo) g.push(t)
+      beatsRef.current = g
+      return
+    }
+    beatsRef.current = null
+  }, [ritmo, session])
+
   useEffect(() => {
     const p = playerRef.current
     if (!p) return
@@ -2363,7 +2408,10 @@ export default function StudioView({ source, onClose }) {
               prometer clique que não existe é mentir pro dedo. Destaque vem do
               peso do número e de um halo, não de caixa. */}
           {bpm && (
-            <span className="topbar-read" data-hint="BPM — batidas por minuto que o app mediu nesta gravação. É leitura, não controle: pra mudar a velocidade use o VEL aqui do lado.">
+            {/* a classe do pulso entra no PAI: assim o ponto e o número batem
+                juntos com um seletor comum, sem depender de `:has()` */}
+            <span className="topbar-read" ref={bpmPulseRef} data-hint="BPM — batidas por minuto que o app mediu nesta gravação. O número pisca junto com as batidas de verdade, então dá pra conferir com o ouvido se a medida está certa. É leitura, não controle: pra mudar a velocidade use o VEL aqui do lado.">
+              <span className="bpm-dot" aria-hidden="true" />
               <span className="topbar-read-label">BPM</span>
               <span className="topbar-read-value">
                 {bpmHalf ? `${Math.round(bpmHalf)}/${Math.round(bpm)}` : Math.round(bpm)}
