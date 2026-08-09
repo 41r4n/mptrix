@@ -232,7 +232,18 @@ export default function App() {
             <p className="palco-nota">
               Ou abra pelo botão de estúdio de qualquer item do acervo.
             </p>
-            <span className="palco-ico" aria-hidden="true"><Ico nome="studio" tamanho={280} /></span>
+            {/* A marca d'água daqui era desenho morto — enfeite pra dar peso ao
+                palco. Agora ela É o relógio: parada sem link, batendo quando
+                acha um, enchendo quando a mão chega. */}
+            <Omnitrix
+              ligado={binariesOk}
+              onEscolher={(presetId, url) => {
+                const p = presets.find((x) => x.id === presetId)
+                if (!p) return
+                setUrlDaRoda(url)
+                setActivePreset(p)
+              }}
+            />
           </div>
         )}
 
@@ -288,19 +299,6 @@ export default function App() {
       </main>
 
 
-
-      {/* A RODA. Fica por cima de qualquer aba porque o link chega quando
-          chega — obrigar a pessoa a estar na aba certa pra ser avisada seria
-          devolver pra ela o trabalho de adivinhar. */}
-      <Omnitrix
-        ligado={binariesOk}
-        onEscolher={(presetId, url) => {
-          const p = presets.find((x) => x.id === presetId)
-          if (!p) return
-          setUrlDaRoda(url)
-          setActivePreset(p)
-        }}
-      />
 
       {activePreset && activePreset.id === 'playlist' && (
         <PlaylistModal

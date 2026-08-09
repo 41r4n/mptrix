@@ -8157,16 +8157,6 @@ section h2::after {
   clip-path: var(--corte-sm);
 }
 .palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); }
-/* marca de fundo gigante: dá peso ao palco sem competir com a leitura */
-.palco-ico {
-  position: absolute;
-  right: -40px;
-  bottom: -60px;
-  color: var(--accent);
-  opacity: 0.05;
-  pointer-events: none;
-}
-
 /* ação principal do palco */
 .acao {
   position: relative;
@@ -8668,103 +8658,98 @@ ul.hlib-grid {
   z-index: 1;
 }
 
-/* ██████████ A RODA (aceno ao Omnitrix) ██████████
+/* ██████████ A MARCA / A RODA (aceno ao Omnitrix) ██████████
    No Omniverse o relógio abre uma coroa com as formas em volta e o Ben gira
    até a que quer. Aqui as formas são os formatos de download.
 
-   Ela não é enfeite temático: existe porque encurta o caminho. Antes era
-   copiar o link lá fora, voltar, abrir BAIXAR, escolher o formato, colar,
-   confirmar. Agora é copiar lá fora e apontar aqui. Por isso ela SÓ existe
-   quando há link copiado — roda vazia seria um botão bonito que não faz nada.
+   A ampulheta É A MARCA DA TELA, não um selo no canto. Ela já ocupava aquele
+   lugar como marca d'água — só que era desenho morto, enfeite pra dar peso ao
+   palco. Agora o mesmo desenho é o relógio. A marca virou instrumento, e é
+   isso que faz a tela parecer o Omnitrix em vez de parecer um aplicativo com
+   um adesivo do Ben 10.
 
-   A roda abre NO CENTRO. Na primeira versão ela nascia grudada no selo, e o
-   canto da janela comia um pedaço dela — e, pior, uma coroa de escolha
-   espremida no rodapé não é o gesto do desenho. No Omniverse o relógio TOMA a
-   tela: tudo escurece e sobram as formas. */
+   Três estados, e cada um só diz o que é verdade:
+     parada  — nada copiado. Não pisca, não convida, não promete.
+     armada  — achou link. Bate devagar: chama sem gritar.
+     cheia   — mão em cima. A areia sobe até encher, e aí pode apertar. */
 
-/* --- o selo, no canto: avisa sem tomar a tela --- */
-.omni-selo-caixa {
-  position: fixed;
-  right: 26px;
-  bottom: 24px;
-  z-index: 60;
-}
-.omni-selo {
+.marca {
+  position: absolute;
+  right: -22px;
+  bottom: -40px;
+  width: 320px;
+  height: 320px;
+  padding: 0;
+  border: none;
+  background: none;
   display: flex;
   align-items: center;
-  gap: 11px;
-  height: 52px;
-  padding: 0 16px 0 9px;
-  background-color: var(--bg-cava);
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--accent-border), 0 8px 24px rgba(0, 0, 0, 0.7);
-  cursor: pointer;
-  font-family: var(--font-mono);
-  text-align: left;
-  transition: box-shadow 0.16s ease, background-color 0.16s ease;
-}
-.omni-selo:hover { background-color: #0d1015; box-shadow: inset 0 0 0 1px var(--accent), 0 8px 28px rgba(0, 0, 0, 0.85); }
-
-.omni-hex {
-  flex: none;
-  width: 36px;
-  height: 40px;
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: #0b0c0f;
-  /* mesmo hexágono das outras marcas do app: as telas têm que se reconhecer */
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  box-shadow: 0 0 18px rgba(182, 255, 59, 0.5);
+  /* parada ela não é botão: não clica, não muda o cursor, não intercepta o
+     ponteiro de quem está lendo o texto do palco */
+  pointer-events: none;
+  cursor: default;
 }
-/* o pulso é o aviso: selo parado no canto não avisa nada. Bate devagar pra
-   chamar sem gritar, e para no hover porque aí já cumpriu a função. */
-.omni-hex { animation: omni-bate 2.2s ease-in-out infinite; }
-.omni-selo:hover .omni-hex { animation: none; }
-@keyframes omni-bate {
-  0%, 72%, 100% { box-shadow: 0 0 18px rgba(182, 255, 59, 0.5); }
-  84% { box-shadow: 0 0 34px rgba(182, 255, 59, 0.95); }
+.marca.armada { pointer-events: auto; cursor: pointer; }
+
+.marca-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transition: filter 0.3s ease;
+}
+/* a ampulheta apagada: o mesmo fantasma discreto que a marca d'água sempre foi */
+.marca-fantasma { fill: var(--accent); opacity: 0.055; }
+/* a lima cheia, que só aparece dentro do retângulo da areia */
+.marca-cheia { fill: var(--accent); }
+/* O NÍVEL DA AREIA. Vazio = retângulo de altura zero no pé da ampulheta.
+   Chromium anima y e height de retângulo como propriedade de estilo, então
+   encher é uma transição normal — nada de contar quadro no JavaScript. */
+.marca-nivel {
+  y: 24px;
+  height: 0px;
+  transition: y 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), height 0.55s cubic-bezier(0.3, 0.9, 0.3, 1);
 }
 
-.omni-fala { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.omni-fala b {
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 500;
+/* ARMADA: um dedo de areia no fundo e a batida devagar. NÃO enche — encher é
+   resposta à mão, e prometer antes da mão chegar é o mesmo erro de piscar sem
+   ter o quê mostrar. */
+.marca.armada .marca-fantasma { opacity: 0.1; }
+.marca.armada .marca-nivel { y: 19px; height: 5px; }
+.marca.armada .marca-svg { animation: marca-bate 2.4s ease-in-out infinite; }
+@keyframes marca-bate {
+  0%, 70%, 100% { filter: drop-shadow(0 0 0 rgba(182, 255, 59, 0)); }
+  85% { filter: drop-shadow(0 0 26px rgba(182, 255, 59, 0.5)); }
 }
-.omni-fala i {
-  font-style: normal;
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  color: var(--muted-2);
-  max-width: 168px;
+
+/* CHEIA: a mão chegou, a areia sobe até o topo. */
+.marca.armada:hover .marca-svg,
+.marca.armada:focus-visible .marca-svg {
+  animation: none;
+  filter: drop-shadow(0 0 36px rgba(182, 255, 59, 0.6));
+}
+.marca.armada:hover .marca-nivel,
+.marca.armada:focus-visible .marca-nivel { y: 0px; height: 24px; }
+.marca.armada:active .marca-svg { transform: scale(0.97); }
+
+.marca-fala {
+  position: absolute;
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.omni-x {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elev);
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  border: none;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   color: var(--muted-2);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.14s ease, color 0.14s ease;
+  pointer-events: none;
+  transition: color 0.2s ease;
 }
-.omni-selo-caixa:hover .omni-x { opacity: 1; }
-.omni-x:hover { color: var(--bad); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5); }
+.marca.armada:hover .marca-fala { color: var(--accent); }
 
 /* --- o palco: tudo escurece e sobram as formas --- */
 .omni-palco {
@@ -8836,7 +8821,7 @@ ul.hlib-grid {
 .omni-fatia.on .omni-rot { fill: #0b0c0f; font-weight: 700; }
 .omni-fatia.on .omni-sub { fill: rgba(11, 12, 15, 0.72); }
 
-/* --- o núcleo: a ampulheta grande no buraco da coroa --- */
+/* --- o núcleo: a ampulheta cheia no buraco da coroa --- */
 .omni-nucleo {
   position: relative;
   z-index: 2;
