@@ -397,7 +397,10 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           única música — e a contagem saía duas vezes, porque o título do
           destino já diz quantos são. Comando é meio, não fim: ele encolhe pra
           o acervo aparecer. */}
-      <div className="barra">
+      {/* a caixa nao recorta nada: ela existe so pra projetar a sombra da
+          barra, que e recortada e por isso nao consegue projetar a propria */}
+      <div className="barra-caixa">
+        <div className="barra">
         <div className="barra-busca">
           <span className="search-icon"><Ico nome="buscar" tamanho={14} /></span>
           <input
@@ -463,7 +466,8 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
               limpar tudo
             </button>
           </>
-        )}
+          )}
+        </div>
       </div>
 
       {filtered.length === 0 ? (

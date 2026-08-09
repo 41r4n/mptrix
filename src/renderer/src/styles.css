@@ -8172,15 +8172,36 @@ ul.hlib-grid {
    controle #15171C — com fio de contorno em cada peça e a marca lima na quina
    esquerda. Borda em volta de texto = clicável: aqui TUDO clica, então pode. */
 
+/* A CAIXA QUE PROJETA — e a correcao de um erro meu.
+   Eu vinha pondo filter: drop-shadow no MESMO elemento que tem clip-path,
+   jurando que o filtro rodava depois do recorte. Roda antes: o navegador
+   filtra e SO ENTAO corta. Ou seja, eu desenhava a sombra e recortava ela
+   fora junto com as quinas — por isso nao aparecia nada, por mais camada
+   que eu empilhasse.
+   A sombra precisa de um elemento sem recorte pra viver. Esta caixa nao
+   corta nada: ela so segura a barra recortada e projeta a silhueta dela.
+
+   E fora da caixa, num palco #0B0C0F, o que aparece e LUZ: sombra escura
+   jogada em quase-preto nao tem pra onde escurecer. Entao a placa derrama
+   claridade — aresta acesa, halo neutro largo, e o respingo lima puxado pra
+   esquerda, que e o lado onde a marca lima esta. Luz refletida da propria
+   peca, nao neon de enfeite. */
+.barra-caixa {
+  margin-bottom: 32px;
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.2))
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 1))
+    drop-shadow(0 16px 32px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 8px 38px rgba(255, 255, 255, 0.08))
+    drop-shadow(-14px 2px 30px var(--glow-painel));
+}
+
 .barra {
   position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  /* folga embaixo: sombra de 34px de queda precisa de chao pra cair, senao
-     ela desenha em cima do primeiro cartao do acervo */
-  margin-bottom: 30px;
   padding: 9px 12px 9px 16px;
   background: var(--bg-cava);
   /* dentro fica so o fio: o relevo agora e todo pra fora */
@@ -8188,22 +8209,6 @@ ul.hlib-grid {
     inset 0 0 0 1px var(--border),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   clip-path: var(--corte-sm);
-  /* PRA FORA DA CAIXA — e aqui tem um limite fisico que eu vinha teimando
-     em ignorar: o palco e #0B0C0F, quase preto. Sombra ESCURA jogada nele
-     nao tem pra onde escurecer, entao some por definicao, por mais camadas
-     que eu empilhe. Fora da caixa, num fundo desses, o que aparece e LUZ.
-     Entao a placa passa a derramar claridade: aresta acesa, halo neutro
-     largo em volta e o respingo lima puxado pra esquerda, que e o lado onde
-     a marca lima esta — e luz refletida da propria peca, nao neon de
-     enfeite. O preto continua, mas so no contato curto, pra assentar.
-     Sai por filter porque box-shadow externo morre no clip-path: o filter
-     roda DEPOIS do recorte e acompanha as quinas cortadas. */
-  filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 0.18))
-    drop-shadow(0 4px 6px rgba(0, 0, 0, 1))
-    drop-shadow(0 14px 30px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 6px 34px rgba(255, 255, 255, 0.07))
-    drop-shadow(-12px 2px 28px var(--glow-painel));
 }
 /* marca lima na quina — diz "isto é o painel de comando" sem gastar largura */
 .barra::before {
