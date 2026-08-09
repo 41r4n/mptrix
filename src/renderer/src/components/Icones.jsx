@@ -27,7 +27,12 @@ const D = {
   destrancado: <><rect width="18" height="11" x="3" y="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>,
   apagar: <path d="M18 6 6 18M6 6l12 12" />,
   buscar: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
-  baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+  baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
+
+  // comando
+  filtro: <path d="M3 4h18l-7 8v7l-4 2v-9L3 4z" />,
+  calendario: <><rect width="18" height="17" x="3" y="4" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></>,
+  ordenar: <path d="M4 6h10M4 12h7M4 18h4M17 4v16M17 20l3-3M17 20l-3-3" />
 }
 
 export default function Ico({ nome, tamanho = 20 }) {
