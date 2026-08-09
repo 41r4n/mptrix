@@ -8159,15 +8159,12 @@ ul.hlib-grid {
    uma única música. E a contagem saía duas vezes: o título do destino já diz
    quantos são. Comando é meio, não fim — encolheu pra o acervo aparecer.
 
-   Depois de achatar eu apaguei: controles em --bg-inset sobre o fundo do app
-   davam dois pontos de diferença e sumiam. Controle que não se enxerga não é
-   discreto, é quebrado. Agora tem escada de superfície (app #0B0C0F → chassi
-   #101216 → controle #15171C) e cada peça com seu fio de contorno.
-
-   A COR vem da escala verde da casa, nunca de matiz inventada: cada controle
-   tem seu tom, então dá pra achar "ordem" pelo verde antes de ler a palavra.
-   O lima continua sendo do destaque — filtro LIGADO, foco e ação — porque
-   neon aqui carrega informação, não enfeita. */
+   Na primeira versão eu achatei DEMAIS: pus os controles em --bg-inset
+   (#0D0F13) sobre o fundo do app (#0B0C0F). Dois pontos de diferença = sumiu.
+   Controle que a pessoa não enxerga não é discreto, é quebrado.
+   Agora tem escada de superfície de verdade — app #0B0C0F → chassi #101216 →
+   controle #15171C — com fio de contorno em cada peça e a marca lima na quina
+   esquerda. Borda em volta de texto = clicável: aqui TUDO clica, então pode. */
 
 .barra {
   position: relative;
@@ -8175,8 +8172,8 @@ ul.hlib-grid {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
-  padding: 10px 12px 13px 17px;
+  margin-bottom: 22px;
+  padding: 9px 12px 9px 16px;
   background: var(--bg-tracks);
   box-shadow: inset 0 0 0 1px var(--border);
   clip-path: var(--corte-sm);
@@ -8186,30 +8183,11 @@ ul.hlib-grid {
   content: '';
   position: absolute;
   left: 0;
-  top: 9px;
-  bottom: 9px;
+  top: 8px;
+  bottom: 8px;
   width: 3px;
   background: var(--accent);
   box-shadow: 0 0 10px rgba(182, 255, 59, 0.45);
-}
-/* trilho de marcações no rodapé do chassi: escala de instrumento, em fio
-   branco fraco. Estrutura, não neon — por isso pode ser decorativo. */
-.barra::after {
-  content: '';
-  position: absolute;
-  left: 17px;
-  right: 12px;
-  bottom: 5px;
-  height: 4px;
-  background:
-    repeating-linear-gradient(to right,
-      var(--border-control) 0 1px, transparent 1px 9px),
-    linear-gradient(to right, var(--accent-border), transparent 38%);
-  background-size: 100% 4px, 100% 1px;
-  background-position: 0 0, 0 100%;
-  background-repeat: repeat-x, no-repeat;
-  opacity: 0.75;
-  pointer-events: none;
 }
 
 .barra-busca {
@@ -8217,9 +8195,9 @@ ul.hlib-grid {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 230px;
-  min-width: 170px;
-  max-width: 380px;
+  flex: 1 1 240px;
+  min-width: 180px;
+  max-width: 400px;
   height: 34px;
   padding: 0 10px;
   background: var(--bg-inset);
@@ -8227,7 +8205,9 @@ ul.hlib-grid {
   clip-path: var(--corte-sm);
   transition: box-shadow 0.14s ease;
 }
-.barra-busca:focus-within { box-shadow: inset 0 0 0 1px var(--accent-border); }
+.barra-busca:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
 .barra-busca:focus-within .search-icon { color: var(--accent); }
 .barra-campo {
   flex: 1;
@@ -8264,26 +8244,10 @@ ul.hlib-grid {
 /* SELETOR E BOTÃO COM A MESMA CARA. Antes o <select> tinha aparência de
    formulário do Windows e o botão de período tinha outra — dois controles
    vizinhos falando línguas diferentes. */
-.barra-ctrl { position: relative; display: inline-flex; align-items: center; flex: none; }
-.barra-ico {
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted);
-  transition: color 0.13s ease;
-}
-.barra-ctrl > .barra-ico {
-  position: absolute;
-  left: 11px;
-  pointer-events: none;
-}
-
 .barra-sel,
 .barra-btn {
   height: 34px;
   padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
   background: var(--bg-elev);
   border: none;
   box-shadow: inset 0 0 0 1px var(--border-control);
@@ -8298,12 +8262,9 @@ ul.hlib-grid {
   flex: none;
 }
 .barra-sel {
-  /* <select> não é caixa flex: no Chromium o texto escolhido desalinha.
-     Volta pra inline-block e deixa o próprio controle centralizar. */
-  display: inline-block;
   appearance: none;
   -webkit-appearance: none;
-  padding: 0 24px 0 32px;
+  padding-right: 24px;
   /* seta desenhada: o triângulo nativo do Windows não combina com nada aqui */
   background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
                     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
@@ -8319,15 +8280,6 @@ ul.hlib-grid {
 }
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
-/* COR POR CONTROLE, escala verde da casa. Aprende-se pelo tom antes da
-   palavra — e some quando o filtro está ligado, porque aí quem manda na
-   peça é o lima do destaque. */
-.barra-ctrl.c1 .barra-ico { color: var(--stem-3); }
-.barra-btn.c2 .barra-ico { color: var(--stem-4); }
-.barra-ctrl.c3 .barra-ico { color: var(--stem-5); }
-.barra-ctrl:hover .barra-ico,
-.barra-btn:hover .barra-ico { color: var(--accent); }
-
 /* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
 .barra-btn.on,
 .barra-btn.aviso {
@@ -8335,8 +8287,6 @@ ul.hlib-grid {
   background: var(--accent-dim);
   box-shadow: inset 0 0 0 1px var(--accent-border);
 }
-.barra-btn.on .barra-ico,
-.barra-btn.on:hover .barra-ico { color: var(--accent); }
 .barra-btn.on:hover,
 .barra-btn.aviso:hover { background: rgba(182, 255, 59, 0.22); color: var(--accent); }
 .barra-btn.forte {
@@ -8348,42 +8298,6 @@ ul.hlib-grid {
 .barra-btn.forte:hover { background: var(--accent-hover); color: #0b0c0f; }
 .barra-btn.forte:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
 .barra-btn.perigo:hover { color: var(--bad); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5); }
-
-/* MEDIDOR — quanto do acervo sobrou depois do filtro.
-   Aceno ao carregador do Omnitrix, e informação de verdade: sem ele a pessoa
-   filtra, some música da tela e não sabe se sumiu por causa do filtro. Os
-   traços acesos sobem pela escala verde, de folha a lima, feito carga. */
-.barra-medidor {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  flex: none;
-  height: 34px;
-  padding: 0 11px;
-  background: var(--bg-inset);
-  box-shadow: inset 0 0 0 1px var(--border);
-  clip-path: var(--corte-sm);
-}
-.med-tracos { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
-.med-tracos i {
-  width: 2px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.13);
-  transition: height 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
-}
-/* cada aceso é um pouco mais alto e mais claro que o anterior: lê-se como
-   carga subindo, e não como doze quadradinhos iguais */
-.med-tracos i.on { background: var(--stem-4); height: 9px; }
-.med-tracos i.on:nth-child(n + 5) { background: var(--stem-3); height: 11px; }
-.med-tracos i.on:nth-child(n + 9) { background: var(--stem-2); height: 13px; }
-.med-tracos i.on:nth-child(12) { background: var(--accent); box-shadow: 0 0 6px rgba(182, 255, 59, 0.6); }
-.barra-medidor b {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--text);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-}
 
 .barra-conta {
   font-family: var(--font-mono);

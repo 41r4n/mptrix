@@ -280,11 +280,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
     return () => { vivo = false }
   }, [visible])
   const hiddenCount = filtered.length - visible.length
-  // segmentos acesos do medidor: fracao do acervo que passou pelo filtro.
-  // acervo vazio acende tudo — zero de zero e o acervo inteiro, nao um corte.
-  const acesos = history.length
-    ? Math.max(filtered.length ? 1 : 0, Math.round((filtered.length / history.length) * 12))
-    : 12
 
   const selectAllVisible = () => setSelectedIds(new Set(visible.map((e) => e.id)))
   const deselectAll = () => setSelectedIds(new Set())
@@ -397,12 +392,11 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
 
   return (
     <div>
-      {/* BARRA DE COMANDO — painel, não formulário.
-          Eram três fileiras empilhadas antes de aparecer uma única música, e a
-          contagem saía duas vezes (o título do destino já diz quantos são).
-          Virou uma fileira só, com a linguagem de console do resto do app:
-          cada controle tem seu ícone desenhado e sua cor da escala da casa,
-          então dá pra achar "ordem" pelo verde antes de ler a palavra. */}
+      {/* BARRA DE COMANDO: uma fileira só.
+          Eram três empilhadas (busca, filtros, seleção) antes de aparecer uma
+          única música — e a contagem saía duas vezes, porque o título do
+          destino já diz quantos são. Comando é meio, não fim: ele encolhe pra
+          o acervo aparecer. */}
       <div className="barra">
         <div className="barra-busca">
           <span className="search-icon"><Ico nome="buscar" tamanho={14} /></span>
@@ -421,55 +415,31 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
 
         <span className="barra-div" aria-hidden="true" />
 
-        <span className="barra-ctrl c1">
-          <span className="barra-ico"><Ico nome="filtro" tamanho={13} /></span>
-          <select className="barra-sel" value={filterType} onChange={(e) => setFilterType(e.target.value)} title="Tipo de arquivo">
-            {TYPE_FILTERS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </span>
-
+        <select className="barra-sel" value={filterType} onChange={(e) => setFilterType(e.target.value)} title="Tipo">
+          {TYPE_FILTERS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
         <button
-          className={`barra-btn c2 ${periodActive ? 'on' : ''}`}
+          className={`barra-btn ${periodActive ? 'on' : ''}`}
           onClick={() => setPeriodPickerOpen(true)}
           type="button"
           title="Período"
-        >
-          <span className="barra-ico"><Ico nome="calendario" tamanho={13} /></span>
-          {summarizePeriod(periodSelection)}
-        </button>
+        >{summarizePeriod(periodSelection)}</button>
+        <select className="barra-sel" value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Ordem">
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
 
-        <span className="barra-ctrl c3">
-          <span className="barra-ico"><Ico nome="ordenar" tamanho={13} /></span>
-          <select className="barra-sel" value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Ordem">
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </span>
-
+        {/* só aparece quando há o que limpar. Mostra quanto sobrou APENAS se o
+            filtro cortou algo — trocar a ordem não corta nada, e "99 de 99"
+            seria um número inútil ocupando a barra. */}
         {hasActiveFilters && (
           <button className="barra-btn aviso" onClick={resetFilters} title="Limpar filtros">
-            <Ico nome="apagar" tamanho={12} /> limpar
+            {filtered.length < history.length ? `${filtered.length} de ${history.length} ✕` : 'limpar ✕'}
           </button>
         )}
-
-        {/* MEDIDOR: quanto do acervo sobrou depois do filtro. Aceno ao
-            carregador do Omnitrix, e é informação de verdade — sem ele a
-            pessoa filtra, some música da tela e não sabe se sumiu por causa
-            do filtro ou porque nunca esteve lá. */}
-        <span
-          className="barra-medidor"
-          title={`${filtered.length} de ${history.length} no acervo`}
-        >
-          <span className="med-tracos" aria-hidden="true">
-            {Array.from({ length: 12 }, (_, i) => (
-              <i key={i} className={i < acesos ? 'on' : ''} />
-            ))}
-          </span>
-          <b>{filtered.length}</b>
-        </span>
 
         <span className="barra-esticar" />
 
