@@ -497,12 +497,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           </button>
         )}
 
-        {hasActiveFilters && (
-          <button className="barra-btn aviso" onClick={resetFilters} title="Limpar filtros">
-            {filtered.length < history.length ? `${filtered.length} de ${history.length} ✕` : 'limpar ✕'}
-          </button>
-        )}
-
         <span className="barra-esticar" />
 
         {selectionMode ? (
