@@ -3571,6 +3571,26 @@ section h2 {
   border-radius: 12px;
   padding: 10px 16px;
 }
+/* Descrição livre do som marcado. Campo de texto TEM borda porque de fato
+   recebe clique e digitação — a regra da casa proíbe borda em coisa que não
+   clica, não o contrário. */
+.lupa-desc {
+  flex: 1 1 200px;
+  min-width: 160px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+}
+.lupa-desc::placeholder { color: var(--muted-2); }
+.lupa-desc:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.lupa-desc:disabled { opacity: 0.5; }
 /* ---------- DAW MPTrix: ruler, agulha, tint, transporte (assinatura) ---------- */
 .studio-ruler {
   position: relative;

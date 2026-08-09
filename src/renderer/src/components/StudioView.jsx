@@ -64,6 +64,16 @@ const NUVEM_PARTIDA = 3
 
 // Escala verde do design system — cor por stem (canônicos fixos; extras
 // ciclam a escala pela ordem em que aparecem na sessão)
+// Faixa que nasceu do "aponta e separa" NÃO tem nome de instrumento — a rede
+// nunca afirmou nome nenhum. O rótulo dela vem do registro da própria faixa: a
+// descrição que o usuário escreveu ("Chocalho") ou "Som 1". Sem isto a mesa
+// mostraria "som1" cru, que não diz nada pra quem está ouvindo.
+function stemMeta(stem, sess) {
+  const rotulo = sess?.stemInfo?.[stem]?.rotulo
+  if (rotulo) return { label: rotulo, icon: '✂️' }
+  return STEM_META[stem] || { label: stem, icon: '🎚️' }
+}
+
 const STEM_SCALE = ['#dff9a0', '#b4e85a', '#7ed97a', '#4ecb8c', '#27a08d', '#8fa57a']
 const STEM_COLOR_FIXED = {
   vocals: '#dff9a0',
@@ -630,6 +640,8 @@ export default function StudioView({ source, onClose }) {
   const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
   const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
+  const [isolando, setIsolando] = useState(false) // "aponta e separa" em curso
+  const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
   useEffect(() => { loopRef.current = { on: loopOn, sel: waveSel } }, [loopOn, waveSel])
@@ -1510,6 +1522,34 @@ export default function StudioView({ source, onClose }) {
     setLupa(res || { error: 'O investigador não respondeu.' })
   }
 
+  // APONTA E SEPARA: o único caminho do app que não precisa de nome nenhum.
+  // Você marca o trecho na onda e ele separa o som que está ali. A descrição em
+  // palavra normal é OPCIONAL e só ajuda a mira — não existe catálogo aqui,
+  // então "chocalho" e "estalar de dedos" valem tanto quanto "guitarra".
+  const isolarSom = async () => {
+    if (!waveSel || !session || isolando) return
+    setIsolando(true)
+    setExportMsg('Separando o som que você marcou… (alguns minutos)')
+    try {
+      const res = await window.mptrix.studio.isolate({
+        key: session.key, start: waveSel.start, end: waveSel.end, descricao: descSom
+      })
+      if (res?.error) setExportMsg(`⚠ ${res.error}`)
+      else if (res?.vazio) setExportMsg('Não achei som separável nesse trecho — tente marcar um pedaço onde ele apareça mais, ou descreva o som em uma palavra.')
+      else if (res?.ok) {
+        setExportMsg(`✓ Separei: "${res.rotulo}" virou faixa nova. Ouve e me diz se é o som que você queria.`)
+        setDescSom('')
+        setWaveSel(null)
+        setLupa(null)
+        if (res.session) setSession(res.session)
+      }
+    } catch (e) {
+      setExportMsg(`⚠ ${e?.message || 'não consegui separar'}`)
+    } finally {
+      setIsolando(false)
+    }
+  }
+
   // Tudo que o painel oferece nasce marcado — inclusive Piano/Teclado, que
   // vem do caminho da cascata e ficava órfão da marcação automática
   const defaultExtractSel = (res, sess) => {
@@ -1695,7 +1735,7 @@ export default function StudioView({ source, onClose }) {
       setExportMsg('⚠ O MPTRIX está dissecando a música agora. Espere terminar pra refazer uma faixa.')
       return
     }
-    const meta = STEM_META[stem] || { label: stem }
+    const meta = stemMeta(stem, session)
     // com a nuvem ligada a conta é outra — prometer 47 min aqui faria a pessoa
     // desistir de refazer uma faixa que na verdade custa ~2 min
     const min = naNuvem
@@ -2012,7 +2052,7 @@ export default function StudioView({ source, onClose }) {
   const doExport = async () => {
     if (!session) return
     const labels = {}
-    for (const stem of session.stems) labels[stem] = STEM_META[stem]?.label || stem
+    for (const stem of session.stems) labels[stem] = stemMeta(stem, session).label
     const res = await window.mptrix.studio.exportStems({ key: session.key, labels })
     if (res?.error) setExportMsg(`⚠ ${res.error}`)
     else if (!res?.cancelled) setExportMsg(`✓ ${res.files.length} faixas exportadas em WAV pra ${res.dir}`)
@@ -2528,7 +2568,7 @@ export default function StudioView({ source, onClose }) {
               <div className="daw-scroll" ref={dawScrollRef} onScroll={updateDawCut}>
               <div className="daw-canvas">
               {presentStems(session).map((stem, stemIdx) => {
-                const meta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+                const meta = stemMeta(stem, session)
                 const col = stemColor(stem, stemIdx)
                 const isMuted = muted.has(stem)
                 const isSolo = solo.has(stem)
@@ -2875,6 +2915,26 @@ export default function StudioView({ source, onClose }) {
                 </button>
                 <button className="btn-secondary btn-small" onClick={() => { setWaveSel(null); setLupa(null) }}>
                   ✕ limpar
+                </button>
+              </div>
+            )}
+            {/* APONTA E SEPARA — o único lugar do app sem nome de instrumento.
+                Mesma marcação de trecho da lupa, servindo pra outra pergunta:
+                lá é "o que tem aqui?", aqui é "tira isso pra fora". */}
+            {waveSel && naNuvem && (
+              <div className="lupa-bar">
+                <span className="muted">✂ Separar o som desse trecho</span>
+                <input
+                  type="text"
+                  className="lupa-desc"
+                  placeholder="que som é? (opcional) — ex.: chocalho"
+                  value={descSom}
+                  disabled={isolando}
+                  onChange={(e) => setDescSom(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') isolarSom() }}
+                />
+                <button className="btn-primary btn-small" disabled={isolando} onClick={isolarSom}>
+                  {isolando ? 'Separando…' : 'Separar esse som'}
                 </button>
               </div>
             )}
@@ -3236,7 +3296,7 @@ export default function StudioView({ source, onClose }) {
                       <span className="shelf-head-acts">PRESENÇA · OUVIR · PROMOVER · FICHA</span>
                     </div>
                     {shelvedStems(session).map((stem) => {
-                      const smeta = STEM_META[stem] || { label: stem, icon: '🎚️' }
+                      const smeta = stemMeta(stem, session)
                       const scol = stemColor(stem, session.stems.indexOf(stem))
                       const st = trackStats(stem)
                       const isSolo = solo.has(stem)
@@ -3434,7 +3494,7 @@ export default function StudioView({ source, onClose }) {
           </div>
 
           {trackInfo && (() => {
-            const meta = STEM_META[trackInfo] || { label: trackInfo, icon: '🎚️' }
+            const meta = stemMeta(trackInfo, session)
             const col = stemColor(trackInfo, presentStems(session).indexOf(trackInfo))
             const st = trackStats(trackInfo)
             const vol = st.info.mean == null ? null

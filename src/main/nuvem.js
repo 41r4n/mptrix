@@ -424,6 +424,78 @@ export async function extrairInstrumentoNaNuvem({
   return { segundos: p.segundos }
 }
 
+// ------------------------------------------------- SOM APONTADO (SEM NOME) --
+// A doutrina do dono, dita desde o começo: *"nome é o que menos importa; se tem
+// um som que é diferente do outro, isso já é a resposta"*. Todo o resto do motor
+// é NOME-PRIMEIRO: pra separar qualquer coisa ele precisa adivinhar o nome e
+// chamar o especialista daquele nome — e som fora do catálogo é som que ele não
+// consegue nem tentar (estalar de dedos não tem modelo em lugar nenhum do mundo;
+// chocalho tem nome e não tem peso publicado).
+//
+// Este caminho não pergunta nome nenhum. Ele recebe ONDE (o trecho, que a
+// própria confissão do sistema já sabe) e, se houver, uma descrição em PALAVRA
+// NORMAL — "chocalho", "estalar de dedos", "aquela buzininha". Nada de enum,
+// nada de catálogo.
+//
+// `output_residual` é o presente: o modelo devolve o som isolado E o que sobrou.
+// Isso torna o cancelador desnecessário aqui — não há subtração estimada, a
+// própria rede entrega as duas metades que somam de volta no original.
+const MODELO_SOM = 'geopti/sam-audio-large'
+
+export async function isolarSomNaNuvem({
+  chave, arquivo, descricao, trechos, destino, destinoResto, state, onProgress, ffmpegPath, run, workDir
+}) {
+  const mod = await pedirJson(`${API}/models/${MODELO_SOM}`, { headers: cab(chave) })
+  if (!mod.latest_version?.id) throw new Error('o isolador está sem versão publicada')
+
+  let envio = arquivo
+  if (ffmpegPath && run && workDir) {
+    const flac = join(workDir, 'envio_som.flac')
+    try {
+      await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', arquivo, '-compression_level', '8', flac], state)
+      envio = flac
+    } catch { /* segue com o original */ }
+  }
+  const enviar = () => subirArquivo(chave, envio, `som.${envio.endsWith('.flac') ? 'flac' : 'wav'}`)
+  let url = await enviar()
+
+  // O modelo mede o span em SEGUNDOS, no formato [['+', ini, fim], ...].
+  // Sem trecho a gente não usa span prompting — e aí a descrição é tudo que
+  // ele tem. Segundo a documentação do próprio modelo, apontar E descrever é o
+  // melhor dos modos; apontar sozinho é o pior. Por isso a descrição tem um
+  // padrão largo em vez de vazio.
+  const usarSpan = Array.isArray(trechos) && trechos.length > 0
+  const input = {
+    audio: url,
+    description: (descricao || '').trim() || 'the most prominent instrument',
+    output_residual: true,
+    ...(usarSpan
+      ? { use_span_prompting: true, span_anchors: JSON.stringify(trechos.map((t) => ['+', Math.max(0, Math.round(t.ini)), Math.round(t.fim)])) }
+      : { predict_spans: true })
+  }
+
+  let p
+  try {
+    p = await rodar(chave, mod.latest_version.id, input, state, (s) => onProgress?.(Math.min(95, 5 + s * 0.5)))
+  } catch (e) {
+    if (!e.linkVenceu) throw e
+    input.audio = await enviar()
+    p = await rodar(chave, mod.latest_version.id, input, state, (s) => onProgress?.(Math.min(95, 5 + s * 0.5)))
+  }
+
+  // A saída é uma lista de URLs: o alvo primeiro, o resto depois quando pedido.
+  // Se vier um só, é o alvo — e aí quem desconta é o cancelador de sempre.
+  const saidas = Array.isArray(p.saida) ? p.saida : [p.saida]
+  if (!saidas.length || !saidas[0]) throw new Error('o isolador não devolveu áudio')
+  await baixar(saidas[0], destino)
+  let temResto = false
+  if (destinoResto && saidas[1]) {
+    await baixar(saidas[1], destinoResto)
+    temResto = true
+  }
+  return { segundos: p.segundos, temResto }
+}
+
 // ------------------------------------------------------------- LETRA -------
 // WhisperX: transcreve E alinha por PALAVRA com alinhamento forçado (casa o
 // texto com o áudio de verdade, em vez de estimar pela atenção do modelo).

@@ -29,6 +29,7 @@ import {
   setShelved,
   stemPeaks,
   investigateStretch,
+  isolarTrecho,
   detectChords,
   transcribeLyrics,
   gruposDeRepeticao,
@@ -1095,6 +1096,19 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:investigate', async (_e, { key, start, end }) => {
     try {
       return await investigateStretch({ key, start, end, ffmpegPath: FFMPEG_PATH })
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
+
+  // APONTA E SEPARA: o unico caminho do app que nao pergunta nome nenhum.
+  ipcMain.handle('studio:isolate', async (_e, { key, start, end, fonte, descricao }) => {
+    if (!existsSync(FFMPEG_PATH)) return { error: 'ffmpeg.exe nao encontrado em resources/bin.' }
+    try {
+      return await isolarTrecho({
+        key, ini: Math.max(0, Number(start) || 0), fim: Number(end) || 0,
+        fonte: fonte || 'other', descricao: descricao || '', ffmpegPath: FFMPEG_PATH
+      })
     } catch (err) {
       return { error: err.message }
     }

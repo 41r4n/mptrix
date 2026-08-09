@@ -3288,6 +3288,119 @@ async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state })
   return { present: true, mean, max, somado: jaExistia }
 }
 
+// ---------- SOM APONTADO: separar sem nome ----------
+//
+// O caminho que a doutrina do dono sempre pediu e o motor nunca teve: separar
+// PORQUE o som é diferente, não porque alguém adivinhou o nome dele. Recebe um
+// trecho (o mesmo que a confissão já aponta) e, opcionalmente, uma descrição em
+// palavra normal. As faixas nascem `som1`, `som2`... — sem etiqueta de
+// instrumento, porque etiqueta que a máquina não tem certeza é mentira.
+
+/** Próximo apelido livre: som1, som2, ... (nunca reaproveita número). */
+function proximoSom(meta) {
+  const usados = new Set([...(meta?.stems || []), ...Object.keys(meta?.stemInfo || {})])
+  for (let i = 1; i < 999; i++) if (!usados.has(`som${i}`)) return `som${i}`
+  throw new Error('sem apelido livre')
+}
+
+/**
+ * Isola o som de um trecho e instala como faixa nova.
+ * `fonte` é a rua (padrão "outros"); `descricao` é texto livre (pode ser vazio).
+ */
+export async function isolarTrecho({ key, ini, fim, fonte = 'other', descricao = '', ffmpegPath, state = { cancelled: false, child: null }, onProgress }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  if (!usarNuvem()) throw new Error('A nuvem está desligada ou sem chave — este recurso só roda nela.')
+  const src = join(dir, 'base', `${fonte}.flac`)
+  if (!existsSync(src)) throw new Error(`Faixa "${fonte}" não encontrada.`)
+
+  const workRoot = join(dir, 'som_work')
+  mkdirSync(workRoot, { recursive: true })
+  const alvo = join(workRoot, 'alvo.flac')
+  const resto = join(workRoot, 'resto.flac')
+  try {
+    const { isolarSomNaNuvem } = await import('./nuvem.js')
+    let r
+    try {
+      r = await isolarSomNaNuvem({
+        chave: lerChaveNuvem(), arquivo: src, descricao,
+        trechos: [{ ini, fim }], destino: alvo, destinoResto: resto,
+        state, onProgress, ffmpegPath, run, workDir: workRoot
+      })
+      somarGastoNuvem(r.segundos, { maquina: 'a100' })
+    } catch (e) {
+      if (e?.segundosGastos) somarGastoNuvem(e.segundosGastos, { maquina: 'a100' })
+      throw e
+    }
+
+    const medir = async (arq) => {
+      let mean = -99
+      let max = -99
+      await run(ffmpegPath, ['-i', arq, '-af', 'volumedetect', '-f', 'null', '-'], state, (l) => {
+        const mm = l.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+        if (mm) mean = parseFloat(mm[1])
+        const mx = l.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+        if (mx) max = parseFloat(mx[1])
+      })
+      return { mean, max }
+    }
+    const doAlvo = await medir(alvo)
+    // veio vazio = não havia som separável ali. Dizer isso é melhor que
+    // instalar uma pista muda e deixar o usuário procurar o que não existe.
+    if (!(doAlvo.mean > -48 || doAlvo.max > -35)) {
+      diario(dir, `apontado ${ini}-${fim} em ${fonte}${descricao ? ` ("${descricao}")` : ''}: veio vazio`)
+      return { ok: false, vazio: true, ...doAlvo }
+    }
+
+    const apelido = proximoSom(readMeta(dir))
+    copyFileSync(alvo, join(dir, 'base', `${apelido}.flac`))
+
+    // A FONTE ENCOLHE PELO RESÍDUO DA PRÓPRIA REDE — não por cancelador
+    // estimado. Aqui as duas metades vêm da mesma decisão do modelo e somam de
+    // volta no original; é a subtração mais honesta que existe no app.
+    // Sem resíduo (modelo devolveu só o alvo), a fonte fica intacta: melhor o
+    // som em dois lugares do que um buraco cavado por estimativa.
+    const orig = join(dir, 'base', `${fonte}_orig.flac`)
+    if (r.temResto) {
+      if (!existsSync(orig)) copyFileSync(src, orig)
+      rmSync(src, { force: true, maxRetries: 12, retryDelay: 250 })
+      copyFileSync(resto, src)
+    }
+
+    const m = readMeta(dir)
+    const stems = stemsOf(m).filter((s) => s !== apelido && s !== 'other')
+    stems.push(apelido, 'other')
+    m.stems = stems
+    m.stemInfo = m.stemInfo || {}
+    // `rotulo` é o que a tela mostra: a descrição que o usuário escreveu, ou
+    // "Som N". Nunca um nome de instrumento — a rede não afirmou nome nenhum.
+    const rotulo = (descricao || '').trim()
+      ? descricao.trim().charAt(0).toUpperCase() + descricao.trim().slice(1)
+      : `Som ${apelido.slice(3)}`
+    m.stemInfo[apelido] = {
+      present: true, mean: doAlvo.mean, max: doAlvo.max, shelved: doAlvo.mean <= -42,
+      origens: [fonte], origem: fonte, apontado: { ini, fim, descricao: descricao || null }, rotulo
+    }
+    if (r.temResto) {
+      try {
+        const dep = await medir(src)
+        m.stemInfo[fonte] = { ...(m.stemInfo[fonte] || {}), mean: dep.mean, max: dep.max, present: dep.mean > -48 || dep.max > -35 }
+      } catch { /* medida velha fica valendo */ }
+    }
+    // o som ganhou dono: a confissão que apontava pra cá não vale mais
+    if (m.autoHarvest?.semDono) {
+      m.autoHarvest.semDono = m.autoHarvest.semDono.filter((c) =>
+        (c.fonte || 'other') !== fonte || c.fim <= ini || c.ini >= fim)
+    }
+    writeMeta(dir, m)
+    diario(dir, `apontado ${ini}-${fim} em ${fonte}${descricao ? ` ("${descricao}")` : ''}: virou ${apelido} (${doAlvo.mean} dB, pico ${doAlvo.max} dB)${r.temResto ? ' — fonte encolheu pelo resíduo' : ' — sem resíduo, fonte intacta'}`)
+    return { ok: true, stem: apelido, rotulo, ...doAlvo, session: sessionPayload(key, m) }
+  } finally {
+    try { rmSync(workRoot, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 }) } catch { /* bancada */ }
+  }
+}
+
 // O que é SOM DA CASA em cada faixa-base: só o que a faixa LITERALMENTE É.
 //
 // Eu tinha enchido esta lista de primos — a guitarra "abrigava" sitar, banjo,
