@@ -137,6 +137,9 @@ const IconPause = () => (
   </svg>
 )
 
+// Nome por extenso da nota. O TOM na tela é mostrado em CIFRA (ver cifraDoTom)
+// porque é o que músico lê; isto fica pra quando o texto precisa ser falado —
+// nome de nota por extenso em legenda ou aviso.
 const NOTE_PT = {
   C: 'Dó', 'C#': 'Dó#', D: 'Ré', 'D#': 'Ré#', E: 'Mi', F: 'Fá',
   'F#': 'Fá#', G: 'Sol', 'G#': 'Sol#', A: 'Lá', 'A#': 'Lá#', B: 'Si',
@@ -395,11 +398,19 @@ const SEP_HINTS = [
   'lapidando os detalhes…'
 ]
 
+// TOM EM CIFRA, do jeito que músico lê: C, Em, A#. O nome por extenso
+// ("Sol maior") é correto e ninguém usa na prática — quem vai tocar quer a
+// cifra. Menor vira o "m" colado, maior não leva sufixo nenhum, que é a
+// convenção universal do caderno de cifra.
+function cifraDoTom(key, scale) {
+  if (!key) return null
+  const nota = FLAT_TO_SHARP[key] || key
+  return `${nota}${scale === 'major' ? '' : 'm'}`
+}
+
 function keyLabel(analysis) {
   if (!analysis?.key) return null
-  const note = NOTE_PT[analysis.key] || analysis.key
-  const scale = analysis.scale === 'major' ? 'maior' : 'menor'
-  return `${note} ${scale}`
+  return cifraDoTom(analysis.key, analysis.scale)
 }
 
 // "Mostra o que a música tem": faixas praticamente silenciosas ficam de fora
@@ -445,8 +456,7 @@ function shiftedKeyLabel(analysis, pitch) {
   const idx = NOTES.indexOf(FLAT_TO_SHARP[analysis.key] || analysis.key)
   if (idx < 0) return null
   const next = NOTES[(idx + pitch + 120) % 12]
-  const scale = analysis.scale === 'major' ? 'maior' : 'menor'
-  return `${NOTE_PT[next]} ${scale}`
+  return cifraDoTom(next, analysis.scale)
 }
 
 // Player por streaming: HTMLAudioElement por faixa (RAM mínima) roteado por
