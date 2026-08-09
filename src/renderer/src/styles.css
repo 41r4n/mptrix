@@ -4563,6 +4563,44 @@ section h2 {
 .topbar-chip-vel.transposed { border-color: var(--accent-border); }
 .topbar-chip-vel.transposed .chip-select { color: var(--accent); }
 
+/* METRÔNOMO: chip da mesma família. Ligado acende a borda em lima, como o TOM
+   transposto — o estado se lê de longe, sem precisar procurar. */
+.topbar-chip-metro.on { border-color: var(--accent-border); }
+.metro-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.metro-glyph { font-size: 12px; color: var(--muted-2); line-height: 1; }
+.topbar-chip-metro.on .metro-glyph { color: var(--accent); }
+.topbar-chip-metro.on .topbar-chip-label { color: var(--text-2); }
+.metro-vol {
+  width: 56px;
+  accent-color: var(--accent);
+}
+/* "seguindo" / "firme": alterna entre acompanhar a gravação e pulso constante.
+   Tem borda porque clica. */
+.metro-modo {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.metro-modo.on {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
 /* cabecalho da tela de processamento (capa + percentual lima gigante) */
 .proc-head {
   display: flex;

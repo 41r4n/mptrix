@@ -552,6 +552,96 @@ function createStemPlayer() {
       for (const el of Object.values(this.els)) el.playbackRate = rate
     },
 
+    // ---------------------------------------------------- METRÔNOMO --------
+    // Clique gerado na hora pelo Web Audio, agendado COM ANTECEDÊNCIA. Um
+    // `setInterval` tocando o som na hora erra dezenas de milissegundos — o
+    // suficiente pra quem está treinando tempo sentir que o clique "escorrega".
+    // Aqui o laço só AGENDA (olhando 200ms à frente) e quem toca no instante
+    // exato é o relógio de áudio da placa, que não sofre com a interface.
+    //
+    // A ponte entre o tempo da música e o tempo do áudio é refeita a cada volta
+    // do laço: `quando = agora + (batida - posição) / velocidade`. Como a
+    // posição é lida do tocador toda vez, qualquer atraso acumulado se corrige
+    // sozinho na volta seguinte, e mudar a velocidade não desalinha nada.
+    metro: { on: false, vol: 0.5, batidas: null, periodo: 0, faseGrade: 0, compasso: 4, prox: 0, timer: null },
+
+    clique(quando, forte) {
+      if (!this.ctx) return
+      const g = this.ctx.createGain()
+      const o = this.ctx.createOscillator()
+      // dois timbres pro ouvido separar o 1 do resto sem contar
+      o.frequency.value = forte ? 1600 : 1000
+      const v = Math.max(0, Math.min(1, this.metro.vol)) * (forte ? 1 : 0.62)
+      // ataque instantâneo e queda curta: som seco, tipo bloco de madeira.
+      // Rampa exponencial em vez de corte seco — corte seco estala.
+      g.gain.setValueAtTime(0.0001, quando)
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, v), quando + 0.001)
+      g.gain.exponentialRampToValueAtTime(0.0001, quando + 0.055)
+      o.connect(g)
+      g.connect(this.ctx.destination)
+      o.start(quando)
+      o.stop(quando + 0.06)
+    },
+
+    metroConfig({ batidas, periodo, faseGrade, compasso, vol }) {
+      if (batidas !== undefined) this.metro.batidas = batidas
+      if (periodo !== undefined) this.metro.periodo = periodo
+      if (faseGrade !== undefined) this.metro.faseGrade = faseGrade
+      if (compasso !== undefined) this.metro.compasso = compasso
+      if (vol !== undefined) this.metro.vol = vol
+      this.metro.prox = -1 // qualquer troca reancora na posição atual
+    },
+
+    metroStart() {
+      if (!this.ctx || this.metro.timer) return
+      this.metro.on = true
+      this.metro.prox = -1 // recalcula a partir da posição atual
+      const passo = () => {
+        if (!this.metro.on || !this.ctx) return
+        // só bate junto com a música tocando: metrônomo sozinho tem outro dono
+        if (this.playing) {
+          const pos = this.position()
+          const rate = (this.els[this.order[0]]?.playbackRate) || 1
+          const horizonte = pos + 0.25 * rate
+          const emitir = (t, i) => {
+            if (t < pos || t > horizonte) return false
+            const quando = this.ctx.currentTime + (t - pos) / rate
+            if (quando > this.ctx.currentTime) {
+              this.clique(quando, this.metro.compasso > 0 && i % this.metro.compasso === 0)
+            }
+            return true
+          }
+          if (this.metro.batidas?.length) {
+            // procura o índice da próxima batida (busca binária: a lista pode
+            // ter centenas de itens e isto roda 10x por segundo)
+            const b = this.metro.batidas
+            if (this.metro.prox < 0 || b[this.metro.prox] < pos - 0.05) {
+              let lo = 0
+              let hi = b.length - 1
+              while (lo < hi) { const mid = (lo + hi) >> 1; if (b[mid] < pos) lo = mid + 1; else hi = mid }
+              this.metro.prox = lo
+            }
+            while (this.metro.prox < b.length && emitir(b[this.metro.prox], this.metro.prox)) this.metro.prox++
+          } else if (this.metro.periodo > 0) {
+            // grade constante: fase é onde o pulso cai dentro do compasso —
+            // sem ela o clique bate no lugar certo do relógio e no lugar
+            // errado da música
+            const p = this.metro.periodo
+            const f = this.metro.faseGrade || 0
+            let n = Math.max(0, Math.ceil((pos - f - 0.001) / p))
+            while (emitir(f + n * p, n)) n++
+          }
+        }
+        this.metro.timer = setTimeout(passo, 100)
+      }
+      passo()
+    },
+
+    metroStop() {
+      this.metro.on = false
+      if (this.metro.timer) { clearTimeout(this.metro.timer); this.metro.timer = null }
+    },
+
     master() {
       return this.els[this.order[0]] || null
     },
@@ -617,6 +707,7 @@ function createStemPlayer() {
     },
 
     dispose() {
+      this.metroStop() // senão o laço do metrônomo sobrevive à música
       this.disposeEls()
       try { this.ctx?.close() } catch {}
       this.ctx = null
@@ -670,6 +761,13 @@ export default function StudioView({ source, onClose }) {
   // avisos de confissão dispensados: guarda a ASSINATURA do que foi dispensado,
   // então som novo confessado traz o aviso de volta sozinho
   const [avisoOculto, setAvisoOculto] = useState({})
+  // METRÔNOMO: ligado/desligado, volume e compasso (0 = sem acento no 1).
+  // `metroFirme` escolhe entre bater NAS BATIDAS DA MÚSICA (segue a banda) ou
+  // numa grade constante — ver o comentário do painel.
+  const [metroOn, setMetroOn] = useState(false)
+  const [metroVol, setMetroVol] = useState(0.5)
+  const [metroCompasso, setMetroCompasso] = useState(4)
+  const [metroFirme, setMetroFirme] = useState(false)
   const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
@@ -2051,6 +2149,39 @@ export default function StudioView({ source, onClose }) {
     playerRef.current?.applyGains(volumes, muted, solo, grupoDoOutros)
   }, [volumes, muted, solo, session, phase, grupoDoOutros])
 
+  // O que o metrônomo tem pra se apoiar nesta música. `grade` só existe quando
+  // um pulso constante REALMENTE descreve a gravação (música programada);
+  // banda humana anda de andamento e não ganha grade — a medição decide, não
+  // o chute. Ver o comentário no analisador.
+  const ritmo = useMemo(() => {
+    const a = session?.analysis
+    const temBatidas = Array.isArray(a?.ticks) && a.ticks.length > 8
+    const g = a?.grade || null
+    return {
+      temBatidas,
+      batidas: temBatidas ? a.ticks : null,
+      grade: g,
+      // sem grade medida, uma grade a partir do BPM ainda serve pra treinar
+      // (ela só não vai grudar na gravação, e a tela avisa isso)
+      periodo: g?.periodo || (a?.bpm ? 60 / a.bpm : null)
+    }
+  }, [session])
+
+  useEffect(() => {
+    const p = playerRef.current
+    if (!p) return
+    // "firme" = grade constante; senão segue as batidas medidas da gravação
+    p.metroConfig({
+      batidas: metroFirme ? null : ritmo.batidas,
+      periodo: metroFirme ? (ritmo.periodo || 0) : 0,
+      faseGrade: ritmo.grade?.fase || 0,
+      compasso: metroCompasso,
+      vol: metroVol
+    })
+    if (metroOn && phase === 'ready') p.metroStart()
+    else p.metroStop()
+  }, [metroOn, metroVol, metroCompasso, metroFirme, ritmo, phase, session])
+
   useEffect(() => { phaseRef.current = phase }, [phase])
 
   // Esc fecha a ficha da faixa. Janela sem tecla de saída é armadilha: se por
@@ -2179,6 +2310,64 @@ export default function StudioView({ source, onClose }) {
                 {bpmHalf ? `${Math.round(bpmHalf)}/${Math.round(bpm)}` : Math.round(bpm)}
                 {tempo !== 100 ? `×${tempo}%` : ''}
               </span>
+            </span>
+          )}
+          {/* METRÔNOMO — irmão do BPM, então mora colado nele.
+              Duas maneiras de bater, e a diferença não é capricho:
+              · NAS BATIDAS DA MÚSICA (padrão): usa as batidas que o analisador
+                mediu na gravação. É o único jeito de ficar junto de banda que
+                toca — gente acelera no refrão e atrasa na virada.
+              · FIRME: pulso constante, pra treinar precisão. Só gruda na
+                gravação quando a música é de máquina; quando não é, o próprio
+                painel avisa em vez de deixar o clique escorregar em silêncio. */}
+          {ritmo.periodo && (
+            <span className={`topbar-chip topbar-chip-metro ${metroOn ? 'on' : ''}`}>
+              <button
+                className="metro-toggle"
+                onClick={() => setMetroOn((v) => !v)}
+                aria-pressed={metroOn}
+                title={metroOn ? 'Desligar o metrônomo' : 'Ligar o metrônomo (bate junto com a música)'}
+              >
+                <span className="metro-glyph" aria-hidden="true">{metroOn ? '◆' : '◇'}</span>
+                <span className="topbar-chip-label">METRÔNOMO</span>
+              </button>
+              {metroOn && (
+                <>
+                  <select
+                    className="chip-select"
+                    value={metroCompasso}
+                    onChange={(e) => setMetroCompasso(parseInt(e.target.value, 10))}
+                    title="Acento no primeiro tempo do compasso"
+                    aria-label="Compasso"
+                  >
+                    <option value={4}>4/4</option>
+                    <option value={3}>3/4</option>
+                    <option value={2}>2/4</option>
+                    <option value={6}>6/8</option>
+                    <option value={0}>sem acento</option>
+                  </select>
+                  <input
+                    type="range"
+                    className="metro-vol"
+                    min="0" max="1" step="0.05"
+                    value={metroVol}
+                    onChange={(e) => setMetroVol(parseFloat(e.target.value))}
+                    title={`Volume do clique: ${Math.round(metroVol * 100)}%`}
+                    aria-label="Volume do metrônomo"
+                  />
+                  {ritmo.temBatidas && (
+                    <button
+                      className={`metro-modo ${metroFirme ? 'on' : ''}`}
+                      onClick={() => setMetroFirme((v) => !v)}
+                      title={metroFirme
+                        ? (ritmo.grade
+                          ? 'FIRME: pulso constante. Esta música é de andamento estável, então o clique gruda nela.'
+                          : 'FIRME: pulso constante. ATENÇÃO — esta música muda de andamento, então o clique vai se separar dela ao longo da faixa. Bom pra treinar precisão, ruim pra tocar junto.')
+                        : 'SEGUINDO: o clique acompanha as batidas medidas na gravação, mesmo quando a banda acelera.'}
+                    >{metroFirme ? 'firme' : 'seguindo'}</button>
+                  )}
+                </>
+              )}
             </span>
           )}
           {/* VELOCIDADE mora junto de BPM e TOM: os três são a mesma família —

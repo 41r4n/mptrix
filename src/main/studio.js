@@ -2037,6 +2037,44 @@ async function adotarOrfaos(dir, ffmpegPath) {
 // trabalhando espera O MESMO serviço terminar, em vez de abrir outro.
 const activeRepairs = new Map()
 
+// Versão da análise de ritmo/tom. Subiu quando ela passou a guardar as BATIDAS
+// (`ticks`) e a grade firme — sem isso o metrônomo não tem em que se apoiar.
+// Mesmo contrato da letra e da cifra: motor melhorou, o acervo INTEIRO se
+// atualiza sozinho na abertura, sem reimportar nada e sem custar nuvem (o
+// analisador roda aqui na máquina, em segundos).
+const ANALISE_V = 2
+
+async function garantirAnalise(dir, ffmpegPath) {
+  const meta = readMeta(dir)
+  if (!meta) return false
+  if ((meta.analiseV || 1) >= ANALISE_V && meta.analysis?.ticks) return false
+  // A batida se lê melhor na BATERIA isolada que na música inteira — é o que a
+  // separação nos deu de presente e o detector agradece: sem voz e sem
+  // harmonia por cima, sobra o pulso. Com o original à mão ele serve de
+  // reserva, pra música que por acaso não tenha faixa de bateria.
+  const fonte = existsSync(join(dir, 'base', 'drums.flac'))
+    ? join(dir, 'base', 'drums.flac')
+    : (meta.sourceFile && existsSync(meta.sourceFile) ? meta.sourceFile : null)
+  if (!fonte) return false
+  try {
+    const nova = await runAnalyzer(fonte, ffmpegPath, {})
+    const m = readMeta(dir)
+    if (!m) return false
+    // O TOM continua sendo o da medida original: lido só na bateria ele seria
+    // lixo. Daqui vem o que é de ritmo, e nada mais.
+    m.analysis = {
+      ...(m.analysis || {}),
+      bpm: nova.bpm, bpmHalf: nova.bpmHalf, confidence: nova.confidence,
+      ticks: nova.ticks || [], grade: nova.grade || null
+    }
+    m.analiseV = ANALISE_V
+    writeMeta(dir, m)
+    return true
+  } catch {
+    return false // sem análise nova a música continua tocando igual
+  }
+}
+
 export function repairSession({ key, ffmpegPath }) {
   const emCurso = activeRepairs.get(key)
   if (emCurso) return emCurso
@@ -2056,13 +2094,14 @@ export function repairSession({ key, ffmpegPath }) {
 
 async function repararDeVerdade(dir, key, ffmpegPath) {
   const adotadas = await adotarOrfaos(dir, ffmpegPath)
+  const analisou = await garantirAnalise(dir, ffmpegPath)
   const meta = readMeta(dir)
-  if (!meta?.extracted?.length) return adotadas > 0
+  if (!meta?.extracted?.length) return adotadas > 0 || analisou
   const want = meta.extracted
     .filter((i) => existsSync(join(dir, 'base', `${i}.flac`)))
     .sort().join(',')
   const desatualizada = (meta.limpezaV || 0) < LIMPEZA_V
-  if (!want || (meta.otherCleanFor === want && !desatualizada)) return adotadas > 0
+  if (!want || (meta.otherCleanFor === want && !desatualizada)) return adotadas > 0 || analisou
   await rebuildOther(dir, ffmpegPath, {})
   await cleanVocalsBleed(dir, ffmpegPath, {})
   const m2 = readMeta(dir)

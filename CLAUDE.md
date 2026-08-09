@@ -42,8 +42,16 @@ nunca `scrollIntoView` — use `scrollTo({ behavior: 'smooth' })`.
 
 ## Escopo real (decisões de adaptação do handoff)
 - O app é Electron desktop: telas mobile/bottom sheets do handoff **não se aplicam**.
-- Cifra/acordes, seções e metrônomo **não existem** no produto (fora de escopo por decisão do dono)
-  — não construir; se um dia entrarem, seguir o visual do handoff.
+- Seções **não existem** no produto (fora de escopo por decisão do dono) — não construir; se um dia
+  entrarem, seguir o visual do handoff.
+- Cifra/acordes **entraram** (painel Acordes + Letra com cifra em cima dos versos).
+- Metrônomo **entrou** (2026-08-08, pedido do pai do dono, que quer acertar o tempo). Ele é chip da
+  barra de cima, colado no BPM. Duas maneiras de bater, e a diferença é medida, não estética:
+  **seguindo** usa as batidas que o analisador achou na gravação (único jeito de ficar junto de banda
+  humana, que acelera no refrão); **firme** é pulso constante, pra treinar precisão. O analisador só
+  publica `analysis.grade` quando um pulso constante REALMENTE descreve a gravação (erro ≤ 8% do
+  período) — Girlfriend/NSYNC encaixa com 34ms, Oceano e Samurai não encaixam (153 e 171ms). Sem
+  grade, o modo firme continua disponível e a tela **avisa** que o clique vai se separar da música.
 - Pan por faixa não existe (só volume + M/S + ↻ refazer).
 - O loop do transporte usa o trecho marcado na onda (Lupa) como A-B; sem trecho, repete a música.
 - Biblioteca real = histórico com ações por item (lista, não grade) — reskin aplica os tokens
