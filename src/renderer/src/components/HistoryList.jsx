@@ -392,89 +392,77 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
 
   return (
     <div>
-      <div className="search-row">
-        <div className="search-input-wrap">
-          <span className="search-icon"><Ico nome="buscar" tamanho={15} /></span>
+      {/* BARRA DE COMANDO: uma fileira só.
+          Eram três empilhadas (busca, filtros, seleção) antes de aparecer uma
+          única música — e a contagem saía duas vezes, porque o título do
+          destino já diz quantos são. Comando é meio, não fim: ele encolhe pra
+          o acervo aparecer. */}
+      <div className="barra">
+        <div className="barra-busca">
+          <span className="search-icon"><Ico nome="buscar" tamanho={14} /></span>
           <input
             type="search"
-            className="search-input"
-            placeholder="Buscar por nome, arquivo, link…"
+            className="barra-campo"
+            placeholder="buscar por nome, arquivo, link…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             spellCheck={false}
           />
           {query && (
-            <button className="search-clear" onClick={() => setQuery('')} title="Limpar">×</button>
+            <button className="barra-x" onClick={() => setQuery('')} title="Limpar busca">×</button>
           )}
         </div>
-      </div>
 
-      <div className="filter-row">
-        <select className="filter-select" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+        <span className="barra-div" aria-hidden="true" />
+
+        <select className="barra-sel" value={filterType} onChange={(e) => setFilterType(e.target.value)} title="Tipo">
           {TYPE_FILTERS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
         <button
-          className={`filter-select filter-period-btn ${periodActive ? 'active' : ''}`}
+          className={`barra-btn ${periodActive ? 'on' : ''}`}
           onClick={() => setPeriodPickerOpen(true)}
           type="button"
-        >
-          📅 {summarizePeriod(periodSelection)}
-        </button>
-        <select className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          title="Período"
+        >{summarizePeriod(periodSelection)}</button>
+        <select className="barra-sel" value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Ordem">
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        {hasActiveFilters && (
-          <button className="link-btn filter-reset" onClick={resetFilters}>limpar filtros</button>
-        )}
-        <span className="filter-count muted">
-          {filtered.length === history.length
-            ? history.length > VISIBLE_LIMIT
-              ? `${VISIBLE_LIMIT}+ (${history.length} no total — a busca encontra todos)`
-              : `${history.length} item${history.length !== 1 ? 's' : ''}`
-            : `${filtered.length} de ${history.length}`}
-        </span>
-      </div>
 
-      <div className="history-head">
+        {/* só aparece quando há o que limpar. Mostra quanto sobrou APENAS se o
+            filtro cortou algo — trocar a ordem não corta nada, e "99 de 99"
+            seria um número inútil ocupando a barra. */}
+        {hasActiveFilters && (
+          <button className="barra-btn aviso" onClick={resetFilters} title="Limpar filtros">
+            {filtered.length < history.length ? `${filtered.length} de ${history.length} ✕` : 'limpar ✕'}
+          </button>
+        )}
+
+        <span className="barra-esticar" />
+
         {selectionMode ? (
           <>
-            <span className="muted">
-              <strong className="selected-count">{selectedIds.size}</strong>
-              {' '}selecionado{selectedIds.size !== 1 ? 's' : ''}
-            </span>
-            <div className="history-head-actions">
-              <button className="link-btn" onClick={allVisibleSelected ? deselectAll : selectAllVisible}>
-                {allVisibleSelected ? 'desmarcar tudo' : 'selecionar tudo'}
-              </button>
-              <button
-                className="btn-primary btn-small"
-                disabled={selectedIds.size === 0}
-                onClick={() => setBatchActionsOpen(true)}
-              >
-                Confirmar {selectedIds.size > 0 ? `(${selectedIds.size})` : ''} →
-              </button>
-              <button className="btn-secondary btn-small" onClick={exitSelectionMode}>
-                Cancelar
-              </button>
-            </div>
+            <span className="barra-conta"><b>{selectedIds.size}</b> marcados</span>
+            <button className="barra-btn" onClick={allVisibleSelected ? deselectAll : selectAllVisible}>
+              {allVisibleSelected ? 'desmarcar tudo' : 'marcar tudo'}
+            </button>
+            <button className="barra-btn forte" disabled={selectedIds.size === 0} onClick={() => setBatchActionsOpen(true)}>
+              confirmar {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </button>
+            <button className="barra-btn" onClick={exitSelectionMode}>cancelar</button>
           </>
         ) : (
-          <div className="history-head-actions">
-            <button
-              className="btn-secondary btn-small"
-              onClick={enterSelectionMode}
-              title="Apagar ou compartilhar vários de uma vez"
-            >
-              ☑ Selecionar vários
+          <>
+            <button className="barra-btn" onClick={enterSelectionMode} title="Apagar ou compartilhar vários de uma vez">
+              selecionar vários
             </button>
-            <button className="link-btn link-danger" onClick={askClearAll}>
+            <button className="barra-btn perigo" onClick={askClearAll} title="Apagar todo o histórico">
               limpar tudo
             </button>
-          </div>
+          </>
         )}
       </div>
 

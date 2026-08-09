@@ -406,91 +406,6 @@ section h2 {
   min-width: 110px;
 }
 
-/* Barra de pesquisa */
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.search-input-wrap {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  pointer-events: none;
-  opacity: 0.6;
-  font-size: 13px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 36px 10px 36px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.12s ease, background 0.12s ease;
-}
-
-.search-input:focus {
-  border-color: var(--accent);
-  background: var(--bg);
-}
-
-.search-input::placeholder {
-  color: var(--muted);
-}
-
-.search-input::-webkit-search-cancel-button {
-  display: none;
-}
-
-.search-clear {
-  position: absolute;
-  right: 8px;
-  background: var(--border-strong);
-  color: var(--text);
-  border: none;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.search-clear:hover {
-  background: var(--bad);
-}
-
-.search-count {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-/* Linha de filtros */
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
 .filter-select {
   padding: 7px 30px 7px 12px;
   background: var(--bg-elev) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%239ba3af' d='M0 0l5 6 5-6z'/></svg>") no-repeat right 10px center;
@@ -518,16 +433,6 @@ section h2 {
 .filter-select option {
   background: var(--bg-elev);
   color: var(--text);
-}
-
-.filter-reset {
-  font-size: 12px;
-}
-
-.filter-count {
-  font-size: 12px;
-  margin-left: auto;
-  white-space: nowrap;
 }
 
 /* Modal de ações em massa */
@@ -636,22 +541,6 @@ section h2 {
   padding: 12px 24px 18px;
   display: flex;
   justify-content: flex-end;
-}
-
-/* Botão de período (substitui o select) */
-.filter-period-btn {
-  padding: 7px 14px;
-  background-image: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
-.filter-period-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background-color: rgba(182, 255, 59, 0.08);
 }
 
 /* Modal de período hierárquico */
@@ -2027,21 +1916,6 @@ section h2 {
   font-size: 14px;
 }
 
-.history-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  font-size: 13px;
-  gap: 10px;
-}
-
-.history-head-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
 .btn-small {
   padding: 6px 12px;
   font-size: 12px;
@@ -2049,11 +1923,6 @@ section h2 {
 
 .link-danger {
   color: var(--bad);
-}
-
-.selected-count {
-  color: var(--accent);
-  font-size: 14px;
 }
 
 .history-list {
@@ -3880,8 +3749,6 @@ section h2 {
     min-width: 90px;
   }
 
-  .search-row,
-  .filter-row,
   .folder-row,
   .modal-actions {
     flex-wrap: wrap;
@@ -8286,3 +8153,117 @@ ul.hlib-grid {
 .ac.perigo:hover { background: var(--bad); color: #0b0c0f; }
 
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }
+
+/* ██████████ BARRA DE COMANDO DO ACERVO ██████████
+   Eram TRÊS fileiras empilhadas — busca, filtros, seleção — antes de aparecer
+   uma única música. E a contagem saía duas vezes, porque o título do destino
+   já diz quantos são.
+   Comando é meio, não fim: ele encolhe pra o acervo aparecer. Uma fileira só,
+   altura de 34px, tudo na mesma língua (mono em caixa-alta, canto cortado).
+   O que some daqui não some do app — só deixa de ocupar a tela antes da hora. */
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.barra-busca {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 180px;
+  max-width: 400px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--bg-inset);
+  clip-path: var(--corte-sm);
+}
+.barra-campo {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+}
+.barra-campo::placeholder { color: var(--muted-2); }
+.barra-campo::-webkit-search-cancel-button { display: none; }
+.barra-x {
+  background: none;
+  border: none;
+  color: var(--muted-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.barra-x:hover { color: var(--text); }
+
+.barra-div {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex: none;
+  margin: 0 2px;
+}
+.barra-esticar { flex: 1 1 auto; }
+
+/* SELETOR E BOTÃO COM A MESMA CARA. Antes o <select> tinha aparência de
+   formulário do Windows e o botão de período tinha outra — dois controles
+   vizinhos falando línguas diferentes. */
+.barra-sel,
+.barra-btn {
+  height: 34px;
+  padding: 0 11px;
+  background: var(--bg-inset);
+  border: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: var(--corte-sm);
+  transition: background 0.13s ease, color 0.13s ease;
+  flex: none;
+}
+.barra-sel {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 22px;
+  /* seta desenhada: o triângulo nativo do Windows não combina com nada aqui */
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted-2) 50%),
+                    linear-gradient(135deg, var(--muted-2) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 15px, calc(100% - 9px) 15px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.barra-sel:hover,
+.barra-btn:hover { background: var(--bg-elev); color: var(--text-2); }
+.barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
+
+.barra-btn.on { color: var(--accent); background: rgba(182, 255, 59, 0.1); }
+.barra-btn.aviso { color: var(--accent); background: rgba(182, 255, 59, 0.1); }
+.barra-btn.forte { background: var(--accent); color: #0b0c0f; font-weight: 700; }
+.barra-btn.forte:hover { background: var(--accent-hover); color: #0b0c0f; }
+.barra-btn.forte:disabled { opacity: 0.4; cursor: default; }
+.barra-btn.perigo:hover { color: var(--bad); }
+
+.barra-conta {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  flex: none;
+}
+.barra-conta b { color: var(--accent); font-size: 12px; }
