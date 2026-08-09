@@ -2406,10 +2406,10 @@ export default function StudioView({ source, onClose }) {
               a forma de chip com borda dos vizinhos (TOM, VEL, METRÔNOMO), que
               clicam de verdade: borda em volta de texto promete clique, e
               prometer clique que não existe é mentir pro dedo. Destaque vem do
-              peso do número e de um halo, não de caixa. */}
+              peso do número, de um halo e do PULSO — informação viva no lugar
+              de caixa. A classe do pulso entra neste span (o pai), pro ponto e
+              o número baterem juntos por um seletor comum, sem `:has()`. */}
           {bpm && (
-            {/* a classe do pulso entra no PAI: assim o ponto e o número batem
-                juntos com um seletor comum, sem depender de `:has()` */}
             <span className="topbar-read" ref={bpmPulseRef} data-hint="BPM — batidas por minuto que o app mediu nesta gravação. O número pisca junto com as batidas de verdade, então dá pra conferir com o ouvido se a medida está certa. É leitura, não controle: pra mudar a velocidade use o VEL aqui do lado.">
               <span className="bpm-dot" aria-hidden="true" />
               <span className="topbar-read-label">BPM</span>
