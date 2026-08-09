@@ -416,6 +416,23 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           )}
         </div>
 
+        {/* PERÍODO colado na busca, e não largado entre tipo e ordem: os dois
+            respondem "de tudo que existe, o que eu quero ver?" — data é busca
+            no tempo. Solto no meio ele obrigava a ler os vizinhos pra
+            entender do que era.
+            Sem filtro ele é só o ícone: "Sempre" ocupava largura pra dizer
+            que nada estava filtrado. Com filtro ele acende e escreve o
+            recorte, porque aí a informação existe. */}
+        <button
+          className={`barra-btn so-icone ${periodActive ? 'on' : ''}`}
+          onClick={() => setPeriodPickerOpen(true)}
+          type="button"
+          title={periodActive ? `Período: ${summarizePeriod(periodSelection)}` : 'Filtrar por período'}
+        >
+          <Ico nome="calendario" tamanho={14} />
+          {periodActive && <span>{summarizePeriod(periodSelection)}</span>}
+        </button>
+
         <span className="barra-div" aria-hidden="true" />
 
         <select className="barra-sel" value={filterType} onChange={(e) => setFilterType(e.target.value)} title="Tipo">
@@ -423,12 +440,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        <button
-          className={`barra-btn ${periodActive ? 'on' : ''}`}
-          onClick={() => setPeriodPickerOpen(true)}
-          type="button"
-          title="Período"
-        >{summarizePeriod(periodSelection)}</button>
         <select className="barra-sel" value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Ordem">
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>

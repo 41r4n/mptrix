@@ -8370,6 +8370,21 @@ ul.hlib-grid {
     inset 0 -2px 6px rgba(0, 0, 0, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
+/* botao que e so icone: quadrado, pra nao ficar uma pastilha comprida com
+   um desenho perdido no meio */
+.barra-btn.so-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 34px;
+  padding: 0;
+  color: var(--muted);
+}
+.barra-btn.so-icone:hover { color: var(--text); }
+/* com filtro ligado ele escreve o recorte e volta a ter largura */
+.barra-btn.so-icone.on { width: auto; padding: 0 12px 0 10px; color: var(--accent); }
+
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
 /* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
