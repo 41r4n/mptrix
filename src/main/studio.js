@@ -3302,7 +3302,11 @@ const SOM_DA_CASA = {
   guitar: ['guitar'],
   piano: ['piano']
 }
-const REVISTAVEIS = Object.keys(SOM_DA_CASA)
+// ORDEM IMPORTA, e é ordem de ÍMÃ. Guitarra e piano são as caixas que mais
+// engolem instrumento alheio (qualquer coisa dedilhada ou sustentada cai numa
+// das duas); voz é a que menos engole. Se o crédito acabar no meio da revista,
+// que tenha acabado depois do que valia mais — não antes.
+const REVISTAVEIS = ['guitar', 'piano', 'bass', 'drums', 'vocals']
 
 // Vacina anti-gêmeo da dissecação — a mesma doutrina do activeExtracts, mas
 // aqui o motivo é DINHEIRO: fechar e reabrir a música durante o interrogatório
