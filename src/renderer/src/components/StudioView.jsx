@@ -800,6 +800,9 @@ export default function StudioView({ source, onClose }) {
   const bpmBeatRef = useRef(-1)
   const beatsRef = useRef(null)
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
+  // o loop foi ligado PELA marcação (e não pelo botão)? é o que decide se ele
+  // sai junto quando a marcação é solta
+  const loopAutoRef = useRef(false)
   const loopRef = useRef({ on: false, sel: null })
   useEffect(() => { loopRef.current = { on: loopOn, sel: waveSel } }, [loopOn, waveSel])
   const [chords, setChords] = useState(null) // null | 'loading' | {list} | {error}
@@ -1691,11 +1694,13 @@ export default function StudioView({ source, onClose }) {
     const t0 = timeAt(e.clientX)
     const x0 = e.clientX
     let moved = false
+    let sel = null
     const onMove = (ev) => {
       if (Math.abs(ev.clientX - x0) > 6) moved = true
       if (moved) {
         const t1 = timeAt(ev.clientX)
-        setWaveSel({ start: Math.min(t0, t1), end: Math.max(t0, t1) })
+        sel = { start: Math.min(t0, t1), end: Math.max(t0, t1) }
+        setWaveSel(sel)
         // Marcar trecho NÃO abre painel nenhum. Isto abria o Extrair de
         // propósito, quando marcar servia pra chamar a Lupa; hoje serve pro
         // LOOP A-B, e quem quer repetir um pedaço não pediu painel na cara.
@@ -1704,9 +1709,22 @@ export default function StudioView({ source, onClose }) {
     const onUp = (ev) => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      // clique seco (sem arrastar) limpa a marcação além de pular: é como se
-      // solta o trecho agora que não existe mais botão "limpar"
-      if (!moved) { setWaveSel(null); seekTo(timeAt(ev.clientX)) }
+      if (moved && sel && sel.end - sel.start > 0.15) {
+        // MARCAR JÁ É MANDAR REPETIR. Marcar um trecho e depois ter que achar o
+        // botão de loop era um passo a mais pra dizer o que a marcação já dizia
+        // — quem cerca um pedaço da música quer aquele pedaço rodando.
+        loopAutoRef.current = true
+        setLoopOn(true)
+        play(sel.start)
+        return
+      }
+      // clique seco (sem arrastar): solta a marcação e pula. E se o loop tinha
+      // sido ligado PELA marcação, ele sai junto — o trecho era o loop. Loop
+      // que o usuário ligou no botão continua ligado, porque não foi a
+      // marcação que pediu.
+      setWaveSel(null)
+      if (loopAutoRef.current) { loopAutoRef.current = false; setLoopOn(false) }
+      seekTo(timeAt(ev.clientX))
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -3798,7 +3816,9 @@ export default function StudioView({ source, onClose }) {
               </button>
               <button
                 className={`tr-btn ${loopOn ? 'on' : ''}`}
-                onClick={() => setLoopOn((v) => !v)}
+                // ligado no BOTÃO deixa de ser loop "da marcação": um clique na
+                // onda não pode desligar o que o dedo do usuário ligou aqui
+                onClick={() => { loopAutoRef.current = false; setLoopOn((v) => !v) }}
                 title={waveSel ? 'Loop: repete o trecho marcado' : 'Loop: repete a música inteira'}
               >
                 <IconLoop />
