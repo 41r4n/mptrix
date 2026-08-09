@@ -3030,6 +3030,18 @@ section h2 {
   cursor: pointer;
 }
 .absent-x:hover { color: var(--text); }
+/* nas caixas em coluna (.studio-scout) o × vai pro canto de cima, senão ele
+   cairia embaixo do texto como se fosse mais uma linha do recado */
+.studio-scout {
+  position: relative;
+}
+.studio-scout > .absent-x {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+.studio-scout > .absent-x + span,
+.studio-scout > span:first-child { padding-right: 18px; }
 
 /* Painel do olheiro (busca profunda de instrumentos) */
 .studio-scout {

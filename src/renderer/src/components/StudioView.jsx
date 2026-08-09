@@ -3349,12 +3349,29 @@ export default function StudioView({ source, onClose }) {
                 </p>
               </div>
             )}
-            {absentStems(session).length > 0 && (
-              <div className="studio-absent muted">
-                Não detectados nessa música:{' '}
-                {absentStems(session).map((s) => STEM_META[s]?.label || s).join(', ')}
-              </div>
-            )}
+            {(() => {
+              // Mesmo contrato dos outros avisos: o × guarda a ASSINATURA do
+              // que foi dispensado. Se a lista de não-detectados mudar (uma
+              // dissecação nova achou ou descartou algo), ele volta sozinho.
+              const aus = absentStems(session)
+              if (!aus.length) return null
+              const sig = `${session.key}|${aus.join(',')}`
+              if (avisoOculto.ausentes === sig) return null
+              return (
+                <div className="studio-absent muted">
+                  <span>
+                    Não detectados nessa música:{' '}
+                    {aus.map((s) => stemMeta(s, session).label).join(', ')}
+                  </span>
+                  <button
+                    className="absent-x"
+                    onClick={() => setAvisoOculto((a) => ({ ...a, ausentes: sig }))}
+                    title="Tirar este aviso da tela (volta se a lista mudar)"
+                    aria-label="Tirar aviso da tela"
+                  >×</button>
+                </div>
+              )
+            })()}
 
             {scout === 'loading' && (
               <div className="studio-scout studio-scout-loading">
@@ -3393,11 +3410,21 @@ export default function StudioView({ source, onClose }) {
                 >parar</button>
               </div>
             )}
-            {naNuvem && !autoJob && (session?.autoHarvest?.done === false) && (
+            {naNuvem && !autoJob && (session?.autoHarvest?.done === false)
+              && avisoOculto.pendura !== session.key && (
               <div className="studio-scout">
                 <span className="muted">
                   Essa música ainda tem trecho pra investigar — continuo na próxima vez que você abrir.
                 </span>
+                {/* dispensável como os outros: aqui a chave é a MÚSICA, porque
+                    o recado é sempre o mesmo enquanto ela não fechar. Fechando,
+                    o aviso some sozinho de qualquer jeito. */}
+                <button
+                  className="absent-x"
+                  onClick={() => setAvisoOculto((a) => ({ ...a, pendura: session.key }))}
+                  title="Tirar este aviso da tela"
+                  aria-label="Tirar aviso da tela"
+                >×</button>
               </div>
             )}
             {!naNuvem && scout && scout !== 'loading' && !extractJob && (() => {
