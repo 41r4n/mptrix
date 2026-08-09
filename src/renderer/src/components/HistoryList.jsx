@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import Ico from './Icones.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import EditEntryModal from './EditEntryModal.jsx'
 import BatchActionsDialog from './BatchActionsDialog.jsx'
@@ -17,19 +18,13 @@ const PRESET_LABELS = {
   lastYear: 'Ano passado'
 }
 
-const PRESET_ICONS = {
-  music: '🎵',
-  playlist: '📀',
-  fast: '⚡',
-  video: '🎬'
-}
 
 const TYPE_FILTERS = [
   { value: 'all', label: 'Todos os tipos' },
-  { value: 'music', label: '🎵 Música única' },
-  { value: 'playlist', label: '📀 Playlist' },
-  { value: 'fast', label: '⚡ Rápido' },
-  { value: 'video', label: '🎬 Vídeo' }
+  { value: 'music', label: 'Música única' },
+  { value: 'playlist', label: 'Playlist' },
+  { value: 'fast', label: 'Rápido' },
+  { value: 'video', label: 'Vídeo' }
 ]
 
 const SORT_OPTIONS = [
@@ -58,18 +53,8 @@ function displayTitle(entry) {
 }
 
 // Capa colorida: hash simples do título -> uma das 6 cores de stem do design
-function coverColor(title) {
-  let h = 0
-  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0
-  return `var(--stem-${(h % 6) + 1})`
-}
 
 // Iniciais da capa: 1ª letra das 2 primeiras palavras
-function coverInitials(title) {
-  const words = title.trim().split(/\s+/).filter(Boolean)
-  const ini = words.slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-  return ini || '♪'
-}
 
 // Badge de origem da capa: derivado do que o item já mostra (ext/qualidade/preset)
 function originBadge(entry) {
@@ -385,7 +370,7 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
     <div>
       <div className="search-row">
         <div className="search-input-wrap">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon"><Ico nome="buscar" tamanho={15} /></span>
           <input
             type="search"
             className="search-input"
@@ -483,7 +468,7 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
         </div>
       ) : (
         <ul className={`hlib-grid ${selectionMode ? 'selection-mode' : ''}`}>
-          {visible.map((entry) => {
+          {visible.map((entry, i) => {
             const unlocked = unlockedIds.has(entry.id)
             const selected = selectedIds.has(entry.id)
             const onItemClick = selectionMode ? () => toggleSelected(entry.id) : undefined
@@ -492,22 +477,28 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
             return (
               <li
                 key={entry.id}
-                className={`hlib-card ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
+                className={`hrow ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
                 onClick={onItemClick}
               >
-                <div className="hlib-cover" style={{ background: coverColor(shown) }}>
-                  <span className="hlib-initials">{coverInitials(shown)}</span>
-                  {selectionMode && (
-                    <div className={`selection-check hlib-check ${selected ? 'checked' : ''}`}>
-                      {selected ? '✓' : ''}
-                    </div>
-                  )}
-                  <span className="hlib-badge" title={entry.presetName}>{originBadge(entry)}</span>
-                </div>
-                <div className="hlib-body">
-                  <div
-                    className={`hlib-title ${!selectionMode ? 'history-title-clickable' : ''}`}
-                    title={selectionMode ? shown : `${shown}\n\nClique pra renomear`}
+                {/* LISTA, NÃO GRADE — é o que o documento do projeto sempre
+                    mandou. As capas coloridas usavam a escala dos STEMS, que é
+                    linguagem de faixa de instrumento; num item de acervo elas
+                    viravam cor aleatória, e cor aleatória é o oposto do
+                    destaque único da casa. No lugar delas: índice em mono e o
+                    ícone do formato, que dizem mais e não gritam. */}
+                <span className="hrow-n">{String(i + 1).padStart(3, '0')}</span>
+                {selectionMode && (
+                  <span className={`hrow-check ${selected ? 'on' : ''}`}>{selected ? '✓' : ''}</span>
+                )}
+                <span className="hrow-ico" title={entry.presetName}>
+                  <Ico nome={entry.presetId} tamanho={16} />
+                </span>
+                <span className="hrow-meio">
+                  <span
+                    className={`hrow-titulo ${!selectionMode ? 'history-title-clickable' : ''}`}
+                    title={selectionMode ? shown : `${shown}
+
+Clique pra renomear`}
                     onClick={(e) => {
                       if (selectionMode) return
                       e.stopPropagation()
@@ -515,62 +506,36 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
                     }}
                   >
                     {shown}
-                    {entry.customName && <span className="custom-mark" title="Renomeado por você">✎</span>}
-                  </div>
-                  <div className="hlib-meta">
-                    <span title={entry.presetName}>{PRESET_ICONS[entry.presetId] ?? '⬇'}</span>
-                    {entry.qualityLabel && <span className="quality-tag">{entry.qualityLabel}</span>}
+                    {entry.customName && <span className="custom-mark" title="Renomeado por você">·</span>}
+                  </span>
+                  <span className="hrow-meta">
+                    <span className="hrow-selo">{originBadge(entry)}</span>
+                    {entry.qualityLabel && <span>{entry.qualityLabel}</span>}
                     {entry.fileSizeLabel && <span>{entry.fileSizeLabel}</span>}
-                    {entry.files && entry.files.length > 1 && (
-                      <span>{entry.files.length} arquivos</span>
-                    )}
+                    {entry.files && entry.files.length > 1 && <span>{entry.files.length} arquivos</span>}
                     <span>{formatTime(entry.timestamp)}</span>
-                  </div>
-                </div>
+                  </span>
+                </span>
                 {!selectionMode && (
-                  <div className="hlib-actions">
-                    <button
-                      className="btn-icon"
-                      onClick={() => onQuickEdit?.(entry)}
-                      disabled={!entry.primaryFile}
-                      title="Edição rápida (tom, BPM e velocidade — sem separar, ~1 min)"
-                    >🎚️</button>
-                    <button
-                      className="btn-icon"
-                      onClick={() => onOpenStudio?.(entry)}
-                      disabled={!entry.primaryFile}
-                      title="Abrir no Estúdio (separar instrumentos)"
-                    >🎛️</button>
-                    <button
-                      className="btn-icon"
-                      onClick={() => openFile(entry)}
-                      disabled={!entry.primaryFile}
-                      title="Abrir arquivo"
-                    >▶</button>
-                    <button
-                      className="btn-icon"
-                      onClick={() => showInExplorer(entry)}
-                      disabled={!entry.primaryFile}
-                      title="Mostrar no Explorer"
-                    >📁</button>
-                    <button
-                      className="btn-icon"
-                      onClick={() => setEditingEntry(entry)}
-                      title="Renomear"
-                    >✏️</button>
-                    <button
-                      className={`btn-icon ${unlocked ? 'btn-icon-unlocked' : ''}`}
-                      onClick={() => toggleLock(entry.id)}
-                      title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}
-                    >{unlocked ? '🔓' : '🔒'}</button>
+                  <span className="hrow-acoes">
+                    <button className="ac" onClick={() => onQuickEdit?.(entry)} disabled={!entry.primaryFile}
+                      title="Edição rápida (tom, BPM e velocidade — sem separar, ~1 min)"><Ico nome="rapido" tamanho={16} /></button>
+                    <button className="ac destaque" onClick={() => onOpenStudio?.(entry)} disabled={!entry.primaryFile}
+                      title="Abrir no Estúdio (separar instrumentos)"><Ico nome="studio" tamanho={16} /></button>
+                    <button className="ac" onClick={() => openFile(entry)} disabled={!entry.primaryFile}
+                      title="Abrir arquivo"><Ico nome="tocar" tamanho={16} /></button>
+                    <button className="ac" onClick={() => showInExplorer(entry)} disabled={!entry.primaryFile}
+                      title="Mostrar no Explorer"><Ico nome="pasta" tamanho={16} /></button>
+                    <button className="ac" onClick={() => setEditingEntry(entry)}
+                      title="Renomear"><Ico nome="renomear" tamanho={16} /></button>
+                    <button className={`ac ${unlocked ? 'aberto' : ''}`} onClick={() => toggleLock(entry.id)}
+                      title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}>
+                      <Ico nome={unlocked ? 'destrancado' : 'trancado'} tamanho={16} /></button>
                     {unlocked && (
-                      <button
-                        className="btn-icon btn-icon-danger"
-                        onClick={() => askRemoveOne(entry)}
-                        title="Apagar do histórico"
-                      >✕</button>
+                      <button className="ac perigo" onClick={() => askRemoveOne(entry)}
+                        title="Apagar do histórico"><Ico nome="apagar" tamanho={16} /></button>
                     )}
-                  </div>
+                  </span>
                 )}
               </li>
             )
@@ -581,7 +546,7 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
       {hiddenCount > 0 && (
         <div className="history-more muted">
           Mostrando os {VISIBLE_LIMIT} mais recentes — tem mais {hiddenCount} guardado{hiddenCount !== 1 ? 's' : ''}.
-          Use a busca ou os filtros pra encontrar qualquer um. 🔍
+          Use a busca ou os filtros pra encontrar qualquer um.
         </div>
       )}
 

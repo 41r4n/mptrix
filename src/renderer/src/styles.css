@@ -8131,3 +8131,141 @@ section h2::after {
   .trilho-pe { display: none; }
   .palco-in { padding: 32px 22px 44px; }
 }
+
+/* ██████████ ACERVO — lista de console ██████████
+   Era grade de cartões com capa colorida. Duas coisas erradas nisso:
+   1. O documento do projeto sempre mandou LISTA, não grade.
+   2. As capas usavam a escala dos STEMS (--stem-1..6), que é linguagem de
+      FAIXA DE INSTRUMENTO. Num item de acervo aquilo virava cor sorteada pelo
+      nome do arquivo — e cor sorteada é o oposto exato do destaque único da
+      casa. Verde, ciano e amarelo brigando entre si em cada linha.
+   No lugar: índice em mono, ícone do formato em traço, e as ações que só
+   acendem quando a linha é apontada. */
+
+.hlib-grid,
+ul.hlib-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.hrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.13s ease;
+  position: relative;
+}
+.hrow:hover { background: rgba(255, 255, 255, 0.03); }
+.hrow.clickable { cursor: pointer; }
+.hrow.selected { background: rgba(182, 255, 59, 0.07); }
+/* barra lateral do selecionado: mesma marca do destino ativo no trilho */
+.hrow.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent);
+}
+
+.hrow-n {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.2);
+  flex: none;
+  width: 26px;
+}
+.hrow:hover .hrow-n { color: var(--muted-2); }
+
+.hrow-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-control);
+  font-size: 10px;
+  color: #0b0c0f;
+}
+.hrow-check.on { background: var(--accent); border-color: var(--accent); }
+
+.hrow-ico {
+  flex: none;
+  display: inline-flex;
+  color: var(--muted-2);
+  transition: color 0.13s ease;
+}
+.hrow:hover .hrow-ico { color: var(--accent); }
+
+.hrow-meio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hrow-titulo {
+  font-size: 13.5px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hrow:hover .hrow-titulo { color: var(--text); }
+.hrow-titulo.history-title-clickable { cursor: text; }
+.hrow-titulo .custom-mark { color: var(--accent); margin-left: 6px; }
+
+.hrow-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+  flex-wrap: wrap;
+}
+.hrow-selo {
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  letter-spacing: 0.12em;
+}
+
+/* AÇÕES: ficam apagadas até a linha ser apontada. Sete botões acesos em cada
+   linha viravam parede de ícones; apagados, o olho lê os títulos primeiro —
+   que é pra isso que se abre um acervo. */
+.hrow-acoes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  opacity: 0.28;
+  transition: opacity 0.13s ease;
+}
+.hrow:hover .hrow-acoes,
+.hrow:focus-within .hrow-acoes { opacity: 1; }
+.ac {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.ac:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+.ac:disabled { opacity: 0.3; cursor: default; }
+.ac:disabled:hover { background: none; color: var(--muted); }
+/* o estúdio é a ação principal do app: acende em lima, as outras não */
+.ac.destaque:hover { color: var(--accent); background: rgba(182, 255, 59, 0.12); }
+.ac.aberto { color: var(--warn); }
+.ac.perigo:hover { color: var(--bad); background: rgba(248, 113, 113, 0.12); }
+
+.search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }

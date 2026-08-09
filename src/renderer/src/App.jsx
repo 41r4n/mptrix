@@ -7,6 +7,7 @@ import UpdateBanner from './components/UpdateBanner.jsx'
 import UpdateFooter from './components/UpdateFooter.jsx'
 import ShareApp from './components/ShareApp.jsx'
 import NuvemConfig from './components/NuvemConfig.jsx'
+import Ico from './components/Icones.jsx'
 import { UpdatesProvider } from './contexts/UpdatesContext.jsx'
 
 // Lupinha: controle de tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0 também
@@ -31,44 +32,7 @@ function ZoomChip() {
   )
 }
 
-// ÍCONES DESENHADOS, NÃO EMOJI.
-//
-// Emoji quebra a lei do proprio app: o documento manda um destaque unico
-// (lima) e nada de cor solta -- e cada emoji chega com vermelho, amarelo e azul
-// proprios. Alem disso ele muda de desenho conforme o Windows, entao nem
-// controle do traco a gente tem.
-//
-// Aqui sao caminhos SVG de traco, na cor herdada (currentColor), com a mesma
-// espessura em todos. Desenhados no codigo porque o app e 100% offline: fonte
-// de icone vinda de CDN esta fora de questao.
-const ICO = {
-  music: <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>,
-  playlist: <><path d="M21 15V6" /><circle cx="18" cy="16" r="3" /><path d="M12 12H3M16 6H3M12 18H3" /></>,
-  fast: <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />,
-  audio_m4a: <path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2" />,
-  audio_wav: <path d="M22 12h-4l-3 9L9 3l-3 9H2" />,
-  video: <><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M7 3v18M17 3v18M3 12h18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4" /></>,
-  studio: <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />,
-  baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-}
-
-function Ico({ nome, tamanho = 20 }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={tamanho}
-      height={tamanho}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {ICO[nome] || ICO.baixar}
-    </svg>
-  )
-}
+// (os ícones agora moram em components/Icones.jsx, compartilhados com o acervo)
 
 // ETIQUETA TÉCNICA de cada cartão: formato e o que ele entrega, em mono e
 // caixa-alta. É leitura de painel — o mesmo jeito do estúdio de dizer medida —
