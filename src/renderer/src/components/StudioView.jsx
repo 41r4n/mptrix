@@ -2181,6 +2181,27 @@ export default function StudioView({ source, onClose }) {
               </span>
             </span>
           )}
+          {/* VELOCIDADE mora junto de BPM e TOM: os três são a mesma família —
+              o que a música É e como ela vai tocar. Estava lá embaixo no
+              transporte, longe dos irmãos, e quem ensaia mexe nos três juntos
+              (baixa a velocidade, confere o BPM, transpõe pro seu tom). */}
+          <span
+            className={`topbar-chip topbar-chip-vel ${tempo !== 100 ? 'transposed' : ''}`}
+            title="Velocidade de reprodução — o tom não muda junto"
+          >
+            <span className="topbar-chip-label">VEL</span>
+            <select
+              className="chip-select"
+              value={tempo}
+              onChange={(e) => changeTempo(parseInt(e.target.value, 10))}
+              disabled={phase !== 'ready'}
+              aria-label="Velocidade de reprodução"
+            >
+              {SPEED_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}%</option>
+              ))}
+            </select>
+          </span>
           {analysisKey && (
             <span
               className={`topbar-chip topbar-chip-tom ${pitch !== 0 ? 'transposed' : ''}`}
@@ -3550,17 +3571,6 @@ export default function StudioView({ source, onClose }) {
               >
                 📜 Letra
               </button>
-              <select
-                className="filter-select tr-speed"
-                value={tempo}
-                onChange={(e) => changeTempo(parseInt(e.target.value, 10))}
-                title="Velocidade de reprodução"
-              >
-                {SPEED_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}%</option>
-                ))}
-              </select>
-
               {altered && (
                 <button className="link-btn" onClick={resetPitchTempo}>voltar ao original</button>
               )}
