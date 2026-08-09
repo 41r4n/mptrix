@@ -271,22 +271,50 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
 
   // Busca a capa dos itens à vista, um pedido por arquivo (o motor guarda em
   // cache no disco; aqui só evito repetir o pedido na mesma sessão).
+  //
+  // ESTE EFEITO JÁ ME ENGANOU UMA VEZ. A primeira versão dependia de
+  // `visible`, que é fatiado a cada render e portanto é um array NOVO toda
+  // vez — o efeito reexecutava sempre, e a limpeza matava o laço anterior no
+  // meio. Só que o arquivo já tinha sido marcado como "pedido" ANTES do
+  // await: quem foi cortado no meio nunca mais era pedido de novo. Como cada
+  // capa que chegava causava um render (e portanto uma nova morte), a coisa
+  // andava mais ou menos uma capa por vez e deixava o resto pra trás — daí
+  // metade dos cartões ficarem no desenho de reserva com a capa em cache no
+  // disco, esperando.
+  //
+  // Agora a dependência é a LISTA de arquivos (texto estável), o pedido é
+  // feito em lote e o resultado é aplicado de uma vez só. A marcação continua
+  // antes do pedido, mas agora só o desmonte cancela.
+  const chavesVisiveis = visible.map((e) => e.primaryFile || '').join('|')
   useEffect(() => {
+    const pendentes = visible
+      .map((e) => e.primaryFile)
+      .filter((f) => f && !capasPedidas.current.has(f))
+    if (!pendentes.length) return
+    for (const f of pendentes) capasPedidas.current.add(f)
+
     let vivo = true
     ;(async () => {
-      for (const e of visible) {
-        const f = e.primaryFile
-        if (!f || capasPedidas.current.has(f)) continue
-        capasPedidas.current.add(f)
-        try {
-          const url = await window.mptrix.history.capa(f)
-          if (!vivo) return
-          if (url) setCapas((c) => ({ ...c, [f]: url }))
-        } catch { /* sem capa: o cartão cai no desenho de reserva */ }
+      // de seis em seis: na primeira vez cada pedido acorda um ffmpeg, e 99 de
+      // uma vez travaria a máquina do usuário por alguns segundos
+      const achadas = {}
+      const fila = [...pendentes]
+      const trabalhar = async () => {
+        while (fila.length) {
+          const f = fila.shift()
+          try {
+            const url = await window.mptrix.history.capa(f)
+            if (url) achadas[f] = url
+          } catch { /* sem capa: o cartão cai no desenho de reserva */ }
+        }
       }
+      await Promise.all(Array.from({ length: 6 }, trabalhar))
+      if (!vivo || !Object.keys(achadas).length) return
+      setCapas((c) => ({ ...c, ...achadas }))
     })()
     return () => { vivo = false }
-  }, [visible])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chavesVisiveis])
   const hiddenCount = filtered.length - visible.length
 
   const selectAllVisible = () => setSelectedIds(new Set(visible.map((e) => e.id)))
