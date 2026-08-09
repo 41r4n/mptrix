@@ -2333,19 +2333,26 @@ export default function StudioView({ source, onClose }) {
               </button>
               {metroOn && (
                 <>
-                  <select
-                    className="chip-select"
-                    value={metroCompasso}
-                    onChange={(e) => setMetroCompasso(parseInt(e.target.value, 10))}
-                    title="Acento no primeiro tempo do compasso"
-                    aria-label="Compasso"
-                  >
-                    <option value={4}>4/4</option>
-                    <option value={3}>3/4</option>
-                    <option value={2}>2/4</option>
-                    <option value={6}>6/8</option>
-                    <option value={0}>sem acento</option>
-                  </select>
+                  {/* COMPASSO livre, não lista fixa. A lista cobria 4/4, 3/4,
+                      2/4 e 6/8 e deixava de fora 5, 7, 9 — justo os que quem
+                      estuda ritmo quer treinar. Zero = sem acento, todo clique
+                      igual. Mesma gramática do TOM (− valor +) pra os dois
+                      chips se lerem do mesmo jeito. */}
+                  <span className="metro-comp">
+                    <button
+                      className="chip-step"
+                      onClick={() => setMetroCompasso((c) => Math.max(0, c - 1))}
+                      aria-label="Menos um tempo por compasso"
+                    >−</button>
+                    <span className="metro-comp-num" title="Tempos por compasso (0 = sem acento)">
+                      {metroCompasso > 0 ? `${metroCompasso}/4` : '—'}
+                    </span>
+                    <button
+                      className="chip-step"
+                      onClick={() => setMetroCompasso((c) => Math.min(16, c + 1))}
+                      aria-label="Mais um tempo por compasso"
+                    >+</button>
+                  </span>
                   <input
                     type="range"
                     className="metro-vol"

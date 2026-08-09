@@ -4582,6 +4582,21 @@ section h2 {
   width: 56px;
   accent-color: var(--accent);
 }
+/* contador de tempos por compasso: número em mono, largura fixa pra o chip não
+   pular de tamanho ao passar de 9 pra 10 */
+.metro-comp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.metro-comp-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 30px;
+  text-align: center;
+}
 /* "seguindo" / "firme": alterna entre acompanhar a gravação e pulso constante.
    Tem borda porque clica. */
 .metro-modo {
