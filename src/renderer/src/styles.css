@@ -3600,7 +3600,6 @@ section h2 {
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
 }
 .tinfo-dentro-row {
   display: flex;
@@ -3847,6 +3846,16 @@ section h2 {
 /* Modais nunca estouram a janela */
 .modal {
   max-width: 92vw;
+}
+/* TETO DE ALTURA PRA TODA JANELA DO APP, não só pra uma. Sem isto, conteúdo
+   comprido (uma ficha com dezenas de trechos, uma playlist longa) faz a janela
+   passar da tela: o × sobe pra fora do alcance e não sobra overlay pra clicar
+   fora — vira parede sem porta. Aconteceu de verdade na ficha da faixa. O
+   conteúdo rola por dentro; a janela nunca cresce além da tela. */
+.modal {
+  max-height: 88vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-period,
@@ -5042,10 +5051,20 @@ body.studio-open .zoom-chip {
   flex: none;
 }
 
+/* faixa que toca a musica quase inteira gera dezenas de trechos: a lista rola
+   dentro dela mesma em vez de esticar a janela */
 .tinfo-ranges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-height: 132px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tinfo-dentro {
+  max-height: 176px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .tinfo-range {
@@ -5065,17 +5084,31 @@ body.studio-open .zoom-chip {
 }
 
 /* ---------- Ficha tecnica v2: viva e organizada ---------- */
+/* TETO DE ALTURA obrigatorio. Sem ele a ficha de uma faixa com muitos trechos
+   crescia alem da tela: o x subia pra fora do alcance E nao sobrava overlay
+   pra clicar fora — a janela virava uma parede sem porta. */
 .tinfo-modal {
   padding: 20px 22px 22px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-height: 84vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
+/* o cabecalho (com o x) fica grudado no topo enquanto o resto rola: a saida
+   nunca sai de vista, por mais longa que a ficha seja */
 .tinfo-head {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: sticky;
+  top: -20px;
+  z-index: 3;
+  background: var(--bg-elev);
+  margin: -20px -22px 0;
+  padding: 20px 22px 10px;
 }
 
 .tinfo-disc {

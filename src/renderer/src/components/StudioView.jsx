@@ -2040,6 +2040,16 @@ export default function StudioView({ source, onClose }) {
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
+  // Esc fecha a ficha da faixa. Janela sem tecla de saída é armadilha: se por
+  // qualquer motivo o × ou o clique fora falharem, o teclado ainda tira a
+  // pessoa de lá.
+  useEffect(() => {
+    if (!trackInfo) return
+    const onKey = (e) => { if (e.key === 'Escape') setTrackInfo(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [trackInfo])
+
   // Cão de guarda: se algum aviso de "pronto!" se perder (app piscou, evento
   // sumiu), a tela consulta o estado real a cada 3s e se cura sozinha.
   useEffect(() => {
