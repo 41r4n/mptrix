@@ -3597,67 +3597,6 @@ section h2 {
   border-radius: 12px;
   padding: 10px 16px;
 }
-/* Descrição livre do som marcado. Campo de texto TEM borda porque de fato
-   recebe clique e digitação — a regra da casa proíbe borda em coisa que não
-   clica, não o contrário. */
-.lupa-desc {
-  flex: 1 1 200px;
-  min-width: 160px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 0.92rem;
-}
-.lupa-desc::placeholder { color: var(--muted-2); }
-.lupa-desc:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.lupa-desc:disabled { opacity: 0.5; }
-/* Lista do que está guardado dentro do "Outros" — vive na FICHA da faixa (os
-   três pontinhos), não na mesa. Cada linha é clicável, então tem borda: a regra
-   da casa é que borda em volta de texto promete clique, e aqui a promessa é
-   verdadeira. Linhas de painel separadas por hairline, número em mono. */
-.tinfo-dentro {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.tinfo-dentro-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: var(--bg-inset);
-  border: none;
-  border-bottom: 1px solid var(--border-hair);
-  padding: 9px 12px;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text-2);
-  font-family: var(--font-ui);
-  font-size: 0.88rem;
-}
-.tinfo-dentro-row:last-child { border-bottom: none; }
-.tinfo-dentro-row:hover { background: var(--bg-elev); color: var(--text); }
-.tinfo-dentro-nome { flex: 1; min-width: 0; }
-.tinfo-dentro-db {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  color: var(--muted-2);
-}
-.tinfo-dentro-sai {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-.tinfo-dentro-row:hover .tinfo-dentro-sai { color: var(--accent); }
 /* ---------- DAW MPTrix: ruler, agulha, tint, transporte (assinatura) ---------- */
 .studio-ruler {
   position: relative;

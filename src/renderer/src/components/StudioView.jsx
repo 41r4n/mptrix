@@ -779,7 +779,6 @@ export default function StudioView({ source, onClose }) {
   const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
   const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
-  const [isolando, setIsolando] = useState(false) // "aponta e separa" em curso
   // avisos de confissão dispensados: guarda a ASSINATURA do que foi dispensado,
   // então som novo confessado traz o aviso de volta sozinho
   const [avisoOculto, setAvisoOculto] = useState({})
@@ -801,7 +800,6 @@ export default function StudioView({ source, onClose }) {
   const bpmPulseRef = useRef(null)
   const bpmBeatRef = useRef(-1)
   const beatsRef = useRef(null)
-  const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
   useEffect(() => { loopRef.current = { on: loopOn, sel: waveSel } }, [loopOn, waveSel])
@@ -1728,33 +1726,10 @@ export default function StudioView({ source, onClose }) {
     setLupa(res || { error: 'O investigador não respondeu.' })
   }
 
-  // APONTA E SEPARA: o único caminho do app que não precisa de nome nenhum.
-  // Você marca o trecho na onda e ele separa o som que está ali. A descrição em
-  // palavra normal é OPCIONAL e só ajuda a mira — não existe catálogo aqui,
-  // então "chocalho" e "estalar de dedos" valem tanto quanto "guitarra".
-  const isolarSom = async () => {
-    if (!waveSel || !session || isolando) return
-    setIsolando(true)
-    setExportMsg('Separando o som que você marcou… (alguns minutos)')
-    try {
-      const res = await window.mptrix.studio.isolate({
-        key: session.key, start: waveSel.start, end: waveSel.end, descricao: descSom
-      })
-      if (res?.error) setExportMsg(`⚠ ${res.error}`)
-      else if (res?.vazio) setExportMsg('Não achei som separável nesse trecho — tente marcar um pedaço onde ele apareça mais, ou descreva o som em uma palavra.')
-      else if (res?.ok) {
-        setExportMsg(`✓ Separei: "${res.rotulo}" virou faixa nova. Ouve e me diz se é o som que você queria.`)
-        setDescSom('')
-        setWaveSel(null)
-        setLupa(null)
-        if (res.session) setSession(res.session)
-      }
-    } catch (e) {
-      setExportMsg(`⚠ ${e?.message || 'não consegui separar'}`)
-    } finally {
-      setIsolando(false)
-    }
-  }
+  // (O "aponta e separa" MANUAL foi removido da tela por decisão do dono:
+  // separar é obrigação do sistema, não tarefa do usuário. O motor continua
+  // inteiro — quem usa é a COLHEITA automática, que aponta sozinha nos trechos
+  // que a própria dissecação confessou.)
 
   // Tudo que o painel oferece nasce marcado — inclusive Piano/Teclado, que
   // vem do caminho da cascata e ficava órfão da marcação automática
@@ -3324,26 +3299,6 @@ export default function StudioView({ source, onClose }) {
                 </button>
                 <button className="btn-secondary btn-small" onClick={() => { setWaveSel(null); setLupa(null) }}>
                   ✕ limpar
-                </button>
-              </div>
-            )}
-            {/* APONTA E SEPARA — o único lugar do app sem nome de instrumento.
-                Mesma marcação de trecho da lupa, servindo pra outra pergunta:
-                lá é "o que tem aqui?", aqui é "tira isso pra fora". */}
-            {waveSel && naNuvem && (
-              <div className="lupa-bar">
-                <span className="muted">✂ Separar o som desse trecho</span>
-                <input
-                  type="text"
-                  className="lupa-desc"
-                  placeholder="que som é? (opcional) — ex.: chocalho"
-                  value={descSom}
-                  disabled={isolando}
-                  onChange={(e) => setDescSom(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') isolarSom() }}
-                />
-                <button className="btn-primary btn-small" disabled={isolando} onClick={isolarSom}>
-                  {isolando ? 'Separando…' : 'Separar esse som'}
                 </button>
               </div>
             )}
