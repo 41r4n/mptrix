@@ -74,6 +74,7 @@ const api = {
 
   history: {
     get: () => ipcRenderer.invoke('history:get'),
+    capa: (file) => ipcRenderer.invoke('history:capa', { file }),
     remove: (id, opts) => ipcRenderer.invoke('history:remove', { id, ...(opts || {}) }),
     rename: (id, newName) => ipcRenderer.invoke('history:rename', { id, newName }),
     clear: () => ipcRenderer.invoke('history:clear'),

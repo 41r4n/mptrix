@@ -2,8 +2,8 @@ import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, 
 import { spawn } from 'child_process'
 import { join, basename, extname, dirname } from 'path'
 import { Readable } from 'stream'
-import { existsSync, mkdirSync, statSync, renameSync, createReadStream } from 'fs'
-import { randomUUID } from 'crypto'
+import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFileSync } from 'fs'
+import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import {
   MODELS as STUDIO_MODELS,
@@ -981,7 +981,13 @@ app.whenReady().then(() => {
       const full = join(stemsRoot(), ...parts)
       if (!existsSync(full)) return new Response('não encontrado', { status: 404 })
       const size = statSync(full).size
-      const type = full.endsWith('.flac') ? 'audio/flac' : full.endsWith('.wav') ? 'audio/wav' : 'application/octet-stream'
+      // capa de item do acervo entra por aqui tambem (mesma porta, mesma
+      // checagem de caminho) — por isso o tipo agora cobre imagem
+      const type = full.endsWith('.flac') ? 'audio/flac'
+        : full.endsWith('.wav') ? 'audio/wav'
+          : full.endsWith('.jpg') || full.endsWith('.jpeg') ? 'image/jpeg'
+            : full.endsWith('.png') ? 'image/png'
+              : 'application/octet-stream'
       const baseHeaders = {
         'Content-Type': type,
         'Accept-Ranges': 'bytes',
@@ -1023,6 +1029,38 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:catalog', () => specialistCatalog())
 
   // Prateleira: guardar/promover faixa (nada é apagado)
+  // CAPA DO ITEM DO ACERVO. O MP3 baixado com capa traz a miniatura do video
+  // embutida; aqui ela e extraida uma vez e guardada em cache, e devolvida como
+  // endereco `stems://` (a mesma porta que ja serve as faixas, com a mesma
+  // checagem de caminho). Arquivo sem capa embutida devolve null e a tela cai
+  // no desenho de reserva — nunca em cor sorteada.
+  ipcMain.handle('history:capa', async (_e, { file }) => {
+    try {
+      if (!file || !existsSync(file)) return null
+      const st = statSync(file)
+      const chave = createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}`).digest('hex').slice(0, 16)
+      const dir = join(stemsRoot(), '_capas', 'img')
+      const alvo = join(dir, `${chave}.jpg`)
+      const url = `stems://s/_capas/img/${chave}.jpg`
+      if (existsSync(alvo)) return statSync(alvo).size > 0 ? url : null
+      mkdirSync(dir, { recursive: true })
+      const ok = await new Promise((resolve) => {
+        const c = spawn(FFMPEG_PATH, ['-y', '-v', 'quiet', '-i', file, '-an', '-frames:v', '1', '-vf', 'scale=480:-1', alvo], { windowsHide: true })
+        c.on('error', () => resolve(false))
+        c.on('close', (code) => resolve(code === 0))
+      })
+      if (!ok || !existsSync(alvo) || statSync(alvo).size === 0) {
+        // marca o "nao tem capa" com arquivo vazio: sem isso o ffmpeg seria
+        // chamado de novo a cada abertura pra todo arquivo sem capa
+        try { writeFileSync(alvo, '') } catch { /* segue sem cache */ }
+        return null
+      }
+      return url
+    } catch {
+      return null
+    }
+  })
+
   ipcMain.handle('studio:shelve', (_e, { key, stem, shelved }) => {
     try {
       return { session: setShelved({ key, stem, shelved }) }

@@ -8132,140 +8132,157 @@ section h2::after {
   .palco-in { padding: 32px 22px 44px; }
 }
 
-/* ██████████ ACERVO — lista de console ██████████
-   Era grade de cartões com capa colorida. Duas coisas erradas nisso:
-   1. O documento do projeto sempre mandou LISTA, não grade.
-   2. As capas usavam a escala dos STEMS (--stem-1..6), que é linguagem de
-      FAIXA DE INSTRUMENTO. Num item de acervo aquilo virava cor sorteada pelo
-      nome do arquivo — e cor sorteada é o oposto exato do destaque único da
-      casa. Verde, ciano e amarelo brigando entre si em cada linha.
-   No lugar: índice em mono, ícone do formato em traço, e as ações que só
-   acendem quando a linha é apontada. */
+/* (o acervo em LISTA foi substituido pelo cartao com capa — ver abaixo) */
+.search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }
+
+/* ██████████ ACERVO — cartão com capa de verdade ██████████
+   "Queria evitar que fosse linhas, queria que fosse mais bonito e amistoso,
+   mostra a imagem do clipe se tiver."
+   Os cartões antigos não eram feios por serem cartões — eram feios pela CAPA
+   FALSA: um bloco de cor sorteada pelo nome do arquivo, com as iniciais. Cor
+   sorteada é o oposto do destaque único da casa, e inicial não diz nada.
+   Com a miniatura real do vídeo (que já vem embutida no MP3) o cartão se
+   sustenta sozinho — e aí ele fica amistoso de verdade, porque a pessoa
+   RECONHECE a música pela imagem antes de ler o nome. */
 
 .hlib-grid,
 ul.hlib-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 16px;
+  padding: 2px;
   margin: 0;
   list-style: none;
 }
 
-.hrow {
+.hcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  clip-path: var(--corte-sm);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.hcard:hover { background: #171a20; transform: translateY(-2px); }
+.hcard.clickable { cursor: pointer; }
+.hcard.selected { background: rgba(182, 255, 59, 0.1); }
+
+/* --- capa --- */
+.hcard-capa {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--bg-inset);
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 11px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.13s ease;
-  position: relative;
+  justify-content: center;
 }
-.hrow:hover { background: rgba(255, 255, 255, 0.03); }
-.hrow.clickable { cursor: pointer; }
-.hrow.selected { background: rgba(182, 255, 59, 0.07); }
-/* barra lateral do selecionado: mesma marca do destino ativo no trilho */
-.hrow.selected::before {
-  content: '';
+.hcard-capa img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease, filter 0.2s ease;
+}
+.hcard:hover .hcard-capa img { transform: scale(1.04); filter: brightness(0.55); }
+/* reserva pra quem não tem capa embutida: ícone do formato, nunca cor sorteada */
+.hcard-semcapa { color: rgba(255, 255, 255, 0.16); }
+
+.hcard-selo {
   position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  background: var(--accent);
-}
-
-.hrow-n {
+  top: 8px;
+  right: 8px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.2);
-  flex: none;
-  width: 26px;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--text-2);
+  background: rgba(11, 12, 15, 0.78);
+  padding: 3px 6px;
+  clip-path: var(--corte-sm);
 }
-.hrow:hover .hrow-n { color: var(--muted-2); }
-
-.hrow-check {
-  width: 16px;
-  height: 16px;
-  flex: none;
+.hcard-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-control);
-  font-size: 10px;
+  background: rgba(11, 12, 15, 0.78);
+  font-size: 11px;
   color: #0b0c0f;
 }
-.hrow-check.on { background: var(--accent); border-color: var(--accent); }
+.hcard-check.on { background: var(--accent); border-color: var(--accent); }
 
-.hrow-ico {
-  flex: none;
-  display: inline-flex;
-  color: var(--muted-2);
-  transition: color 0.13s ease;
-}
-.hrow:hover .hrow-ico { color: var(--accent); }
-
-.hrow-meio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.hrow-titulo {
-  font-size: 13.5px;
-  color: var(--text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.hrow:hover .hrow-titulo { color: var(--text); }
-.hrow-titulo.history-title-clickable { cursor: text; }
-.hrow-titulo .custom-mark { color: var(--accent); margin-left: 6px; }
-
-.hrow-meta {
+/* AÇÕES POR CIMA DA CAPA, só quando o cartão é apontado. Sete botões sempre
+   visíveis viravam parede de ícones e roubavam a capa — que é justamente o que
+   faz a pessoa reconhecer a música. */
+.hcard-acoes {
+  position: absolute;
+  inset: auto 0 0 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: linear-gradient(to top, rgba(11, 12, 15, 0.92), transparent);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.hcard:hover .hcard-acoes,
+.hcard:focus-within .hcard-acoes { opacity: 1; transform: none; }
+
+/* --- pé do cartão --- */
+.hcard-pe { padding: 11px 12px 13px; display: flex; flex-direction: column; gap: 5px; }
+.hcard-titulo {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hcard:hover .hcard-titulo { color: var(--text); }
+.hcard-titulo.history-title-clickable { cursor: text; }
+.hcard-titulo .custom-mark { color: var(--accent); margin-left: 5px; }
+.hcard-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 9px;
   letter-spacing: 0.08em;
   color: var(--muted-2);
-  flex-wrap: wrap;
-}
-.hrow-selo {
-  color: var(--muted);
-  border: 1px solid var(--border);
-  padding: 1px 5px;
-  letter-spacing: 0.12em;
 }
 
-/* AÇÕES: ficam apagadas até a linha ser apontada. Sete botões acesos em cada
-   linha viravam parede de ícones; apagados, o olho lê os títulos primeiro —
-   que é pra isso que se abre um acervo. */
-.hrow-acoes {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: none;
-  opacity: 0.28;
-  transition: opacity 0.13s ease;
-}
-.hrow:hover .hrow-acoes,
-.hrow:focus-within .hrow-acoes { opacity: 1; }
+/* botões de ação do acervo — vivem por cima da capa, então precisam de fundo
+   próprio pra se destacar de qualquer imagem que esteja atrás */
 .ac {
   width: 28px;
   height: 28px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 6px;
-  color: var(--muted);
+  color: var(--text-2);
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.ac:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
-.ac:disabled { opacity: 0.3; cursor: default; }
-.ac:disabled:hover { background: none; color: var(--muted); }
-/* o estúdio é a ação principal do app: acende em lima, as outras não */
-.ac.destaque:hover { color: var(--accent); background: rgba(182, 255, 59, 0.12); }
+.ac:hover { background: rgba(255, 255, 255, 0.18); color: var(--text); }
+.ac:disabled { opacity: 0.35; cursor: default; }
+.ac:disabled:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-2); }
+/* o estúdio é a ação principal do app: só ele acende em lima */
+.ac.destaque { background: rgba(182, 255, 59, 0.16); color: var(--accent); }
+.ac.destaque:hover { background: var(--accent); color: #0b0c0f; }
 .ac.aberto { color: var(--warn); }
-.ac.perigo:hover { color: var(--bad); background: rgba(248, 113, 113, 0.12); }
+.ac.perigo:hover { background: var(--bad); color: #0b0c0f; }
 
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }

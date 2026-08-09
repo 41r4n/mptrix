@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Ico from './Icones.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import EditEntryModal from './EditEntryModal.jsx'
@@ -171,6 +171,11 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [confirmState, setConfirmState] = useState(null)
   const [editingEntry, setEditingEntry] = useState(null)
+  // CAPA DE VERDADE. O MP3 baixado com capa traz a miniatura do video embutida
+  // — o motor extrai uma vez e guarda em cache. Sem isso a alternativa era a
+  // capa falsa de cor sorteada, que era justamente o que estava feio.
+  const [capas, setCapas] = useState({})
+  const capasPedidas = useRef(new Set())
   const [batchActionsOpen, setBatchActionsOpen] = useState(false)
   const [periodPickerOpen, setPeriodPickerOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -255,6 +260,25 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
 
   const VISIBLE_LIMIT = 100
   const visible = filtered.slice(0, VISIBLE_LIMIT)
+
+  // Busca a capa dos itens à vista, um pedido por arquivo (o motor guarda em
+  // cache no disco; aqui só evito repetir o pedido na mesma sessão).
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      for (const e of visible) {
+        const f = e.primaryFile
+        if (!f || capasPedidas.current.has(f)) continue
+        capasPedidas.current.add(f)
+        try {
+          const url = await window.mptrix.history.capa(f)
+          if (!vivo) return
+          if (url) setCapas((c) => ({ ...c, [f]: url }))
+        } catch { /* sem capa: o cartão cai no desenho de reserva */ }
+      }
+    })()
+    return () => { vivo = false }
+  }, [visible])
   const hiddenCount = filtered.length - visible.length
 
   const selectAllVisible = () => setSelectedIds(new Set(visible.map((e) => e.id)))
@@ -477,25 +501,48 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
             return (
               <li
                 key={entry.id}
-                className={`hrow ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
+                className={`hcard ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
                 onClick={onItemClick}
               >
-                {/* LISTA, NÃO GRADE — é o que o documento do projeto sempre
-                    mandou. As capas coloridas usavam a escala dos STEMS, que é
-                    linguagem de faixa de instrumento; num item de acervo elas
-                    viravam cor aleatória, e cor aleatória é o oposto do
-                    destaque único da casa. No lugar delas: índice em mono e o
-                    ícone do formato, que dizem mais e não gritam. */}
-                <span className="hrow-n">{String(i + 1).padStart(3, '0')}</span>
-                {selectionMode && (
-                  <span className={`hrow-check ${selected ? 'on' : ''}`}>{selected ? '✓' : ''}</span>
-                )}
-                <span className="hrow-ico" title={entry.presetName}>
-                  <Ico nome={entry.presetId} tamanho={16} />
-                </span>
-                <span className="hrow-meio">
-                  <span
-                    className={`hrow-titulo ${!selectionMode ? 'history-title-clickable' : ''}`}
+                {/* CAPA DE VERDADE. Os cartoes antigos nao eram feios por serem
+                    cartoes — eram feios pela CAPA FALSA: bloco de cor sorteada
+                    pelo nome do arquivo, com iniciais. Com a miniatura do video
+                    (que ja vem embutida no MP3) o cartao se sustenta sozinho.
+                    Sem capa embutida, cai no desenho de reserva: o icone do
+                    formato numa superficie escura — nunca cor sorteada. */}
+                <div className="hcard-capa">
+                  {capas[entry.primaryFile]
+                    ? <img src={capas[entry.primaryFile]} alt="" loading="lazy" />
+                    : <span className="hcard-semcapa"><Ico nome={entry.presetId} tamanho={30} /></span>}
+                  <span className="hcard-selo">{originBadge(entry)}</span>
+                  {selectionMode && (
+                    <span className={`hcard-check ${selected ? 'on' : ''}`}>{selected ? '✓' : ''}</span>
+                  )}
+                  {!selectionMode && (
+                    <div className="hcard-acoes">
+                      <button className="ac destaque" onClick={(e) => { e.stopPropagation(); onOpenStudio?.(entry) }} disabled={!entry.primaryFile}
+                        title="Abrir no Estúdio (separar instrumentos)"><Ico nome="studio" tamanho={16} /></button>
+                      <button className="ac" onClick={(e) => { e.stopPropagation(); onQuickEdit?.(entry) }} disabled={!entry.primaryFile}
+                        title="Edição rápida (tom, BPM e velocidade — sem separar, ~1 min)"><Ico nome="rapido" tamanho={16} /></button>
+                      <button className="ac" onClick={(e) => { e.stopPropagation(); openFile(entry) }} disabled={!entry.primaryFile}
+                        title="Abrir arquivo"><Ico nome="tocar" tamanho={16} /></button>
+                      <button className="ac" onClick={(e) => { e.stopPropagation(); showInExplorer(entry) }} disabled={!entry.primaryFile}
+                        title="Mostrar no Explorer"><Ico nome="pasta" tamanho={16} /></button>
+                      <button className="ac" onClick={(e) => { e.stopPropagation(); setEditingEntry(entry) }}
+                        title="Renomear"><Ico nome="renomear" tamanho={16} /></button>
+                      <button className={`ac ${unlocked ? 'aberto' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLock(entry.id) }}
+                        title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}>
+                        <Ico nome={unlocked ? 'destrancado' : 'trancado'} tamanho={16} /></button>
+                      {unlocked && (
+                        <button className="ac perigo" onClick={(e) => { e.stopPropagation(); askRemoveOne(entry) }}
+                          title="Apagar do histórico"><Ico nome="apagar" tamanho={16} /></button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="hcard-pe">
+                  <div
+                    className={`hcard-titulo ${!selectionMode ? 'history-title-clickable' : ''}`}
                     title={selectionMode ? shown : `${shown}
 
 Clique pra renomear`}
@@ -507,36 +554,14 @@ Clique pra renomear`}
                   >
                     {shown}
                     {entry.customName && <span className="custom-mark" title="Renomeado por você">·</span>}
-                  </span>
-                  <span className="hrow-meta">
-                    <span className="hrow-selo">{originBadge(entry)}</span>
+                  </div>
+                  <div className="hcard-meta">
                     {entry.qualityLabel && <span>{entry.qualityLabel}</span>}
                     {entry.fileSizeLabel && <span>{entry.fileSizeLabel}</span>}
-                    {entry.files && entry.files.length > 1 && <span>{entry.files.length} arquivos</span>}
+                    {entry.files && entry.files.length > 1 && <span>{entry.files.length} arq.</span>}
                     <span>{formatTime(entry.timestamp)}</span>
-                  </span>
-                </span>
-                {!selectionMode && (
-                  <span className="hrow-acoes">
-                    <button className="ac" onClick={() => onQuickEdit?.(entry)} disabled={!entry.primaryFile}
-                      title="Edição rápida (tom, BPM e velocidade — sem separar, ~1 min)"><Ico nome="rapido" tamanho={16} /></button>
-                    <button className="ac destaque" onClick={() => onOpenStudio?.(entry)} disabled={!entry.primaryFile}
-                      title="Abrir no Estúdio (separar instrumentos)"><Ico nome="studio" tamanho={16} /></button>
-                    <button className="ac" onClick={() => openFile(entry)} disabled={!entry.primaryFile}
-                      title="Abrir arquivo"><Ico nome="tocar" tamanho={16} /></button>
-                    <button className="ac" onClick={() => showInExplorer(entry)} disabled={!entry.primaryFile}
-                      title="Mostrar no Explorer"><Ico nome="pasta" tamanho={16} /></button>
-                    <button className="ac" onClick={() => setEditingEntry(entry)}
-                      title="Renomear"><Ico nome="renomear" tamanho={16} /></button>
-                    <button className={`ac ${unlocked ? 'aberto' : ''}`} onClick={() => toggleLock(entry.id)}
-                      title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}>
-                      <Ico nome={unlocked ? 'destrancado' : 'trancado'} tamanho={16} /></button>
-                    {unlocked && (
-                      <button className="ac perigo" onClick={() => askRemoveOne(entry)}
-                        title="Apagar do histórico"><Ico nome="apagar" tamanho={16} /></button>
-                    )}
-                  </span>
-                )}
+                  </div>
+                </div>
               </li>
             )
           })}
