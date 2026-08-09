@@ -8172,28 +8172,40 @@ ul.hlib-grid {
    controle #15171C — com fio de contorno em cada peça e a marca lima na quina
    esquerda. Borda em volta de texto = clicável: aqui TUDO clica, então pode. */
 
-/* A CAIXA QUE PROJETA — e a correcao de um erro meu.
-   Eu vinha pondo filter: drop-shadow no MESMO elemento que tem clip-path,
-   jurando que o filtro rodava depois do recorte. Roda antes: o navegador
-   filtra e SO ENTAO corta. Ou seja, eu desenhava a sombra e recortava ela
-   fora junto com as quinas — por isso nao aparecia nada, por mais camada
-   que eu empilhasse.
-   A sombra precisa de um elemento sem recorte pra viver. Esta caixa nao
-   corta nada: ela so segura a barra recortada e projeta a silhueta dela.
+/* A CAIXA QUE PROJETA — e a correcao de dois erros meus.
+   1) Eu punha filter: drop-shadow no MESMO elemento que tem clip-path,
+      jurando que o filtro rodava depois do recorte. Roda antes: o navegador
+      filtra e SO ENTAO corta — eu desenhava a sombra e recortava ela fora
+      junto com as quinas. Por isso nao aparecia nada. Sombra precisa de um
+      elemento sem recorte pra viver, e esta caixa e ele.
+   2) Depois empilhei cinco drop-shadow pra alargar o halo, e dava pra ver o
+      FORMATO da sombra. Filtro e corrente: cada drop-shadow usa a saida do
+      anterior como fonte, entao o segundo sombreia a sombra do primeiro, o
+      terceiro sombreia aquilo, e o que era pra ser esfumado virou um bloco
+      solido com borda.
+   Entao a claridade larga saiu do filtro e virou degrade radial, que
+   esmaece por natureza e nao tem contorno. No filtro ficou so o que precisa
+   ser nitido: a aresta acesa e o contato curto.
 
-   E fora da caixa, num palco #0B0C0F, o que aparece e LUZ: sombra escura
-   jogada em quase-preto nao tem pra onde escurecer. Entao a placa derrama
-   claridade — aresta acesa, halo neutro largo, e o respingo lima puxado pra
-   esquerda, que e o lado onde a marca lima esta. Luz refletida da propria
-   peca, nao neon de enfeite. */
+   E claridade, nao sombra, de proposito: num palco #0B0C0F a sombra escura
+   nao tem pra onde escurecer. O respingo lima e puxado pra esquerda, que e
+   o lado onde a marca lima da barra esta — luz refletida da propria peca. */
 .barra-caixa {
-  margin-bottom: 32px;
+  position: relative;
+  margin-bottom: 34px;
   filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 0.2))
-    drop-shadow(0 4px 6px rgba(0, 0, 0, 1))
-    drop-shadow(0 16px 32px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 8px 38px rgba(255, 255, 255, 0.08))
-    drop-shadow(-14px 2px 30px var(--glow-painel));
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.16))
+    drop-shadow(0 5px 10px rgba(0, 0, 0, 0.9));
+}
+.barra-caixa::before {
+  content: '';
+  position: absolute;
+  inset: -54px -48px -66px -54px;
+  z-index: -1;
+  background:
+    radial-gradient(52% 120% at 24% 52%, var(--glow-painel), transparent 70%),
+    radial-gradient(78% 155% at 56% 58%, rgba(255, 255, 255, 0.055), transparent 72%);
+  pointer-events: none;
 }
 
 .barra {
