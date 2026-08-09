@@ -8180,8 +8180,16 @@ ul.hlib-grid {
   margin-bottom: 22px;
   padding: 9px 12px 9px 16px;
   background: var(--bg-cava);
-  box-shadow: inset 0 0 0 1px var(--border);
+  /* fio de contorno + boca escura em cima + labio de luz embaixo: a placa
+     tem espessura. O ultimo e o que mais vende o relevo. */
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    inset 0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   clip-path: var(--corte-sm);
+  /* sombra projetada: box-shadow externo morre no clip-path, filter nao —
+     ele roda depois do recorte e acompanha as quinas cortadas. */
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.65));
 }
 /* marca lima na quina — diz "isto é o painel de comando" sem gastar largura */
 .barra::before {
@@ -8206,12 +8214,17 @@ ul.hlib-grid {
   height: 34px;
   padding: 0 10px;
   background: var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control);
+  box-shadow:
+    inset 0 0 0 1px var(--border-control),
+    inset 0 2px 7px rgba(0, 0, 0, 0.85);
   clip-path: var(--corte-sm);
   transition: box-shadow 0.14s ease;
 }
 .barra-busca:focus-within {
-  box-shadow: inset 0 0 0 1px var(--accent-border);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-border),
+    inset 0 2px 7px rgba(0, 0, 0, 0.85),
+    0 0 12px rgba(182, 255, 59, 0.16);
 }
 .barra-busca:focus-within .search-icon { color: var(--accent); }
 .barra-campo {
@@ -8255,7 +8268,9 @@ ul.hlib-grid {
   padding: 0 12px;
   background: var(--bg-cava-2);
   border: none;
-  box-shadow: inset 0 0 0 1px var(--border-control);
+  box-shadow:
+    inset 0 0 0 1px var(--border-control),
+    inset 0 2px 6px rgba(0, 0, 0, 0.8);
   color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 9.5px;
@@ -8281,7 +8296,10 @@ ul.hlib-grid {
 .barra-btn:hover {
   background: #0b0d11;
   color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border-strong);
+  box-shadow:
+    inset 0 0 0 1px var(--border-strong),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
@@ -8290,7 +8308,9 @@ ul.hlib-grid {
 .barra-btn.aviso {
   color: var(--accent);
   background: var(--accent-dim);
-  box-shadow: inset 0 0 0 1px var(--accent-border);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-border),
+    inset 0 0 14px rgba(182, 255, 59, 0.12);
 }
 .barra-btn.on:hover,
 .barra-btn.aviso:hover { background: rgba(182, 255, 59, 0.22); color: var(--accent); }
@@ -8298,7 +8318,9 @@ ul.hlib-grid {
   background: var(--accent);
   color: #0b0c0f;
   font-weight: 700;
-  box-shadow: 0 0 14px rgba(182, 255, 59, 0.3);
+  box-shadow:
+    0 0 16px rgba(182, 255, 59, 0.35),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22);
 }
 .barra-btn.forte:hover { background: var(--accent-hover); color: #0b0c0f; }
 .barra-btn.forte:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
