@@ -2911,7 +2911,9 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
       if (!existsSync(f)) continue
       const cl = join(workRoot, `viz_${s}.flac`)
       await run(ffmpegPath, ['-y', '-loglevel', 'error', '-ss', String(trecho.ini), '-t', String(durClipe), '-i', f, cl], state)
-      vizinhos.push(await decodificarMono(ffmpegPath, cl, workRoot, `viz_${s}`, state))
+      // o NOME viaja junto: a faixa do próprio candidato não pode ser usada
+      // pra acusá-lo de eco (ver `validos`)
+      vizinhos.push({ stem: s, canal: await decodificarMono(ffmpegPath, cl, workRoot, `viz_${s}`, state) })
       try { rmSync(cl, { force: true }) } catch { /* preso pelo ffmpeg que acabou de sair; some com a bancada */ }
     }
     return vizinhos
@@ -3056,8 +3058,16 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // faixas existentes e o "outros" (de onde o clipe saiu) fica de fora de
     // propósito. Aqui a pergunta é outra: o que ele TIROU do clipe?
     const doClipe = await decodificarMono(ffmpegPath, clipe, workRoot, 'clipe', state)
+    // A FAIXA DO PRÓPRIO CANDIDATO NÃO O ACUSA DE ECO. Achar MAIS sitar dentro
+    // da guitarra não é eco da faixa Sitar — é o resto dele, que nunca saiu de
+    // lá. Foi exatamente a queixa do dono na Oceano: "o sitar é fraco na faixa
+    // dele e aparece mais na guitarra". Com a faixa dele no júri, o pedaço de
+    // dentro da guitarra seria vetado como cópia e o som ficaria preso pra
+    // sempre. Contra passagem/cópia continua valendo `sobrouAlgo`, que é a
+    // guarda certa pra isso.
     const validos = comSom.filter((r) =>
-      !viz.some((v) => fracaoEco(r.canal, v) > 0.4) && sobrouAlgo(doClipe, r.canal))
+      !viz.some((v) => v.stem !== r.inst && fracaoEco(r.canal, v.canal) > 0.4)
+      && sobrouAlgo(doClipe, r.canal))
     const reprovados = comSom.filter((r) => !validos.includes(r))
     registrar([...negaram, ...reprovados])
     if (!validos.length) return { dono: null, sondados, palpite, truncado, sumiram }
@@ -3137,11 +3147,15 @@ async function revalidarConfissoes(dir, ffmpegPath, semDono, state) {
 async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state }) {
   const src = join(dir, 'base', `${fonte}.flac`)
   const destino = join(dir, 'base', `${inst}.flac`)
+  // A faixa pode JÁ EXISTIR (o sitar saiu do "outros" fraquinho e o grosso dele
+  // estava na guitarra). Nesse caso o achado não substitui nada: ele SOMA.
+  const jaExistia = existsSync(destino)
+  const novo = join(workRoot, `novo_${inst}.flac`)
   const { extrairInstrumentoNaNuvem } = await import('./nuvem.js')
   try {
     const r = await extrairInstrumentoNaNuvem({
       chave: lerChaveNuvem(), instrumento: SPECIALISTS[inst].file,
-      arquivo: src, destino, state, ffmpegPath, run, workDir: workRoot
+      arquivo: src, destino: novo, state, ffmpegPath, run, workDir: workRoot
     })
     somarGastoNuvem(r.segundos, { maquina: 'gpu' })
   } catch (e) {
@@ -3149,31 +3163,62 @@ async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state })
     throw e
   }
 
-  // a mesma balança da extração normal: quase-mudo não vira faixa
-  let mean = -99
-  let max = -99
-  await run(ffmpegPath, ['-i', destino, '-af', 'volumedetect', '-f', 'null', '-'], state, (l) => {
-    const mm = l.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
-    if (mm) mean = parseFloat(mm[1])
-    const mx = l.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
-    if (mx) max = parseFloat(mx[1])
-  })
-  const present = mean > -48 || max > -35
-  if (!present) {
-    try { rmSync(destino, { force: true, maxRetries: 12, retryDelay: 250 }) } catch { /* sobra vira órfã; a adoção esconde */ }
-    return { present: false, mean, max }
+  const medir = async (arq) => {
+    let mean = -99
+    let max = -99
+    await run(ffmpegPath, ['-i', arq, '-af', 'volumedetect', '-f', 'null', '-'], state, (l) => {
+      const mm = l.match(/mean_volume:\s*(-?\d+(?:\.\d+)?)/)
+      if (mm) mean = parseFloat(mm[1])
+      const mx = l.match(/max_volume:\s*(-?\d+(?:\.\d+)?)/)
+      if (mx) max = parseFloat(mx[1])
+    })
+    return { mean, max }
   }
+
+  // a mesma balança da extração normal: quase-mudo não vira faixa
+  const doNovo = await medir(novo)
+  if (!(doNovo.mean > -48 || doNovo.max > -35)) {
+    try { rmSync(novo, { force: true, maxRetries: 12, retryDelay: 250 }) } catch { /* bancada some no fim */ }
+    return { present: false, ...doNovo, somado: false }
+  }
+
+  // A faixa somada é montada na BANCADA, não por cima da original: nada é
+  // commitado antes da guarda anti-roubo lá embaixo aprovar.
+  const somada = join(workRoot, `somada_${inst}.flac`)
+  if (jaExistia) {
+    // SOMA sem normalizar: `normalize=1` (o padrão do amix) divide o volume
+    // pelo número de entradas — a faixa somada sairia 6 dB mais baixa que as
+    // duas partes, e o desconto da fonte ficaria errado na mesma medida.
+    await run(ffmpegPath, [
+      '-y', '-loglevel', 'error', '-i', destino, '-i', novo,
+      '-filter_complex', 'amix=inputs=2:duration=longest:normalize=0', somada
+    ], state)
+  } else {
+    copyFileSync(novo, somada)
+  }
+  const { mean, max } = await medir(somada)
+  // FLAC é inteiro: soma que estoura vira corte duro, e corte duro é chiado.
+  // Não acontece nos níveis reais (as duas metades do mesmo instrumento vivem
+  // bem abaixo do talo), mas se um dia acontecer eu quero ver escrito, não
+  // descobrir pelo ouvido do dono.
+  if (max >= -0.2) diario(dir, `  revista: ATENÇÃO — a soma de ${inst} encostou no talo (pico ${max} dB)`)
 
   // desconta da fonte: cópia pristina uma vez, cancelador medido sempre a
   // partir dela — refazer nunca degrada (mesmo contrato do outros)
   const orig = join(dir, 'base', `${fonte}_orig.flac`)
   if (!existsSync(orig)) copyFileSync(src, orig)
+  const antesDaFonte = await medir(src)
   const m0 = readMeta(dir)
+  // TODAS as faixas que já saíram desta fonte entram no cancelador, senão
+  // reconstruir a partir do _orig devolveria pra fonte o que saiu antes.
+  // `origens` é lista porque um mesmo instrumento pode ter sido pescado em
+  // mais de uma rua (um pouco no "outros", o grosso na guitarra).
   const claims = [...new Set([
     ...Object.entries(m0?.stemInfo || {})
-      .filter(([s, i]) => i?.origem === fonte && existsSync(join(dir, 'base', `${s}.flac`)))
+      .filter(([s, i]) => (i?.origens || (i?.origem ? [i.origem] : [])).includes(fonte)
+        && s !== inst && existsSync(join(dir, 'base', `${s}.flac`)))
       .map(([s]) => join(dir, 'base', `${s}.flac`)),
-    destino
+    somada
   ])]
   const tmp = join(dir, 'base', `${fonte}_limpo_tmp.flac`)
   await run(
@@ -3182,6 +3227,23 @@ async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state })
     state, null,
     { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
   )
+
+  // GUARDA ANTI-ROUBO. A revista solta o especialista dentro de uma faixa que
+  // JÁ É um instrumento — e modelo de seção adora devolver a faixa inteira com
+  // outro nome. Se isso passar, o usuário perde a guitarra (ou a bateria) pra
+  // ganhar uma cópia dela com etiqueta trocada, e o _orig some atrás de camadas.
+  // Separação tira o hóspede e deixa o dono da casa em pé: queda grande na
+  // fonte é roubo, não separação — desfaz tudo e o candidato fica sem a vaga.
+  const depoisDaFonte = await medir(tmp)
+  const QUEDA_MAX_DB = 9
+  if (depoisDaFonte.mean < antesDaFonte.mean - QUEDA_MAX_DB) {
+    diario(dir, `  revista: RECUSEI ${inst} em ${fonte} — levaria a faixa junto (${antesDaFonte.mean} -> ${depoisDaFonte.mean} dB)`)
+    for (const p of [tmp, novo, somada]) { try { rmSync(p, { force: true, maxRetries: 8, retryDelay: 200 }) } catch { /* bancada */ } }
+    return { present: false, mean, max, roubo: true }
+  }
+
+  if (jaExistia) rmSync(destino, { force: true, maxRetries: 12, retryDelay: 250 })
+  copyFileSync(somada, destino)
   rmSync(src, { force: true, maxRetries: 12, retryDelay: 250 })
   renameSync(tmp, src)
 
@@ -3195,7 +3257,14 @@ async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state })
   stems.push(inst, 'other')
   m.stems = stems
   m.stemInfo = m.stemInfo || {}
-  m.stemInfo[inst] = { present: true, mean, max, shelved: mean <= -42, origem: fonte }
+  const antes = m.stemInfo[inst] || {}
+  const origens = [...new Set([
+    ...(antes.origens || (antes.origem ? [antes.origem] : [])),
+    // faixa que já existia veio do "outros" pelo caminho clássico
+    ...(jaExistia && !antes.origens && !antes.origem ? ['other'] : []),
+    fonte
+  ])]
+  m.stemInfo[inst] = { ...antes, present: true, mean, max, shelved: mean <= -42, origens, origem: origens[0] }
   // a fonte mudou de conteúdo: a medida dela precisa acompanhar
   let fMean = -99
   let fMax = -99
@@ -3209,18 +3278,28 @@ async function extrairDaFaixa({ dir, fonte, inst, ffmpegPath, workRoot, state })
     m.stemInfo[fonte] = { ...(m.stemInfo[fonte] || {}), mean: fMean, max: fMax, present: fMean > -48 || fMax > -35 }
   } catch { /* medida velha fica valendo */ }
   writeMeta(dir, m)
-  diario(dir, `  revista: ${inst} saiu de dentro de ${fonte} (média ${mean} dB, pico ${max} dB)`)
-  return { present: true, mean, max }
+  diario(dir, `  revista: ${inst} ${jaExistia ? 'GANHOU MAIS' : 'saiu'} de dentro de ${fonte} (novo ${doNovo.mean} dB; faixa agora ${mean} dB, pico ${max} dB)`)
+  return { present: true, mean, max, somado: jaExistia }
 }
 
-// O que é SOM DA CASA em cada faixa-base: cheiro disso ali dentro não é
-// contrabando, é a própria faixa. O resto — sintetizador dentro da guitarra,
-// órgão dentro do piano — é o que a revista existe pra achar.
+// O que é SOM DA CASA em cada faixa-base: só o que a faixa LITERALMENTE É.
+//
+// Eu tinha enchido esta lista de primos — a guitarra "abrigava" sitar, banjo,
+// bandolim, cavaquinho, violão... com a desculpa de que são todos dedilhados. O
+// dono ouviu a Oceano e derrubou a desculpa: *"fui ver como é o som de um sitar,
+// é muito parecido, mas ele é fraco na faixa dele e na guitarra aparece mais"*.
+// Traduzindo: primo listado aqui é primo que a revista NUNCA vai procurar, e o
+// som fica preso na caixa errada pra sempre. Separador que abriga primo não é
+// separador. Fica só o nome da própria faixa; o resto é procurável.
+//
+// (Bateria mantém as PEÇAS do kit — bumbo, caixa, tom são a bateria, não
+// instrumentos convidados. Mas pandeiro, congas, timpani e triângulo saíram:
+// são instrumentos por direito próprio, e o dono quer cada um na sua pista.)
 const SOM_DA_CASA = {
   vocals: ['vocals'],
-  drums: ['drums', 'percussion', 'timpani', 'congas', 'tambourine', 'triangle'],
-  bass: ['bass', 'double-bass'],
-  guitar: ['guitar', 'acoustic-guitar', 'electric-guitar', 'banjo', 'mandolin', 'ukulele', 'dobro', 'sitar'],
+  drums: ['drums', 'kick', 'snare', 'toms', 'cymbals', 'hh'],
+  bass: ['bass'],
+  guitar: ['guitar'],
   piano: ['piano']
 }
 const REVISTAVEIS = Object.keys(SOM_DA_CASA)
@@ -3767,14 +3846,19 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             convergiu = false
             break
           }
-          const meta2 = readMeta(dir)
-          const ja2 = new Set([...stemsOf(meta2), ...(meta2?.extracted || [])])
           const casa = SOM_DA_CASA[faixa] || []
+          // TER FAIXA NÃO É MOTIVO PRA NÃO PROCURAR AQUI DENTRO. Este era o
+          // erro que prendia o sitar: eu filtrava por "já extraído", e como o
+          // sitar tinha saído do "outros" (fraquinho, -50 dB), a revista da
+          // guitarra pulava ele — justo onde o dono ouvia o sitar mais alto que
+          // na própria faixa dele. Instrumento com faixa fraca é o caso MAIS
+          // comum de contrabando, não a exceção: o que ele achar aqui é somado
+          // na faixa que já existe (ver extrairDaFaixa).
           const cheirosR = Object.entries(faroR?.arsenal || {})
             .map(([inst, v]) => [APELIDOS_FARO[inst] || inst, v])
             .map(([inst, v]) => ({ inst, score: v?.score ?? v ?? 0, at: v?.at ?? 0 }))
             .filter((c) => c.score >= CHEIRO_MIN && SPECIALISTS[c.inst]
-              && !casa.includes(c.inst) && !ja2.has(c.inst)
+              && !casa.includes(c.inst)
               && !jaSondou(sondas, c.inst, c.at, 10, durR, faixa))
             .sort((a, b) => b.score - a.score)
           // mesmo aglutinador da dissecação: cheiros vizinhos são o mesmo som
@@ -3809,7 +3893,11 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
               onStatus({ id, state: 'running', auto: true, fase: 'separando', alvos: [r.dono] })
               try {
                 const res = await extrairDaFaixa({ dir, fonte: faixa, inst: r.dono, ffmpegPath, workRoot, state })
-                if (!res.present) {
+                // recusado por roubo é resposta DEFINITIVA ("não é um hóspede,
+                // é a própria faixa"), não dívida: o veto já ficou registrado e
+                // não se confessa som que tem dono conhecido
+                if (res.roubo) { /* veto vale; segue */ }
+                else if (!res.present) {
                   // reivindicou no clipe e veio mudo na música: o som existe,
                   // só não virou faixa — confessa apontando a rua certa
                   if (!progresso.semDono.some((s) => s.ini === trecho.ini && s.fonte === faixa)) {
