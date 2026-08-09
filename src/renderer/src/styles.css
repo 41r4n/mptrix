@@ -32,7 +32,7 @@
   --accent-2: #b6ff3b;      /* legado: colapsa no destaque único */
   --accent-dim: rgba(182, 255, 59, 0.14);
   --accent-border: rgba(182, 255, 59, 0.55);
-  --glow-painel: rgba(182, 255, 59, 0.13);  /* respingo da marca lima pra fora do painel */
+  --glow-painel: rgba(182, 255, 59, 0.2);  /* respingo da marca lima pra fora do painel */
   --ok: #4ecb8c;
   --bad: #f87171;
   --warn: #eab308;          /* botão M ativo */
@@ -7485,6 +7485,10 @@ section h2::after {
 :root {
   --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  /* CHANFRO DAS PECAS PEQUENAS. Num chip de 34px de altura, cortar 10px das
+     quinas come quase um terco do lado — deixa de ler como chanfro e passa a
+     ler como pedaco faltando. 5px mantem a assinatura sem morder a peca. */
+  --corte-xs: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
 }
 
 .console {
@@ -8198,9 +8202,9 @@ ul.hlib-grid {
   position: relative;
   margin-bottom: 34px;
   filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 0.15))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.2))
     drop-shadow(0 4px 9px rgba(0, 0, 0, 0.85))
-    drop-shadow(-6px 6px 42px var(--glow-painel));
+    drop-shadow(-6px 7px 46px var(--glow-painel));
 }
 
 .barra {
@@ -8243,7 +8247,7 @@ ul.hlib-grid {
   box-shadow:
     inset 0 0 0 1px var(--border-control),
     inset 0 2px 7px rgba(0, 0, 0, 0.85);
-  clip-path: var(--corte-sm);
+  clip-path: var(--corte-xs);
   transition: box-shadow 0.14s ease;
 }
 .barra-busca:focus-within {
@@ -8303,7 +8307,7 @@ ul.hlib-grid {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
-  clip-path: var(--corte-sm);
+  clip-path: var(--corte-xs);
   transition: background 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
   flex: none;
 }
