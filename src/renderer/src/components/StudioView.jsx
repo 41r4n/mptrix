@@ -657,6 +657,9 @@ export default function StudioView({ source, onClose }) {
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
   const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
   const [isolando, setIsolando] = useState(false) // "aponta e separa" em curso
+  // avisos de confissão dispensados: guarda a ASSINATURA do que foi dispensado,
+  // então som novo confessado traz o aviso de volta sozinho
+  const [avisoOculto, setAvisoOculto] = useState({})
   const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
@@ -3265,19 +3268,43 @@ export default function StudioView({ source, onClose }) {
               // confissão da revista aponta pra DENTRO de uma faixa — dizer só o
               // tempo mandaria o ouvido procurar na música inteira
               const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.fonte ? ` dentro de ${STEM_META[r.fonte]?.label || r.fonte}` : ''}`
+              // A ASSINATURA é a chave de "já vi este aviso". Esconder não pode
+              // virar esquecer: se a dissecação confessar um trecho novo, a
+              // assinatura muda e o aviso VOLTA sozinho. Prestar contas do som
+              // é obrigação do sistema; o que o usuário dispensa é o aviso que
+              // ele já leu, não a dívida.
+              const sig = (l) => `${session.key}|${l.map(faixa).join('·')}`
+              const sigOrfas = sig(orfas)
+              const sigPend = sig(pendentes)
               return (
                 <>
-                  {orfas.length > 0 && (
+                  {orfas.length > 0 && avisoOculto.orfas !== sigOrfas && (
                     <div className="studio-absent muted">
-                      Som sem dono: {orfas
-                        .map((r) => `${faixa(r)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
-                        .join(' · ')} — tem som aí que eu não consegui nomear.
+                      <span>
+                        Som sem dono: {orfas
+                          .map((r) => `${faixa(r)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
+                          .join(' · ')} — tem som aí que eu não consegui nomear.
+                      </span>
+                      <button
+                        className="absent-x"
+                        onClick={() => setAvisoOculto((a) => ({ ...a, orfas: sigOrfas }))}
+                        title="Tirar este aviso da tela (volta se aparecer som novo)"
+                        aria-label="Tirar aviso da tela"
+                      >×</button>
                     </div>
                   )}
-                  {pendentes.length > 0 && (
+                  {pendentes.length > 0 && avisoOculto.pendentes !== sigPend && (
                     <div className="studio-absent muted">
-                      Faltou perguntar: {pendentes.map(faixa).join(' · ')} — tem som aí, mas
-                      a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.
+                      <span>
+                        Faltou perguntar: {pendentes.map(faixa).join(' · ')} — tem som aí, mas
+                        a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.
+                      </span>
+                      <button
+                        className="absent-x"
+                        onClick={() => setAvisoOculto((a) => ({ ...a, pendentes: sigPend }))}
+                        title="Tirar este aviso da tela (volta se aparecer som novo)"
+                        aria-label="Tirar aviso da tela"
+                      >×</button>
                     </div>
                   )}
                 </>
