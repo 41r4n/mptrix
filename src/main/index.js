@@ -27,6 +27,7 @@ import {
   specialistCatalog,
   redoStem,
   setShelved,
+  setDentroDeOutros,
   stemPeaks,
   investigateStretch,
   isolarTrecho,
@@ -1027,6 +1028,16 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:shelve', (_e, { key, stem, shelved }) => {
     try {
       return { session: setShelved({ key, stem, shelved }) }
+    } catch (err) {
+      return { error: err.message }
+    }
+  })
+
+  // Guardar a faixa DENTRO do "outros" (e tirar de lá). Só marca — nenhum
+  // áudio é tocado, então a volta é exata e instantânea.
+  ipcMain.handle('studio:fold', (_e, { key, stem, dentro }) => {
+    try {
+      return { session: setDentroDeOutros({ key, stem, dentro }) }
     } catch (err) {
       return { error: err.message }
     }

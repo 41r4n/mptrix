@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 
 const STEM_META = {
   vocals: { label: 'Voz', icon: '🎤' },
@@ -404,9 +404,13 @@ function keyLabel(analysis) {
 
 // "Mostra o que a música tem": faixas praticamente silenciosas ficam de fora
 // Mesa: só quem toca de verdade (nem quase-mudas, nem guardadas na prateleira)
+// Guardada DENTRO do "outros": não aparece na mesa nem na prateleira, porque
+// ela deixou de ser uma faixa por conta própria — virou parte do outros.
+const noOutros = (sess, s) => !!sess?.stemInfo?.[s]?.dentroDeOutros
+
 function presentStems(sess) {
   if (!sess?.stemInfo) return sess?.stems || []
-  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && !sess.stemInfo[s]?.shelved)
+  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && !sess.stemInfo[s]?.shelved && !noOutros(sess, s))
 }
 
 // Player: TUDO que tem som entra na mistura — inclusive as guardadas. O som
@@ -420,7 +424,14 @@ function audibleStems(sess) {
 // Prateleira: faixas guardadas (evidência fraca ou decisão do dono)
 function shelvedStems(sess) {
   if (!sess?.stemInfo) return []
-  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && sess.stemInfo[s]?.shelved)
+  return sess.stems.filter((s) => sess.stemInfo[s]?.present !== false && sess.stemInfo[s]?.shelved && !noOutros(sess, s))
+}
+
+// Faixas que a pessoa mandou pra dentro do "outros" — continuam tocando (dentro
+// dele), e daqui saem de volta com um clique.
+function foldedStems(sess) {
+  if (!sess?.stemInfo) return []
+  return sess.stems.filter((s) => s !== 'other' && noOutros(sess, s))
 }
 
 function absentStems(sess) {
@@ -577,10 +588,15 @@ function createStemPlayer() {
       }
     },
 
-    applyGains(volumes, muted, solo) {
+    // `grupo` diz quem manda em quem: faixa guardada DENTRO do "outros" não tem
+    // vida própria — obedece o volume, o mudo e o solo do outros. Sem isso,
+    // "guardar dentro" seria mentira: dar solo no Outros deixaria de fora
+    // justamente o som que a pessoa acabou de mandar pra lá.
+    applyGains(volumes, muted, solo, grupo = {}) {
       for (const [stem, el] of Object.entries(this.els)) {
-        const vol = Math.max(0, Math.min(1, volumes[stem] ?? 1))
-        const off = muted.has(stem) || (solo.size > 0 && !solo.has(stem))
+        const dono = grupo[stem] || stem
+        const vol = Math.max(0, Math.min(1, volumes[dono] ?? 1))
+        const off = muted.has(dono) || (solo.size > 0 && !solo.has(dono))
         el.volume = off ? 0 : vol
       }
     },
@@ -945,7 +961,7 @@ export default function StudioView({ source, onClose }) {
         const format = res.format || 'flac'
         await p.load(audibleStems(session), stemUrl(session.key, variant, format), targetPitch)
         const m = mixerRef.current
-        p.applyGains(m.volumes, m.muted, m.solo)
+        p.applyGains(m.volumes, m.muted, m.solo, m.grupo)
         p.seek(cur)
         if (wasPlaying && aliveRef.current && pitchRef.current === targetPitch) await p.play(cur)
         if (aliveRef.current) setHq({ state: 'done' })
@@ -976,7 +992,7 @@ export default function StudioView({ source, onClose }) {
     try {
       await p.load(audibleStems(sess), stemUrl(sess.key, 'base', 'flac'), 0)
       const m = mixerRef.current
-      p.applyGains({ ...m.volumes }, m.muted, m.solo)
+      p.applyGains({ ...m.volumes }, m.muted, m.solo, m.grupo)
       p.seek(pos)
       if (wasPlaying && aliveRef.current) await p.play(pos)
     } catch {
@@ -986,7 +1002,7 @@ export default function StudioView({ source, onClose }) {
       try {
         await p.load(audibleStems(sess), stemUrl(sess.key, 'base', 'flac'), 0)
         const m = mixerRef.current
-        p.applyGains({ ...m.volumes }, m.muted, m.solo)
+        p.applyGains({ ...m.volumes }, m.muted, m.solo, m.grupo)
         p.seek(pos)
         if (wasPlaying && aliveRef.current) await p.play(pos)
       } catch (e2) {
@@ -1383,6 +1399,24 @@ export default function StudioView({ source, onClose }) {
       return
     }
     if (res?.session) await reloadSession(res.session)
+  }
+
+  // Guardar a faixa DENTRO do "outros" (ou tirar de lá). Nenhum áudio é
+  // alterado — é marca, então a volta é exata e instantânea.
+  const setDentroOutros = async (stem, dentro) => {
+    if (!session) return
+    const res = await window.mptrix.studio.fold({ key: session.key, stem, dentro })
+    if (res?.error) {
+      setExportMsg(`⚠ ${res.error}`)
+      return
+    }
+    if (res?.session) {
+      await reloadSession(res.session)
+      const nome = stemMeta(stem, res.session).label
+      setExportMsg(dentro
+        ? `${nome} foi pra dentro do Outros — continua tocando, agora junto com ele.`
+        : `${nome} saiu do Outros e voltou pra mesa.`)
+    }
   }
 
   // LEGENDA FLUTUANTE: uma só, posicionada em tela cheia — assim nunca é
@@ -1989,10 +2023,20 @@ export default function StudioView({ source, onClose }) {
     }
   }, [source.path, model]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Quem está guardado dentro do "outros" obedece o outros — no tocador e na
+  // exportação. Recalcula junto com a sessão porque guardar/tirar muda o mapa.
+  const grupoDoOutros = useMemo(() => {
+    const g = {}
+    for (const s of session?.stems || []) {
+      if (s !== 'other' && session?.stemInfo?.[s]?.dentroDeOutros) g[s] = 'other'
+    }
+    return g
+  }, [session])
+
   useEffect(() => {
-    mixerRef.current = { volumes, muted, solo }
-    playerRef.current?.applyGains(volumes, muted, solo)
-  }, [volumes, muted, solo, session, phase])
+    mixerRef.current = { volumes, muted, solo, grupo: grupoDoOutros }
+    playerRef.current?.applyGains(volumes, muted, solo, grupoDoOutros)
+  }, [volumes, muted, solo, session, phase, grupoDoOutros])
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -3226,6 +3270,25 @@ export default function StudioView({ source, onClose }) {
             </aside>
             )}
             </div>
+            {/* DENTRO DO OUTROS: quem foi jogado pra lá some da mesa, então
+                precisa de uma porta de volta que não dependa de clicar na
+                faixa — ela não está mais lá pra ser clicada. Cada nome é o
+                botão que traz de volta. */}
+            {foldedStems(session).length > 0 && (
+              <div className="dentro-outros">
+                <span className="dentro-cap">DENTRO DO OUTROS</span>
+                {foldedStems(session).map((stem) => (
+                  <button
+                    key={stem}
+                    className="dentro-chip"
+                    onClick={() => setDentroOutros(stem, false)}
+                    title="Tirar do Outros e devolver pra mesa"
+                  >
+                    {stemMeta(stem, session).label} <span aria-hidden="true">↖</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
               <div className={`shelf-frame ${shelfOpen ? 'open' : ''}`}>
@@ -3590,9 +3653,9 @@ export default function StudioView({ source, onClose }) {
                       </div>
                     </div>
                   )}
-                  {(session.extracted || []).includes(trackInfo) && (
-                    <div className="confirm-actions">
-                      {session.stemInfo?.[trackInfo]?.shelved ? (
+                  <div className="confirm-actions">
+                    {(session.extracted || []).includes(trackInfo) && (
+                      session.stemInfo?.[trackInfo]?.shelved ? (
                         <button
                           className="btn-primary btn-small"
                           onClick={() => { setStemShelf(trackInfo, false); setTrackInfo(null) }}
@@ -3602,9 +3665,19 @@ export default function StudioView({ source, onClose }) {
                           className="btn-secondary btn-small"
                           onClick={() => { setStemShelf(trackInfo, true); setTrackInfo(null) }}
                         >📦 Guardar na prateleira</button>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                    {/* Vale pra QUALQUER faixa (guardada na prateleira ou não),
+                        menos o próprio outros. Prateleira é esconder mantendo
+                        vida própria; isto é juntar no outros de vez. */}
+                    {trackInfo !== 'other' && (
+                      <button
+                        className="btn-secondary btn-small"
+                        onClick={() => { setDentroOutros(trackInfo, true); setTrackInfo(null) }}
+                        title="A faixa continua tocando, mas junto com o Outros: mesmo volume, mesmo mudo, mesmo solo. Dá pra tirar depois."
+                      >↘ Jogar dentro do Outros</button>
+                    )}
+                  </div>
                 </div>
               </div>
             )

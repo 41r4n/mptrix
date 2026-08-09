@@ -2158,6 +2158,32 @@ export function setShelved({ key, stem, shelved }) {
   return sessionPayload(key, readMeta(dir))
 }
 
+/**
+ * GUARDAR DENTRO DO "OUTROS" (e tirar de lá).
+ *
+ * Faixa que não interessa não precisa sumir nem virar arquivo novo: ela passa a
+ * andar JUNTO com o "outros" — mesmo volume, mesmo mudo, mesmo solo, e sai
+ * dentro dele na exportação. Na mesa some; na música continua inteira.
+ *
+ * É de propósito que NENHUM ÁUDIO é tocado aqui. Somar de verdade dentro do
+ * "outros" exigiria subtrair depois pra desfazer, e subtração é estimativa —
+ * ida e volta algumas vezes degradaria a faixa até virar chiado. Como marca, o
+ * caminho de volta é exato e instantâneo, hoje e daqui a um ano.
+ *
+ * Diferente da prateleira: prateleira é ESCONDER (a faixa continua sozinha, com
+ * volume e solo próprios); isto é AGRUPAR (ela deixa de ter vida própria).
+ */
+export function setDentroDeOutros({ key, stem, dentro }) {
+  const dir = join(STEMS_DIR, key)
+  const meta = readMeta(dir)
+  if (!meta) throw new Error('Sessão não encontrada.')
+  if (stem === 'other') throw new Error('O "outros" não cabe dentro dele mesmo.')
+  meta.stemInfo = meta.stemInfo || {}
+  meta.stemInfo[stem] = { ...(meta.stemInfo[stem] || {}), dentroDeOutros: !!dentro }
+  writeMeta(dir, meta)
+  return sessionPayload(key, readMeta(dir))
+}
+
 // REFAZER FAIXA: apaga uma faixa extraída e devolve o som dela pra "outros",
 // deixando tudo pronto pra extrair de novo DO ZERO (sem reaproveitar pedaços
 // possivelmente suspeitos de uma rodada problemática).
@@ -4407,10 +4433,30 @@ export async function exportStems({ key, targetDir, ffmpegPath, labels }) {
   const state = {}
   const written = []
   const safeTitle = (meta.title || 'musica').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').slice(0, 120)
+  // Faixa guardada DENTRO do "outros" não sai como arquivo próprio: ela sai
+  // dentro do outros, que é o que a pessoa vê na mesa. Exportar as duas coisas
+  // entregaria o mesmo som duas vezes — e quem somasse os arquivos de volta
+  // ouviria esse som no dobro do volume.
+  const dentro = stems.filter((s) => s !== 'other' && meta.stemInfo?.[s]?.dentroDeOutros
+    && existsSync(join(dir, 'base', `${s}.flac`)))
   for (const stem of stems) {
+    if (dentro.includes(stem)) continue
     const label = labels?.[stem] || stem
     const target = join(targetDir, `${safeTitle} - ${label}.wav`)
-    await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', join(dir, 'base', `${stem}.flac`), target], state)
+    const fonte = join(dir, 'base', `${stem}.flac`)
+    if (stem === 'other' && dentro.length) {
+      // soma sem normalizar: `normalize=1` dividiria o volume pelo número de
+      // entradas e o "outros" exportado sairia mais baixo que o que se ouve
+      const entradas = [fonte, ...dentro.map((s) => join(dir, 'base', `${s}.flac`))]
+      await run(ffmpegPath, [
+        '-y', '-loglevel', 'error',
+        ...entradas.flatMap((f) => ['-i', f]),
+        '-filter_complex', `amix=inputs=${entradas.length}:duration=longest:normalize=0`,
+        target
+      ], state)
+    } else {
+      await run(ffmpegPath, ['-y', '-loglevel', 'error', '-i', fonte, target], state)
+    }
     written.push(target)
   }
   return written

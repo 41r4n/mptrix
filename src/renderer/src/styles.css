@@ -3591,6 +3591,37 @@ section h2 {
   border-color: var(--accent);
 }
 .lupa-desc:disabled { opacity: 0.5; }
+/* Faixas jogadas dentro do "outros". O rótulo em caixa-alta com hairline é
+   leitura de painel (não clica); cada nome É botão, então tem borda — a regra
+   da casa: borda em volta de texto = clicável. */
+.dentro-outros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.dentro-cap {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--muted-2);
+}
+.dentro-chip {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.dentro-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
 /* ---------- DAW MPTrix: ruler, agulha, tint, transporte (assinatura) ---------- */
 .studio-ruler {
   position: relative;
