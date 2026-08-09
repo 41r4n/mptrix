@@ -91,6 +91,11 @@ export default function App() {
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
   // da nuvem, mais abaixo) — null enquanto não respondeu
   const [nuvemLigada, setNuvemLigada] = useState(null)
+  // ABA ATIVA. O app deixa de ser uma pagina que se rola de cima a baixo e
+  // passa a ser um aparelho: trilho fixo a esquerda, area de trabalho a
+  // direita. Era o esqueleto que fazia a tela "parecer a mesma" por baixo de
+  // qualquer pele nova.
+  const [aba, setAba] = useState('estudio')
   useEffect(() => {
     let vivo = true
     const ler = async () => {
@@ -163,128 +168,159 @@ export default function App() {
   return (
     <UpdatesProvider>
       <div className="app">
-        {/* ================= CONSOLE ==================
-            O problema nao era organizacao, era FALTA DE ESCALA: a tela inteira
-            vivia entre 10 e 17px, tudo com o mesmo peso, e isso le como
-            relatorio. Aqui a marca ocupa o tamanho que uma marca ocupa, e ao
-            lado dela fica uma LEITURA DE INSTRUMENTO (destino, nuvem, acervo)
-            no lugar da antiga linha de pasta -- estado do aparelho, nao
-            formulario. */}
-        <header className="console">
-          <span className="console-mira tl" aria-hidden="true" />
-          <span className="console-mira tr" aria-hidden="true" />
-          <div className="console-marca">
-            <span className="brand-hex brand-hex-lg" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" className="brand-glyph">
-                <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" />
-              </svg>
-            </span>
-            <div className="console-marca-texto">
-              <h1 className="console-nome">MPTRIX</h1>
-              <p className="console-lema">BAIXAR <i>·</i> SEPARAR <i>·</i> ENSAIAR</p>
-            </div>
-          </div>
-
-          <div className="leitura">
-            <div className="leitura-linha">
-              <span className="leitura-rot">DESTINO</span>
-              <span className="leitura-val" title={outputDir}>
-                {outputDir ? outputDir.split(/[\/]/).filter(Boolean).slice(-1)[0] : '—'}
-              </span>
-              <span className="leitura-acoes">
-                <button className="btn-ghost-min" onClick={openFolder}>abrir</button>
-                <button className="btn-ghost-min" onClick={pickFolder}>mudar</button>
-              </span>
-            </div>
-            <div className="leitura-linha">
-              <span className="leitura-rot">NUVEM</span>
-              <span className={`leitura-val ${nuvemLigada ? 'aceso' : ''}`}>
-                {nuvemLigada === null ? '…' : nuvemLigada ? 'LIGADA' : 'DESLIGADA'}
-              </span>
-            </div>
-            <div className="leitura-linha">
-              <span className="leitura-rot">ACERVO</span>
-              <span className="leitura-val num">{history.length}</span>
-              <span className="leitura-sufixo">itens</span>
-            </div>
-          </div>
-        </header>
-
-        <UpdateBanner />
-
-        {!binariesOk && (
-        <div className="banner banner-error">
-          <strong>Binários ausentes.</strong>{' '}
-          Coloque <code>yt-dlp.exe</code> e <code>ffmpeg.exe</code> em <code>resources/bin/</code> e reinicie.
-          <ul>
-            <li className={env.binariesPresent.ytDlp ? 'ok' : 'missing'}>
-              yt-dlp.exe — {env.binariesPresent.ytDlp ? 'ok' : 'faltando'}
-            </li>
-            <li className={env.binariesPresent.ffmpeg ? 'ok' : 'missing'}>
-              ffmpeg.exe — {env.binariesPresent.ffmpeg ? 'ok' : 'faltando'}
-            </li>
-          </ul>
-        </div>
-      )}
-
-      {/* ESTUDIO PRIMEIRO E EM FAIXA LARGA: e o que o app tem de proprio, e
-          estava escondido como mais um cartao igual aos seis de baixar. */}
-      <section className="bloco">
-        <h2 className="secao"><b>01</b> ESTÚDIO DE ENSAIO <span className="beta-tag">BETA</span></h2>
-        <button className="faixa" onClick={openStudioFromFile}>
-          <span className="faixa-fundo" aria-hidden="true" />
-          <span className="faixa-corpo">
-            <span className="faixa-titulo">Separar<br />instrumentos</span>
-            <span className="faixa-lista">
-              <i>voz</i><i>bateria</i><i>baixo</i><i>guitarra</i><i>piano</i><i>e o resto</i>
-            </span>
-            <span className="faixa-desc">
-              Muda o tom, deixa mais lento, marca o compasso e ensaia por cima. Escolha uma
-              música do computador ou pelo botão de estúdio de um item do acervo.
-            </span>
+      {/* ═══════════ TRILHO ═══════════
+          O app parou de ser uma página que se rola de cima a baixo. As três
+          coisas que ele faz viram DESTINOS, não seções empilhadas — e o estado
+          do aparelho (destino, nuvem, acervo) mora no pé do trilho, sempre à
+          vista, como painel de equipamento. */}
+      <nav className="trilho">
+        <div className="trilho-marca">
+          <span className="brand-hex" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15" className="brand-glyph">
+              <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" />
+            </svg>
           </span>
-          <span className="faixa-ico" aria-hidden="true"><Ico nome="studio" tamanho={112} /></span>
-        </button>
-      </section>
+          <span className="trilho-nome">MPTRIX</span>
+        </div>
 
-      <section className="bloco">
-        <h2 className="secao"><b>02</b> BAIXAR</h2>
-        <div className="grade">
-          {presets.map((p, i) => (
+        <div className="trilho-itens">
+          {[
+            { id: 'estudio', n: '01', rot: 'ESTÚDIO', sub: 'separar e ensaiar' },
+            { id: 'baixar', n: '02', rot: 'BAIXAR', sub: 'MP3, WAV, vídeo' },
+            { id: 'acervo', n: '03', rot: 'ACERVO', sub: `${history.length} itens` },
+            { id: 'nuvem', n: '04', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
+          ].map((it) => (
             <button
-              key={p.id}
-              className={`chip ${binariesOk ? '' : 'disabled'}`}
-              onClick={() => binariesOk && setActivePreset(p)}
-              disabled={!binariesOk}
+              key={it.id}
+              className={`trilho-item ${aba === it.id ? 'on' : ''}`}
+              onClick={() => setAba(it.id)}
             >
-              <span className="chip-borda" aria-hidden="true" />
-              <span className="chip-in">
-                <span className="chip-topo">
-                  <span className="chip-num">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="chip-ico" aria-hidden="true"><Ico nome={p.id} tamanho={18} /></span>
-                </span>
-                <span className="chip-nome">{p.name}</span>
-                {PRESET_TAG[p.id] && <span className="chip-tag">{PRESET_TAG[p.id]}</span>}
-                <span className="chip-desc">{p.description}</span>
+              <span className="trilho-n">{it.n}</span>
+              <span className="trilho-txt">
+                <span className="trilho-rot">{it.rot}</span>
+                <span className="trilho-sub">{it.sub}</span>
               </span>
             </button>
           ))}
         </div>
-      </section>
 
-      <NuvemConfig />
+        <div className="trilho-pe">
+          <div className="pe-linha">
+            <span className="pe-rot">DESTINO</span>
+            <span className="pe-val" title={outputDir}>
+              {outputDir ? outputDir.split(/[\\/]/).filter(Boolean).slice(-1)[0] : '—'}
+            </span>
+          </div>
+          <div className="pe-acoes">
+            <button className="btn-ghost-min" onClick={openFolder}>abrir</button>
+            <button className="btn-ghost-min" onClick={pickFolder}>mudar</button>
+          </div>
+          <div className="pe-linha">
+            <span className="pe-rot">NUVEM</span>
+            <span className={`pe-val ${nuvemLigada ? 'aceso' : ''}`}>
+              {nuvemLigada === null ? '…' : nuvemLigada ? 'LIGADA' : 'DESLIGADA'}
+            </span>
+          </div>
+        </div>
+      </nav>
 
-      <section className="bloco">
-        <h2 className="secao"><b>03</b> ACERVO</h2>
-        <HistoryList
-          history={history}
-          onChange={setHistory}
-          onOpenStudio={openStudioFromEntry}
-          onQuickEdit={openQuickEditFromEntry}
-        />
-      </section>
+      {/* ═══════════ ÁREA DE TRABALHO ═══════════ */}
+      <main className="palco">
+        <UpdateBanner />
 
-      <ShareApp />
+        {!binariesOk && (
+          <div className="banner banner-error">
+            <strong>Binários ausentes.</strong>{' '}
+            Coloque <code>yt-dlp.exe</code> e <code>ffmpeg.exe</code> em <code>resources/bin/</code> e reinicie.
+            <ul>
+              <li className={env.binariesPresent.ytDlp ? 'ok' : 'missing'}>
+                yt-dlp.exe — {env.binariesPresent.ytDlp ? 'ok' : 'faltando'}
+              </li>
+              <li className={env.binariesPresent.ffmpeg ? 'ok' : 'missing'}>
+                ffmpeg.exe — {env.binariesPresent.ffmpeg ? 'ok' : 'faltando'}
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {aba === 'estudio' && (
+          <div className="palco-in">
+            <p className="palco-olho">01 / ESTÚDIO DE ENSAIO <span className="beta-tag">BETA</span></p>
+            <h1 className="palco-titulo">Separar<br />instrumentos</h1>
+            <p className="palco-linha">
+              Voz, bateria, baixo, guitarra, piano — e o resto que ninguém
+              costuma achar. Depois mude o tom, deixe mais lento, marque o
+              compasso e ensaie por cima.
+            </p>
+            <div className="palco-etiquetas">
+              <i>dissecação</i><i>tom</i><i>velocidade</i><i>metrônomo</i><i>cifra</i><i>letra</i>
+            </div>
+            <button className="acao" onClick={openStudioFromFile}>
+              <span className="acao-borda" aria-hidden="true" />
+              <span className="acao-in">
+                <Ico nome="studio" tamanho={20} />
+                Escolher uma música do computador
+              </span>
+            </button>
+            <p className="palco-nota">
+              Ou abra pelo botão de estúdio de qualquer item do acervo.
+            </p>
+            <span className="palco-ico" aria-hidden="true"><Ico nome="studio" tamanho={280} /></span>
+          </div>
+        )}
+
+        {aba === 'baixar' && (
+          <div className="palco-in">
+            <p className="palco-olho">02 / BAIXAR</p>
+            <h1 className="palco-titulo">O que você<br />quer levar?</h1>
+            <div className="grade">
+              {presets.map((p, i) => (
+                <button
+                  key={p.id}
+                  className={`chip ${binariesOk ? '' : 'disabled'}`}
+                  onClick={() => binariesOk && setActivePreset(p)}
+                  disabled={!binariesOk}
+                >
+                  <span className="chip-borda" aria-hidden="true" />
+                  <span className="chip-in">
+                    <span className="chip-topo">
+                      <span className="chip-num">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="chip-ico" aria-hidden="true"><Ico nome={p.id} tamanho={18} /></span>
+                    </span>
+                    <span className="chip-nome">{p.name}</span>
+                    {PRESET_TAG[p.id] && <span className="chip-tag">{PRESET_TAG[p.id]}</span>}
+                    <span className="chip-desc">{p.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {aba === 'acervo' && (
+          <div className="palco-in">
+            <p className="palco-olho">03 / ACERVO</p>
+            <h1 className="palco-titulo">{history.length} <small>itens</small></h1>
+            <HistoryList
+              history={history}
+              onChange={setHistory}
+              onOpenStudio={openStudioFromEntry}
+              onQuickEdit={openQuickEditFromEntry}
+            />
+          </div>
+        )}
+
+        {aba === 'nuvem' && (
+          <div className="palco-in">
+            <p className="palco-olho">04 / NUVEM</p>
+            <h1 className="palco-titulo">Separação<br />na nuvem</h1>
+            <NuvemConfig />
+            <ShareApp />
+          </div>
+        )}
+      </main>
+
+
 
       {activePreset && activePreset.id === 'playlist' && (
         <PlaylistModal
