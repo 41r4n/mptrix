@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, 
 import { spawn } from 'child_process'
 import { join, basename, extname, dirname } from 'path'
 import { Readable } from 'stream'
-import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFileSync, readdirSync, unlinkSync } from 'fs'
 import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import {
@@ -1541,6 +1541,54 @@ app.whenReady().then(() => {
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
   })
+
+  // VARREDURA DAS CAPAS ÓRFÃS.
+  //
+  // A chave da capa é feita do caminho + tamanho + data do arquivo + versão do
+  // extrator. Qualquer um dos quatro mudando gera chave nova — e a capa antiga
+  // fica no disco pra sempre, sem ninguém pra pedir por ela. Isso acontece
+  // sozinho, na rotina normal: item apagado do acervo, arquivo renomeado, e
+  // toda vez que eu melhoro o jeito de extrair (a mudança pro filtro
+  // "thumbnail" sozinha deixou 99 arquivos órfãos).
+  //
+  // Como a conta é a mesma que gera as chaves boas, o que sobra é lixo por
+  // definição — e o que for apagado por engano volta na primeira vez que o
+  // acervo pedir. Por isso a varredura pode ser burra e barata: roda uma vez
+  // na abertura e não pergunta nada.
+  const limparCapasOrfas = () => {
+    try {
+      const dir = join(stemsRoot(), '_capas', 'img')
+      if (!existsSync(dir)) return
+      const lista = getHistory()
+      // acervo vazio não é "tudo é órfão": pode ser registro ainda não lido
+      if (!lista.length) return
+
+      const vivas = new Set()
+      for (const e of lista) {
+        const f = e.primaryFile
+        if (!f || !existsSync(f)) continue
+        const st = statSync(f)
+        const chave = createHash('sha1')
+          .update(`${f}|${st.size}|${st.mtimeMs}|v${CAPA_V}`).digest('hex').slice(0, 16)
+        vivas.add(`${chave}.jpg`)
+      }
+
+      let apagadas = 0
+      let bytes = 0
+      for (const nome of readdirSync(dir)) {
+        if (vivas.has(nome)) continue
+        try {
+          bytes += statSync(join(dir, nome)).size
+          unlinkSync(join(dir, nome))
+          apagadas++
+        } catch { /* arquivo em uso: fica pra proxima abertura */ }
+      }
+      if (apagadas) console.log(`[capas] ${apagadas} orfas apagadas (${Math.round(bytes / 1024)} KB)`)
+    } catch {
+      /* limpeza e conforto, nunca obrigacao: jamais pode impedir o app de abrir */
+    }
+  }
+  limparCapasOrfas()
 
   createWindow()
 
