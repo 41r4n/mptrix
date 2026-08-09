@@ -2978,7 +2978,7 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
         // na fila. Uma falhar não derruba as outras — elas já estão em voo.
         // O MOTIVO viaja junto: sem ele, "sondados=2 de 6" no diário não dizia
         // nada e a causa da perda ficava fora do alcance de qualquer conserto.
-        return { inst, falhou: true, erro: e?.message || 'morreu sem dizer por quê' }
+        return { inst, falhou: true, erro: e?.message || 'morreu sem dizer por quê', semCredito: !!e?.semCredito }
       }
       try {
         // decodifica com estado NEUTRO de propósito: a sonda já foi paga e
@@ -3005,6 +3005,12 @@ async function interrogarTrecho({ dir, workRoot, ffmpegPath, trecho, at, dur, su
     // música não fechava nunca. Insistir uma vez custa uma sonda e devolve o
     // trecho pro caminho normal.
     const perdidas = respostas.filter((r) => r.falhou)
+    // Parede de crédito: nem insiste, nem confessa, nem marca pendência — sai
+    // avisando, que é o que dá pro usuário fazer alguma coisa a respeito.
+    if (perdidas.some((r) => r.semCredito)) {
+      diario(dir, '    ACABOU O CRÉDITO na nuvem — parei aqui')
+      return { dono: null, sondados, palpite, truncado: true, semTeto: true, semCredito: true }
+    }
     if (perdidas.length) {
       for (const r of perdidas) diario(dir, `    perdi ${r.inst}: ${r.erro}`)
       // não insiste sem dinheiro nem depois do cancelar — e dá um respiro, que
@@ -3678,7 +3684,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           // sem dinheiro nem pra UMA pergunta: parar aqui e dizer por quê. Sem
           // isso a dissecação seguia varrendo trechos e rodadas em falso,
           // rodando o farejador três vezes por abertura pra nada.
-          if (r.semTeto) { motivoParada = 'nuvem-indisponivel'; break }
+          if (r.semTeto) { motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'; break }
           // sonda paga vai pro disco AGORA: fechar o app (ou faltar luz) no meio
           // da dissecação não pode jogar fora o que já foi pago.
           // Falhar aqui EM SILÊNCIO era o pior dos mundos: o motor seguia
@@ -3891,7 +3897,7 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             })
             progresso.procurados.push(...r.sondados)
             diario(dir, `  revista ${faixa} ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} perdi=${r.sumiram?.length || 0} dono=${r.dono || '-'} truncado=${r.truncado}`)
-            if (r.semTeto) { motivoParada = 'nuvem-indisponivel'; revistaLimpa = false; break }
+            if (r.semTeto) { motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'; revistaLimpa = false; break }
             try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR a revista: ${e?.message || e}`) }
             if (r.dono) {
               onStatus({ id, state: 'running', auto: true, fase: 'separando', alvos: [r.dono] })

@@ -159,7 +159,16 @@ async function criarPredicao(chave, versao, input, state) {
         ultima = new Error('a nuvem pediu pra esperar (limite de pedidos por minuto)')
         continue
       }
-      if (j !== null && r.status < 500) throw new Error(j.detail || `o Replicate recusou (${r.status})`)
+      if (j !== null && r.status < 500) {
+        const e = new Error(j.detail || `o Replicate recusou (${r.status})`)
+        // ACABOU O CRÉDITO não é "falhou": é uma parede. Sem essa marca o motor
+        // trata como sonda perdida, insiste, marca o trecho como pendente e
+        // segue batendo na porta fechada a música inteira — enchendo o
+        // caderninho de erro e a tela de "faltou perguntar" que nunca vai ser
+        // respondido. Marcado, a dissecação para na hora e diz o motivo certo.
+        if (/insufficient credit/i.test(e.message)) e.semCredito = true
+        throw e
+      }
       ultima = new Error(`o Replicate respondeu ${r.status}${j === null ? ' (não-JSON)' : ''}`)
       livreEm = Date.now() + 4000 * (i + 1)
     }

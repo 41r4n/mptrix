@@ -1031,7 +1031,9 @@ export default function StudioView({ source, onClose }) {
             + (pendentes.length
               ? ` ⚠ Faltou perguntar em ${trechos(pendentes)} — a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.`
               : '')
-          const parou = st.parou === 'nuvem-indisponivel'
+          const parou = st.parou === 'sem-credito'
+            ? ' Parei porque acabou o crédito da sua conta na Replicate — recarregue e eu continuo exatamente de onde parei, sem repagar nada.'
+            : st.parou === 'nuvem-indisponivel'
             ? ' Parei porque a nuvem ficou indisponível (teto de gasto ou chave) — continuo de onde parei quando ela voltar.'
             : st.parou ? ` Parei antes do fim (${st.parou}) — continuo na próxima abertura.` : ''
           // só diz "dissequei" quando o motor realmente varreu tudo; senão a
