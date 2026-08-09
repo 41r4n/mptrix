@@ -2467,6 +2467,35 @@ export default function StudioView({ source, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [trackInfo])
 
+  // ESPAÇO = VOLTAR PRO COMEÇO DO LOOP. É o gesto de quem está estudando um
+  // trecho: errou no meio, aperta espaço, já está de volta no ponto A tocando —
+  // sem procurar o mouse, sem mirar na onda. É assim que app de estudo faz.
+  //
+  // Sem trecho marcado ele volta a ser o que todo mundo espera: tocar/pausar.
+  // Trocar o significado do espaço SEMPRE seria pior que o problema que ele
+  // resolve — quem não está em loop nenhum não quer surpresa.
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const onKey = (e) => {
+      if (e.key !== ' ' && e.code !== 'Space') return
+      // digitando em campo de texto (letra, descrição) o espaço é espaço
+      const alvo = e.target
+      const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)
+      if (digitando) return
+      e.preventDefault() // senão o navegador também rola a página / reclica o botão focado
+      const sel = waveSel
+      if (sel && sel.end - sel.start > 0.15) {
+        play(sel.start) // volta pro A e segue tocando, pausado ou não
+      } else if (playing) {
+        pause()
+      } else {
+        play()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase, waveSel, playing, play, pause])
+
   // Cão de guarda: se algum aviso de "pronto!" se perder (app piscou, evento
   // sumiu), a tela consulta o estado real a cada 3s e se cura sozinha.
   useEffect(() => {
@@ -4066,6 +4095,16 @@ export default function StudioView({ source, onClose }) {
               </button>
               {loopOn && (
                 <span className="loop-label">LOOP<br />{waveSel ? 'TRECHO' : 'MÚSICA'}</span>
+              )}
+              {/* atalho invisível é atalho que não existe: com trecho marcado, a
+                  tecla que reinicia o loop fica escrita ao lado do transporte */}
+              {waveSel && (
+                <span
+                  className="tecla-dica"
+                  data-hint="ESPAÇO — volta pro começo do trecho marcado e continua tocando. É o gesto de quem está estudando: errou no meio, aperta espaço, já está de volta no começo. Sem trecho marcado, o espaço volta a ser tocar/pausar."
+                >
+                  <kbd>espaço</kbd> volta ao início
+                </span>
               )}
 
               {/* timer vivo: textContent escrito por frame (ref), lima */}
