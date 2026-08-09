@@ -2112,11 +2112,19 @@ async function repararDeVerdade(dir, key, ffmpegPath) {
 
 // FORMA DE ONDA: os "picos" de volume de uma faixa (as dobras sonoras da tela).
 // Decodifica em 400Hz mono — leve — e guarda em cache ao lado das faixas.
-export async function stemPeaks({ key, stem, ffmpegPath, buckets = 800 }) {
+// 2000 pontos, não 800. O desenho da onda agora AMPLIA (zoom horizontal da
+// mesa) pra pessoa marcar um loop curto com precisão, e com 800 pontos numa
+// música de cinco minutos cada ponto cobre 0,37s — esticado, isso vira degrau
+// quadrado e some justamente o detalhe que ela foi procurar. Com 2000 cada
+// ponto cobre 0,15s, que aguenta o zoom até 8×. O arquivo de cache cresce
+// ~50KB por faixa: barato pelo que compra.
+// O nome do cache mudou junto (peaks3): cache velho tem a resolução velha, e
+// reaproveitar entregaria onda grossa pra sempre.
+export async function stemPeaks({ key, stem, ffmpegPath, buckets = 2000 }) {
   const dir = join(STEMS_DIR, key)
   const flac = join(dir, 'base', `${stem}.flac`)
   if (!existsSync(flac)) throw new Error('Faixa não encontrada.')
-  const cache = join(dir, `peaks2_${stem}.json`)
+  const cache = join(dir, `peaks3_${stem}.json`)
   if (existsSync(cache) && statSync(cache).mtimeMs >= statSync(flac).mtimeMs) {
     try { return JSON.parse(readFileSync(cache, 'utf8')) } catch {}
   }

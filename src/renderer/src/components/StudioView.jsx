@@ -828,6 +828,13 @@ export default function StudioView({ source, onClose }) {
   }, [shelfOpen])
   // altura da área das pistas — usada pra enquadrar um número inteiro de faixas
   const dawScrollRef = useRef(null)
+  // ZOOM HORIZONTAL da mesa. 1 = a música inteira cabe na tela; 4 = cada
+  // segundo ocupa quatro vezes mais espaço. Existe pra dar PRECISÃO no loop:
+  // sem isso, marcar dois segundos numa música de cinco minutos são quatro
+  // pixels, e ninguém acerta o ponto arrastando quatro pixels.
+  const [zoomX, setZoomX] = useState(1)
+  const rulerInnerRef = useRef(null)
+  const gutterWRef = useRef(0) // largura de UMA canaleta na tela (sem zoom)
   const [dawH, setDawH] = useState(0)
   const [uiZoom, setUiZoom] = useState(1)
   useEffect(() => {
@@ -980,6 +987,22 @@ export default function StudioView({ source, onClose }) {
           }
           if (rulerNodesRef.current.ph) rulerNodesRef.current.ph.style.left = pct
           if (rulerNodesRef.current.tint) rulerNodesRef.current.tint.style.width = pct
+          // AMPLIADO, O PLAYHEAD FOGE DA TELA. Se ele sair de vista a mesa vira
+          // um retrato parado — a pessoa não sabe mais onde a música está. Aqui
+          // a janela persegue o playhead, mas só quando ele passa da BORDA
+          // (margem de 12%): rolar a cada quadro deixaria a onda escorrendo o
+          // tempo todo e embrulharia o olho.
+          const sc = dawScrollRef.current
+          if (sc && sc.scrollWidth > sc.clientWidth + 4 && p.playing && !draggingRef.current) {
+            const railW = sc.scrollWidth - (contentWRef.current || 0)
+            const x = railW + (dur ? (t / dur) * (contentWRef.current || 0) : 0)
+            const vis0 = sc.scrollLeft + railW
+            const vis1 = sc.scrollLeft + sc.clientWidth
+            const folga = (sc.clientWidth - railW) * 0.12
+            if (x < vis0 + folga || x > vis1 - folga) {
+              sc.scrollLeft = Math.max(0, x - railW - (sc.clientWidth - railW) / 2)
+            }
+          }
           if (timerElRef.current) {
             const txt = fmtTime(t)
             if (timerElRef.current.textContent !== txt) timerElRef.current.textContent = txt
@@ -1625,21 +1648,83 @@ export default function StudioView({ source, onClose }) {
     const top = el.scrollTop > 2
     const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 2
     setDawCut((c) => (c.top === top && c.bottom === bottom ? c : { top, bottom }))
+    // a RÉGUA vive fora da área que rola (pra não sumir quando as faixas rolam
+    // pra baixo), então ela não acompanha a rolagem lateral sozinha: é
+    // empurrada aqui, no mesmo evento, pra não existir um quadro sequer com o
+    // tempo desalinhado das ondas
+    if (rulerInnerRef.current) {
+      rulerInnerRef.current.style.transform = `translateX(${-el.scrollLeft}px)`
+    }
   }, [])
 
   // Mede a área das pistas: quantas faixas cabem inteiras, e de que tamanho.
   // Com poucas, elas esticam; com muitas, encaixam N inteiras e o resto rola —
   // nunca sobra meia faixa cortada na borda de baixo.
+  // Largura do conteúdo em PIXELS. Não dá pra usar porcentagem: a linha encolhe
+  // pro tamanho dos filhos, e filho com largura em % do pai que depende do
+  // filho é conta circular — o zoom simplesmente não sairia do lugar.
+  const [contentW, setContentW] = useState(0)
+  // espelho em ref: o relógio de quadro não pode depender de estado do React
+  const contentWRef = useRef(0)
+  useEffect(() => { contentWRef.current = contentW }, [contentW])
   useEffect(() => {
     const el = dawScrollRef.current
     if (!el) return
-    const measure = () => { setDawH(el.clientHeight); updateDawCut() }
+    const measure = () => {
+      setDawH(el.clientHeight)
+      const rail = el.querySelector('.daw-rail')
+      const larguraTrilho = rail ? rail.getBoundingClientRect().width : 264
+      const visivel = Math.max(120, el.clientWidth - larguraTrilho)
+      gutterWRef.current = visivel
+      setContentW(Math.round(visivel * zoomX))
+      updateDawCut()
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     if (el.firstElementChild) ro.observe(el.firstElementChild) // altura do conteúdo
     return () => ro.disconnect()
-  }, [phase, session?.key, updateDawCut])
+  }, [phase, session?.key, updateDawCut, zoomX])
+
+  // Aproximar/afastar SEGURANDO O PONTO DE ANCORAGEM. Sem isso, aproximar
+  // joga a pessoa pra outro lugar da música e ela perde o trecho que estava
+  // olhando — é o erro clássico de zoom em linha do tempo. Aqui o ponto de
+  // referência (o centro da tela, ou onde o mouse está) fica parado.
+  const aplicarZoom = useCallback((alvo, xAncora) => {
+    const z = Math.max(1, Math.min(16, alvo))
+    const sc = dawScrollRef.current
+    setZoomX((atual) => {
+      if (z === atual || !sc) return z
+      const rail = sc.querySelector('.daw-rail')
+      const railW = rail ? rail.getBoundingClientRect().width : 264
+      const visivel = Math.max(1, sc.clientWidth - railW)
+      // posição da âncora dentro do conteúdo, em fração da música
+      const ancoraPx = xAncora != null
+        ? Math.max(0, xAncora - sc.getBoundingClientRect().left - railW)
+        : visivel / 2
+      const frac = (sc.scrollLeft + ancoraPx) / Math.max(1, visivel * atual)
+      requestAnimationFrame(() => {
+        const novo = visivel * z
+        sc.scrollLeft = Math.max(0, Math.min(novo - visivel, frac * novo - ancoraPx))
+        updateDawCut()
+      })
+      return z
+    })
+  }, [updateDawCut])
+
+  // Ctrl + roda do mouse sobre as ondas aproxima no ponto do cursor — o jeito
+  // que todo editor de áudio faz, e o mais rápido pra achar um trecho curto.
+  useEffect(() => {
+    const sc = dawScrollRef.current
+    if (!sc || phase !== 'ready') return
+    const onWheel = (e) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      aplicarZoom(e.deltaY < 0 ? zoomX * 2 : zoomX / 2, e.clientX)
+    }
+    sc.addEventListener('wheel', onWheel, { passive: false })
+    return () => sc.removeEventListener('wheel', onWheel)
+  }, [phase, zoomX, aplicarZoom])
 
   // TETO DE 10 FAIXAS NA TELA: mais que isso aperta demais e a leitura morre.
   // Com até 10, elas dividem toda a altura (maior tamanho possível); passando
@@ -2962,13 +3047,44 @@ export default function StudioView({ source, onClose }) {
                   <span className="hex-dot" aria-hidden="true" />
                   <span className="daw-cap">PISTAS</span>
                   <span className="daw-rail-flex" />
-                  <span className="daw-cap daw-cap-dim">{presentStems(session).length} STEMS</span>
+                  {/* ZOOM da linha do tempo. Fica aqui no cabeçalho das pistas
+                      porque é dali que ele manda: estica a régua e as ondas
+                      juntas. Serve pra marcar loop curto com precisão. */}
+                  <span className="daw-zoom">
+                    <button
+                      className="chip-step"
+                      onClick={() => aplicarZoom(zoomX / 2)}
+                      disabled={zoomX <= 1}
+                      data-hint="AFASTAR — mostra mais música na tela. No 1× a música inteira cabe de uma vez."
+                      aria-label="Afastar"
+                    >−</button>
+                    <button
+                      className={`daw-zoom-num ${zoomX > 1 ? 'on' : ''}`}
+                      onClick={() => aplicarZoom(1)}
+                      data-hint={zoomX > 1
+                        ? `APROXIMADO ${zoomX}× — clique pra voltar a ver a música inteira. Segure Ctrl e role o mouse sobre as ondas pra aproximar no ponto onde o cursor está.`
+                        : 'A música inteira cabe na tela. Aproxime pra marcar um loop curto com precisão — ou segure Ctrl e role o mouse sobre as ondas.'}
+                    >{zoomX}×</button>
+                    <button
+                      className="chip-step"
+                      onClick={() => aplicarZoom(zoomX * 2)}
+                      disabled={zoomX >= 16}
+                      data-hint="APROXIMAR — estica a linha do tempo. É o que dá precisão pra marcar um trecho curto: no 1× dois segundos são quatro pixels."
+                      aria-label="Aproximar"
+                    >+</button>
+                  </span>
                 </div>
                 <div className="daw-gutter daw-ruler">
+                  <div className="daw-ruler-inner" ref={rulerInnerRef} style={{ width: contentW ? `${contentW}px` : '100%' }}>
                   {playDuration > 0 && (() => {
+                    // com zoom cabe marca mais fina: de 5 em 5s à vista normal,
+                    // de 1 em 1s (e até meio segundo) quando esticado — régua
+                    // sem marca não ajuda a acertar ponto nenhum
+                    const passo = zoomX >= 8 ? 1 : zoomX >= 4 ? 2 : 5
+                    const grande = zoomX >= 8 ? 10 : zoomX >= 4 ? 10 : 30
                     const ticks = []
-                    for (let s = 0; s < playDuration; s += 5) {
-                      const major = s % 30 === 0
+                    for (let s = 0; s < playDuration; s += passo) {
+                      const major = s % grande === 0
                       ticks.push(
                         <div
                           key={s}
@@ -2981,6 +3097,7 @@ export default function StudioView({ source, onClose }) {
                     }
                     return ticks
                   })()}
+                  </div>
                 </div>
               </div>
               {/* área rolável: as pistas nunca encolhem abaixo do piso de leitura;
@@ -3057,7 +3174,7 @@ export default function StudioView({ source, onClose }) {
                         <span className="daw-vol-num">{Math.round((volumes[stem] ?? 1) * 100)}</span>
                       </div>
                     </div>
-                    <div className="daw-gutter">
+                    <div className="daw-gutter" style={contentW ? { width: `${contentW}px` } : undefined}>
                       <WaveLane
                         peaks={peaksMap[stem]}
                         duration={playDuration}

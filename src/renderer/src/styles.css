@@ -7244,3 +7244,83 @@ body.studio-open .zoom-chip {
   color: var(--accent);
   text-shadow: 0 0 14px rgba(182, 255, 59, 0.45);
 }
+
+/* ---------- ZOOM HORIZONTAL DA MESA ----------
+   A mesa passa a rolar de lado quando o zoom estica o conteudo. Tres regras
+   seguram a coisa em pe:
+   1) o TRILHO gruda na esquerda (sticky) — os controles da faixa nunca podem
+      sair de vista, senao a pessoa perde o M/S ao investigar um trecho;
+   2) a REGUA mora fora da area que rola verticalmente, entao ela e empurrada
+      por JS no mesmo evento de rolagem (ver updateDawCut);
+   3) a linha nao pode encolher os filhos: com `min-width: 0` a canaleta
+      esticada voltaria a caber na tela e o zoom nao faria nada. */
+.daw-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+/* a TELA de desenho tambem tem que crescer com as linhas: sem isto ela fica do
+   tamanho da janela e o overlay (que se mede por ela) cobriria so o pedaco
+   visivel — playhead e marcacao cairiam no lugar errado assim que rolasse. */
+.daw-canvas {
+  min-width: min-content;
+}
+.daw-canvas > .daw-row {
+  min-width: min-content;
+}
+/* o trilho fica ACIMA do overlay (z-index 4): grudado na esquerda ele passa por
+   baixo da camada de arrastar quando a mesa rola, e os botoes M/S parariam de
+   receber clique. */
+.daw-row > .daw-rail {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+/* so as canaletas das PISTAS ganham largura fixa (a do zoom). A da regua fica
+   flex:1 de proposito: ela nao rola junto, quem anda e o conteudo dela por
+   dentro (translate), entao a caixa dela e sempre a largura visivel. */
+.daw-canvas .daw-gutter {
+  flex: none;
+}
+.daw-ruler {
+  overflow: hidden;
+  position: relative;
+}
+.daw-ruler-inner {
+  position: relative;
+  height: 100%;
+  will-change: transform;
+}
+/* barra de rolagem discreta, na linguagem da casa */
+.daw-scroll::-webkit-scrollbar { height: 10px; width: 10px; }
+.daw-scroll::-webkit-scrollbar-track { background: var(--bg-inset); }
+.daw-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+}
+.daw-scroll::-webkit-scrollbar-thumb:hover { background: rgba(182, 255, 59, 0.45); }
+
+/* controle de zoom no cabecalho das pistas */
+.daw-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.daw-zoom-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  min-width: 26px;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+.daw-zoom-num.on { color: var(--accent); }
+.daw-zoom .chip-step {
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+}
+.daw-zoom .chip-step:disabled { opacity: 0.35; cursor: default; }
