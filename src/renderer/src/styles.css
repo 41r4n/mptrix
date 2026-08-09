@@ -7281,7 +7281,11 @@ body.studio-open .zoom-chip {
    tela, por mais que se aproxime. */
 .daw-canvas .daw-gutter > .wave-lane {
   position: sticky;
-  left: 0;
+  /* gruda DEPOIS do trilho, nao no zero do painel. Com `left: 0` a onda ficava
+     ancorada embaixo do trilho (que e sticky no zero) e, tendo a largura da
+     area visivel, sobrava justamente uma tira preta da largura do trilho na
+     borda direita -- a "quebra" que o dono viu no zoom. */
+  left: var(--rail-w);
   top: 0;
   /* PRECISA repetir o que a regra `.daw .wave-lane` dava: aquela usava
      `position: absolute; inset: 0` pra onda preencher a pista, e trocar o
