@@ -53,7 +53,13 @@ nunca `scrollIntoView` — use `scrollTo({ behavior: 'smooth' })`.
   período) — Girlfriend/NSYNC encaixa com 34ms, Oceano e Samurai não encaixam (153 e 171ms). Sem
   grade, o modo firme continua disponível e a tela **avisa** que o clique vai se separar da música.
 - Pan por faixa não existe (só volume + M/S + ↻ refazer).
-- O loop do transporte usa o trecho marcado na onda (Lupa) como A-B; sem trecho, repete a música.
+- O loop do transporte usa o trecho marcado na onda como A-B; sem trecho, repete a música.
+  Marcar (arrastar na onda) serve SÓ pra isso — clique seco solta a marcação.
+- A **Lupa** ("Investigar trecho") **saiu** (2026-08-09, decisão do dono): perguntar "o que tem
+  aqui?" num pedaço marcado é trabalho da dissecação, que varre a música inteira sozinha. Pedir
+  pro usuário apontar era devolver pra ele a tarefa do sistema. Mesma razão que tirou o
+  "aponta e separa" manual — **separar e investigar são obrigação do sistema, não tarefa do
+  usuário**; o motor de apontar (`isolarTrecho`) vive na colheita automática.
 - Biblioteca real = histórico com ações por item (lista, não grade) — reskin aplica os tokens
   mantendo TODAS as ações; features nunca são removidas por causa de visual.
 

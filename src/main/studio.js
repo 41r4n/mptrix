@@ -2151,40 +2151,10 @@ export async function stemPeaks({ key, stem, ffmpegPath, buckets = 800 }) {
   return out
 }
 
-// LUPA DE TRECHO: fareja SÓ o pedaço marcado do "outros" limpo e compara com
-// as notas da música inteira — o que pontua alto aqui e baixo no resto é
-// exatamente o som que se destaca no trecho (o que o ouvido notou).
-export async function investigateStretch({ key, start, end, ffmpegPath }) {
-  const dir = join(STEMS_DIR, key)
-  const meta = readMeta(dir)
-  if (!meta) throw new Error('Sessão não encontrada.')
-  const src = join(dir, 'base', 'other.flac')
-  if (!existsSync(src)) throw new Error('Stem "outros" não encontrado.')
-  const len = Math.max(2, end - start)
-  const seg = join(dir, 'lupa_seg.wav')
-  await run(ffmpegPath, [
-    '-y', '-loglevel', 'error', '-ss', String(Math.max(0, start)), '-t', String(Math.ceil(len)),
-    '-i', src, '-ac', '2', '-ar', '44100', seg
-  ], {})
-  let out
-  try {
-    out = await runScoutScript(seg, {})
-  } finally {
-    rmSync(seg, { force: true })
-  }
-  const whole = meta.scout?.arsenal || {}
-  const items = Object.entries(out.arsenal || {})
-    .map(([id, v]) => ({
-      id,
-      stretch: v.score,
-      whole: whole[id]?.score ?? null,
-      // destaque = presença no trecho além da presença geral na música
-      standout: v.score - (whole[id]?.score ?? 0)
-    }))
-    .filter((i) => SPECIALISTS[i.id] && !(meta.stems || []).includes(i.id) && i.stretch >= 0.08)
-    .sort((a, b) => (b.standout + b.stretch * 0.5) - (a.standout + a.stretch * 0.5))
-  return { start, end, items: items.slice(0, 8) }
-}
+// (A LUPA saiu: perguntar "o que tem aqui?" num trecho marcado virou trabalho
+// da dissecacao, que faz isso na musica inteira sozinha. Marcar na onda hoje
+// serve so pro loop A-B.)
+
 
 // PRATELEIRA: guardar/promover uma faixa — nada é apagado, só muda de assento
 export function setShelved({ key, stem, shelved }) {

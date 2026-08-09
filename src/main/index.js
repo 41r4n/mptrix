@@ -29,7 +29,6 @@ import {
   setShelved,
   setDentroDeOutros,
   stemPeaks,
-  investigateStretch,
   detectChords,
   transcribeLyrics,
   gruposDeRepeticao,
@@ -1103,14 +1102,6 @@ app.whenReady().then(() => {
   })
 
   // Lupa de trecho: fareja só o pedaço marcado e ranqueia o que se destaca
-  ipcMain.handle('studio:investigate', async (_e, { key, start, end }) => {
-    try {
-      return await investigateStretch({ key, start, end, ffmpegPath: FFMPEG_PATH })
-    } catch (err) {
-      return { error: err.message }
-    }
-  })
-
   ipcMain.handle('studio:open', (_e, { path: inputFile, model, title }) => {
     if (!inputFile || !existsSync(inputFile)) {
       return { error: 'Arquivo não encontrado no disco.' }

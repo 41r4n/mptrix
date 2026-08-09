@@ -244,7 +244,7 @@ function useSmoothProgress(target, active) {
 }
 
 // Faixa com as "dobras sonoras": desenha os picos, mostra o cursor de
-// reprodução, clique = pular pra posição, arrastar = marcar trecho pra Lupa
+// reprodução, clique = pular pra posição, arrastar = marcar o trecho do loop
 function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes }) {
   const canvasRef = useRef(null)
   const boxRef = useRef(null)
@@ -778,7 +778,6 @@ export default function StudioView({ source, onClose }) {
   const [showArsenal, setShowArsenal] = useState(false)
   const [peaksMap, setPeaksMap] = useState({}) // forma de onda por faixa
   const [waveSel, setWaveSel] = useState(null) // {start, end} trecho marcado
-  const [lupa, setLupa] = useState(null) // null | 'loading' | resultado da lupa
   // avisos de confissão dispensados: guarda a ASSINATURA do que foi dispensado,
   // então som novo confessado traz o aviso de volta sozinho
   const [avisoOculto, setAvisoOculto] = useState({})
@@ -810,7 +809,7 @@ export default function StudioView({ source, onClose }) {
   const [lyricsPct, setLyricsPct] = useState(0)
   useEffect(() => window.mptrix.studio.onLyricsProgress?.((p) => setLyricsPct(p.percent || 0)), [])
   const [showLyrics, setShowLyrics] = useState(false)
-  const [showExtract, setShowExtract] = useState(false) // painel Extrair (olheiro/lupa/arsenal)
+  const [showExtract, setShowExtract] = useState(false) // painel Extrair (olheiro/arsenal)
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const lyricsListRef = useRef(null)
@@ -1273,7 +1272,6 @@ export default function StudioView({ source, onClose }) {
   useEffect(() => {
     setPeaksMap({})
     setWaveSel(null)
-    setLupa(null)
     setChords(null)
     setShowChords(false)
     setLyrics(null)
@@ -1685,7 +1683,7 @@ export default function StudioView({ source, onClose }) {
   }
 
   // Overlay do DAW: um só capturador de ponteiro pra todas as canaletas —
-  // clique pula pra posição; arrastar marca o trecho (Lupa + loop)
+  // clique pula pra posição (e solta a marcação); arrastar marca o trecho do loop
   const overlayDown = (e) => {
     if (!playDuration) return
     const box = e.currentTarget.getBoundingClientRect()
@@ -1698,32 +1696,20 @@ export default function StudioView({ source, onClose }) {
       if (moved) {
         const t1 = timeAt(ev.clientX)
         setWaveSel({ start: Math.min(t0, t1), end: Math.max(t0, t1) })
-        setLupa(null)
-        // marcar trecho abre o painel Extrair (é lá que mora a Lupa)
-        setShowExtract(true)
-        setShowChords(false)
-        setShowLyrics(false)
+        // Marcar trecho NÃO abre painel nenhum. Isto abria o Extrair de
+        // propósito, quando marcar servia pra chamar a Lupa; hoje serve pro
+        // LOOP A-B, e quem quer repetir um pedaço não pediu painel na cara.
       }
     }
     const onUp = (ev) => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      if (!moved) seekTo(timeAt(ev.clientX))
+      // clique seco (sem arrastar) limpa a marcação além de pular: é como se
+      // solta o trecho agora que não existe mais botão "limpar"
+      if (!moved) { setWaveSel(null); seekTo(timeAt(ev.clientX)) }
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-  }
-
-  // Lupa de trecho: fareja só o pedaço marcado e ranqueia o que se destaca
-  const runLupa = async () => {
-    if (!waveSel || !session || lupa === 'loading') return
-    setLupa('loading')
-    const res = await window.mptrix.studio.investigate({
-      key: session.key,
-      start: waveSel.start,
-      end: waveSel.end
-    })
-    setLupa(res || { error: 'O investigador não respondeu.' })
   }
 
   // (O "aponta e separa" MANUAL foi removido da tela por decisão do dono:
@@ -2555,7 +2541,7 @@ export default function StudioView({ source, onClose }) {
               if (n) { setShowChords(false); setShowLyrics(false) }
             }}
             disabled={phase !== 'ready'}
-            title="Extrair mais instrumentos dessa música (olheiro, Lupa e Arsenal)"
+            title="Extrair mais instrumentos dessa música (olheiro e Arsenal)"
           >
             {extractJob ? '⛏️ Extraindo…' : '➕ Extrair faixas'}
           </button>
@@ -3063,7 +3049,7 @@ export default function StudioView({ source, onClose }) {
                   </div>
                 )
               })}
-              {/* Overlay único: clique pula, arrastar marca trecho (Lupa/loop) */}
+              {/* Overlay único: clique pula, arrastar marca o trecho do loop */}
               <div className="daw-overlay" onPointerDown={overlayDown}>
                 {playDuration > 0 && (() => {
                   const lines = []
@@ -3286,69 +3272,14 @@ export default function StudioView({ source, onClose }) {
                 ))}
               </div>
             )}
-            {/* Painel Extrair: olheiro, lupa e arsenal moram aqui, ao lado da mesa */}
+            {/* Painel Extrair: olheiro e arsenal moram aqui, ao lado da mesa */}
             {showExtract && (
             <aside className="chords-panel extract-panel">
-            {waveSel && (
-              <div className="lupa-bar">
-                <span className="muted">
-                  🔍 Trecho marcado: <strong>{fmtTime(waveSel.start)} – {fmtTime(waveSel.end)}</strong>
-                </span>
-                <button className="btn-primary btn-small" disabled={lupa === 'loading'} onClick={runLupa}>
-                  {lupa === 'loading' ? 'Investigando… (~30s)' : 'Investigar trecho'}
-                </button>
-                <button className="btn-secondary btn-small" onClick={() => { setWaveSel(null); setLupa(null) }}>
-                  ✕ limpar
-                </button>
-              </div>
-            )}
-            {lupa && lupa !== 'loading' && lupa.error && (
-              <p className="muted studio-hint">⚠ {lupa.error}</p>
-            )}
-            {lupa && lupa !== 'loading' && !lupa.error && (
-              <div className="studio-scout">
-                <div className="studio-plan-section-title">
-                  🔍 No trecho {fmtTime(lupa.start)}–{fmtTime(lupa.end)}, o que se destaca
-                </div>
-                {(lupa.items || []).length === 0 && (
-                  <p className="muted studio-hint">
-                    Nada do arsenal se destaca nesse trecho — pode ser um timbre que os faros
-                    ainda não conhecem, ou o som está muito misturado.
-                  </p>
-                )}
-                {(lupa.items || []).map((it) => {
-                  const meta = STEM_META[it.id] || { label: it.id, icon: '🎚️' }
-                  const conf = humanConf(it.stretch)
-                  const soAqui = it.whole != null && it.standout > 0.12
-                  return (
-                    <div key={it.id} className="studio-plan-item">
-                      <span className="studio-plan-item-icon">{meta.icon}</span>
-                      <span className="studio-plan-item-name">
-                        {meta.label}
-                        <span className="studio-plan-when">
-                          {soAqui ? 'se destaca SÓ nesse trecho' : 'presente no trecho'}
-                        </span>
-                      </span>
-                      <span className={`studio-plan-conf ${conf >= 75 ? 'high' : conf >= 55 ? 'mid' : 'low'}`}>
-                        {conf}%
-                      </span>
-                      {extractSel.has(it.id) ? (
-                        <span className="muted" style={{ fontSize: '12px' }}>✓ marcado</span>
-                      ) : (
-                        <button
-                          className="btn-secondary btn-small"
-                          onClick={() => setExtractSel((s) => new Set([...s, it.id]))}
-                        >➕ marcar</button>
-                      )}
-                    </div>
-                  )
-                })}
-                <p className="muted studio-hint">
-                  O que você marcar entra na lista de extração do painel abaixo — a faixa final
-                  cobre a música inteira, como sempre.
-                </p>
-              </div>
-            )}
+            {/* A LUPA ("Investigar trecho") saiu: marcar um pedaco da onda
+                agora serve so pro LOOP A-B. Perguntar "o que tem aqui?" virou
+                trabalho da dissecacao, que faz isso na musica inteira sozinha
+                — pedir pro usuario apontar era devolver pra ele a tarefa do
+                sistema. */}
             {(() => {
               // Mesmo contrato dos outros avisos: o × guarda a ASSINATURA do
               // que foi dispensado. Se a lista de não-detectados mudar (uma

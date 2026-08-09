@@ -109,7 +109,6 @@ const api = {
     shelve: (opts) => ipcRenderer.invoke('studio:shelve', opts),
     fold: (opts) => ipcRenderer.invoke('studio:fold', opts),
     peaks: (opts) => ipcRenderer.invoke('studio:peaks', opts),
-    investigate: (opts) => ipcRenderer.invoke('studio:investigate', opts),
     chords: (opts) => ipcRenderer.invoke('studio:chords', opts),
     lyrics: (opts) => ipcRenderer.invoke('studio:lyrics', opts),
     onLyricsProgress: on('studio:lyricsProgress'),
