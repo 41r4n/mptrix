@@ -3004,6 +3004,15 @@ section h2 {
   font-size: 12.5px;
   padding: 4px 6px;
 }
+/* CINTO DE SEGURANÇA: se um aviso desses cair de novo dentro de uma fila
+   horizontal, ele não pode empurrar o resto da tela. `min-width: 0` deixa o
+   texto quebrar linha em vez de esticar a fila — sem isso um item de flex
+   cresce até caber a frase inteira numa linha só, e foi assim que a mesa foi
+   espremida a ponto de sumir. */
+.studio-absent {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 /* Painel do olheiro (busca profunda de instrumentos) */
 .studio-scout {

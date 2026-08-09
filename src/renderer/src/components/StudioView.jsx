@@ -2923,39 +2923,6 @@ export default function StudioView({ source, onClose }) {
                 ))}
               </div>
             )}
-            {/* CONFISSÃO — fora do painel Extrair de propósito: prestar contas do
-                som que o sistema não conseguiu nomear é obrigação, não detalhe
-                escondido atrás de um painel que nasce fechado. Aparece também
-                com a nuvem desligada: o registro é da música, não da conexão. */}
-            {!autoJob && (session?.autoHarvest?.semDono?.length || 0) > 0 && (() => {
-              // Duas dívidas diferentes, ditas com palavras diferentes: "ninguém
-              // reivindicou" é veredito; "faltou perguntar" é trabalho por fazer.
-              // Misturar as duas numa frase só faria o usuário achar que o motor
-              // já desistiu de um trecho que ele ainda vai reabrir.
-              const lista = session.autoHarvest.semDono
-              const orfas = lista.filter((r) => !r.pendente)
-              const pendentes = lista.filter((r) => r.pendente)
-              // confissão da revista aponta pra DENTRO de uma faixa — dizer só o
-              // tempo mandaria o ouvido procurar na música inteira
-              const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.fonte ? ` dentro de ${STEM_META[r.fonte]?.label || r.fonte}` : ''}`
-              return (
-                <>
-                  {orfas.length > 0 && (
-                    <div className="studio-absent muted">
-                      Som sem dono: {orfas
-                        .map((r) => `${faixa(r)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
-                        .join(' · ')} — tem som aí que eu não consegui nomear.
-                    </div>
-                  )}
-                  {pendentes.length > 0 && (
-                    <div className="studio-absent muted">
-                      Faltou perguntar: {pendentes.map(faixa).join(' · ')} — tem som aí, mas
-                      a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.
-                    </div>
-                  )}
-                </>
-              )
-            })()}
             {/* Painel Extrair: olheiro, lupa e arsenal moram aqui, ao lado da mesa */}
             {showExtract && (
             <aside className="chords-panel extract-panel">
@@ -3280,6 +3247,42 @@ export default function StudioView({ source, onClose }) {
             </aside>
             )}
             </div>
+            {/* CONFISSÃO — fica FORA da fila horizontal da mesa, de propósito.
+                Aqui dentro (`daw-wrap`) tudo é coluna lado a lado: mesa, cifra,
+                painel Extrair. Um aviso de texto comprido virava uma COLUNA
+                VAZIA gigante no meio, espremia a mesa e empurrava os painéis —
+                foi exatamente o que aconteceu quando eu tirei a confissão de
+                dentro do painel Extrair hoje. Ela pertence à faixa de baixo,
+                em largura cheia, junto da prateleira. */}
+            {!autoJob && (session?.autoHarvest?.semDono?.length || 0) > 0 && (() => {
+              // Duas dívidas diferentes, ditas com palavras diferentes: "ninguém
+              // reivindicou" é veredito; "faltou perguntar" é trabalho por fazer.
+              // Misturar as duas numa frase só faria o usuário achar que o motor
+              // já desistiu de um trecho que ele ainda vai reabrir.
+              const lista = session.autoHarvest.semDono
+              const orfas = lista.filter((r) => !r.pendente)
+              const pendentes = lista.filter((r) => r.pendente)
+              // confissão da revista aponta pra DENTRO de uma faixa — dizer só o
+              // tempo mandaria o ouvido procurar na música inteira
+              const faixa = (r) => `${fmtTime(r.ini)}–${fmtTime(r.fim)}${r.fonte ? ` dentro de ${STEM_META[r.fonte]?.label || r.fonte}` : ''}`
+              return (
+                <>
+                  {orfas.length > 0 && (
+                    <div className="studio-absent muted">
+                      Som sem dono: {orfas
+                        .map((r) => `${faixa(r)}${r.palpite ? ` (parece ${r.palpite})` : ''}`)
+                        .join(' · ')} — tem som aí que eu não consegui nomear.
+                    </div>
+                  )}
+                  {pendentes.length > 0 && (
+                    <div className="studio-absent muted">
+                      Faltou perguntar: {pendentes.map(faixa).join(' · ')} — tem som aí, mas
+                      a nuvem derrubou perguntas minhas. Tento de novo na próxima dissecação.
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
               <div className={`shelf-frame ${shelfOpen ? 'open' : ''}`}>
