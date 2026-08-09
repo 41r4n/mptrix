@@ -38,6 +38,18 @@ const PRESET_ICONS = {
   video: '🎬'
 }
 
+// ETIQUETA TÉCNICA de cada cartão: formato e o que ele entrega, em mono e
+// caixa-alta. É leitura de painel — o mesmo jeito do estúdio de dizer medida —
+// e resolve na hora a pergunta que o título não responde ("isso me dá o quê?").
+const PRESET_TAG = {
+  music: 'MP3 · MÁXIMA · COM CAPA',
+  playlist: 'MP3 · LOTE',
+  fast: 'MP3 · MÉDIA · LEVE',
+  audio_m4a: 'M4A · NATIVO · SEM PERDA',
+  audio_wav: 'WAV · SEM COMPRESSÃO',
+  video: 'MP4 · ATÉ 8K'
+}
+
 export default function App() {
   const [env, setEnv] = useState(null)
   const [outputDir, setOutputDir] = useState('')
@@ -104,7 +116,7 @@ export default function App() {
       <div className="app">
         <header className="hero">
           <div className="home-brand-row">
-            <span className="brand-disc brand-disc-lg" aria-hidden="true">
+            <span className="brand-hex brand-hex-lg" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="22" height="22" className="brand-glyph">
                 <path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" />
               </svg>
@@ -154,8 +166,9 @@ export default function App() {
               onClick={() => binariesOk && setActivePreset(p)}
               disabled={!binariesOk}
             >
-              <span className="card-icon">{PRESET_ICONS[p.id] ?? '⬇'}</span>
+              <span className="card-hex" aria-hidden="true">{PRESET_ICONS[p.id] ?? '⬇'}</span>
               <span className="card-name">{p.name}</span>
+              {PRESET_TAG[p.id] && <span className="card-tag">{PRESET_TAG[p.id]}</span>}
               <span className="card-desc">{p.description}</span>
             </button>
           ))}
@@ -166,8 +179,9 @@ export default function App() {
         <h2>Estúdio de ensaio <span className="beta-tag">BETA</span></h2>
         <div className="cards">
           <button className="card studio-card" onClick={openStudioFromFile}>
-            <span className="card-icon">🎛️</span>
+            <span className="card-hex" aria-hidden="true">🎛️</span>
             <span className="card-name">Separar instrumentos</span>
+            <span className="card-tag">DISSECAÇÃO · TOM · VELOCIDADE · METRÔNOMO</span>
             <span className="card-desc">
               Isole voz, bateria, baixo e mais. Mude o tom, deixe mais lento e ensaie por cima —
               tudo no seu PC. Escolha uma música do computador ou clique no 🎛️ de um item do histórico.

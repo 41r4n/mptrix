@@ -7478,3 +7478,114 @@ body.studio-open .zoom-chip {
   background: var(--bg-inset);
   color: var(--text-2);
 }
+
+/* ================= TELA INICIAL NA MESMA LINGUA DO ESTUDIO =================
+   As duas telas nao pareciam o mesmo aplicativo: o estudio fala hexagono,
+   medidor, mono em caixa-alta e hairline; a inicial falava cartao redondo
+   generico. O vocabulario Ben 10 ja estava no documento do projeto (hexagono
+   do Omnitrix, medidor do carregador) -- a inicial so nao usava.
+   Nada aqui inventa cor nova: e a mesma lima, a mesma superficie, as mesmas
+   hairlines. Muda a FORMA. */
+
+/* --- marca hexagonal (substitui o disco redondo, nas duas telas) --- */
+.brand-hex {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  filter: drop-shadow(0 0 10px rgba(182, 255, 59, 0.45));
+}
+.brand-hex-lg {
+  width: 40px;
+  height: 40px;
+}
+.brand-hex .brand-glyph { fill: #0b0c0f; }
+
+/* --- cartao: quadro tecnico em vez de caixa arredondada --- */
+.card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
+/* cantos de mira: dois tracos no canto superior esquerdo, como visor de
+   equipamento. Puro CSS, sem imagem, e some no hover pra dar lugar a borda viva */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 10px;
+  height: 10px;
+  border-top: 1.5px solid var(--border-control);
+  border-left: 1.5px solid var(--border-control);
+  border-radius: 2px 0 0 0;
+  transition: border-color 0.15s ease;
+  pointer-events: none;
+}
+/* faixa de energia na base: aparece no hover, como o tint do estudio */
+.card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s ease;
+}
+.card:hover::after { transform: scaleX(1); }
+.card:hover::before { border-color: var(--accent); }
+.card:disabled::after,
+.card.disabled::after { display: none; }
+
+/* --- icone hexagonal do cartao (aceno ao Omnitrix) --- */
+.card-hex {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  background: rgba(182, 255, 59, 0.12);
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  transition: background 0.15s ease, filter 0.15s ease;
+}
+.card:hover .card-hex {
+  background: rgba(182, 255, 59, 0.26);
+  filter: drop-shadow(0 0 12px rgba(182, 255, 59, 0.4));
+}
+
+/* --- etiqueta tecnica: leitura de painel, nunca forma de botao --- */
+.card-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: var(--muted-2);
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  align-self: flex-start;
+}
+.card:hover .card-tag { color: var(--muted); }
+
+/* --- titulo de secao com hairline de console ---
+   O titulo ja era mono em caixa-alta (a lingua certa), mas flutuava solto. A
+   linha que sai dele e corre ate a borda e o que transforma texto em CABECALHO
+   DE PAINEL -- o mesmo recurso que separa as leituras do estudio. */
+section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+section h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}

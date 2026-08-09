@@ -2627,7 +2627,9 @@ export default function StudioView({ source, onClose }) {
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <span className="brand-disc" aria-hidden="true">
+        {/* mesma marca hexagonal da tela inicial: as duas telas tem que se
+            reconhecer como o mesmo aplicativo */}
+        <span className="brand-hex" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="15" height="15"><path d="M5 4.5h14l-5.2 7.5L19 19.5H5l5.2-7.5z" fill="#0b0c0f" /></svg>
         </span>
         <span className="brand-name">MPTrix</span>
