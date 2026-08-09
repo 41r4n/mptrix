@@ -288,8 +288,8 @@ section h2 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 7, 12, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(3, 4, 7, 0.84);
+  backdrop-filter: blur(7px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,41 +550,77 @@ section h2 {
 }
 
 /* Modal de período hierárquico */
+/* ██████████ FILTRAR POR PERÍODO ██████████
+   Estava camuflado porque eu tinha empilhado quase-preto em cima de
+   quase-preto: painel #08090C, poços #050609, fundo #0B0C0F. Três pontos de
+   diferença entre camadas não constroem hierarquia nenhuma — vira uma chapa
+   só e o olho não sabe onde começa cada coisa.
+
+   Agora a escada é larga: poço #050609 → painel #101216 → faixa do título
+   #15171C. Quem é fundo é MAIS preto que o app, quem é estrutura é mais
+   claro. E as quatro colunas ganharam tom próprio da escala verde da casa,
+   descendo de lima a azulado — a cor diz em que degrau da busca você está
+   antes de ler o rótulo.
+
+   A regra que mantém isso legível: LIMA É AÇÃO (aplicar, atalho escolhido),
+   ESCALA VERDE É ESTRUTURA (que nível, o que já foi marcado). Neon só onde
+   carrega informação. */
+
+/* a sombra precisa de um elemento sem recorte pra viver: o painel tem
+   clip-path e clip-path corta filtro */
+.period-caixa {
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.22))
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 24px 70px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 60px var(--glow-painel));
+  animation: slideUp 0.18s ease;
+}
+
 .modal-period {
   width: 880px;
   max-width: calc(100vw - 32px);
   --chanfro: 14px;
-  --fio: var(--border);
-  background-color: var(--bg-cava);
+  --fio: var(--border-strong);
+  background-color: var(--bg-tracks);
   border: none;
   border-radius: 0;
-  /* clip-path corta box-shadow, entao a profundidade vira fio + o escuro do
-     proprio overlay. Sombra externa aqui exigiria mais um elemento so pra
-     projetar, e o fundo borrado ja separa o painel do resto. */
   box-shadow: inset 0 0 0 1px var(--fio);
   overflow: visible;
+  animation: none;
 }
 
-/* --- cabeçalho --- */
+/* --- faixa do título: a camada mais clara do painel --- */
 .period-head {
   position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 22px 24px 18px 26px;
-  border-bottom: 1px solid var(--border);
+  padding: 20px 22px 18px 26px;
+  background-color: var(--bg-elev);
+  border-bottom: 1px solid var(--border-control);
 }
-/* marca lima na quina, igual à da barra de comando */
+/* marca lima na quina + fio de neon correndo por baixo da faixa: o neon
+   morre no meio do caminho, senão vira moldura decorativa */
 .period-head::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 24px;
-  bottom: 20px;
+  top: 20px;
+  bottom: 18px;
   width: 3px;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(182, 255, 59, 0.45);
+  box-shadow: 0 0 12px rgba(182, 255, 59, 0.55);
+}
+.period-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(to right, var(--accent), rgba(182, 255, 59, 0.12) 22%, transparent 48%);
 }
 .period-etiqueta {
   display: block;
@@ -592,8 +628,9 @@ section h2 {
   font-size: 9px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--muted-2);
+  color: var(--accent);
   margin-bottom: 5px;
+  text-shadow: 0 0 12px rgba(182, 255, 59, 0.4);
 }
 .period-head h3 {
   margin: 0;
@@ -604,6 +641,7 @@ section h2 {
 }
 .period-x {
   --chanfro: 5px;
+  --fio: var(--border-control);
   width: 32px;
   height: 32px;
   flex: none;
@@ -617,10 +655,10 @@ section h2 {
   cursor: pointer;
   transition: color 0.13s ease, background-color 0.13s ease;
 }
-.period-x:hover { --fio: rgba(248, 113, 113, 0.5); color: var(--bad); background-color: #0b0d11; }
+.period-x:hover { --fio: rgba(248, 113, 113, 0.6); color: var(--bad); background-color: rgba(248, 113, 113, 0.12); }
 
 .period-body {
-  padding: 18px 24px 0 26px;
+  padding: 18px 22px 0 26px;
   gap: 14px;
 }
 
@@ -632,26 +670,28 @@ section h2 {
 }
 .preset-chip {
   --chanfro: 5px;
+  --fio: var(--border-control);
   height: 32px;
   padding: 0 14px;
   background-color: var(--bg-cava-2);
   border: none;
   box-shadow: inset 0 0 0 1px var(--fio);
   border-radius: 0;
-  color: var(--text-2);
+  color: var(--muted);
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 0.13s ease, color 0.13s ease;
+  transition: background-color 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
 }
-.preset-chip:hover { --fio: var(--border-strong); background-color: #0b0d11; color: var(--text); }
+.preset-chip:hover { --fio: var(--border-strong); background-color: #0d1015; color: var(--text); }
 .preset-chip.active {
   --fio: var(--accent);
   background-color: var(--accent);
   color: #0b0c0f;
   font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--fio), 0 0 18px rgba(182, 255, 59, 0.4);
 }
 .preset-chip.active:hover { background-color: var(--accent-hover); color: #0b0c0f; }
 
@@ -661,21 +701,21 @@ section h2 {
   gap: 12px;
   font-family: var(--font-mono);
   font-size: 9px;
-  color: var(--muted-2);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  font-weight: 400;
-  margin: 6px 0 2px;
+  margin: 8px 0 2px;
 }
 .period-divider::before,
 .period-divider::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border);
 }
+.period-divider::before { background: linear-gradient(to right, transparent, var(--border-control)); }
+.period-divider::after { background: linear-gradient(to left, transparent, var(--border-control)); }
 
-/* --- as quatro colunas: cada uma é um poço --- */
+/* --- as quatro colunas: poços escuros, cada um com seu tom --- */
 .period-columns {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -683,6 +723,7 @@ section h2 {
   height: 320px;
 }
 .period-col {
+  --tom: var(--muted);
   display: flex;
   flex-direction: column;
   background-color: var(--bg-cava-2);
@@ -691,26 +732,47 @@ section h2 {
   border-radius: 0;
   min-width: 0;
 }
-/* coluna que ainda não pode ser usada some de vez em vez de ficar meio
-   apagada: escolha que não existe não deve parecer escolha */
-.period-col.disabled { opacity: 0.4; }
+/* a escala desce de lima a azulado conforme a busca fecha o cerco */
+.period-col.t1 { --tom: var(--stem-2); }
+.period-col.t2 { --tom: var(--stem-3); }
+.period-col.t3 { --tom: var(--stem-4); }
+.period-col.t4 { --tom: var(--stem-5); }
+/* coluna que ainda não pode ser usada apaga de vez: escolha que não existe
+   não deve parecer escolha */
+.period-col.disabled { opacity: 0.34; }
+.period-col.disabled .period-col-head { color: var(--muted-2); }
+.period-col.disabled .period-col-head::after { opacity: 0.2; }
 
 .period-col-head {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 11px 12px 10px;
+  background-color: rgba(255, 255, 255, 0.028);
   border-bottom: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 9px;
-  color: var(--muted-2);
+  color: var(--tom);
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  font-weight: 400;
 }
-/* contador quadrado, não pastilha: pastilha aqui parecia botão */
+/* fio de neon no topo do poço, na cor do degrau — é o que dá cor à tela sem
+   pintar superfície */
+.period-col-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, var(--tom), transparent 70%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tom) 45%, transparent);
+}
+/* contador quadrado, não pastilha: pastilha ali parecia botão, e ela não
+   clica — mentir pro dedo é bug de design */
 .period-col-count {
-  background: var(--accent);
+  background: var(--tom);
   color: #0b0c0f;
   font-family: var(--font-mono);
   font-size: 9.5px;
@@ -746,18 +808,19 @@ section h2 {
   cursor: pointer;
   transition: background 0.1s ease;
 }
-.period-item:hover { background: rgba(255, 255, 255, 0.04); }
-.period-item.selected { background: rgba(182, 255, 59, 0.1); }
-/* barra lateral lima no escolhido: lê-se de relance qual está ligado, sem
-   depender de enxergar o tique */
+.period-item:hover { background: rgba(255, 255, 255, 0.05); }
+.period-item.selected { background: color-mix(in srgb, var(--tom) 14%, transparent); }
+/* barra lateral na cor do degrau: lê-se de relance qual está ligado, sem
+   depender de enxergar o tique de 13px */
 .period-item.selected::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 4px;
-  bottom: 4px;
+  top: 3px;
+  bottom: 3px;
   width: 2px;
-  background: var(--accent);
+  background: var(--tom);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tom) 60%, transparent);
 }
 
 /* o input continua no DOM pro teclado e pro leitor de tela — só some da
@@ -782,8 +845,8 @@ section h2 {
 }
 .period-item:hover .period-marca { box-shadow: inset 0 0 0 1px var(--border-strong); }
 .period-item.selected .period-marca {
-  background: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent), 0 0 8px rgba(182, 255, 59, 0.4);
+  background: var(--tom);
+  box-shadow: inset 0 0 0 1px var(--tom), 0 0 10px color-mix(in srgb, var(--tom) 55%, transparent);
 }
 /* o tique é desenhado com duas hastes: sem fonte, sem emoji, e do tamanho
    certo em qualquer zoom */
@@ -799,7 +862,7 @@ section h2 {
   transform: rotate(43deg);
 }
 .period-item input:focus-visible + .period-marca {
-  box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 2px rgba(182, 255, 59, 0.35);
+  box-shadow: inset 0 0 0 1px var(--tom), 0 0 0 2px color-mix(in srgb, var(--tom) 40%, transparent);
 }
 
 .period-item-text { flex: 1; min-width: 0; }
@@ -811,21 +874,23 @@ section h2 {
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
 }
+.period-item.selected .period-item-label { color: var(--tom); }
 .period-item-sub {
   font-size: 10px;
   color: var(--muted-2);
   margin-top: 1px;
 }
 
-/* --- rodapé --- */
+/* --- rodapé: volta pra camada clara, fechando o sanduíche --- */
 .period-footer {
-  padding: 16px 24px 20px 26px;
-  border-top: 1px solid var(--border);
+  padding: 16px 22px 18px 26px;
+  background-color: var(--bg-elev);
+  border-top: 1px solid var(--border-control);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 18px;
 }
 .period-footer-actions { display: flex; gap: 8px; }
 /* "limpar tudo" é desfazer, não ação: texto puro, sem forma de botão, senão
@@ -846,6 +911,7 @@ section h2 {
 
 .period-btn {
   --chanfro: 5px;
+  --fio: var(--border-control);
   height: 36px;
   padding: 0 20px;
   background-color: var(--bg-cava-2);
@@ -857,15 +923,15 @@ section h2 {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 0.13s ease, color 0.13s ease;
+  transition: background-color 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
 }
-.period-btn:hover { --fio: var(--border-strong); background-color: #0b0d11; color: var(--text); }
+.period-btn:hover { --fio: var(--border-strong); background-color: #0d1015; color: var(--text); }
 .period-btn.forte {
   --fio: var(--accent);
   background-color: var(--accent);
   color: #0b0c0f;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--fio), 0 0 16px rgba(182, 255, 59, 0.3);
+  box-shadow: inset 0 0 0 1px var(--fio), 0 0 20px rgba(182, 255, 59, 0.42);
 }
 .period-btn.forte:hover { background-color: var(--accent-hover); color: #0b0c0f; }
 

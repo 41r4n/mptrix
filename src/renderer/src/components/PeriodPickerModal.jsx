@@ -174,6 +174,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
       {/* Mesma lingua do acervo: chassi cavado com chanfro de contorno
           fechado, marca lima na quina, rotulo mono em caixa-alta. O
           funcionamento nao mudou uma linha — so o vestuario. */}
+      <div className="period-caixa" onClick={(e) => e.stopPropagation()}>
       <div className="modal modal-period chanfro" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
         <header className="period-head">
           <div>
@@ -207,6 +208,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
 
           <div className="period-columns">
             <PeriodColumn
+              tom="t1"
               title="Ano"
               items={availableYears.map((y) => ({ key: y, label: String(y) }))}
               selected={years}
@@ -214,6 +216,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
               onToggle={(k) => toggleYear(Number(k))}
             />
             <PeriodColumn
+              tom="t2"
               title="Mês"
               items={availableMonths.map(({ key, year, month }) => ({
                 key,
@@ -226,6 +229,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
               disabled={years.size === 0}
             />
             <PeriodColumn
+              tom="t3"
               title="Semana"
               items={availableWeeks.map(({ key, week, month, year }) => {
                 const start = (week - 1) * 7 + 1
@@ -242,6 +246,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
               disabled={months.size === 0}
             />
             <PeriodColumn
+              tom="t4"
               title="Dia"
               items={availableDays.map(({ key, year, month, day }) => {
                 const date = new Date(year, month - 1, day)
@@ -267,13 +272,14 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
           </div>
         </div>
       </div>
+      </div>
     </div>
   )
 }
 
-function PeriodColumn({ title, items, selected, onToggle, disabled, empty }) {
+function PeriodColumn({ title, items, selected, onToggle, disabled, empty, tom }) {
   return (
-    <div className={`period-col chanfro ${disabled ? 'disabled' : ''}`}>
+    <div className={`period-col chanfro ${tom} ${disabled ? 'disabled' : ''}`}>
       <div className="period-col-head">
         <span>{title}</span>
         {selected.size > 0 && <span className="period-col-count">{selected.size}</span>}
