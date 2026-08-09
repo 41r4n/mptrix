@@ -4485,6 +4485,35 @@ section h2 {
   flex: 1;
   min-width: 120px;
 }
+/* O TRECHO MARCADO desenhado na barra de tempo. Fica ATRAS do controle
+   (z-index 0 contra 1) pra nao roubar o clique de arrastar, e as bordas
+   marcam onde o loop comeca e acaba -- o mesmo tracejado das pistas, pro olho
+   ligar as duas coisas. */
+.seek-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+}
+.seek-wrap .studio-seek {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+}
+.seek-loop {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(182, 255, 59, 0.16);
+  border-left: 1px dashed var(--accent);
+  border-right: 1px dashed var(--accent);
+  pointer-events: none;
+  z-index: 0;
+}
 
 .studio-time-total {
   color: var(--muted-2);

@@ -4109,18 +4109,33 @@ export default function StudioView({ source, onClose }) {
 
               {/* timer vivo: textContent escrito por frame (ref), lima */}
               <span className="studio-time studio-time-live" ref={timerElRef}>{fmtTime(pos)}</span>
-              <input
-                type="range"
-                className="studio-seek"
-                min="0"
-                max={playDuration || 1}
-                step="0.1"
-                defaultValue={Math.min(pos, playDuration || 0)}
-                ref={seekElRef}
-                onPointerDown={() => { draggingRef.current = true }}
-                onPointerUp={() => { draggingRef.current = false }}
-                onChange={(e) => seekTo(parseFloat(e.target.value))}
-              />
+              {/* A barra de tempo e a unica visao da MUSICA INTEIRA quando a
+                  mesa esta aproximada. Sem o trecho desenhado aqui, com zoom
+                  alto a pessoa perde a nocao de onde o loop esta na musica. */}
+              <span className="seek-wrap">
+                {waveSel && playDuration > 0 && (
+                  <span
+                    className="seek-loop"
+                    style={{
+                      left: `${(waveSel.start / playDuration) * 100}%`,
+                      width: `${(Math.max(0.2, waveSel.end - waveSel.start) / playDuration) * 100}%`
+                    }}
+                    aria-hidden="true"
+                  />
+                )}
+                <input
+                  type="range"
+                  className="studio-seek"
+                  min="0"
+                  max={playDuration || 1}
+                  step="0.1"
+                  defaultValue={Math.min(pos, playDuration || 0)}
+                  ref={seekElRef}
+                  onPointerDown={() => { draggingRef.current = true }}
+                  onPointerUp={() => { draggingRef.current = false }}
+                  onChange={(e) => seekTo(parseFloat(e.target.value))}
+                />
+              </span>
               <span className="studio-time studio-time-total">{fmtTime(playDuration)}</span>
 
               <span className="topbar-divider" />
