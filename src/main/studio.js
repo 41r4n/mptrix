@@ -1979,7 +1979,7 @@ const LIMPEZA_V = 1
 // Aqui a PASTA manda. Todo .flac de especialista que o registro não cita é
 // adotado com a MESMA balança da extração — inclusive a prateleira, senão faixa
 // quase-muda entra na mesa se passando por instrumento.
-async function adotarOrfaos(dir, ffmpegPath) {
+async function adotarOrfaos(dir, ffmpegPath, onEtapa) {
   const meta = readMeta(dir)
   if (!meta) return 0
   const conhecidas = new Set([...stemsOf(meta), ...(meta.extracted || [])])
@@ -1991,6 +1991,7 @@ async function adotarOrfaos(dir, ffmpegPath) {
       .filter((id) => SPECIALISTS[id] && !conhecidas.has(id))
   } catch { return 0 }
   if (!orfas.length) return 0
+  onEtapa?.(`adotando ${orfas.length} faixa${orfas.length > 1 ? 's' : ''} solta${orfas.length > 1 ? 's' : ''}`)
 
   let adotadas = 0
   for (const id of orfas) {
@@ -2044,7 +2045,7 @@ const activeRepairs = new Map()
 // analisador roda aqui na máquina, em segundos).
 const ANALISE_V = 2
 
-async function garantirAnalise(dir, ffmpegPath) {
+async function garantirAnalise(dir, ffmpegPath, onEtapa) {
   const meta = readMeta(dir)
   if (!meta) return false
   if ((meta.analiseV || 1) >= ANALISE_V && meta.analysis?.ticks) return false
@@ -2056,6 +2057,7 @@ async function garantirAnalise(dir, ffmpegPath) {
     ? join(dir, 'base', 'drums.flac')
     : (meta.sourceFile && existsSync(meta.sourceFile) ? meta.sourceFile : null)
   if (!fonte) return false
+  onEtapa?.('medindo o ritmo da música')
   try {
     const nova = await runAnalyzer(fonte, ffmpegPath, {})
     const m = readMeta(dir)
@@ -2075,7 +2077,7 @@ async function garantirAnalise(dir, ffmpegPath) {
   }
 }
 
-export function repairSession({ key, ffmpegPath }) {
+export function repairSession({ key, ffmpegPath, onEtapa }) {
   const emCurso = activeRepairs.get(key)
   if (emCurso) return emCurso
   const p = (async () => {
@@ -2085,16 +2087,18 @@ export function repairSession({ key, ffmpegPath }) {
     // os dois lendo e gravando os mesmos arquivos. O conserto espera a vez:
     // roda na próxima abertura, com a bancada livre.
     if (activeAutos.get(key)?.vivo) return false
-    return repararDeVerdade(dir, key, ffmpegPath)
+    return repararDeVerdade(dir, key, ffmpegPath, onEtapa)
   })()
   activeRepairs.set(key, p)
   p.then(() => activeRepairs.delete(key), () => activeRepairs.delete(key))
   return p
 }
 
-async function repararDeVerdade(dir, key, ffmpegPath) {
-  const adotadas = await adotarOrfaos(dir, ffmpegPath)
-  const analisou = await garantirAnalise(dir, ffmpegPath)
+async function repararDeVerdade(dir, key, ffmpegPath, onEtapa) {
+  // Cada aviso sai ANTES da etapa, não depois: quem está esperando precisa
+  // saber o que está rodando agora, não o que já acabou.
+  const adotadas = await adotarOrfaos(dir, ffmpegPath, onEtapa)
+  const analisou = await garantirAnalise(dir, ffmpegPath, onEtapa)
   const meta = readMeta(dir)
   if (!meta?.extracted?.length) return adotadas > 0 || analisou
   const want = meta.extracted
@@ -2102,7 +2106,9 @@ async function repararDeVerdade(dir, key, ffmpegPath) {
     .sort().join(',')
   const desatualizada = (meta.limpezaV || 0) < LIMPEZA_V
   if (!want || (meta.otherCleanFor === want && !desatualizada)) return adotadas > 0 || analisou
+  onEtapa?.('refazendo o Outros')
   await rebuildOther(dir, ffmpegPath, {})
+  onEtapa?.('limpando a voz')
   await cleanVocalsBleed(dir, ffmpegPath, {})
   const m2 = readMeta(dir)
   m2.limpezaV = LIMPEZA_V

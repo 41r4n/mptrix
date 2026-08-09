@@ -1111,14 +1111,30 @@ app.whenReady().then(() => {
     }
     const cached = getCachedSession(inputFile, model || 'htdemucs')
     if (cached) {
-      // Fiscal de abertura: se um trabalho antigo caiu antes do desconto,
-      // a faixa "outros" se conserta sozinha antes da sessão aparecer
-      return repairSession({ key: cached.key, ffmpegPath: FFMPEG_PATH })
+      // FISCAL DE ABERTURA: conserta o que ficou pela metade (faixa no disco
+      // sem registro, "outros" sem o desconto, análise de ritmo velha).
+      //
+      // Ele roda ANTES da sessão aparecer, e isso é de propósito: ele reescreve
+      // other.flac e vocals.flac, e mexer nesses arquivos com o tocador já
+      // lendo eles quebra a reprodução. O preço é a espera — que o dono levou
+      // na cara como "travou, não entrou", porque a tela não dizia nada.
+      //
+      // Agora ela diz. O aviso sai antes de cada etapa pesada, e some quando
+      // termina. Esperar sabendo o que está acontecendo é outra coisa.
+      send('studio:status', { state: 'consertando', key: cached.key })
+      return repairSession({
+        key: cached.key,
+        ffmpegPath: FFMPEG_PATH,
+        onEtapa: (etapa) => send('studio:status', { state: 'consertando', key: cached.key, etapa })
+      })
         .catch(() => false)
-        .then((repaired) => ({
-          session: repaired ? getCachedSession(inputFile, model || 'htdemucs') : cached,
-          repaired
-        }))
+        .then((repaired) => {
+          send('studio:status', { state: 'consertado', key: cached.key })
+          return {
+            session: repaired ? getCachedSession(inputFile, model || 'htdemucs') : cached,
+            repaired
+          }
+        })
     }
     heavyJobStart()
     const { id, cancel } = startStudioJob({

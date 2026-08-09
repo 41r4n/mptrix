@@ -802,6 +802,11 @@ export default function StudioView({ source, onClose }) {
   // avisos de confissão dispensados: guarda a ASSINATURA do que foi dispensado,
   // então som novo confessado traz o aviso de volta sozinho
   const [avisoOculto, setAvisoOculto] = useState({})
+  // O que o fiscal de abertura está fazendo agora. Ele roda ANTES da música
+  // aparecer (reescreve other/vocals, e mexer nisso com o tocador lendo quebra
+  // a reprodução), então a espera é inevitável — mas ficar sem dizer nada fez o
+  // dono achar que o app tinha travado.
+  const [consertando, setConsertando] = useState(null)
   // METRÔNOMO: ligado/desligado, volume e compasso (0 = sem acento no 1).
   // `metroFirme` escolhe entre bater NAS BATIDAS DA MÚSICA (segue a banda) ou
   // numa grade constante — ver o comentário do painel.
@@ -1264,6 +1269,10 @@ export default function StudioView({ source, onClose }) {
   // trabalhos internos marcados com auto:true) e resume no painel
   useEffect(() => {
     const offS = window.mptrix.studio.onStatus((st) => {
+      // O fiscal de abertura não é dissecação, então tem que ser tratado ANTES
+      // do filtro abaixo — que existe pra descartar status de OUTRAS músicas.
+      if (st.state === 'consertando') { setConsertando(st.etapa || ''); return }
+      if (st.state === 'consertado') { setConsertando(null); return }
       if (!st.auto) return
       if (st.state !== 'running') {
         // Só o status da dissecação DESTA música mexe no painel: o "done" de uma
@@ -2806,8 +2815,19 @@ export default function StudioView({ source, onClose }) {
                     : 'Preparando a análise (~2-3 min)…'
                 : phase === 'decoding'
                   ? 'Preparando o player…'
-                  : STAGE_LABELS[stage] || 'Começando…'}
+                  : consertando != null
+                    ? 'Arrumando a casa antes de abrir…'
+                    : STAGE_LABELS[stage] || 'Começando…'}
             </h3>
+            {consertando != null && (
+              <p className="muted studio-hint">
+                {consertando
+                  ? `${consertando}…`
+                  : 'conferindo se ficou algo pela metade da última vez'}
+                <br />
+                Isso acontece uma vez só por música — na próxima abertura ela entra direto.
+              </p>
+            )}
             {(phase === 'processing' || phase === 'planning') && percent != null && (
               <>
                 <div className="proc-head">
