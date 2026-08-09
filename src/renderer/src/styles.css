@@ -4563,6 +4563,46 @@ section h2 {
 .topbar-chip-vel.transposed { border-color: var(--accent-border); }
 .topbar-chip-vel.transposed .chip-select { color: var(--accent); }
 
+/* LEITURA DE PAINEL (não clica): sem caixa, sem borda. Quem destaca é o número
+   — mono, pesado, com halo — e o rótulo pequeno em caixa-alta. Uma hairline à
+   direita separa da vizinhança sem desenhar botão. É a forma prescrita pela
+   casa pra informação que não clica. */
+.topbar-read {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px 0 3px;
+  border-right: 1px solid var(--border);
+  flex: none;
+  align-self: center;
+}
+.topbar-read-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--muted-2);
+  align-self: center;
+}
+.topbar-read-value {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 0 14px rgba(242, 244, 247, 0.28);
+  line-height: 1;
+  align-self: center;
+}
+/* velocidade alterada muda o BPM que se ouve: o sufixo entra em lima porque é
+   consequência de um controle mexido, não medida da gravação */
+.topbar-read-suf {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  align-self: center;
+}
+
 /* METRÔNOMO: chip da mesma família. Ligado acende a borda em lima, como o TOM
    transposto — o estado se lê de longe, sem precisar procurar. */
 .topbar-chip-metro.on { border-color: var(--accent-border); }

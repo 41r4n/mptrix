@@ -2357,13 +2357,18 @@ export default function StudioView({ source, onClose }) {
           {model === 'quick' && <div className="studio-title-sub">🎚️ Edição rápida</div>}
         </div>
         <div className="studio-header-actions">
+          {/* BPM é LEITURA, não controle — não clica em nada. Por isso não usa
+              a forma de chip com borda dos vizinhos (TOM, VEL, METRÔNOMO), que
+              clicam de verdade: borda em volta de texto promete clique, e
+              prometer clique que não existe é mentir pro dedo. Destaque vem do
+              peso do número e de um halo, não de caixa. */}
           {bpm && (
-            <span className="topbar-chip">
-              <span className="topbar-chip-label">BPM</span>
-              <span className="topbar-chip-value">
+            <span className="topbar-read" data-hint="BPM — batidas por minuto que o app mediu nesta gravação. É leitura, não controle: pra mudar a velocidade use o VEL aqui do lado.">
+              <span className="topbar-read-label">BPM</span>
+              <span className="topbar-read-value">
                 {bpmHalf ? `${Math.round(bpmHalf)}/${Math.round(bpm)}` : Math.round(bpm)}
-                {tempo !== 100 ? `×${tempo}%` : ''}
               </span>
+              {tempo !== 100 && <span className="topbar-read-suf">×{tempo}%</span>}
             </span>
           )}
           {/* METRÔNOMO — irmão do BPM, então mora colado nele.
