@@ -857,6 +857,8 @@ export default function StudioView({ source, onClose }) {
   // espelho do zoom: o tratador da roda é registrado uma vez só, e sem o ref
   // ele leria sempre o valor do primeiro render (o zoom nunca sairia de 1×)
   const zoomRef = useRef(1)
+  const syncZoomRef = useRef(null) // atraso pro React acompanhar o gesto
+  const dawRef = useRef(null)      // dono da variavel --content-w
   const rulerInnerRef = useRef(null)
   const gutterWRef = useRef(0) // largura de UMA canaleta na tela (sem zoom)
   // O que está à vista agora, em pixels. Lido pelas ondas na hora de desenhar
@@ -1334,6 +1336,12 @@ export default function StudioView({ source, onClose }) {
   useEffect(() => {
     setPeaksMap({})
     setWaveSel(null)
+    // musica nova comeca inteira na tela: manter o zoom da anterior deixaria a
+    // pessoa caida no meio de uma faixa que ela nunca abriu
+    zoomRef.current = 1
+    setZoomX(1)
+    dawRef.current?.style.removeProperty('--content-w')
+    vistaRef.current.rolagem = 0
     setChords(null)
     setShowChords(false)
     setLyrics(null)
@@ -1718,45 +1726,78 @@ export default function StudioView({ source, onClose }) {
       const visivel = Math.max(120, el.clientWidth - larguraTrilho)
       gutterWRef.current = visivel
       setViewW(Math.round(visivel))
-      const cont = Math.round(visivel * zoomX)
+      // o zoom vive no ref durante o gesto; a medida usa ele, não o estado
+      const cont = Math.round(visivel * (zoomRef.current || 1))
       setContentW(cont)
       vistaRef.current.conteudo = cont
+      dawRef.current?.style.setProperty('--content-w', `${cont}px`)
       updateDawCut()
+      redesenharOndas()
     }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     if (el.firstElementChild) ro.observe(el.firstElementChild) // altura do conteúdo
     return () => ro.disconnect()
-  }, [phase, session?.key, updateDawCut, zoomX])
+  }, [phase, session?.key, updateDawCut, redesenharOndas, zoomX])
 
   // Aproximar/afastar SEGURANDO O PONTO DE ANCORAGEM. Sem isso, aproximar
   // joga a pessoa pra outro lugar da música e ela perde o trecho que estava
   // olhando — é o erro clássico de zoom em linha do tempo. Aqui o ponto de
   // referência (o centro da tela, ou onde o mouse está) fica parado.
+  // APROXIMAR/AFASTAR ESCREVENDO DIRETO NO DOM.
+  //
+  // A versao anterior mexia no estado do React a cada passo da roda e ainda
+  // fazia efeito colateral DENTRO do setState (proibido: o React pode rodar o
+  // atualizador duas vezes, e em hora imprevisivel). O resultado era o que o
+  // dono viu: engasgo em vez de animacao, e a onda mostrando a fatia velha
+  // enquanto a regua ja tinha andado.
+  //
+  // Aqui o gesto inteiro e DOM puro -- largura das canaletas, largura e
+  // deslocamento da regua, rolagem, e o redesenho das ondas. O React so
+  // acompanha depois, por um sincronismo atrasado, pra atualizar o rotulo e as
+  // marcas da regua sem travar o dedo do usuario. E a mesma doutrina do
+  // playhead: por quadro, escreve no no; nunca re-render.
   const aplicarZoom = useCallback((alvo, xAncora) => {
-    // contínuo, não em degraus: é isso que dá a sensação de animação em vez de
-    // salto. Duas casas decimais bastam pra ficar liso e não virar número feio.
-    const z = Math.round(Math.max(1, Math.min(16, alvo)) * 100) / 100
     const sc = dawScrollRef.current
-    setZoomX((atual) => {
-      if (z === atual || !sc) return z
-      const rail = sc.querySelector('.daw-rail')
-      const railW = rail ? rail.getBoundingClientRect().width : 264
-      const visivel = Math.max(1, sc.clientWidth - railW)
-      // posição da âncora dentro do conteúdo, em fração da música
-      const ancoraPx = xAncora != null
-        ? Math.max(0, xAncora - sc.getBoundingClientRect().left - railW)
-        : visivel / 2
-      const frac = (sc.scrollLeft + ancoraPx) / Math.max(1, visivel * atual)
-      requestAnimationFrame(() => {
-        const novo = visivel * z
-        sc.scrollLeft = Math.max(0, Math.min(novo - visivel, frac * novo - ancoraPx))
-        updateDawCut()
-      })
-      return z
-    })
-  }, [updateDawCut])
+    if (!sc) return
+    const z = Math.max(1, Math.min(16, alvo))
+    const atual = zoomRef.current || 1
+    if (Math.abs(z - atual) < 0.0005) return
+    const rail = sc.querySelector('.daw-rail')
+    const railW = rail ? rail.getBoundingClientRect().width : 264
+    const visivel = Math.max(120, sc.clientWidth - railW)
+    // ancora: o ponto que precisa ficar PARADO (cursor, ou centro da tela)
+    const ancoraPx = xAncora != null
+      ? Math.max(0, Math.min(visivel, xAncora - sc.getBoundingClientRect().left - railW))
+      : visivel / 2
+    const frac = (sc.scrollLeft + ancoraPx) / Math.max(1, visivel * atual)
+    const novoW = Math.round(visivel * z)
+
+    zoomRef.current = z
+    vistaRef.current.conteudo = novoW
+    // A largura mora numa VARIAVEL CSS do container, nao em style inline de
+    // cada canaleta. Inline o React reescreveria no proximo re-render -- e ele
+    // acontece 4x por segundo por causa do relogio -- e o zoom saltaria pra
+    // tras no meio do gesto.
+    dawRef.current?.style.setProperty('--content-w', `${novoW}px`)
+    const rolagem = Math.max(0, Math.min(novoW - visivel, frac * novoW - ancoraPx))
+    sc.scrollLeft = rolagem
+    vistaRef.current.rolagem = sc.scrollLeft
+    if (rulerInnerRef.current) {
+      rulerInnerRef.current.style.width = `${novoW}px`
+      rulerInnerRef.current.style.transform = `translateX(${-sc.scrollLeft}px)`
+    }
+    redesenharOndas()
+
+    // React acompanha quando o dedo para: rotulo do zoom e marcas mais finas
+    // na regua nao precisam de cada passo do gesto.
+    clearTimeout(syncZoomRef.current)
+    syncZoomRef.current = setTimeout(() => {
+      setZoomX(Math.round(z * 100) / 100)
+      setContentW(novoW)
+    }, 140)
+  }, [redesenharOndas])
 
   // RODA DO MOUSE = APROXIMAR, como no REAPER. Sem segurar tecla nenhuma, e
   // CONTÍNUO: cada passo multiplica por ~1,15, então a linha do tempo abre e
@@ -3101,7 +3142,7 @@ export default function StudioView({ source, onClose }) {
             {/* Mesa de DAW: rail de controles 264px + canaletas contínuas,
                 com UM overlay de playhead/tint cruzando todas as pistas */}
             <div className="daw-wrap">
-            <div className={`daw ${dawCut.top ? 'cut-top' : ''} ${dawCut.bottom ? 'cut-bottom' : ''}`}>
+            <div className={`daw ${dawCut.top ? 'cut-top' : ''} ${dawCut.bottom ? 'cut-bottom' : ''}`} ref={dawRef}>
               <div className="daw-row daw-head-row">
                 <div className="daw-rail daw-rail-head">
                   <span className="hex-dot" aria-hidden="true" />
@@ -3113,7 +3154,7 @@ export default function StudioView({ source, onClose }) {
                   <span className="daw-zoom">
                     <button
                       className="chip-step"
-                      onClick={() => aplicarZoom(zoomX / 1.6)}
+                      onClick={() => aplicarZoom((zoomRef.current || 1) / 1.6)}
                       disabled={zoomX <= 1.001}
                       data-hint="AFASTAR — mostra mais música na tela. No 1× a música inteira cabe de uma vez. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
                       aria-label="Afastar"
@@ -3127,7 +3168,7 @@ export default function StudioView({ source, onClose }) {
                     >{(Math.round(zoomX * 10) / 10).toString().replace('.', ',')}×</button>
                     <button
                       className="chip-step"
-                      onClick={() => aplicarZoom(zoomX * 1.6)}
+                      onClick={() => aplicarZoom((zoomRef.current || 1) * 1.6)}
                       disabled={zoomX >= 15.99}
                       data-hint="APROXIMAR — estica a linha do tempo. É o que dá precisão pra marcar um trecho curto: no 1× dois segundos são quatro pixels. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
                       aria-label="Aproximar"
@@ -3135,7 +3176,7 @@ export default function StudioView({ source, onClose }) {
                   </span>
                 </div>
                 <div className="daw-gutter daw-ruler">
-                  <div className="daw-ruler-inner" ref={rulerInnerRef} style={{ width: contentW ? `${contentW}px` : '100%' }}>
+                  <div className="daw-ruler-inner" ref={rulerInnerRef}>
                   {playDuration > 0 && (() => {
                     // com zoom cabe marca mais fina: de 5 em 5s à vista normal,
                     // de 1 em 1s (e até meio segundo) quando esticado — régua
@@ -3234,7 +3275,7 @@ export default function StudioView({ source, onClose }) {
                         <span className="daw-vol-num">{Math.round((volumes[stem] ?? 1) * 100)}</span>
                       </div>
                     </div>
-                    <div className="daw-gutter" style={contentW ? { width: `${contentW}px` } : undefined}>
+                    <div className="daw-gutter">
                       <WaveLane
                         peaks={peaksMap[stem]}
                         duration={playDuration}

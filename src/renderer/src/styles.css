@@ -7290,6 +7290,7 @@ body.studio-open .zoom-chip {
    dentro (translate), entao a caixa dela e sempre a largura visivel. */
 .daw-canvas .daw-gutter {
   flex: none;
+  width: var(--content-w, 100%);
 }
 .daw-ruler {
   overflow: hidden;
@@ -7298,6 +7299,7 @@ body.studio-open .zoom-chip {
 .daw-ruler-inner {
   position: relative;
   height: 100%;
+  width: var(--content-w, 100%);
   will-change: transform;
 }
 /* barra de rolagem discreta, na linguagem da casa */
