@@ -8203,19 +8203,57 @@ ul.hlib-grid {
     drop-shadow(-6px 7px 46px var(--glow-painel));
 }
 
+/* ▚▚▚ CHANFRO COM O CONTORNO FECHADO ▚▚▚
+   O fio aqui e box-shadow inset, que desenha um RETANGULO. O clip-path corta
+   a quina depois, e a aresta diagonal fica sem linha nenhuma — o contorno
+   abre um vao e o olho le pedaco faltando. Eu tentei encolher o chanfro (so
+   encolheu o vao) e depois tirar o chanfro (virou quadrado, perdeu a
+   assinatura). Nenhuma das duas era o conserto: o conserto e DESENHAR a
+   diagonal.
+   Cada peca chanfrada leva duas faixas de degrade do tamanho exato do
+   chanfro, encostadas nas quinas cortadas, com a linha correndo em cima da
+   propria aresta. A metade de fora e recortada junto com a quina; sobra a
+   metade de dentro, que fecha o contorno.
+   A cor sai de --fio, entao quando a peca acende (foco, filtro ligado) a
+   diagonal acende junto — senao o contorno ficaria lima com duas gravetas
+   brancas nas pontas. */
+.barra,
+.barra-busca,
+.barra-sel,
+.barra-btn {
+  --fio: var(--border-control);
+  --diag: linear-gradient(to top right,
+    transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
+    var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--chanfro)) 0,
+    100% var(--chanfro),
+    100% 100%,
+    var(--chanfro) 100%,
+    0 calc(100% - var(--chanfro)));
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+}
+
 .barra {
+  --chanfro: 10px;
+  --fio: var(--border);
   position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
   padding: 9px 12px 9px 16px;
-  background: var(--bg-cava);
+  /* background-COLOR, nunca o atalho: o atalho apaga o background-image que
+     desenha as diagonais */
+  background-color: var(--bg-cava);
   /* dentro fica so o fio: o relevo agora e todo pra fora */
   box-shadow:
-    inset 0 0 0 1px var(--border),
+    inset 0 0 0 1px var(--fio),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-  clip-path: var(--corte-sm);
 }
 /* marca lima na quina — diz "isto é o painel de comando" sem gastar largura */
 .barra::before {
@@ -8229,14 +8267,8 @@ ul.hlib-grid {
   box-shadow: 0 0 10px rgba(182, 255, 59, 0.45);
 }
 
-/* SEM CHANFRO NAS PECAS PEQUENAS — e o motivo nao e tamanho, e a borda.
-   O fio de contorno aqui e box-shadow inset, que desenha um RETANGULO. O
-   clip-path corta a quina depois, entao a diagonal fica sem linha nenhuma:
-   o contorno abre um vao e o olho le pedaco faltando. Diminuir o corte de
-   10 pra 5px so encolheu o vao, nao fechou.
-   Peca pequena entao fica reta, com o contorno inteiro. O chanfro continua
-   sendo assinatura onde ele cabe: no chassi. */
 .barra-busca {
+  --chanfro: 6px;
   position: relative;
   display: flex;
   align-items: center;
@@ -8246,16 +8278,16 @@ ul.hlib-grid {
   max-width: 400px;
   height: 34px;
   padding: 0 10px;
-  background: var(--bg-cava-2);
+  background-color: var(--bg-cava-2);
   box-shadow:
-    inset 0 0 0 1px var(--border-control),
+    inset 0 0 0 1px var(--fio),
     inset 0 2px 7px rgba(0, 0, 0, 0.85);
-  border-radius: 2px;
   transition: box-shadow 0.14s ease;
 }
 .barra-busca:focus-within {
+  --fio: var(--accent-border);
   box-shadow:
-    inset 0 0 0 1px var(--accent-border),
+    inset 0 0 0 1px var(--fio),
     inset 0 2px 7px rgba(0, 0, 0, 0.85),
     0 0 12px rgba(182, 255, 59, 0.16);
 }
@@ -8297,12 +8329,13 @@ ul.hlib-grid {
    vizinhos falando línguas diferentes. */
 .barra-sel,
 .barra-btn {
+  --chanfro: 6px;
   height: 34px;
   padding: 0 12px;
-  background: var(--bg-cava-2);
+  background-color: var(--bg-cava-2);
   border: none;
   box-shadow:
-    inset 0 0 0 1px var(--border-control),
+    inset 0 0 0 1px var(--fio),
     inset 0 2px 6px rgba(0, 0, 0, 0.8);
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -8310,27 +8343,30 @@ ul.hlib-grid {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 2px;
-  transition: background 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
+  transition: background-color 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
   flex: none;
 }
 .barra-sel {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 24px;
-  /* seta desenhada: o triângulo nativo do Windows não combina com nada aqui */
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 14px) 15px, calc(100% - 10px) 15px;
-  background-size: 4px 4px, 4px 4px;
+  /* a seta entra na MESMA lista das diagonais: background-image nao empilha
+     entre regras, a ultima declaracao vence a lista inteira */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    var(--diag), var(--diag);
+  background-size: 4px 4px, 4px 4px, var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: calc(100% - 14px) 15px, calc(100% - 10px) 15px, top right, bottom left;
   background-repeat: no-repeat;
 }
 .barra-sel:hover,
 .barra-btn:hover {
-  background: #0b0d11;
+  --fio: var(--border-strong);
+  background-color: #0b0d11;
   color: var(--text);
   box-shadow:
-    inset 0 0 0 1px var(--border-strong),
+    inset 0 0 0 1px var(--fio),
     inset 0 -2px 6px rgba(0, 0, 0, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
@@ -8339,25 +8375,31 @@ ul.hlib-grid {
 /* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
 .barra-btn.on,
 .barra-btn.aviso {
+  --fio: var(--accent-border);
   color: var(--accent);
-  background: var(--accent-dim);
+  background-color: var(--accent-dim);
   box-shadow:
-    inset 0 0 0 1px var(--accent-border),
+    inset 0 0 0 1px var(--fio),
     inset 0 0 14px rgba(182, 255, 59, 0.12);
 }
 .barra-btn.on:hover,
-.barra-btn.aviso:hover { background: rgba(182, 255, 59, 0.22); color: var(--accent); }
+.barra-btn.aviso:hover { background-color: rgba(182, 255, 59, 0.22); color: var(--accent); }
 .barra-btn.forte {
-  background: var(--accent);
+  --fio: var(--accent);
+  background-color: var(--accent);
   color: #0b0c0f;
   font-weight: 700;
   box-shadow:
     0 0 16px rgba(182, 255, 59, 0.35),
     inset 0 -2px 0 rgba(0, 0, 0, 0.22);
 }
-.barra-btn.forte:hover { background: var(--accent-hover); color: #0b0c0f; }
+.barra-btn.forte:hover { background-color: var(--accent-hover); color: #0b0c0f; }
 .barra-btn.forte:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
-.barra-btn.perigo:hover { color: var(--bad); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5); }
+.barra-btn.perigo:hover {
+  --fio: rgba(248, 113, 113, 0.5);
+  color: var(--bad);
+  box-shadow: inset 0 0 0 1px var(--fio);
+}
 
 .barra-conta {
   font-family: var(--font-mono);
