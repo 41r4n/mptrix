@@ -7485,10 +7485,6 @@ section h2::after {
 :root {
   --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  /* CHANFRO DAS PECAS PEQUENAS. Num chip de 34px de altura, cortar 10px das
-     quinas come quase um terco do lado — deixa de ler como chanfro e passa a
-     ler como pedaco faltando. 5px mantem a assinatura sem morder a peca. */
-  --corte-xs: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
 }
 
 .console {
@@ -8233,6 +8229,13 @@ ul.hlib-grid {
   box-shadow: 0 0 10px rgba(182, 255, 59, 0.45);
 }
 
+/* SEM CHANFRO NAS PECAS PEQUENAS — e o motivo nao e tamanho, e a borda.
+   O fio de contorno aqui e box-shadow inset, que desenha um RETANGULO. O
+   clip-path corta a quina depois, entao a diagonal fica sem linha nenhuma:
+   o contorno abre um vao e o olho le pedaco faltando. Diminuir o corte de
+   10 pra 5px so encolheu o vao, nao fechou.
+   Peca pequena entao fica reta, com o contorno inteiro. O chanfro continua
+   sendo assinatura onde ele cabe: no chassi. */
 .barra-busca {
   position: relative;
   display: flex;
@@ -8247,7 +8250,7 @@ ul.hlib-grid {
   box-shadow:
     inset 0 0 0 1px var(--border-control),
     inset 0 2px 7px rgba(0, 0, 0, 0.85);
-  clip-path: var(--corte-xs);
+  border-radius: 2px;
   transition: box-shadow 0.14s ease;
 }
 .barra-busca:focus-within {
@@ -8307,7 +8310,7 @@ ul.hlib-grid {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
-  clip-path: var(--corte-xs);
+  border-radius: 2px;
   transition: background 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
   flex: none;
 }
