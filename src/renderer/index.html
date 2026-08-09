@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>MPTRIX</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.ytimg.com https://i.ytimg.com https://yt3.ggpht.com; connect-src 'self' stems:; media-src 'self' stems:;" />
+    <!--
+      A porta "stems:" e a que serve os arquivos guardados no computador. Ela
+      ja estava liberada pra SOM (media-src) e pra dados (connect-src), mas
+      nao pra IMAGEM — entao a capa era extraida, gravada em cache e servida
+      certinho, e o navegador recusava a exibir no ultimo passo. Por isso as
+      capas apareciam quebradas mesmo com os 99 arquivos no lugar.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: stems: https://*.ytimg.com https://i.ytimg.com https://yt3.ggpht.com; connect-src 'self' stems:; media-src 'self' stems:;" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Fontes do design system (auto-hospedadas: o MPTRIX é 100% offline) -->
     <link rel="stylesheet" href="/fonts/fonts.css" />
