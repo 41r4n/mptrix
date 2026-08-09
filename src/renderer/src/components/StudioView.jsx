@@ -563,7 +563,13 @@ function createStemPlayer() {
     // do laço: `quando = agora + (batida - posição) / velocidade`. Como a
     // posição é lida do tocador toda vez, qualquer atraso acumulado se corrige
     // sozinho na volta seguinte, e mudar a velocidade não desalinha nada.
-    metro: { on: false, vol: 0.5, batidas: null, periodo: 0, faseGrade: 0, compasso: 4, prox: 0, timer: null },
+    // `acento` é de quantos em quantos CLIQUES cai o tempo forte (já contando
+    // subdivisão). `livre` é o metrônomo sem música: bate no relógio do áudio,
+    // não na posição da faixa, porque não há faixa.
+    metro: {
+      on: false, vol: 0.5, batidas: null, periodo: 0, faseGrade: 0, acento: 4,
+      prox: 0, timer: null, livre: false, livreBpm: 90, livreProx: 0, livreN: 0
+    },
 
     clique(quando, forte) {
       if (!this.ctx) return
@@ -583,12 +589,14 @@ function createStemPlayer() {
       o.stop(quando + 0.06)
     },
 
-    metroConfig({ batidas, periodo, faseGrade, compasso, vol }) {
+    metroConfig({ batidas, periodo, faseGrade, acento, vol, livre, livreBpm }) {
       if (batidas !== undefined) this.metro.batidas = batidas
       if (periodo !== undefined) this.metro.periodo = periodo
       if (faseGrade !== undefined) this.metro.faseGrade = faseGrade
-      if (compasso !== undefined) this.metro.compasso = compasso
+      if (acento !== undefined) this.metro.acento = acento
       if (vol !== undefined) this.metro.vol = vol
+      if (livre !== undefined) this.metro.livre = livre
+      if (livreBpm !== undefined) this.metro.livreBpm = livreBpm
       this.metro.prox = -1 // qualquer troca reancora na posição atual
     },
 
@@ -598,17 +606,31 @@ function createStemPlayer() {
       this.metro.prox = -1 // recalcula a partir da posição atual
       const passo = () => {
         if (!this.metro.on || !this.ctx) return
-        // só bate junto com a música tocando: metrônomo sozinho tem outro dono
-        if (this.playing) {
+        const forte = (i) => this.metro.acento > 0 && i % this.metro.acento === 0
+        if (this.metro.livre && !this.playing) {
+          // SEM MÚSICA: o clique não tem posição de faixa pra seguir, então
+          // anda no relógio do próprio áudio. Mesmo agendamento com
+          // antecedência — é o que garante o tempo firme que serve pra treinar.
+          const p = 60 / Math.max(20, Math.min(300, this.metro.livreBpm))
+          const agora = this.ctx.currentTime
+          // primeira volta (ou volta depois de uma pausa longa): reancora
+          if (!(this.metro.livreProx > agora - 1)) {
+            this.metro.livreProx = agora + 0.08
+            this.metro.livreN = 0
+          }
+          while (this.metro.livreProx <= agora + 0.25) {
+            this.clique(this.metro.livreProx, forte(this.metro.livreN))
+            this.metro.livreProx += p
+            this.metro.livreN++
+          }
+        } else if (this.playing) {
           const pos = this.position()
           const rate = (this.els[this.order[0]]?.playbackRate) || 1
           const horizonte = pos + 0.25 * rate
           const emitir = (t, i) => {
             if (t < pos || t > horizonte) return false
             const quando = this.ctx.currentTime + (t - pos) / rate
-            if (quando > this.ctx.currentTime) {
-              this.clique(quando, this.metro.compasso > 0 && i % this.metro.compasso === 0)
-            }
+            if (quando > this.ctx.currentTime) this.clique(quando, forte(i))
             return true
           }
           if (this.metro.batidas?.length) {
@@ -768,6 +790,13 @@ export default function StudioView({ source, onClose }) {
   const [metroVol, setMetroVol] = useState(0.5)
   const [metroCompasso, setMetroCompasso] = useState(4)
   const [metroFirme, setMetroFirme] = useState(false)
+  // subdivisão: 0.5 = clica a cada duas batidas · 1 = na batida · 2 = duas por
+  // batida. NÃO é BPM diferente — continua ancorado nas batidas da própria
+  // gravação, então não sai de sincronia.
+  const [metroMult, setMetroMult] = useState(1)
+  // metrônomo sem música: bate com a faixa parada, no BPM que a pessoa escolher
+  const [metroLivre, setMetroLivre] = useState(false)
+  const [metroBpm, setMetroBpm] = useState(90)
   const [descSom, setDescSom] = useState('')      // descrição livre do som marcado
   const [loopOn, setLoopOn] = useState(false) // loop do transporte (trecho ou música)
   const loopRef = useRef({ on: false, sel: null })
@@ -2167,20 +2196,45 @@ export default function StudioView({ source, onClose }) {
     }
   }, [session])
 
+  // A lista de cliques já sai pronta daqui, com a subdivisão aplicada. Fazer a
+  // conta aqui (e não dentro do laço do metrônomo) mantém o laço burro e rápido:
+  // ele só caminha numa lista ordenada, 10 vezes por segundo.
+  const cliquesDaMusica = useMemo(() => {
+    const b = ritmo.batidas
+    if (!b?.length) return null
+    if (metroMult === 2) {
+      // uma batida no meio de cada par — o intervalo real, não o médio, então
+      // a subdivisão respira junto com a banda
+      const out = []
+      for (let i = 0; i < b.length; i++) {
+        out.push(b[i])
+        if (i + 1 < b.length) out.push((b[i] + b[i + 1]) / 2)
+      }
+      return out
+    }
+    if (metroMult === 0.5) return b.filter((_, i) => i % 2 === 0)
+    return b
+  }, [ritmo, metroMult])
+
   useEffect(() => {
     const p = playerRef.current
     if (!p) return
-    // "firme" = grade constante; senão segue as batidas medidas da gravação
+    // O acento cai no tempo 1 do compasso — e o "de quantos em quantos cliques"
+    // muda com a subdivisão: em ×2 são dois cliques por batida, então um
+    // compasso de 4 tem 8 cliques.
+    const acento = metroCompasso > 0 ? Math.max(1, Math.round(metroCompasso * metroMult)) : 0
     p.metroConfig({
-      batidas: metroFirme ? null : ritmo.batidas,
-      periodo: metroFirme ? (ritmo.periodo || 0) : 0,
+      batidas: (metroLivre || metroFirme) ? null : cliquesDaMusica,
+      periodo: metroFirme && ritmo.periodo ? ritmo.periodo / metroMult : 0,
       faseGrade: ritmo.grade?.fase || 0,
-      compasso: metroCompasso,
-      vol: metroVol
+      acento,
+      vol: metroVol,
+      livre: metroLivre,
+      livreBpm: metroBpm * metroMult
     })
     if (metroOn && phase === 'ready') p.metroStart()
     else p.metroStop()
-  }, [metroOn, metroVol, metroCompasso, metroFirme, ritmo, phase, session])
+  }, [metroOn, metroVol, metroCompasso, metroFirme, metroMult, metroLivre, metroBpm, cliquesDaMusica, ritmo, phase, session])
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -2320,7 +2374,9 @@ export default function StudioView({ source, onClose }) {
               · FIRME: pulso constante, pra treinar precisão. Só gruda na
                 gravação quando a música é de máquina; quando não é, o próprio
                 painel avisa em vez de deixar o clique escorregar em silêncio. */}
-          {ritmo.periodo && (
+          {/* o chip aparece sempre que houver sessão: mesmo sem ritmo medido
+              (música sem batida detectável), o modo SOZINHO ainda serve */}
+          {(ritmo.periodo || phase === 'ready') && (
             <span className={`topbar-chip topbar-chip-metro ${metroOn ? 'on' : ''}`}>
               <button
                 className="metro-toggle"
@@ -2367,7 +2423,46 @@ export default function StudioView({ source, onClose }) {
                     data-hint={`VOLUME DO CLIQUE — ${Math.round(metroVol * 100)}%. Mexe só no metrônomo; o volume da música continua o mesmo.`}
                     aria-label="Volume do metrônomo"
                   />
-                  {ritmo.temBatidas && (
+                  {/* SUBDIVISÃO — não é BPM diferente. Continua ancorada nas
+                      batidas da própria gravação, então não sai de sincronia
+                      por mais que a música ande. */}
+                  <button
+                    className={`metro-mult ${metroMult !== 1 ? 'on' : ''}`}
+                    onClick={() => { setMetroMult((m) => (m === 1 ? 2 : m === 2 ? 0.5 : 1)); setHint(null) }}
+                    data-hint={metroMult === 2
+                      ? 'DOBRADO — dois cliques por batida. É o jeito clássico de apertar a precisão: obriga a mão a acertar o meio do tempo, não só o tempo. Clique pra ir pra metade.'
+                      : metroMult === 0.5
+                        ? 'PELA METADE — um clique a cada duas batidas. Marca só o tempo forte, pra sentir a frase inteira em vez de contar tudo. Clique pra voltar ao normal.'
+                        : 'NA BATIDA — um clique por tempo. Clique pra dobrar (dois por tempo, treina precisão).'}
+                  >{metroMult === 2 ? '×2' : metroMult === 0.5 ? '÷2' : '×1'}</button>
+                  {/* METRÔNOMO SOLTO: com a música parada, ele bate no BPM que
+                      a pessoa escolher. É o caso de sentar com o instrumento
+                      sem faixa nenhuma tocando. */}
+                  <button
+                    className={`metro-modo ${metroLivre ? 'on' : ''}`}
+                    onClick={() => { setMetroLivre((v) => !v); setHint(null) }}
+                    data-hint={metroLivre
+                      ? 'SOZINHO — bate no seu BPM, com a música parada. Dá play na música e ele volta a seguir a gravação. Clique pra desligar o modo sozinho.'
+                      : 'SOZINHO — liga o metrônomo sem música nenhuma, no BPM que você escolher. Pra sentar com o instrumento e treinar.'}
+                  >{metroLivre ? 'sozinho' : 'com a música'}</button>
+                  {metroLivre && (
+                    <span className="metro-comp">
+                      <button
+                        className="chip-step"
+                        onClick={() => setMetroBpm((b) => Math.max(20, b - 1))}
+                        aria-label="Diminuir BPM"
+                      >−</button>
+                      <span className="metro-comp-num" data-hint="BPM DO METRÔNOMO SOZINHO — batidas por minuto. Vale de 20 a 300.">
+                        {metroBpm}
+                      </span>
+                      <button
+                        className="chip-step"
+                        onClick={() => setMetroBpm((b) => Math.min(300, b + 1))}
+                        aria-label="Aumentar BPM"
+                      >+</button>
+                    </span>
+                  )}
+                  {!metroLivre && ritmo.temBatidas && (
                     <button
                       className={`metro-modo ${metroFirme ? 'on' : ''}`}
                       // a legenda descreve o estado ATUAL; sem limpar, quem
