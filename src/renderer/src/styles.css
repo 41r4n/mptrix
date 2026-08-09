@@ -7275,6 +7275,16 @@ body.studio-open .zoom-chip {
   left: 0;
   z-index: 5;
 }
+/* A ONDA fica do tamanho da JANELA e grudada na esquerda, mesmo com a canaleta
+   esticada pelo zoom: quem cresce e a canaleta (ela manda na rolagem e nas
+   contas de posicao), nao a imagem. Assim o bitmap nunca passa da largura da
+   tela, por mais que se aproxime. */
+.daw-canvas .daw-gutter > .wave-lane {
+  position: sticky;
+  left: 0;
+  width: auto;
+}
+
 /* so as canaletas das PISTAS ganham largura fixa (a do zoom). A da regua fica
    flex:1 de proposito: ela nao rola junto, quem anda e o conteudo dela por
    dentro (translate), entao a caixa dela e sempre a largura visivel. */

@@ -245,7 +245,7 @@ function useSmoothProgress(target, active) {
 
 // Faixa com as "dobras sonoras": desenha os picos, mostra o cursor de
 // reprodução, clique = pular pra posição, arrastar = marcar o trecho do loop
-function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes }) {
+function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes, vista, registrarDesenho, larguraVisivel }) {
   const canvasRef = useRef(null)
   const boxRef = useRef(null)
   const dragRef = useRef(null)
@@ -253,24 +253,38 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !peaks) return
+    // SÓ O PEDAÇO VISÍVEL É DESENHADO. A canaleta cresce com o zoom (é ela que
+    // manda na rolagem e nas contas de posição), mas a IMAGEM fica do tamanho
+    // da janela e grudada na esquerda. Sem isso, no 16× cada onda viraria um
+    // bitmap de ~14 mil pixels de largura: quinze faixas assim estouram a
+    // memória e o navegador ainda corta o que passa do limite dele.
     const draw = () => {
       const dpr = window.devicePixelRatio || 1
       const w = canvas.clientWidth || 600
       const h = canvas.clientHeight || 34
-      canvas.width = w * dpr
-      canvas.height = h * dpr
+      const bw = Math.max(1, Math.round(w * dpr))
+      const bh = Math.max(1, Math.round(h * dpr))
+      // trocar o tamanho do bitmap limpa e é caro: só quando muda de verdade
+      if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh }
       const ctx = canvas.getContext('2d')
-      ctx.scale(dpr, dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
+      // fatia da música que está à vista, em fração de 0 a 1
+      const v = vista?.current
+      const total = v?.conteudo > 0 ? v.conteudo : w
+      const ini = Math.max(0, Math.min(1, (v?.rolagem || 0) / total))
+      const fim = Math.max(ini, Math.min(1, ((v?.rolagem || 0) + w) / total))
+      const p0 = ini * peaks.length
+      const p1 = Math.max(p0 + 1, fim * peaks.length)
       // Traços verticais finos com respiro, como no protótipo (~1 barra a cada
       // 4.5px, largura 1.8, centrados na linha do meio)
       const bars = Math.max(60, Math.floor(w / 4.5))
-      const per = peaks.length / bars
+      const per = (p1 - p0) / bars
       ctx.fillStyle = color || 'rgba(182, 255, 59, 0.9)'
       for (let b = 0; b < bars; b++) {
         let max = 0
-        const s0 = Math.floor(b * per)
-        const s1 = Math.min(peaks.length, Math.max(s0 + 1, Math.floor((b + 1) * per)))
+        const s0 = Math.floor(p0 + b * per)
+        const s1 = Math.min(peaks.length, Math.max(s0 + 1, Math.floor(p0 + (b + 1) * per)))
         for (let s = s0; s < s1; s++) if (peaks[s] > max) max = peaks[s]
         const ph = Math.max(2, max * (h - 8))
         const x = (b + 0.5) * (w / bars)
@@ -278,11 +292,13 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
       }
     }
     draw()
+    // quem rola/aproxima chama estes desenhos direto, sem passar pelo React
+    registrarDesenho?.(draw)
     // Janela mudou de tamanho? Redesenha — senão a onda fica esticada/borrada
     const ro = new ResizeObserver(draw)
     ro.observe(canvas)
-    return () => ro.disconnect()
-  }, [peaks, color])
+    return () => { ro.disconnect(); registrarDesenho?.(null) }
+  }, [peaks, color, vista, registrarDesenho, larguraVisivel])
 
   const timeAt = (clientX) => {
     const r = boxRef.current.getBoundingClientRect()
@@ -314,7 +330,12 @@ function WaveLane({ peaks, duration, color, selection, onSeek, onSelect, onNodes
   }
 
   return (
-    <div className="wave-lane" ref={boxRef} onPointerDown={onDown} title="Clique: pular · Arrastar: marcar trecho pra investigar">
+    <div
+      className="wave-lane"
+      ref={boxRef}
+      onPointerDown={onDown}
+      style={larguraVisivel ? { width: `${larguraVisivel}px` } : undefined}
+    >
       <div className="wave-zero" />
       <canvas ref={canvasRef} className="wave-canvas" />
       {/* tint da região já tocada + playhead: escritos por frame via ref */}
@@ -833,8 +854,23 @@ export default function StudioView({ source, onClose }) {
   // sem isso, marcar dois segundos numa música de cinco minutos são quatro
   // pixels, e ninguém acerta o ponto arrastando quatro pixels.
   const [zoomX, setZoomX] = useState(1)
+  // espelho do zoom: o tratador da roda é registrado uma vez só, e sem o ref
+  // ele leria sempre o valor do primeiro render (o zoom nunca sairia de 1×)
+  const zoomRef = useRef(1)
   const rulerInnerRef = useRef(null)
   const gutterWRef = useRef(0) // largura de UMA canaleta na tela (sem zoom)
+  // O que está à vista agora, em pixels. Lido pelas ondas na hora de desenhar
+  // (só o pedaço visível) e escrito no evento de rolagem — nunca por estado do
+  // React, senão rolar viraria re-render de quinze faixas por quadro.
+  const vistaRef = useRef({ rolagem: 0, conteudo: 0 })
+  const desenhosRef = useRef(new Map())
+  const registrarDesenho = useCallback((stem) => (fn) => {
+    if (fn) desenhosRef.current.set(stem, fn)
+    else desenhosRef.current.delete(stem)
+  }, [])
+  const redesenharOndas = useCallback(() => {
+    for (const fn of desenhosRef.current.values()) fn()
+  }, [])
   const [dawH, setDawH] = useState(0)
   const [uiZoom, setUiZoom] = useState(1)
   useEffect(() => {
@@ -1655,7 +1691,10 @@ export default function StudioView({ source, onClose }) {
     if (rulerInnerRef.current) {
       rulerInnerRef.current.style.transform = `translateX(${-el.scrollLeft}px)`
     }
-  }, [])
+    // as ondas desenham só a fatia visível: rolou, redesenha na hora
+    vistaRef.current.rolagem = el.scrollLeft
+    redesenharOndas()
+  }, [redesenharOndas])
 
   // Mede a área das pistas: quantas faixas cabem inteiras, e de que tamanho.
   // Com poucas, elas esticam; com muitas, encaixam N inteiras e o resto rola —
@@ -1664,9 +1703,11 @@ export default function StudioView({ source, onClose }) {
   // pro tamanho dos filhos, e filho com largura em % do pai que depende do
   // filho é conta circular — o zoom simplesmente não sairia do lugar.
   const [contentW, setContentW] = useState(0)
+  const [viewW, setViewW] = useState(0) // largura VISÍVEL da canaleta (a onda usa esta)
   // espelho em ref: o relógio de quadro não pode depender de estado do React
   const contentWRef = useRef(0)
   useEffect(() => { contentWRef.current = contentW }, [contentW])
+  useEffect(() => { zoomRef.current = zoomX }, [zoomX])
   useEffect(() => {
     const el = dawScrollRef.current
     if (!el) return
@@ -1676,7 +1717,10 @@ export default function StudioView({ source, onClose }) {
       const larguraTrilho = rail ? rail.getBoundingClientRect().width : 264
       const visivel = Math.max(120, el.clientWidth - larguraTrilho)
       gutterWRef.current = visivel
-      setContentW(Math.round(visivel * zoomX))
+      setViewW(Math.round(visivel))
+      const cont = Math.round(visivel * zoomX)
+      setContentW(cont)
+      vistaRef.current.conteudo = cont
       updateDawCut()
     }
     measure()
@@ -1691,7 +1735,9 @@ export default function StudioView({ source, onClose }) {
   // olhando — é o erro clássico de zoom em linha do tempo. Aqui o ponto de
   // referência (o centro da tela, ou onde o mouse está) fica parado.
   const aplicarZoom = useCallback((alvo, xAncora) => {
-    const z = Math.max(1, Math.min(16, alvo))
+    // contínuo, não em degraus: é isso que dá a sensação de animação em vez de
+    // salto. Duas casas decimais bastam pra ficar liso e não virar número feio.
+    const z = Math.round(Math.max(1, Math.min(16, alvo)) * 100) / 100
     const sc = dawScrollRef.current
     setZoomX((atual) => {
       if (z === atual || !sc) return z
@@ -1712,19 +1758,33 @@ export default function StudioView({ source, onClose }) {
     })
   }, [updateDawCut])
 
-  // Ctrl + roda do mouse sobre as ondas aproxima no ponto do cursor — o jeito
-  // que todo editor de áudio faz, e o mais rápido pra achar um trecho curto.
+  // RODA DO MOUSE = APROXIMAR, como no REAPER. Sem segurar tecla nenhuma, e
+  // CONTÍNUO: cada passo multiplica por ~1,15, então a linha do tempo abre e
+  // fecha liso em vez de saltar de 2× pra 4×.
+  //
+  // Sobre as ONDAS a roda aproxima; sobre o TRILHO (nomes, M/S, volume) ela
+  // rola a lista de faixas. É o jeito de ter as duas coisas sem tecla mágica —
+  // cada área faz o que ela é. Shift+roda anda de lado.
   useEffect(() => {
     const sc = dawScrollRef.current
     if (!sc || phase !== 'ready') return
     const onWheel = (e) => {
-      if (!e.ctrlKey) return
+      if (e.ctrlKey || e.altKey) return // zoom da interface (lupinha) segue seu
+      if (e.target?.closest?.('.daw-rail')) return // sobre o trilho: rola a lista
+      if (e.shiftKey) {
+        e.preventDefault()
+        sc.scrollLeft += e.deltaY
+        return
+      }
       e.preventDefault()
-      aplicarZoom(e.deltaY < 0 ? zoomX * 2 : zoomX / 2, e.clientX)
+      // exponencial pelo tamanho do passo: roda de mouse manda ~100 por clique,
+      // trackpad manda valores pequenos e contínuos — os dois ficam suaves
+      const fator = Math.exp(-e.deltaY * 0.0015)
+      aplicarZoom(zoomRef.current * fator, e.clientX)
     }
     sc.addEventListener('wheel', onWheel, { passive: false })
     return () => sc.removeEventListener('wheel', onWheel)
-  }, [phase, zoomX, aplicarZoom])
+  }, [phase, aplicarZoom])
 
   // TETO DE 10 FAIXAS NA TELA: mais que isso aperta demais e a leitura morre.
   // Com até 10, elas dividem toda a altura (maior tamanho possível); passando
@@ -3053,23 +3113,23 @@ export default function StudioView({ source, onClose }) {
                   <span className="daw-zoom">
                     <button
                       className="chip-step"
-                      onClick={() => aplicarZoom(zoomX / 2)}
-                      disabled={zoomX <= 1}
-                      data-hint="AFASTAR — mostra mais música na tela. No 1× a música inteira cabe de uma vez."
+                      onClick={() => aplicarZoom(zoomX / 1.6)}
+                      disabled={zoomX <= 1.001}
+                      data-hint="AFASTAR — mostra mais música na tela. No 1× a música inteira cabe de uma vez. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
                       aria-label="Afastar"
                     >−</button>
                     <button
                       className={`daw-zoom-num ${zoomX > 1 ? 'on' : ''}`}
                       onClick={() => aplicarZoom(1)}
                       data-hint={zoomX > 1
-                        ? `APROXIMADO ${zoomX}× — clique pra voltar a ver a música inteira. Segure Ctrl e role o mouse sobre as ondas pra aproximar no ponto onde o cursor está.`
-                        : 'A música inteira cabe na tela. Aproxime pra marcar um loop curto com precisão — ou segure Ctrl e role o mouse sobre as ondas.'}
-                    >{zoomX}×</button>
+                        ? 'APROXIMADO — clique pra voltar a ver a música inteira. Role o mouse sobre as ondas pra abrir e fechar a linha do tempo; ela aproxima no ponto onde o cursor está.'
+                        : 'A música inteira cabe na tela. Role o mouse sobre as ondas pra aproximar e marcar um loop curto com precisão.'}
+                    >{(Math.round(zoomX * 10) / 10).toString().replace('.', ',')}×</button>
                     <button
                       className="chip-step"
-                      onClick={() => aplicarZoom(zoomX * 2)}
-                      disabled={zoomX >= 16}
-                      data-hint="APROXIMAR — estica a linha do tempo. É o que dá precisão pra marcar um trecho curto: no 1× dois segundos são quatro pixels."
+                      onClick={() => aplicarZoom(zoomX * 1.6)}
+                      disabled={zoomX >= 15.99}
+                      data-hint="APROXIMAR — estica a linha do tempo. É o que dá precisão pra marcar um trecho curto: no 1× dois segundos são quatro pixels. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
                       aria-label="Aproximar"
                     >+</button>
                   </span>
@@ -3179,6 +3239,9 @@ export default function StudioView({ source, onClose }) {
                         peaks={peaksMap[stem]}
                         duration={playDuration}
                         color={col}
+                        vista={vistaRef}
+                        registrarDesenho={registrarDesenho(stem)}
+                        larguraVisivel={viewW}
                       />
                     </div>
                   </div>
