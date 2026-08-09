@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import Ico from './Icones.jsx'
 
 const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -170,13 +171,18 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-period" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
-        <header className="modal-header">
+      {/* Mesma lingua do acervo: chassi cavado com chanfro de contorno
+          fechado, marca lima na quina, rotulo mono em caixa-alta. O
+          funcionamento nao mudou uma linha — so o vestuario. */}
+      <div className="modal modal-period chanfro" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
+        <header className="period-head">
           <div>
-            <h3>Filtrar por período</h3>
-            <p className="modal-sub">Use os atalhos rápidos ou explore por ano → mês → semana → dia.</p>
+            <span className="period-etiqueta">Filtro</span>
+            <h3>Período</h3>
           </div>
-          <button className="btn-close" onClick={onClose} aria-label="Fechar">×</button>
+          <button className="period-x chanfro" onClick={onClose} aria-label="Fechar" type="button">
+            <Ico nome="apagar" tamanho={15} />
+          </button>
         </header>
 
         <div className="modal-body period-body">
@@ -184,7 +190,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
             {PRESETS.map((p) => (
               <button
                 key={p.value}
-                className={`preset-chip ${mode === 'all' && p.value === 'all' ? 'active' : ''} ${mode === 'preset' && preset === p.value ? 'active' : ''}`}
+                className={`preset-chip chanfro ${mode === 'all' && p.value === 'all' ? 'active' : ''} ${mode === 'preset' && preset === p.value ? 'active' : ''}`}
                 onClick={() => {
                   if (p.value === 'all') switchMode('all')
                   else { switchMode('preset'); setPreset(p.value) }
@@ -254,10 +260,10 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
         </div>
 
         <div className="period-footer">
-          <button className="link-btn" onClick={clearAll}>↺ limpar tudo</button>
+          <button className="period-limpar" onClick={clearAll} type="button">limpar tudo</button>
           <div className="period-footer-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" onClick={apply}>Aplicar</button>
+            <button className="period-btn chanfro" onClick={onClose} type="button">Cancelar</button>
+            <button className="period-btn chanfro forte" onClick={apply} type="button">Aplicar</button>
           </div>
         </div>
       </div>
@@ -267,7 +273,7 @@ export default function PeriodPickerModal({ history, initial, onApply, onClose }
 
 function PeriodColumn({ title, items, selected, onToggle, disabled, empty }) {
   return (
-    <div className={`period-col ${disabled ? 'disabled' : ''}`}>
+    <div className={`period-col chanfro ${disabled ? 'disabled' : ''}`}>
       <div className="period-col-head">
         <span>{title}</span>
         {selected.size > 0 && <span className="period-col-count">{selected.size}</span>}
@@ -280,11 +286,16 @@ function PeriodColumn({ title, items, selected, onToggle, disabled, empty }) {
             const isSelected = selected.has(it.key)
             return (
               <label key={it.key} className={`period-item ${isSelected ? 'selected' : ''}`}>
+                {/* a caixinha nativa do Windows chega com a paleta dela e nao
+                    obedece nem a espessura do traco — o input continua ai pro
+                    teclado e pro leitor de tela, invisivel, e quem aparece e
+                    a marca desenhada */}
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => onToggle(it.key)}
                 />
+                <span className="period-marca" aria-hidden="true" />
                 <div className="period-item-text">
                   <div className="period-item-label">{it.label}</div>
                   {it.sublabel && <div className="period-item-sub">{it.sublabel}</div>}
