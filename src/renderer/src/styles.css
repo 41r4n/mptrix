@@ -7423,31 +7423,8 @@ body.studio-open .zoom-chip {
 }
 .daw-scroll::-webkit-scrollbar-thumb:hover { background: rgba(182, 255, 59, 0.45); }
 
-/* controle de zoom no cabecalho das pistas */
-.daw-zoom {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.daw-zoom-num {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  background: none;
-  border: none;
-  padding: 2px 4px;
-  min-width: 26px;
-  color: var(--muted-2);
-  cursor: pointer;
-}
-.daw-zoom-num.on { color: var(--accent); }
-.daw-zoom .chip-step {
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
-}
-.daw-zoom .chip-step:disabled { opacity: 0.35; cursor: default; }
+/* (o controle -/+/1x do zoom saiu do cabecalho: a roda do mouse faz o mesmo) */
+
 
 /* dica de tecla no transporte: leitura, nao botao — por isso sem borda em volta
    do texto. So o <kbd> tem moldura, porque ele representa uma TECLA fisica, que

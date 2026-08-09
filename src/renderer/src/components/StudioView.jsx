@@ -3232,32 +3232,12 @@ export default function StudioView({ source, onClose }) {
                   <span className="hex-dot" aria-hidden="true" />
                   <span className="daw-cap">PISTAS</span>
                   <span className="daw-rail-flex" />
-                  {/* ZOOM da linha do tempo. Fica aqui no cabeçalho das pistas
-                      porque é dali que ele manda: estica a régua e as ondas
-                      juntas. Serve pra marcar loop curto com precisão. */}
-                  <span className="daw-zoom">
-                    <button
-                      className="chip-step"
-                      onClick={() => aplicarZoom((zoomRef.current || 1) / 1.6)}
-                      disabled={zoomX <= 1.001}
-                      data-hint="AFASTAR — mostra mais música na tela. No 1× a música inteira cabe de uma vez. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
-                      aria-label="Afastar"
-                    >−</button>
-                    <button
-                      className={`daw-zoom-num ${zoomX > 1 ? 'on' : ''}`}
-                      onClick={() => aplicarZoom(1)}
-                      data-hint={zoomX > 1
-                        ? 'APROXIMADO — clique pra voltar a ver a música inteira. Role o mouse sobre as ondas pra abrir e fechar a linha do tempo; ela aproxima no ponto onde o cursor está.'
-                        : 'A música inteira cabe na tela. Role o mouse sobre as ondas pra aproximar e marcar um loop curto com precisão.'}
-                    >{(Math.round(zoomX * 10) / 10).toString().replace('.', ',')}×</button>
-                    <button
-                      className="chip-step"
-                      onClick={() => aplicarZoom((zoomRef.current || 1) * 1.6)}
-                      disabled={zoomX >= 15.99}
-                      data-hint="APROXIMAR — estica a linha do tempo. É o que dá precisão pra marcar um trecho curto: no 1× dois segundos são quatro pixels. (A roda do mouse sobre as ondas faz o mesmo, de forma contínua.)"
-                      aria-label="Aproximar"
-                    >+</button>
-                  </span>
+                  {/* O contador de faixas VOLTOU: eu o tinha trocado pelo
+                      controle de zoom sem avisar, e informacao nao se troca por
+                      controle em silencio. O controle de zoom, esse sim, saiu —
+                      a roda do mouse faz o mesmo de forma continua, e duplo
+                      clique nas ondas volta pra musica inteira. */}
+                  <span className="daw-cap daw-cap-dim">{presentStems(session).length} STEMS</span>
                 </div>
                 <div className="daw-gutter daw-ruler">
                   <div className="daw-ruler-inner" ref={rulerInnerRef}>
@@ -3373,7 +3353,12 @@ export default function StudioView({ source, onClose }) {
                 )
               })}
               {/* Overlay único: clique pula, arrastar marca o trecho do loop */}
-              <div className="daw-overlay" onPointerDown={overlayDown}>
+              <div
+                className="daw-overlay"
+                onPointerDown={overlayDown}
+                onDoubleClick={() => aplicarZoom(1)}
+                title="Duplo clique: volta a ver a música inteira"
+              >
                 {playDuration > 0 && (() => {
                   const lines = []
                   for (let s = 30; s < playDuration; s += 30) {
