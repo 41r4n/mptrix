@@ -8359,7 +8359,9 @@ ul.hlib-grid {
 /* o estúdio é a ação principal do app: só ele acende em lima */
 .ac.destaque { background: rgba(182, 255, 59, 0.16); color: var(--accent); }
 .ac.destaque:hover { background: var(--accent); color: #0b0c0f; }
-.ac.aberto { color: var(--warn); }
+/* a lixeira fica apagada ate a pessoa apontar: acao destrutiva nao pede
+   atencao, so precisa estar la quando procurada */
+.ac.perigo { color: var(--muted-2); }
 .ac.perigo:hover { background: var(--bad); color: #0b0c0f; }
 
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }

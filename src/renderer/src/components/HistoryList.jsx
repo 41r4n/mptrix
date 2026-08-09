@@ -166,7 +166,6 @@ function sortEntries(entries, sortBy) {
 }
 
 export default function HistoryList({ history, onChange, onOpenStudio, onQuickEdit }) {
-  const [unlockedIds, setUnlockedIds] = useState(() => new Set())
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [confirmState, setConfirmState] = useState(null)
@@ -210,15 +209,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   const openFile = (entry) => entry.primaryFile && window.mptrix.shell.openPath(entry.primaryFile)
   const showInExplorer = (entry) => entry.primaryFile && window.mptrix.shell.showInFolder(entry.primaryFile)
 
-  const toggleLock = (id) => {
-    setUnlockedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   const closeConfirm = () => setConfirmState(null)
 
   const askRemoveOne = (entry) => {
@@ -232,11 +222,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
       onConfirm: async () => {
         closeConfirm()
         const updated = await window.mptrix.history.remove(entry.id, { deleteFile: true })
-        setUnlockedIds((prev) => {
-          const next = new Set(prev)
-          next.delete(entry.id)
-          return next
-        })
         onChange?.(updated)
       }
     })
@@ -535,7 +520,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
       ) : (
         <ul className={`hlib-grid ${selectionMode ? 'selection-mode' : ''}`}>
           {visible.map((entry, i) => {
-            const unlocked = unlockedIds.has(entry.id)
             const selected = selectedIds.has(entry.id)
             const onItemClick = selectionMode ? () => toggleSelected(entry.id) : undefined
             const shown = displayTitle(entry)
@@ -581,13 +565,14 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
                         title="Mostrar no Explorer"><Ico nome="pasta" tamanho={16} /></button>
                       <button className="ac" onClick={(e) => { e.stopPropagation(); setEditingEntry(entry) }}
                         title="Renomear"><Ico nome="renomear" tamanho={16} /></button>
-                      <button className={`ac ${unlocked ? 'aberto' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLock(entry.id) }}
-                        title={unlocked ? 'Trancar de novo' : 'Destrancar pra poder apagar'}>
-                        <Ico nome={unlocked ? 'destrancado' : 'trancado'} tamanho={16} /></button>
-                      {unlocked && (
-                        <button className="ac perigo" onClick={(e) => { e.stopPropagation(); askRemoveOne(entry) }}
-                          title="Apagar do histórico"><Ico nome="apagar" tamanho={16} /></button>
-                      )}
+                      {/* CADEADO SAIU. Apagar exigia dois cliques em botoes
+                          diferentes — destrancar e so entao a lixeira. Isso
+                          nao protegia mais nada: a pergunta de confirmacao,
+                          que diz o nome da musica e avisa que o arquivo vai
+                          pra Lixeira do Windows, ja e a trava de verdade.
+                          Cadeado era so um pedagio antes dela. */}
+                      <button className="ac perigo" onClick={(e) => { e.stopPropagation(); askRemoveOne(entry) }}
+                        title="Apagar"><Ico nome="lixeira" tamanho={16} /></button>
                     </div>
                   )}
                 </div>
