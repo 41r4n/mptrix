@@ -1048,28 +1048,64 @@ app.whenReady().then(() => {
   // endereco `stems://` (a mesma porta que ja serve as faixas, com a mesma
   // checagem de caminho). Arquivo sem capa embutida devolve null e a tela cai
   // no desenho de reserva — nunca em cor sorteada.
+  // CAPA DO ITEM DO ACERVO.
+  //
+  // Música traz a miniatura embutida no arquivo, então é só extrair. Vídeo
+  // não tem miniatura embutida: a capa precisa ser um QUADRO da imagem — e
+  // aí mora o problema que eu tinha criado. Pegar o primeiro quadro devolve
+  // preto na maioria dos vídeos, porque quase todos abrem em fade-in ou com
+  // uma vinheta escura. Dos 88 vídeos do acervo, 39 tinham vindo pretos.
+  //
+  // Agora o vídeo entra pelo filtro "thumbnail" do ffmpeg, que analisa um
+  // lote de quadros e escolhe o mais representativo em vez do primeiro, e
+  // começando alguns segundos adiante pra pular a vinheta. Se der ruim, ele
+  // desce a escada de tentativas até a mais burra.
+  //
+  // A versão entra na chave do cache: mudar o jeito de extrair sem trocar a
+  // chave deixaria as capas pretas antigas guardadas pra sempre.
+  const CAPA_V = 2
+  const EXT_VIDEO = new Set(['.mp4', '.mkv', '.webm', '.mov', '.avi', '.m4v'])
+
   ipcMain.handle('history:capa', async (_e, { file }) => {
     try {
       if (!file || !existsSync(file)) return null
       const st = statSync(file)
-      const chave = createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}`).digest('hex').slice(0, 16)
+      const chave = createHash('sha1')
+        .update(`${file}|${st.size}|${st.mtimeMs}|v${CAPA_V}`).digest('hex').slice(0, 16)
       const dir = join(stemsRoot(), '_capas', 'img')
       const alvo = join(dir, `${chave}.jpg`)
       const url = `stems://s/_capas/img/${chave}.jpg`
       if (existsSync(alvo)) return statSync(alvo).size > 0 ? url : null
       mkdirSync(dir, { recursive: true })
-      const ok = await new Promise((resolve) => {
-        const c = spawn(FFMPEG_PATH, ['-y', '-v', 'quiet', '-i', file, '-an', '-frames:v', '1', '-vf', 'scale=480:-1', alvo], { windowsHide: true })
+
+      const rodar = (args) => new Promise((resolve) => {
+        const c = spawn(FFMPEG_PATH, ['-y', '-v', 'quiet', ...args, alvo], { windowsHide: true })
         c.on('error', () => resolve(false))
         c.on('close', (code) => resolve(code === 0))
       })
-      if (!ok || !existsSync(alvo) || statSync(alvo).size === 0) {
-        // marca o "nao tem capa" com arquivo vazio: sem isso o ffmpeg seria
-        // chamado de novo a cada abertura pra todo arquivo sem capa
-        try { writeFileSync(alvo, '') } catch { /* segue sem cache */ }
-        return null
+
+      const ehVideo = EXT_VIDEO.has(extname(file).toLowerCase())
+      // cada degrau vem com o tamanho mínimo que aceita: quadro preto sai em
+      // menos de 1,5 KB depois de comprimido, então tamanho é o jeito barato
+      // de perguntar "isto aqui é imagem ou é uma chapa escura?"
+      const tentativas = ehVideo
+        ? [
+            { args: ['-ss', '12', '-i', file, '-an', '-vf', 'thumbnail,scale=480:-1', '-frames:v', '1'], minimo: 2500 },
+            { args: ['-ss', '45', '-i', file, '-an', '-vf', 'thumbnail,scale=480:-1', '-frames:v', '1'], minimo: 2500 },
+            { args: ['-i', file, '-an', '-vf', 'thumbnail,scale=480:-1', '-frames:v', '1'], minimo: 1200 },
+            { args: ['-i', file, '-an', '-frames:v', '1', '-vf', 'scale=480:-1'], minimo: 1 }
+          ]
+        : [{ args: ['-i', file, '-an', '-frames:v', '1', '-vf', 'scale=480:-1'], minimo: 1 }]
+
+      for (const t of tentativas) {
+        const ok = await rodar(t.args)
+        if (ok && existsSync(alvo) && statSync(alvo).size >= t.minimo) return url
       }
-      return url
+
+      // marca o "nao tem capa" com arquivo vazio: sem isso o ffmpeg seria
+      // chamado de novo a cada abertura pra todo arquivo sem capa
+      try { writeFileSync(alvo, '') } catch { /* segue sem cache */ }
+      return null
     } catch {
       return null
     }
