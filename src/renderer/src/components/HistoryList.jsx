@@ -470,6 +470,23 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           ))}
         </select>
 
+        {/* FAVORITOS no fim dos dois seletores: eles dizem "que tipo" e "em
+            que ordem", e este diz "só os meus" — os três estreitam a mesma
+            lista. Some quando não há nenhum favorito, porque filtro que só
+            pode dar zero é armadilha. */}
+        {totalFavoritos > 0 && (
+          <button
+            className={`barra-btn so-icone ${soFavoritos ? 'on estrelado' : ''}`}
+            onClick={() => setSoFavoritos((v) => !v)}
+            type="button"
+            aria-pressed={soFavoritos}
+            title={soFavoritos ? 'Mostrando só favoritos' : `Ver só favoritos (${totalFavoritos})`}
+          >
+            <Ico nome={soFavoritos ? 'estrelaCheia' : 'estrela'} tamanho={14} />
+            {soFavoritos && <span>{totalFavoritos}</span>}
+          </button>
+        )}
+
         {/* SÓ O X. Ele mostrava "2 de 99", e esse número já estava dito duas
             vezes: o botão de favoritos mostra o 2 e o título do destino
             mostra o 99. Contagem repetida não vira reforço, vira ruído —
