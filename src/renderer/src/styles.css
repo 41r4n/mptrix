@@ -3591,51 +3591,48 @@ section h2 {
   border-color: var(--accent);
 }
 .lupa-desc:disabled { opacity: 0.5; }
-/* O que está guardado dentro da pista "Outros" — mora no rodapé do trilho DELA,
-   não numa faixa nova da tela. Sem caixa e sem borda de propósito: é leitura,
-   e a borda faria parecer três botões empilhando peso visual numa informação
-   secundária. O que denuncia o clique é o × que acende no hover. */
-.daw-dentro {
-  position: absolute;
-  left: 10px;
-  bottom: 4px;
-  z-index: 5; /* acima da camada de arrastar, senão o clique vira seek */
+/* Lista do que está guardado dentro do "Outros" — vive na FICHA da faixa (os
+   três pontinhos), não na mesa. Cada linha é clicável, então tem borda: a regra
+   da casa é que borda em volta de texto promete clique, e aqui a promessa é
+   verdadeira. Linhas de painel separadas por hairline, número em mono. */
+.tinfo-dentro {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tinfo-dentro-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  max-width: calc(100% - 20px);
+  gap: 10px;
+  width: 100%;
+  background: var(--bg-inset);
+  border: none;
+  border-bottom: 1px solid var(--border-hair);
+  padding: 9px 12px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
 }
-.daw-dentro-cap {
+.tinfo-dentro-row:last-child { border-bottom: none; }
+.tinfo-dentro-row:hover { background: var(--bg-elev); color: var(--text); }
+.tinfo-dentro-nome { flex: 1; min-width: 0; }
+.tinfo-dentro-db {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
+  font-size: 0.76rem;
+  color: var(--muted-2);
+}
+.tinfo-dentro-sai {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-2);
-  background: rgba(11, 12, 15, 0.72);
-  border-radius: 4px;
-  padding: 1px 4px;
 }
-.daw-dentro-item {
-  /* fundo levíssimo só pra não brigar com a onda desenhada atrás */
-  background: rgba(11, 12, 15, 0.72);
-  border: none;
-  border-radius: 6px;
-  padding: 1px 6px;
-  font-family: var(--font-ui);
-  font-size: 0.74rem;
-  cursor: pointer;
-  opacity: 0.8;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.daw-dentro-item:hover { opacity: 1; }
-.daw-dentro-x {
-  font-size: 0.82rem;
-  color: var(--muted-2);
-}
-.daw-dentro-item:hover .daw-dentro-x { color: var(--bad); }
+.tinfo-dentro-row:hover .tinfo-dentro-sai { color: var(--accent); }
 /* ---------- DAW MPTrix: ruler, agulha, tint, transporte (assinatura) ---------- */
 .studio-ruler {
   position: relative;

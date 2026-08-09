@@ -2686,29 +2686,6 @@ export default function StudioView({ source, onClose }) {
                         duration={playDuration}
                         color={col}
                       />
-                      {/* O que foi jogado pra dentro desta pista mora DENTRO
-                          dela — é informação do Outros, não uma seção nova da
-                          tela. Vai no canto da onda porque o trilho tem altura
-                          fixa e uma linha a mais lá espremeria o M/S. Sem caixa
-                          e sem borda: é leitura; o que denuncia o clique é o ×
-                          que acende. Fica acima da camada de arrastar (z-index)
-                          pra o clique chegar no botão em vez de virar seek. */}
-                      {stem === 'other' && foldedStems(session).length > 0 && (
-                        <div className="daw-dentro">
-                          <span className="daw-dentro-cap">contém</span>
-                          {foldedStems(session).map((f) => (
-                            <button
-                              key={f}
-                              className="daw-dentro-item"
-                              style={{ color: col }}
-                              onClick={() => setDentroOutros(f, false)}
-                              title={`Tirar ${stemMeta(f, session).label} de dentro do Outros`}
-                            >
-                              {stemMeta(f, session).label}<span className="daw-dentro-x" aria-hidden="true">×</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 )
@@ -3638,6 +3615,32 @@ export default function StudioView({ source, onClose }) {
                   {st.coverage != null && (
                     <div className="tinfo-presbar">
                       <div style={{ width: `${st.coverage}%`, background: col }} />
+                    </div>
+                  )}
+                  {/* QUEM ESTÁ GUARDADO AQUI DENTRO. A ficha da faixa é o lugar
+                      certo: a mesa não precisa carregar essa informação o tempo
+                      todo, e quem abre os três pontinhos veio justamente
+                      perguntar "o que é essa faixa?". Cada linha sai daqui. */}
+                  {trackInfo === 'other' && foldedStems(session).length > 0 && (
+                    <div className="tinfo-sec">
+                      <div className="tinfo-cap">GUARDADOS AQUI DENTRO — CLIQUE PRA TIRAR</div>
+                      <div className="tinfo-dentro">
+                        {foldedStems(session).map((f) => {
+                          const fi = session.stemInfo?.[f] || {}
+                          return (
+                            <button
+                              key={f}
+                              className="tinfo-dentro-row"
+                              onClick={() => setDentroOutros(f, false)}
+                              title={`Tirar ${stemMeta(f, session).label} e devolver pra mesa`}
+                            >
+                              <span className="tinfo-dentro-nome">{stemMeta(f, session).label}</span>
+                              <span className="tinfo-dentro-db">{fi.mean != null ? `${fi.mean} dB` : ''}</span>
+                              <span className="tinfo-dentro-sai">tirar ↖</span>
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                   {st.ranges.length > 0 && (
