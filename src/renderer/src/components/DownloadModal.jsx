@@ -142,8 +142,10 @@ function RunProgress({ stages, progress, elapsedSec, filesCount, lastLog, estima
   )
 }
 
-export default function DownloadModal({ preset, outputDir, onClose, onPickFolder, history }) {
-  const [url, setUrl] = useState('')
+export default function DownloadModal({ preset, outputDir, onClose, onPickFolder, history, urlInicial }) {
+  // link vindo da roda: a pessoa ja copiou la fora, colar de novo aqui seria
+  // pedir duas vezes a mesma coisa
+  const [url, setUrl] = useState(urlInicial || '')
   const [state, setState] = useState(STATES.IDLE)
   const [progress, setProgress] = useState(null)
   const [stages, setStages] = useState([])

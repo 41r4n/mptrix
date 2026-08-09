@@ -204,6 +204,60 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
+// ██████ VIGIA DA ÁREA DE TRANSFERÊNCIA ██████
+//
+// O caminho normal era: a pessoa copia o link no navegador, volta pro MPTRIX,
+// abre BAIXAR, escolhe o formato, cola o link. O passo de colar é trabalho
+// que o computador podia fazer sozinho — ele já sabe o que está na área de
+// transferência.
+//
+// Não existe evento de "a área de transferência mudou" no Electron, então é
+// vigia mesmo: olha de segundo em segundo. É barato (uma leitura de texto) e
+// precisa rodar mesmo com o app atrás do navegador — justamente aí é que a
+// pessoa copia.
+//
+// Só avisa uma vez por link: sem isso o aviso voltaria a cada segundo pro
+// mesmo link, e um aviso que não some vira poluição, não ajuda.
+const HOSTS_CONHECIDOS = /(youtube\.com|youtu\.be|soundcloud\.com|bandcamp\.com|vimeo\.com|dailymotion\.com|twitch\.tv|facebook\.com|instagram\.com|tiktok\.com|x\.com|twitter\.com)$/i
+
+function lerLinkDaArea() {
+  let texto = ''
+  try { texto = (clipboard.readText() || '').trim() } catch { return null }
+  // link tem que caber numa linha: texto colado com quebra é outra coisa
+  if (!texto || texto.length > 2048 || /\s/.test(texto)) return null
+  let u
+  try { u = new URL(texto) } catch { return null }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+  const host = u.hostname.replace(/^www\./, '')
+  if (!HOSTS_CONHECIDOS.test(host)) return null
+  return {
+    url: texto,
+    host,
+    // playlist muda o formato sugerido: baixar 40 músicas uma a uma seria
+    // castigo, e o preset de playlist existe exatamente pra isso
+    playlist: u.searchParams.has('list') || /\/playlist|\/sets\//.test(u.pathname)
+  }
+}
+
+let ultimoLinkVisto = null
+let vigiaArea = null
+
+function ligarVigiaDaArea() {
+  if (vigiaArea) return
+  vigiaArea = setInterval(() => {
+    const achado = lerLinkDaArea()
+    const chave = achado?.url || null
+    if (chave === ultimoLinkVisto) return
+    ultimoLinkVisto = chave
+    if (achado) send('clipboard:link', achado)
+  }, 1000)
+}
+
+function desligarVigiaDaArea() {
+  if (vigiaArea) clearInterval(vigiaArea)
+  vigiaArea = null
+}
+
 const gotInstanceLock = app.requestSingleInstanceLock()
 if (!gotInstanceLock) {
   app.quit()
@@ -1591,6 +1645,7 @@ app.whenReady().then(() => {
   limparCapasOrfas()
 
   createWindow()
+  ligarVigiaDaArea()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -1598,6 +1653,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  desligarVigiaDaArea()
   for (const cancel of activeJobs.values()) {
     try { cancel() } catch {}
   }

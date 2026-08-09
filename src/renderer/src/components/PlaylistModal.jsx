@@ -126,8 +126,9 @@ function formatBytesSmart(bytes) {
   return v.toFixed(v >= 10 || i < 2 ? 0 : 1) + ' ' + units[i]
 }
 
-export default function PlaylistModal({ outputDir, onClose, onPickFolder }) {
-  const [url, setUrl] = useState('')
+export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlInicial }) {
+  // link vindo da roda: colar de novo seria pedir duas vezes a mesma coisa
+  const [url, setUrl] = useState(urlInicial || '')
   const [state, setState] = useState(STATES.IDLE)
   const [errorMsg, setErrorMsg] = useState('')
   const [playlist, setPlaylist] = useState(null)

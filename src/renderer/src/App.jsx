@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DownloadModal from './components/DownloadModal.jsx'
+import Omnitrix from './components/Omnitrix.jsx'
 import PlaylistModal from './components/PlaylistModal.jsx'
 import StudioView from './components/StudioView.jsx'
 import HistoryList from './components/HistoryList.jsx'
@@ -50,6 +51,8 @@ export default function App() {
   const [env, setEnv] = useState(null)
   const [outputDir, setOutputDir] = useState('')
   const [activePreset, setActivePreset] = useState(null)
+  // link que a roda entregou, pra chegar ja preenchido no modal
+  const [urlDaRoda, setUrlDaRoda] = useState(null)
   const [history, setHistory] = useState([])
   const [studioSource, setStudioSource] = useState(null)
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
@@ -286,10 +289,24 @@ export default function App() {
 
 
 
+      {/* A RODA. Fica por cima de qualquer aba porque o link chega quando
+          chega — obrigar a pessoa a estar na aba certa pra ser avisada seria
+          devolver pra ela o trabalho de adivinhar. */}
+      <Omnitrix
+        ligado={binariesOk}
+        onEscolher={(presetId, url) => {
+          const p = presets.find((x) => x.id === presetId)
+          if (!p) return
+          setUrlDaRoda(url)
+          setActivePreset(p)
+        }}
+      />
+
       {activePreset && activePreset.id === 'playlist' && (
         <PlaylistModal
           outputDir={outputDir}
-          onClose={() => setActivePreset(null)}
+          urlInicial={urlDaRoda}
+          onClose={() => { setActivePreset(null); setUrlDaRoda(null) }}
           onPickFolder={pickFolder}
         />
       )}
@@ -299,7 +316,8 @@ export default function App() {
           preset={activePreset}
           outputDir={outputDir}
           history={history}
-          onClose={() => setActivePreset(null)}
+          urlInicial={urlDaRoda}
+          onClose={() => { setActivePreset(null); setUrlDaRoda(null) }}
           onPickFolder={pickFolder}
         />
       )}

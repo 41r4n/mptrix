@@ -32,6 +32,12 @@ const api = {
     zerarGasto: () => ipcRenderer.invoke('nuvem:zerarGasto')
   },
 
+  // O vigia empurra o link achado; a tela nunca lê a área de transferência
+  // sozinha, pra não precisar de permissão nenhuma no processo de renderização.
+  clipboard: {
+    onLink: on('clipboard:link')
+  },
+
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath),
