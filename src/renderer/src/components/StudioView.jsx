@@ -2467,6 +2467,34 @@ export default function StudioView({ source, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [trackInfo])
 
+  // Arrastar as pontas do trecho na barra de tempo. Ajustar é o gesto mais
+  // comum depois de marcar — o loop quase nunca sai perfeito de primeira, e
+  // remarcar tudo na onda por causa de meio segundo é trabalho à toa.
+  const arrastarPonta = (qual) => (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const wrap = e.currentTarget.closest('.seek-wrap')
+    if (!wrap || !playDuration) return
+    const box = wrap.getBoundingClientRect()
+    const tempoEm = (x) => Math.max(0, Math.min(playDuration, ((x - box.left) / box.width) * playDuration))
+    const mover = (ev) => {
+      setWaveSel((sel) => {
+        if (!sel) return sel
+        const t = tempoEm(ev.clientX)
+        // as pontas não se atravessam: sempre sobra ao menos 0,15s de trecho
+        return qual === 'a'
+          ? { start: Math.min(t, sel.end - 0.15), end: sel.end }
+          : { start: sel.start, end: Math.max(t, sel.start + 0.15) }
+      })
+    }
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+    }
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+  }
+
   // ESPAÇO = VOLTAR PRO COMEÇO DO LOOP. É o gesto de quem está estudando um
   // trecho: errou no meio, aperta espaço, já está de volta no ponto A tocando —
   // sem procurar o mouse, sem mirar na onda. É assim que app de estudo faz.
@@ -4120,8 +4148,23 @@ export default function StudioView({ source, onClose }) {
                       left: `${(waveSel.start / playDuration) * 100}%`,
                       width: `${(Math.max(0.2, waveSel.end - waveSel.start) / playDuration) * 100}%`
                     }}
-                    aria-hidden="true"
-                  />
+                  >
+                    {/* PONTAS ARRASTAVEIS (trim handles). E o que separa uma
+                        listra de um controle: da pra ajustar o loop sem
+                        remarcar tudo na onda. */}
+                    <button
+                      className="seek-grip a"
+                      onPointerDown={arrastarPonta('a')}
+                      data-hint="INÍCIO DO TRECHO — arraste pra ajustar sem precisar marcar tudo de novo."
+                      aria-label="Ajustar início do trecho"
+                    />
+                    <button
+                      className="seek-grip b"
+                      onPointerDown={arrastarPonta('b')}
+                      data-hint="FIM DO TRECHO — arraste pra ajustar sem precisar marcar tudo de novo."
+                      aria-label="Ajustar fim do trecho"
+                    />
+                  </span>
                 )}
                 <input
                   type="range"

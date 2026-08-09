@@ -4504,35 +4504,49 @@ section h2 {
   width: 100%;
   min-width: 0;
 }
-/* O trecho NAO pode ser desenhado em cima da parte preenchida da barra: os dois
-   sao lima, entao o progresso passava por cima e engolia a marcacao. Agora ele
-   mora ACIMA do trilho da barra -- faixa solida com brilho, onde nada compete
-   com ela. So os dois tracinhos de inicio/fim descem cruzando o trilho, e eles
-   levam um contorno escuro pra continuarem legiveis sobre o lima do progresso. */
+/* LOOP BRACE — o formato que os editores de audio usam pra marcar um trecho:
+   uma barra por cima do trilho com duas PERNAS descendo nas pontas. A forma
+   fecha a regiao (o olho le "daqui ate aqui") em vez de so pintar por cima,
+   que era o que estava feio.
+   Fica ACIMA do trilho de proposito: a marcacao e o preenchimento do progresso
+   sao os dois lima, entao desenhar em cima fazia o progresso engolir ela. */
 .seek-loop {
   position: absolute;
   top: 0;
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px 3px 0 0;
   background: var(--accent);
-  box-shadow: 0 0 8px rgba(182, 255, 59, 0.65);
-  pointer-events: none;
+  box-shadow: 0 0 10px rgba(182, 255, 59, 0.5);
   z-index: 2;
+  pointer-events: none;
 }
-.seek-loop::before,
-.seek-loop::after {
-  content: '';
+/* as pernas SAO as alcas: puxar a ponta ajusta o trecho sem remarcar tudo */
+.seek-grip {
   position: absolute;
   top: 0;
-  width: 3px;
-  height: 15px;
-  border-radius: 2px;
+  width: 5px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
   background: var(--accent);
-  /* anel escuro: e o que separa o tracinho do preenchimento lima por baixo */
-  box-shadow: 0 0 0 1.5px var(--bg), 0 0 7px rgba(182, 255, 59, 0.8);
+  /* anel escuro: e o que mantem a perna legivel quando o progresso lima
+     passa por baixo dela */
+  box-shadow: 0 0 0 1.5px var(--bg), 0 0 8px rgba(182, 255, 59, 0.7);
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 3;
 }
-.seek-loop::before { left: 0; }
-.seek-loop::after { right: 0; }
+/* alvo de toque generoso sem engordar o desenho */
+.seek-grip::after {
+  content: '';
+  position: absolute;
+  inset: -5px -7px;
+}
+.seek-grip:hover { background: var(--accent-hover); }
+.seek-grip.a { left: -1px; }
+.seek-grip.b { right: -1px; }
+
 
 .studio-time-total {
   color: var(--muted-2);
