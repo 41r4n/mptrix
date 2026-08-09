@@ -8156,20 +8156,38 @@ ul.hlib-grid {
 
 /* ██████████ BARRA DE COMANDO DO ACERVO ██████████
    Eram TRÊS fileiras empilhadas — busca, filtros, seleção — antes de aparecer
-   uma única música. E a contagem saía duas vezes, porque o título do destino
-   já diz quantos são.
-   Comando é meio, não fim: ele encolhe pra o acervo aparecer. Uma fileira só,
-   altura de 34px, tudo na mesma língua (mono em caixa-alta, canto cortado).
-   O que some daqui não some do app — só deixa de ocupar a tela antes da hora. */
+   uma única música. E a contagem saía duas vezes: o título do destino já diz
+   quantos são. Comando é meio, não fim — encolheu pra o acervo aparecer.
+
+   Na primeira versão eu achatei DEMAIS: pus os controles em --bg-inset
+   (#0D0F13) sobre o fundo do app (#0B0C0F). Dois pontos de diferença = sumiu.
+   Controle que a pessoa não enxerga não é discreto, é quebrado.
+   Agora tem escada de superfície de verdade — app #0B0C0F → chassi #101216 →
+   controle #15171C — com fio de contorno em cada peça e a marca lima na quina
+   esquerda. Borda em volta de texto = clicável: aqui TUDO clica, então pode. */
 
 .barra {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 22px;
+  padding: 9px 12px 9px 16px;
+  background: var(--bg-tracks);
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: var(--corte-sm);
+}
+/* marca lima na quina — diz "isto é o painel de comando" sem gastar largura */
+.barra::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(182, 255, 59, 0.45);
 }
 
 .barra-busca {
@@ -8183,8 +8201,14 @@ ul.hlib-grid {
   height: 34px;
   padding: 0 10px;
   background: var(--bg-inset);
+  box-shadow: inset 0 0 0 1px var(--border-control);
   clip-path: var(--corte-sm);
+  transition: box-shadow 0.14s ease;
 }
+.barra-busca:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+.barra-busca:focus-within .search-icon { color: var(--accent); }
 .barra-campo {
   flex: 1;
   min-width: 0;
@@ -8200,20 +8224,20 @@ ul.hlib-grid {
 .barra-x {
   background: none;
   border: none;
-  color: var(--muted-2);
+  color: var(--muted);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
   padding: 0 2px;
 }
-.barra-x:hover { color: var(--text); }
+.barra-x:hover { color: var(--accent); }
 
 .barra-div {
   width: 1px;
-  height: 18px;
-  background: var(--border);
+  height: 20px;
+  background: var(--border-control);
   flex: none;
-  margin: 0 2px;
+  margin: 0 3px;
 }
 .barra-esticar { flex: 1 1 auto; }
 
@@ -8223,47 +8247,65 @@ ul.hlib-grid {
 .barra-sel,
 .barra-btn {
   height: 34px;
-  padding: 0 11px;
-  background: var(--bg-inset);
+  padding: 0 12px;
+  background: var(--bg-elev);
   border: none;
-  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   cursor: pointer;
   clip-path: var(--corte-sm);
-  transition: background 0.13s ease, color 0.13s ease;
+  transition: background 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
   flex: none;
 }
 .barra-sel {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 22px;
+  padding-right: 24px;
   /* seta desenhada: o triângulo nativo do Windows não combina com nada aqui */
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted-2) 50%),
-                    linear-gradient(135deg, var(--muted-2) 50%, transparent 50%);
-  background-position: calc(100% - 13px) 15px, calc(100% - 9px) 15px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 15px, calc(100% - 10px) 15px;
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
 }
 .barra-sel:hover,
-.barra-btn:hover { background: var(--bg-elev); color: var(--text-2); }
+.barra-btn:hover {
+  background: #1b1e25;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
 .barra-sel option { background: var(--bg-elev); color: var(--text); font-family: var(--font-ui); }
 
-.barra-btn.on { color: var(--accent); background: rgba(182, 255, 59, 0.1); }
-.barra-btn.aviso { color: var(--accent); background: rgba(182, 255, 59, 0.1); }
-.barra-btn.forte { background: var(--accent); color: #0b0c0f; font-weight: 700; }
+/* filtro ligado acende: a barra tem que dizer que está mexendo no acervo */
+.barra-btn.on,
+.barra-btn.aviso {
+  color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+.barra-btn.on:hover,
+.barra-btn.aviso:hover { background: rgba(182, 255, 59, 0.22); color: var(--accent); }
+.barra-btn.forte {
+  background: var(--accent);
+  color: #0b0c0f;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(182, 255, 59, 0.3);
+}
 .barra-btn.forte:hover { background: var(--accent-hover); color: #0b0c0f; }
-.barra-btn.forte:disabled { opacity: 0.4; cursor: default; }
-.barra-btn.perigo:hover { color: var(--bad); }
+.barra-btn.forte:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.barra-btn.perigo:hover { color: var(--bad); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5); }
 
 .barra-conta {
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--muted-2);
+  color: var(--muted);
   flex: none;
+  padding-left: 4px;
 }
-.barra-conta b { color: var(--accent); font-size: 12px; }
+.barra-conta b { color: var(--accent); font-size: 12.5px; }
