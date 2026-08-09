@@ -4514,24 +4514,26 @@ section h2 {
   cursor: pointer;
 }
 .seek-wrap .studio-seek::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--accent) 0 var(--seek-pct, 0%),
-    rgba(255, 255, 255, 0.13) var(--seek-pct, 0%) 100%
-  );
+  height: 12px;
+  background:
+    linear-gradient(to right, var(--accent) 0 var(--seek-pct, 0%), transparent var(--seek-pct, 0%)) center / 100% 6px no-repeat,
+    linear-gradient(to right, rgba(255, 255, 255, 0.16) 0 100%) center / 100% 1.5px no-repeat;
 }
+/* A AGULHA CONTINUA LINHA (o dono pediu: linha mira, bola nao), mas ganha o
+   contorno de mira do kit -- o anel escuro e a borda lima em volta, mesma
+   assinatura da alca do volume. */
 .seek-wrap .studio-seek::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
   width: 3px;
-  height: 18px;
-  border-radius: 1.5px;
+  height: 16px;
+  border-radius: 0;
   background: var(--accent);
-  box-shadow: 0 0 0 1px rgba(11, 12, 15, 0.9), var(--glow-playhead, 0 0 10px rgba(182, 255, 59, 0.75));
-  /* centra a linha no trilho de 4px */
-  margin-top: -7px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3px rgba(182, 255, 59, 0.55),
+    var(--glow-playhead, 0 0 10px rgba(182, 255, 59, 0.75));
+  margin-top: -2px;
 }
 .seek-wrap .studio-seek:hover::-webkit-slider-thumb {
   background: var(--accent-hover);
@@ -6655,28 +6657,33 @@ body.studio-open .zoom-chip {
   background: transparent;
   cursor: pointer;
 }
+/* trilho na gramatica do kit: a parte CHEIA e um traco grosso solido, a VAZIA
+   e um fio fino. A diferenca de ESPESSURA (nao so de cor) e o que faz o nivel
+   se ler de longe, e e o que o kit usa em todos os controles. */
 .daw-rail .studio-volume::-webkit-slider-runnable-track {
-  height: 9px;
-  border-radius: 1px;
-  background: linear-gradient(
-    to right,
-    var(--vol-cor, var(--accent)) 0 var(--vol-pct, 100%),
-    rgba(255, 255, 255, 0.12) var(--vol-pct, 100%) 100%
-  );
-  -webkit-mask: repeating-linear-gradient(to right, #000 0 5px, transparent 5px 8px);
-          mask: repeating-linear-gradient(to right, #000 0 5px, transparent 5px 8px);
+  height: 12px;
+  background:
+    linear-gradient(to right, var(--vol-cor, var(--accent)) 0 var(--vol-pct, 100%), transparent var(--vol-pct, 100%)) center / 100% 7px no-repeat,
+    linear-gradient(to right, rgba(255, 255, 255, 0.16) 0 100%) center / 100% 1.5px no-repeat;
 }
 /* agulha de linha, igual a da barra de tempo: a mesma gramatica em todo lugar
    onde se mira um valor */
+/* ALCA = QUADRADO COM MIRA, a assinatura do kit. Os quatro cantinhos sao
+   desenhados com sombras solidas (um retangulo escuro por tras + o quadrado
+   lima na frente), sem elemento extra: pseudo-elemento nao existe em thumb de
+   range nativo. */
 .daw-rail .studio-volume::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 3px;
-  height: 14px;
-  border-radius: 1.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
   background: var(--vol-cor, var(--accent));
-  box-shadow: 0 0 0 1px rgba(11, 12, 15, 0.9), 0 0 8px rgba(182, 255, 59, 0.45);
-  margin-top: -2.5px;
+  box-shadow:
+    0 0 0 2px var(--bg-tracks),
+    0 0 0 3px var(--vol-cor, var(--accent)),
+    0 0 10px rgba(182, 255, 59, 0.35);
+  margin-top: 2px;
 }
 
 .daw-vol-num {

@@ -8,3 +8,6 @@ dist/
 .replicate-token
 .env
 *.token
+
+# chave de leitura do Figma (referencia de design) — nunca versionada
+.figma-token
