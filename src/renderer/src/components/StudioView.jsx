@@ -2324,9 +2324,11 @@ export default function StudioView({ source, onClose }) {
             <span className={`topbar-chip topbar-chip-metro ${metroOn ? 'on' : ''}`}>
               <button
                 className="metro-toggle"
-                onClick={() => setMetroOn((v) => !v)}
+                onClick={() => { setMetroOn((v) => !v); setHint(null) }}
                 aria-pressed={metroOn}
-                title={metroOn ? 'Desligar o metrônomo' : 'Ligar o metrônomo (bate junto com a música)'}
+                data-hint={metroOn
+                  ? 'METRÔNOMO LIGADO — clica junto com a música enquanto ela toca. Clique pra desligar.'
+                  : 'METRÔNOMO — marca o tempo junto com a música. O primeiro tempo do compasso tem som mais agudo, pra achar o "um" sem contar.'}
               >
                 <span className="metro-glyph" aria-hidden="true">{metroOn ? '◆' : '◇'}</span>
                 <span className="topbar-chip-label">METRÔNOMO</span>
@@ -2344,7 +2346,10 @@ export default function StudioView({ source, onClose }) {
                       onClick={() => setMetroCompasso((c) => Math.max(0, c - 1))}
                       aria-label="Menos um tempo por compasso"
                     >−</button>
-                    <span className="metro-comp-num" title="Tempos por compasso (0 = sem acento)">
+                    <span
+                      className="metro-comp-num"
+                      data-hint="COMPASSO — quantos tempos até o acento voltar. 4 é o comum; dá pra pôr 3 (valsa), 5, 7, o que quiser treinar. Em zero todos os cliques ficam iguais, sem acento."
+                    >
                       {metroCompasso > 0 ? `${metroCompasso}/4` : '—'}
                     </span>
                     <button
@@ -2359,18 +2364,23 @@ export default function StudioView({ source, onClose }) {
                     min="0" max="1" step="0.05"
                     value={metroVol}
                     onChange={(e) => setMetroVol(parseFloat(e.target.value))}
-                    title={`Volume do clique: ${Math.round(metroVol * 100)}%`}
+                    data-hint={`VOLUME DO CLIQUE — ${Math.round(metroVol * 100)}%. Mexe só no metrônomo; o volume da música continua o mesmo.`}
                     aria-label="Volume do metrônomo"
                   />
                   {ritmo.temBatidas && (
                     <button
                       className={`metro-modo ${metroFirme ? 'on' : ''}`}
-                      onClick={() => setMetroFirme((v) => !v)}
-                      title={metroFirme
+                      // a legenda descreve o estado ATUAL; sem limpar, quem
+                      // clica com o mouse parado continua lendo o texto do
+                      // estado anterior até tirar o mouse e voltar
+                      onClick={() => { setMetroFirme((v) => !v); setHint(null) }}
+                      data-hint={metroFirme
                         ? (ritmo.grade
-                          ? 'FIRME: pulso constante. Esta música é de andamento estável, então o clique gruda nela.'
-                          : 'FIRME: pulso constante. ATENÇÃO — esta música muda de andamento, então o clique vai se separar dela ao longo da faixa. Bom pra treinar precisão, ruim pra tocar junto.')
-                        : 'SEGUINDO: o clique acompanha as batidas medidas na gravação, mesmo quando a banda acelera.'}
+                          ? 'FIRME — pulso constante, sempre no mesmo intervalo. Esta gravação tem andamento estável, então o clique gruda nela do começo ao fim. Clique pra voltar a seguir a música.'
+                          : 'FIRME — pulso constante, sempre no mesmo intervalo. CUIDADO: esta gravação muda de andamento, então o clique vai se afastando dela ao longo da música. Ótimo pra treinar precisão sozinho, ruim pra tocar junto. Clique pra voltar a seguir a música.')
+                        : (ritmo.grade
+                          ? 'SEGUINDO — o clique acompanha as batidas medidas nesta gravação. Clique pra trocar por pulso constante (nesta música dá no mesmo: o andamento dela é estável).'
+                          : 'SEGUINDO — o clique acompanha as batidas medidas nesta gravação, inclusive quando a banda acelera ou segura. É o que serve pra tocar junto. Clique pra trocar por pulso constante.')}
                     >{metroFirme ? 'firme' : 'seguindo'}</button>
                   )}
                 </>
