@@ -282,9 +282,15 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   // metade dos cartões ficarem no desenho de reserva com a capa em cache no
   // disco, esperando.
   //
-  // Agora a dependência é a LISTA de arquivos (texto estável), o pedido é
-  // feito em lote e o resultado é aplicado de uma vez só. A marcação continua
-  // antes do pedido, mas agora só o desmonte cancela.
+  // Agora a dependência é a LISTA de arquivos (texto estável) e o pedido vai
+  // em lote. E NÃO existe mais guarda de cancelamento, que foi meu segundo
+  // erro aqui: em modo estrito o React roda todo efeito duas vezes de
+  // propósito, pra caçar exatamente esse tipo de bug. A primeira execução
+  // marcava os 99 como pedidos e era "cancelada"; a segunda não achava mais
+  // nada pendente e voltava vazia; e o resultado da primeira ia pro lixo por
+  // causa da guarda. Resultado: nenhuma capa, nunca.
+  // Guardar resultado que já chegou não custa nada — no React 18 aplicar
+  // estado depois do desmonte é só um no-op.
   const chavesVisiveis = visible.map((e) => e.primaryFile || '').join('|')
   useEffect(() => {
     const pendentes = visible
@@ -293,7 +299,6 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
     if (!pendentes.length) return
     for (const f of pendentes) capasPedidas.current.add(f)
 
-    let vivo = true
     ;(async () => {
       // de seis em seis: na primeira vez cada pedido acorda um ffmpeg, e 99 de
       // uma vez travaria a máquina do usuário por alguns segundos
@@ -309,10 +314,8 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
         }
       }
       await Promise.all(Array.from({ length: 6 }, trabalhar))
-      if (!vivo || !Object.keys(achadas).length) return
-      setCapas((c) => ({ ...c, ...achadas }))
+      if (Object.keys(achadas).length) setCapas((c) => ({ ...c, ...achadas }))
     })()
-    return () => { vivo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chavesVisiveis])
   const hiddenCount = filtered.length - visible.length
