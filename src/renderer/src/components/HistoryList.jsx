@@ -256,6 +256,18 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
   // o acervo ja tem 99 itens e sem marcacao a unica forma de reachar uma
   // musica e lembrar do nome dela.
   const toggleFavorito = async (entry) => {
+    // A ponte pro motor so e reconstruida quando o app reinicia — a tela
+    // recarrega sozinha, o preload nao. Sem esta guarda o clique morria
+    // calado, que e o pior jeito de falhar: parece botao quebrado.
+    if (!window.mptrix?.history?.favorite) {
+      setConfirmState({
+        title: 'Precisa reiniciar o MPTRIX',
+        message: 'O favorito acabou de ser instalado no motor. A tela já atualizou sozinha, mas a ponte com o motor só é refeita quando o app abre de novo — feche e abra o MPTRIX que a estrela passa a funcionar.',
+        confirmLabel: 'Entendi',
+        onConfirm: () => setConfirmState(null)
+      })
+      return
+    }
     const r = await window.mptrix.history.favorite(entry.id, !entry.favorito)
     if (r?.updated) onChange?.(r.updated)
   }
