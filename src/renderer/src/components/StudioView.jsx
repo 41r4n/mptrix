@@ -2686,6 +2686,29 @@ export default function StudioView({ source, onClose }) {
                         duration={playDuration}
                         color={col}
                       />
+                      {/* O que foi jogado pra dentro desta pista mora DENTRO
+                          dela — é informação do Outros, não uma seção nova da
+                          tela. Vai no canto da onda porque o trilho tem altura
+                          fixa e uma linha a mais lá espremeria o M/S. Sem caixa
+                          e sem borda: é leitura; o que denuncia o clique é o ×
+                          que acende. Fica acima da camada de arrastar (z-index)
+                          pra o clique chegar no botão em vez de virar seek. */}
+                      {stem === 'other' && foldedStems(session).length > 0 && (
+                        <div className="daw-dentro">
+                          <span className="daw-dentro-cap">contém</span>
+                          {foldedStems(session).map((f) => (
+                            <button
+                              key={f}
+                              className="daw-dentro-item"
+                              style={{ color: col }}
+                              onClick={() => setDentroOutros(f, false)}
+                              title={`Tirar ${stemMeta(f, session).label} de dentro do Outros`}
+                            >
+                              {stemMeta(f, session).label}<span className="daw-dentro-x" aria-hidden="true">×</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -3270,25 +3293,6 @@ export default function StudioView({ source, onClose }) {
             </aside>
             )}
             </div>
-            {/* DENTRO DO OUTROS: quem foi jogado pra lá some da mesa, então
-                precisa de uma porta de volta que não dependa de clicar na
-                faixa — ela não está mais lá pra ser clicada. Cada nome é o
-                botão que traz de volta. */}
-            {foldedStems(session).length > 0 && (
-              <div className="dentro-outros">
-                <span className="dentro-cap">DENTRO DO OUTROS</span>
-                {foldedStems(session).map((stem) => (
-                  <button
-                    key={stem}
-                    className="dentro-chip"
-                    onClick={() => setDentroOutros(stem, false)}
-                    title="Tirar do Outros e devolver pra mesa"
-                  >
-                    {stemMeta(stem, session).label} <span aria-hidden="true">↖</span>
-                  </button>
-                ))}
-              </div>
-            )}
             {/* Prateleira: faixas guardadas (evidência fraca ou decisão do dono) */}
             {shelvedStems(session).length > 0 && (
               <div className={`shelf-frame ${shelfOpen ? 'open' : ''}`}>

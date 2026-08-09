@@ -3591,37 +3591,51 @@ section h2 {
   border-color: var(--accent);
 }
 .lupa-desc:disabled { opacity: 0.5; }
-/* Faixas jogadas dentro do "outros". O rótulo em caixa-alta com hairline é
-   leitura de painel (não clica); cada nome É botão, então tem borda — a regra
-   da casa: borda em volta de texto = clicável. */
-.dentro-outros {
+/* O que está guardado dentro da pista "Outros" — mora no rodapé do trilho DELA,
+   não numa faixa nova da tela. Sem caixa e sem borda de propósito: é leitura,
+   e a borda faria parecer três botões empilhando peso visual numa informação
+   secundária. O que denuncia o clique é o × que acende no hover. */
+.daw-dentro {
+  position: absolute;
+  left: 10px;
+  bottom: 4px;
+  z-index: 5; /* acima da camada de arrastar, senão o clique vira seek */
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  border-top: 1px solid var(--border);
+  max-width: calc(100% - 20px);
 }
-.dentro-cap {
+.daw-dentro-cap {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  background: rgba(11, 12, 15, 0.72);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.daw-dentro-item {
+  /* fundo levíssimo só pra não brigar com a onda desenhada atrás */
+  background: rgba(11, 12, 15, 0.72);
+  border: none;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  cursor: pointer;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.daw-dentro-item:hover { opacity: 1; }
+.daw-dentro-x {
+  font-size: 0.82rem;
   color: var(--muted-2);
 }
-.dentro-chip {
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 10px;
-  color: var(--text-2);
-  font-family: var(--font-ui);
-  font-size: 0.84rem;
-  cursor: pointer;
-}
-.dentro-chip:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
+.daw-dentro-item:hover .daw-dentro-x { color: var(--bad); }
 /* ---------- DAW MPTrix: ruler, agulha, tint, transporte (assinatura) ---------- */
 .studio-ruler {
   position: relative;
