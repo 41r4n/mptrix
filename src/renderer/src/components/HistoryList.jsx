@@ -470,23 +470,13 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
           ))}
         </select>
 
-        {/* só aparece quando há o que limpar. Mostra quanto sobrou APENAS se o
-            filtro cortou algo — trocar a ordem não corta nada, e "99 de 99"
-            seria um número inútil ocupando a barra. */}
-        {/* FAVORITOS no fim dos dois seletores: eles dizem "que tipo" e "em
-            que ordem", e este diz "so os meus" — os tres estreitam a mesma
-            lista. Some quando nao ha nenhum favorito, porque filtro que so
-            pode dar zero e armadilha. */}
-        {totalFavoritos > 0 && (
-          <button
-            className={`barra-btn so-icone ${soFavoritos ? 'on estrelado' : ''}`}
-            onClick={() => setSoFavoritos((v) => !v)}
-            type="button"
-            aria-pressed={soFavoritos}
-            title={soFavoritos ? 'Mostrando só favoritos' : `Ver só favoritos (${totalFavoritos})`}
-          >
-            <Ico nome={soFavoritos ? 'estrelaCheia' : 'estrela'} tamanho={14} />
-            {soFavoritos && <span>{totalFavoritos}</span>}
+        {/* SÓ O X. Ele mostrava "2 de 99", e esse número já estava dito duas
+            vezes: o botão de favoritos mostra o 2 e o título do destino
+            mostra o 99. Contagem repetida não vira reforço, vira ruído —
+            e aqui o que a pessoa quer deste botão é desfazer, não ler. */}
+        {hasActiveFilters && (
+          <button className="barra-btn so-icone limpar" onClick={resetFilters} type="button" title="Limpar filtros">
+            <Ico nome="apagar" tamanho={14} />
           </button>
         )}
 
