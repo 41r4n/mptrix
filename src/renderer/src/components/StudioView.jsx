@@ -3333,7 +3333,7 @@ export default function StudioView({ source, onClose }) {
                           step="0.01"
                           value={volumes[stem] ?? 1}
                           onChange={(e) => setVolumes((v) => ({ ...v, [stem]: parseFloat(e.target.value) }))}
-                          style={{ accentColor: col }}
+                          style={{ '--vol-pct': `${Math.round((volumes[stem] ?? 1) * 100)}%`, '--vol-cor': col }}
                           title={`Volume: ${Math.round((volumes[stem] ?? 1) * 100)}%`}
                         />
                         <span className="daw-vol-num">{Math.round((volumes[stem] ?? 1) * 100)}</span>

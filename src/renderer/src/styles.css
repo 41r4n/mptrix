@@ -6641,10 +6641,42 @@ body.studio-open .zoom-chip {
 }
 
 /* volume: trilha fina na cor do próprio stem + número mono */
+/* VOLUME COMO MEDIDOR SEGMENTADO — a mesma forma que o `.pres-meter` já usa no
+   app, que e a linguagem da casa pra medida (aceno ao carregador do Omnitrix).
+   Bloquinho se conta com o olho; barra lisa so se estima, e volume e a coisa
+   que a pessoa mais reajusta na mesa.
+   O controle continua sendo um range nativo (arrasta, teclado, acessibilidade
+   de graca) -- muda so a pintura: um degrade cortado na posicao atual, recortado
+   por uma mascara que abre as frestas entre os blocos. */
 .daw-rail .studio-volume {
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  appearance: none;
+  -webkit-appearance: none;
+  height: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.daw-rail .studio-volume::-webkit-slider-runnable-track {
+  height: 9px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    var(--vol-cor, var(--accent)) 0 var(--vol-pct, 100%),
+    rgba(255, 255, 255, 0.12) var(--vol-pct, 100%) 100%
+  );
+  -webkit-mask: repeating-linear-gradient(to right, #000 0 5px, transparent 5px 8px);
+          mask: repeating-linear-gradient(to right, #000 0 5px, transparent 5px 8px);
+}
+/* agulha de linha, igual a da barra de tempo: a mesma gramatica em todo lugar
+   onde se mira um valor */
+.daw-rail .studio-volume::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 3px;
+  height: 14px;
+  border-radius: 1.5px;
+  background: var(--vol-cor, var(--accent));
+  box-shadow: 0 0 0 1px rgba(11, 12, 15, 0.9), 0 0 8px rgba(182, 255, 59, 0.45);
+  margin-top: -2.5px;
 }
 
 .daw-vol-num {
