@@ -39,6 +39,53 @@ export default function NuvemConfig() {
   // vira uma faixa honesta em vez de uma promessa que eu não posso cumprir.
   const custoMedio = estado.musicasFeitas >= 3 ? porMusica : 0
 
+  // ██████ O JORNAL DO CRÉDITO ██████
+  //
+  // Número sozinho não é notícia. "US$ 4,20" não diz se é muito ou pouco —
+  // quem nunca usou não tem régua pra saber. A frase dá a régua: traduz o
+  // mesmo número em "dá pra continuar" ou "é hora de comprar", e diz o que
+  // acontece se ignorar.
+  const jornal = (() => {
+    if (!estado.creditoInformado) {
+      return {
+        nivel: 'mudo',
+        titulo: 'não sei quanto você tem',
+        txt: 'Me diga quanto pôs de crédito e eu passo a avisar antes de acabar. Sem esse número eu não tenho como frear — e o que passar do crédito vira dívida lá.'
+      }
+    }
+    const sobra = Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito)
+    const fracao = sobra / estado.creditoInformado
+    const musicas = custoMedio ? Math.floor(sobra / custoMedio) : null
+    const quantas = musicas != null ? ` Dá pra mais ou menos ${musicas} música${musicas !== 1 ? 's' : ''}.` : ''
+
+    if (estado.paradaPor) {
+      return {
+        nivel: 'parou',
+        titulo: 'parei a nuvem',
+        txt: `Sobrou ${emDolar(sobra)} do que você informou, e eu parei antes de encostar — se passasse, viraria dívida e o Replicate suspende a conta até quitar. Pondo mais crédito e atualizando o valor, eu volto sozinho.`
+      }
+    }
+    if (fracao <= 0.25) {
+      return {
+        nivel: 'pouco',
+        titulo: 'está acabando',
+        txt: `Sobra mais ou menos ${emDolar(sobra)}.${quantas} Vou parar sozinho em ${emDolar(estado.creditoInformado * 0.15)} de sobra, pra não virar dívida — então já vale comprar mais.`
+      }
+    }
+    if (fracao <= 0.6) {
+      return {
+        nivel: 'meio',
+        titulo: 'na metade',
+        txt: `Sobra mais ou menos ${emDolar(sobra)}.${quantas} Ainda dá pra trabalhar tranquilo; eu aviso quando estiver perto do fim.`
+      }
+    }
+    return {
+      nivel: 'cheio',
+      titulo: 'tem bastante',
+      txt: `Sobra mais ou menos ${emDolar(sobra)}.${quantas} Pode usar à vontade — eu conto e aviso antes de apertar.`
+    }
+  })()
+
   const guardar = async () => {
     setOcupado(true)
     setRecado(null)
@@ -342,13 +389,24 @@ export default function NuvemConfig() {
                   )}
                 </div>
                 <span className="credito-espaco" />
+                {/* o botão PEDE quando aperta: cor de aviso e batida devagar.
+                    Botão que muda de comportamento conforme a situação é o
+                    jeito de a tela falar sem escrever mais uma linha. */}
                 <button
-                  className="btn-primary credito-ir"
+                  className={`btn-primary credito-ir ${jornal.nivel === 'parou' || jornal.nivel === 'pouco' ? 'pedindo' : ''}`}
                   onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
                 >
                   <Ico nome="baixar" tamanho={15} />
                   Ver saldo e comprar crédito
                 </button>
+              </div>
+
+              <div className={`jornal ${jornal.nivel}`}>
+                <span className="jornal-luz" aria-hidden="true" />
+                <div>
+                  <b>{jornal.titulo}</b>
+                  <p>{jornal.txt}</p>
+                </div>
               </div>
 
               <p className="nuvem-texto miudo">

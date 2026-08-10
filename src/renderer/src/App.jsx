@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DownloadModal from './components/DownloadModal.jsx'
 import Omnitrix from './components/Omnitrix.jsx'
 import TituloVivo, { useFalaDaVez } from './components/TituloVivo.jsx'
@@ -70,6 +70,12 @@ export default function App() {
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
   // da nuvem, mais abaixo) — null enquanto não respondeu
   const [nuvemLigada, setNuvemLigada] = useState(null)
+  // AVISO DE PARADA. A nuvem pode se desligar sozinha no meio de uma
+  // separação — e é justamente aí que a pessoa NÃO está olhando pra tela da
+  // nuvem. Sem isto o trabalho de repente volta a demorar minutos e ninguém
+  // conta por quê.
+  const [avisoNuvem, setAvisoNuvem] = useState(null)
+  const paradaVista = useRef(null)
   // ABA ATIVA. O app deixa de ser uma pagina que se rola de cima a baixo e
   // passa a ser um aparelho: trilho fixo a esquerda, area de trabalho a
   // direita. Era o esqueleto que fazia a tela "parecer a mesma" por baixo de
@@ -80,7 +86,13 @@ export default function App() {
     const ler = async () => {
       try {
         const n = await window.mptrix.nuvem?.estado()
-        if (vivo) setNuvemLigada(!!(n?.ligada && n?.temChave))
+        if (!vivo) return
+        setNuvemLigada(!!(n?.ligada && n?.temChave))
+        // só avisa na TRANSIÇÃO: mostrar o mesmo recado a cada 3s viraria
+        // parede, e parede a pessoa aprende a ignorar
+        const parada = n?.paradaPor || null
+        if (parada && parada !== paradaVista.current) setAvisoNuvem(parada)
+        paradaVista.current = parada
       } catch { /* sem nuvem configurada: a leitura mostra DESLIGADA */ }
     }
     ler()
@@ -387,6 +399,36 @@ export default function App() {
       </main>
 
 
+
+      {/* O RECADO. Aparece por cima de qualquer tela, porque a parada
+          acontece durante o trabalho — não na aba da nuvem. */}
+      {avisoNuvem && (
+        <div className="recado">
+          <span className="recado-barra" aria-hidden="true" />
+          <div className="recado-txt">
+            <b>
+              {avisoNuvem === 'teto-do-mes'
+                ? 'Cheguei no teto do mês'
+                : avisoNuvem === 'freio-credito'
+                  ? 'Seu crédito está acabando'
+                  : 'Seu crédito acabou'}
+            </b>
+            <p>
+              Desliguei a nuvem e voltei a separar aqui no seu computador.{' '}
+              <strong>Seu trabalho continua normalmente</strong> — só vai levar
+              alguns minutos em vez de meio.
+              {avisoNuvem === 'freio-credito' && ' Parei antes de acabar pra você não ficar devendo.'}
+            </p>
+          </div>
+          <button
+            className="recado-ir"
+            onClick={() => { setAba('nuvem'); setAvisoNuvem(null) }}
+          >
+            ver crédito
+          </button>
+          <button className="recado-x" onClick={() => setAvisoNuvem(null)} title="Dispensar">×</button>
+        </div>
+      )}
 
       {activePreset && activePreset.id === 'playlist' && (
         <PlaylistModal

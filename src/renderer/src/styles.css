@@ -10321,3 +10321,137 @@ ul.hlib-grid {
   background: var(--text-2);
   opacity: 0.55;
 }
+
+/* --- O RECADO ---
+   A nuvem pode se desligar sozinha NO MEIO de uma separação, e é justamente
+   aí que a pessoa não está olhando pra aba da nuvem. Sem isto o trabalho de
+   repente volta a demorar minutos e ninguém conta por quê.
+   Ele aparece por cima de qualquer tela, e só na TRANSIÇÃO: mostrar o mesmo
+   recado a cada leitura viraria parede, e parede a pessoa aprende a ignorar. */
+.recado {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 200;
+  width: 420px;
+  max-width: calc(100vw - 44px);
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px 16px 16px 18px;
+  background: linear-gradient(160deg, #16171a, #0b0c0f 72%);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.35), 0 18px 44px rgba(0, 0, 0, 0.8);
+  animation: recado-entra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes recado-entra {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.recado-barra {
+  position: absolute;
+  left: 0;
+  top: 11px;
+  bottom: 11px;
+  width: 3px;
+  background: var(--warn);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.55);
+}
+.recado-txt { flex: 1; min-width: 0; }
+.recado-txt b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warn);
+  margin-bottom: 7px;
+}
+.recado-txt p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.recado-txt strong { color: var(--text); font-weight: 600; }
+.recado-ir {
+  flex: none;
+  align-self: center;
+  height: 32px;
+  padding: 0 14px;
+  background: var(--warn);
+  border: none;
+  color: #0b0c0f;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+}
+.recado-ir:hover { background: #f5c518; }
+.recado-x {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--muted-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.recado-x:hover { color: var(--text); }
+
+/* --- O JORNAL DO CRÉDITO ---
+   Número sozinho não é notícia. "US$ 4,20" não diz se é muito ou pouco — quem
+   nunca usou não tem régua pra saber. A frase dá a régua: traduz o mesmo
+   número em "dá pra continuar" ou "é hora de comprar", e diz o que acontece
+   se ignorar. */
+.jornal {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 0 0 14px;
+  padding: 12px 14px 13px 15px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.jornal b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.jornal p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+/* a luz de estado: um losango que muda de cor. Diz o nível de longe, antes de
+   qualquer palavra ser lida. */
+.jornal-luz {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.jornal.cheio b { color: var(--accent); }
+.jornal.cheio .jornal-luz { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.7); }
+.jornal.meio b { color: var(--stem-3); }
+.jornal.meio .jornal-luz { background: var(--stem-3); box-shadow: 0 0 10px rgba(126, 217, 122, 0.6); }
+.jornal.pouco b { color: var(--warn); }
+.jornal.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 10px rgba(234, 179, 8, 0.7); animation: jornal-bate 1.8s ease-in-out infinite; }
+.jornal.parou b { color: var(--bad); }
+.jornal.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 10px rgba(248, 113, 113, 0.7); }
+.jornal.mudo b { color: var(--muted-2); }
+.jornal.mudo .jornal-luz { background: var(--muted-2); }
+@keyframes jornal-bate { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* o botão PEDE quando aperta: cor de aviso e batida devagar. Botão que muda de
+   comportamento conforme a situação é o jeito de a tela falar sem escrever
+   mais uma linha. */
+.credito-ir.pedindo {
+  background: var(--warn);
+  color: #0b0c0f;
+  animation: credito-pede 1.9s ease-in-out infinite;
+}
+.credito-ir.pedindo:hover { background: #f5c518; animation: none; }
+@keyframes credito-pede {
+  0%, 100% { box-shadow: 0 0 0 rgba(234, 179, 8, 0); }
+  55% { box-shadow: 0 0 24px rgba(234, 179, 8, 0.75); }
+}
