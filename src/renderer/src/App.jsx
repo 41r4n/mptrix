@@ -247,7 +247,19 @@ export default function App() {
                 // separador usa, e quem quer os instrumentos quer o material
                 // mais limpo possível.
                 const querEstudio = presetId === 'separar'
-                const p = presets.find((x) => x.id === (querEstudio ? 'audio_m4a' : presetId))
+                // ENDEREÇO DE LISTA PURA vai pra tela da lista, escolha o
+                // formato que escolher. Os presets de música rodam com
+                // "--no-playlist": num endereço sem vídeo apontado eles não
+                // teriam o que baixar, e a pessoa levaria um erro por ter
+                // pedido uma coisa razoável. Quem sabe que "list=" sem "v="
+                // é lista inteira é o app, não ela.
+                let alvo = querEstudio ? 'audio_m4a' : presetId
+                try {
+                  const u = new URL(url)
+                  const listaPura = u.searchParams.has('list') && !u.searchParams.get('v')
+                  if (listaPura && !querEstudio) alvo = 'playlist'
+                } catch { /* endereço estranho: segue o que foi pedido */ }
+                const p = presets.find((x) => x.id === alvo)
                 if (!p) return
                 setRodaPediuEstudio(querEstudio)
                 setUrlDaRoda(url)

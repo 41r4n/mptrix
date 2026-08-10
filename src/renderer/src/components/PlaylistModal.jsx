@@ -192,6 +192,17 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
     setPerItemOption({})
   }, [globalKind])
 
+  // LINK VINDO DA RODA JÁ ENTRA BUSCANDO. Quem escolheu a playlist na roda já
+  // disse o que queria — parar numa caixa de texto com o endereço preenchido
+  // e um botão "buscar" seria pedir pra confirmar a mesma coisa duas vezes.
+  const jaBuscou = useRef(false)
+  useEffect(() => {
+    if (jaBuscou.current || !urlInicial?.trim()) return
+    jaBuscou.current = true
+    probe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlInicial])
+
   const probe = async () => {
     if (!url.trim()) return
     setState(STATES.PROBING)
