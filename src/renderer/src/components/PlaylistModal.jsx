@@ -9,23 +9,26 @@ const STATES = {
   ERROR: 'error'
 }
 
+// Sem emoji nos rótulos: cada um chega com a paleta dele e muda de desenho
+// conforme o Windows — dentro de um <option> não dá nem pra trocar por ícone
+// desenhado, então o jeito honesto é escrever o que a coisa é.
 const AUDIO_OPTIONS = [
-  { id: 'music',      label: '🎵 MP3 — qualidade máxima',           presetId: 'music',     qualityHeight: null },
-  { id: 'fast',       label: '⚡ MP3 — rápido (qualidade média)',   presetId: 'fast',      qualityHeight: null },
-  { id: 'audio_m4a',  label: '🎼 M4A — qualidade original (sem reconverter)', presetId: 'audio_m4a', qualityHeight: null },
-  { id: 'audio_wav',  label: '💿 WAV — sem compressão (arquivo grande)',     presetId: 'audio_wav', qualityHeight: null }
+  { id: 'music',      label: 'MP3 — qualidade máxima',           presetId: 'music',     qualityHeight: null },
+  { id: 'fast',       label: 'MP3 — rápido (qualidade média)',   presetId: 'fast',      qualityHeight: null },
+  { id: 'audio_m4a',  label: 'M4A — original, sem reconverter',  presetId: 'audio_m4a', qualityHeight: null },
+  { id: 'audio_wav',  label: 'WAV — sem compressão (bem maior)', presetId: 'audio_wav', qualityHeight: null }
 ]
 
 const VIDEO_OPTIONS = [
-  { id: 'auto_max', label: '✨ Cada vídeo na máxima possível', auto: 'max' },
-  { id: 'auto_med', label: '⚖️ Cada vídeo na média (~720p)', auto: 'med' },
-  { id: 'auto_min', label: '📉 Cada vídeo na mínima (rápido)', auto: 'min' },
-  { id: 'video_480',  label: '📺 MP4 até 480p',              presetId: 'video', qualityHeight: 480 },
-  { id: 'video_720',  label: '📺 MP4 até 720p (HD)',         presetId: 'video', qualityHeight: 720 },
-  { id: 'video_1080', label: '📺 MP4 até 1080p (Full HD)',   presetId: 'video', qualityHeight: 1080 },
-  { id: 'video_1440', label: '📺 MP4 até 2K (1440p)',        presetId: 'video', qualityHeight: 1440 },
-  { id: 'video_2160', label: '📺 MP4 até 4K',                presetId: 'video', qualityHeight: 2160 },
-  { id: 'video_max',  label: '🎬 Vídeo máxima qualidade (até 8K)', presetId: 'video', qualityHeight: 4320 }
+  { id: 'auto_max', label: 'Cada vídeo na máxima possível', auto: 'max' },
+  { id: 'auto_med', label: 'Cada vídeo na média (~720p)', auto: 'med' },
+  { id: 'auto_min', label: 'Cada vídeo na mínima (rápido)', auto: 'min' },
+  { id: 'video_480',  label: 'MP4 até 480p',              presetId: 'video', qualityHeight: 480 },
+  { id: 'video_720',  label: 'MP4 até 720p (HD)',         presetId: 'video', qualityHeight: 720 },
+  { id: 'video_1080', label: 'MP4 até 1080p (Full HD)',   presetId: 'video', qualityHeight: 1080 },
+  { id: 'video_1440', label: 'MP4 até 2K (1440p)',        presetId: 'video', qualityHeight: 1440 },
+  { id: 'video_2160', label: 'MP4 até 4K',                presetId: 'video', qualityHeight: 2160 },
+  { id: 'video_max',  label: 'Vídeo na máxima (até 8K)',  presetId: 'video', qualityHeight: 4320 }
 ]
 
 const ALL_OPTIONS = [...AUDIO_OPTIONS, ...VIDEO_OPTIONS]
