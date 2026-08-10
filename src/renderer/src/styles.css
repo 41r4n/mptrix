@@ -8155,23 +8155,33 @@ section h2::after {
   vertical-align: middle;
   margin-left: 10px;
 }
-/* TETO DE LARGURA PRO TEXTO DO PALCO. A marca mora na metade direita, e sem
-   teto qualquer frase mais longa cresce até encostar nela — foi o que
-   aconteceu. Com o teto, o encontro deixa de depender de quem escreve a
-   frase. */
+/* TETO DE LARGURA PRO TEXTO DO PALCO, calculado CONTRA A MARCA.
+   Eu tinha posto uma porcentagem no olho (52%) e conferi depois: encostava em
+   cinco das seis larguras que testei. Porcentagem chutada não sabe onde a
+   marca está — ela precisa vir da mesma conta que posiciona a marca, senão é
+   sorte.
+   A conta: a marca fica no meio do palco, então a borda esquerda dela é
+   (100vw - trilho)/2 menos metade da largura dela. O texto começa a 46px da
+   borda do palco. Sobra isso aqui, menos uma folga de respiro.
+   Só o corpo do texto precisa disso: o título grande fica ACIMA da faixa onde
+   a marca mora, então nunca se cruzam. */
+.palco-texto-teto,
+.palco-linha,
+.palco-etiquetas,
+.palco-nota {
+  max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 165px - 78px));
+}
 .palco-linha {
   margin: 0 0 20px;
   font-size: 14.5px;
   line-height: 1.6;
   color: var(--muted);
-  max-width: min(54ch, 52%);
 }
 .palco-etiquetas {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 26px;
-  max-width: min(60ch, 56%);
 }
 .palco-etiquetas i {
   font-style: normal;
@@ -8184,7 +8194,7 @@ section h2::after {
   padding: 5px 9px;
   clip-path: var(--corte-sm);
 }
-.palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); max-width: min(48ch, 50%); }
+.palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); }
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }
 
 /* ██████████ ACERVO — cartão com capa de verdade ██████████
@@ -8746,10 +8756,16 @@ ul.hlib-grid {
    espaço com o texto do palco */
 @media (max-width: 1280px) {
   .marca { width: 240px; }
+  .palco-linha, .palco-etiquetas, .palco-nota {
+    max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 120px - 70px));
+  }
   .marca-svg { width: 200px; height: 220px; }
 }
 @media (max-width: 1040px) {
   .marca { width: 180px; }
+  .palco-linha, .palco-etiquetas, .palco-nota {
+    max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 90px - 60px));
+  }
   .marca-svg { width: 150px; height: 165px; }
   .marca-fala { display: none; }
 }
