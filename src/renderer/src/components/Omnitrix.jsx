@@ -263,7 +263,15 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                         : 'não deu pra ler o nome — o download funciona igual'}
                   </i>
                 </span>
-                <span className="mostra-esc">esc fecha</span>
+                {/* Aqui morava um "esc fecha" que ninguém precisava ler:
+                    clicar fora já fecha, e Esc continua funcionando pra quem
+                    usa teclado. Sobrou uma marca de canto — fio e hachura, em
+                    branco fraco. É estrutura, não neon: ela fecha o bloco no
+                    canto direito e não diz nada, então não pode gastar
+                    lima. */}
+                <span className="mostra-selo" aria-hidden="true">
+                  <i /><i /><i />
+                </span>
               </div>
 
               <div className="mostra-forma">
