@@ -217,11 +217,20 @@ export default function NuvemConfig() {
                 <details className="duvida">
                   <summary>Podem cobrar mais do que eu tenho? Vou levar susto na fatura?</summary>
                   <p>
-                    O crédito é pré-pago: você põe US$ 5, e o serviço não tem
-                    como gastar além do que está lá. Fora isso, o MPTRIX tem o
-                    teto dele — chegando no valor que você marcar, ele volta a
-                    separar aqui no computador sozinho. Não existe assinatura
-                    nem cobrança recorrente.
+                    Não existe assinatura nem cobrança recorrente — você paga o
+                    que usar. Mas atenção numa coisa que eu já vi acontecer:{' '}
+                    <strong>o crédito acabar não trava o serviço na hora.</strong>{' '}
+                    O que passar do crédito vira uma dívida pequena na conta do
+                    Replicate, e eles suspendem o acesso até você quitar. Foram
+                    25 centavos de dólar no caso que eu vi — pouco dinheiro, mas
+                    a conta fica parada até resolver.
+                  </p>
+                  <p>
+                    Por isso o <strong>teto de gasto aqui embaixo importa de
+                    verdade</strong>: ele é o freio que está do SEU lado. Quando
+                    o MPTRIX chega no valor que você marcar, ele volta a separar
+                    aqui no computador sozinho, antes de encostar no limite lá.
+                    Com o teto em zero não existe freio nenhum.
                   </p>
                 </details>
 
@@ -333,9 +342,10 @@ export default function NuvemConfig() {
                   Zerar contador
                 </button>
               </div>
-              <p className="nuvem-texto miudo">
-                Chegando no teto, o MPTRIX volta a separar aqui no computador
-                sozinho — sem te avisar depois do estrago.
+              <p className={`nuvem-texto miudo ${!estado.tetoCentavos ? 'aviso' : ''}`}>
+                {estado.tetoCentavos
+                  ? <>Chegando em {emDolar(estado.tetoCentavos)}, o MPTRIX volta a separar aqui no computador sozinho — sem te avisar depois do estrago.</>
+                  : <><strong>Sem teto, não existe freio deste lado.</strong> O crédito acabar não trava o serviço na hora: o que passar vira dívida na conta do Replicate e ele suspende o acesso até quitar. Marcar um valor aqui evita isso.</>}
               </p>
             </>
           )}
