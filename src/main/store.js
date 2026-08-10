@@ -59,6 +59,12 @@ export function setDownloadDir(dir) {
 // avisar que não dá do que gravar um token legível num JSON.
 // MÊS CORRENTE, no relógio de quem usa. O Replicate fecha a conta por mês, e
 // o teto só faz sentido se contar a mesma coisa que a fatura conta.
+//
+// Data em hora LOCAL de propósito. Quando fui conferir isto, meu próprio teste
+// disse que a virada não funcionava — porque eu escrevi new Date('2026-09-01'),
+// que o JavaScript lê como meia-noite em Londres e vira 31 de agosto às 21h
+// aqui. O código estava certo; o teste é que estava errado. Fica anotado
+// porque o mesmo tropeço espera qualquer um que for mexer aqui.
 function mesAgora() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
