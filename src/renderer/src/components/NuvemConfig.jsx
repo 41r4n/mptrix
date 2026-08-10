@@ -15,6 +15,7 @@ const PAINEL_CHAVES = 'https://replicate.com/account/api-tokens'
 // levar a pessoa até lá num clique, em vez de inventar uma estimativa de
 // saldo que pode estar errada justamente na hora que importa.
 const PAINEL_CREDITO = 'https://replicate.com/account/billing'
+const CRIAR_CONTA = 'https://replicate.com/signin'
 
 export default function NuvemConfig() {
   const [estado, setEstado] = useState(null)
@@ -34,6 +35,9 @@ export default function NuvemConfig() {
   // dividir por cem de cabeça pra saber se gastou muito — e é justamente o
   // número que ela mais quer ler rápido.
   const emDolar = (c) => `US$ ${(c / 100).toFixed(2).replace('.', ',')}`
+  // média medida NESTE computador. Sem histórico não invento número: o texto
+  // vira uma faixa honesta em vez de uma promessa que eu não posso cumprir.
+  const custoMedio = estado.musicasFeitas >= 3 ? porMusica : 0
 
   const guardar = async () => {
     setOcupado(true)
@@ -76,31 +80,88 @@ export default function NuvemConfig() {
                   guardar sua chave — ela ficaria legível em disco. A separação segue local.
                 </p>
               )}
-              <div className="nuvem-chave">
-                <input
-                  type="password"
-                  className="nuvem-campo"
-                  placeholder="Cole aqui sua chave (começa com r8_)"
-                  value={chave}
-                  onChange={(e) => setChave(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && chave.trim() && guardar()}
-                  disabled={!estado.podeGuardar || ocupado}
-                  spellCheck={false}
-                />
-                <button
-                  className="btn-primary"
-                  onClick={guardar}
-                  disabled={!chave.trim() || ocupado || !estado.podeGuardar}
-                >
-                  {ocupado ? 'Conferindo…' : 'Guardar'}
-                </button>
-              </div>
-              <button
-                className="nuvem-link"
-                onClick={() => window.mptrix.shell.openExternal(PAINEL_CHAVES)}
-              >
-                Onde eu pego essa chave?
-              </button>
+
+              {/* ██████ O CAMINHO ██████
+                  Antes isto era um parágrafo, um campo de senha e um link
+                  dizendo "onde eu pego essa chave?". Quem já sabia, resolvia;
+                  quem não sabia, parava ali — e quem não sabe é justamente
+                  quem esta tela precisa atender.
+                  Agora são quatro passos numerados, cada um com o PORQUÊ ao
+                  lado do o quê. Sem o porquê a pessoa executa sem entender e
+                  trava no primeiro imprevisto; com ele, ela sabe o que está
+                  fazendo e consegue se virar quando a tela do Replicate mudar
+                  de lugar — porque vai mudar. */}
+              <ol className="passos">
+                <li className="passo">
+                  <span className="passo-n">01</span>
+                  <div className="passo-txt">
+                    <b>Criar uma conta no Replicate</b>
+                    <i>É de graça e dá pra entrar com a conta do Google ou do GitHub. O Replicate é quem aluga a placa de vídeo — o MPTRIX não tem servidor nenhum.</i>
+                    <button className="passo-ir" onClick={() => window.mptrix.shell.openExternal(CRIAR_CONTA)}>
+                      abrir o Replicate
+                    </button>
+                  </div>
+                </li>
+
+                <li className="passo">
+                  <span className="passo-n">02</span>
+                  <div className="passo-txt">
+                    <b>Botar crédito na conta</b>
+                    <i>
+                      Você paga direto a eles, não ao MPTRIX. {custoMedio
+                        ? <>Pelo seu histórico, cada música sai por volta de <strong>{emDolar(custoMedio)}</strong> — US$ 5 dariam umas <strong>{Math.max(1, Math.floor(500 / custoMedio))}</strong> músicas.</>
+                        : <>Em geral fica na casa de centavos por música; US$ 5 já dão pra experimentar bastante.</>}
+                    </i>
+                    <button className="passo-ir" onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}>
+                      abrir a página de crédito
+                    </button>
+                  </div>
+                </li>
+
+                <li className="passo">
+                  <span className="passo-n">03</span>
+                  <div className="passo-txt">
+                    <b>Copiar a chave da conta</b>
+                    <i>É uma senha que começa com <code>r8_</code>. Ela diz ao Replicate que o trabalho é seu e vai na sua conta — por isso ela não pode ser dividida com ninguém.</i>
+                    <button className="passo-ir" onClick={() => window.mptrix.shell.openExternal(PAINEL_CHAVES)}>
+                      abrir minhas chaves
+                    </button>
+                  </div>
+                </li>
+
+                <li className="passo">
+                  <span className="passo-n">04</span>
+                  <div className="passo-txt">
+                    <b>Colar aqui embaixo</b>
+                    <i>Ela vai pro cofre de senhas do Windows, não pra um arquivo. Depois de guardada, nem esta tela consegue ler de volta — ela só sabe que existe uma.</i>
+                    <div className="nuvem-chave">
+                      <input
+                        type="password"
+                        className="nuvem-campo"
+                        placeholder="cole a chave aqui (começa com r8_)"
+                        value={chave}
+                        onChange={(e) => setChave(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && chave.trim() && guardar()}
+                        disabled={!estado.podeGuardar || ocupado}
+                        spellCheck={false}
+                      />
+                      <button
+                        className="btn-primary"
+                        onClick={guardar}
+                        disabled={!chave.trim() || ocupado || !estado.podeGuardar}
+                      >
+                        {ocupado ? 'Conferindo…' : 'Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+
+              <p className="nuvem-texto miudo">
+                Não quer mexer com isso agora? Tudo bem — sem chave o MPTRIX
+                separa aqui no seu computador do mesmo jeito, só demora uns
+                minutos em vez de meio minuto.
+              </p>
             </>
           )}
 

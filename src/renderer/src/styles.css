@@ -10060,3 +10060,92 @@ ul.hlib-grid {
 .credito-lado b { color: var(--text-2); font-size: 12px; font-weight: 500; }
 .credito-espaco { flex: 1 1 auto; }
 .credito-ir { display: inline-flex; align-items: center; gap: 9px; flex: none; }
+
+/* --- O CAMINHO: quatro passos com o porquê ao lado do quê ---
+   Antes eram um parágrafo, um campo de senha e um link "onde eu pego essa
+   chave?". Quem já sabia resolvia; quem não sabia parava ali — e quem não
+   sabe é justamente quem esta tela precisa atender.
+   O porquê fica em cada passo, não num texto separado: sem ele a pessoa
+   executa sem entender e trava no primeiro imprevisto. Com ele, ela se vira
+   quando a tela do Replicate mudar de lugar — porque vai mudar. */
+.passos {
+  list-style: none;
+  margin: 6px 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.passo {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  padding: 16px 0 18px 4px;
+}
+.passo + .passo { border-top: 1px solid var(--border); }
+/* o fio que liga os passos: sem ele são quatro blocos soltos; com ele, um
+   caminho com começo e fim */
+.passo:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 48px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--accent-border), transparent);
+  opacity: 0.5;
+}
+.passo-n {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  z-index: 1;
+}
+.passo-txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.passo-txt b { font-size: 15px; color: var(--text); font-weight: 600; }
+.passo-txt i {
+  font-style: normal;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 72ch;
+}
+.passo-txt i strong { color: var(--accent); font-weight: 500; }
+.passo-txt code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--bg-cava-2);
+  padding: 1px 5px;
+  color: var(--text-2);
+}
+.passo-ir {
+  align-self: flex-start;
+  margin-top: 3px;
+  height: 30px;
+  padding: 0 13px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.13s ease, box-shadow 0.13s ease, background 0.13s ease;
+}
+.passo-ir:hover {
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  background: rgba(182, 255, 59, 0.06);
+}
+.passo .nuvem-chave { margin-top: 4px; }
