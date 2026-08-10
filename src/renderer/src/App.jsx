@@ -237,6 +237,7 @@ export default function App() {
                 acha um, enchendo quando a mão chega. */}
             <Omnitrix
               ligado={binariesOk}
+              presets={presets}
               onEscolher={(presetId, url) => {
                 const p = presets.find((x) => x.id === presetId)
                 if (!p) return

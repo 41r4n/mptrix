@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Ico from './Icones.jsx'
 
 // ██████ A RODA ██████
@@ -62,10 +62,24 @@ function meio(i, total, raio) {
 // A silhueta, uma vez só, pra marca e núcleo desenharem a MESMA ampulheta.
 const AMPULHETA = 'M5.4 2h13.2c0 4.6-4.6 7.6-4.6 10s4.6 5.4 4.6 10H5.4c0-4.6 4.6-7.6 4.6-10S5.4 6.6 5.4 2Z'
 
-export default function Omnitrix({ ligado, onEscolher }) {
+// mm:ss — duração só ajuda se for legível de relance
+function relogio(seg) {
+  if (!seg && seg !== 0) return null
+  const m = Math.floor(seg / 60)
+  const s = Math.round(seg % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
   const [link, setLink] = useState(null)
   const [aberta, setAberta] = useState(false)
   const [sobre, setSobre] = useState(null)
+  // o que foi copiado, por extenso. O endereço do site diz de onde veio, não
+  // O QUE é — e "youtube.com" não ajuda ninguém a confirmar que copiou a
+  // música certa.
+  const [info, setInfo] = useState(null)
+  const [buscando, setBuscando] = useState(false)
+  const infoCache = useRef({})
 
   useEffect(() => {
     // pergunta o que já está na área ANTES de passar a escutar: a marca só
@@ -91,12 +105,42 @@ export default function Omnitrix({ ligado, onEscolher }) {
     return () => window.removeEventListener('keydown', aoTeclar)
   }, [aberta])
 
+  // BUSCA O NOME SÓ QUANDO A RODA ABRE, nunca ao detectar o link. Descobrir o
+  // título custa uma chamada de rede pelo yt-dlp; fazer isso a cada link
+  // copiado seria gastar banda por conta própria pra 90% dos links que a
+  // pessoa nem vai baixar. Abrir a roda é intenção declarada.
+  useEffect(() => {
+    if (!aberta || !link) return
+    const url = link.url
+    const guardado = infoCache.current[url]
+    if (guardado) { setInfo(guardado); return }
+    setInfo(null)
+    setBuscando(true)
+    let vivo = true
+    window.mptrix.video.probe(url)
+      .then((r) => {
+        if (!vivo) return
+        const i = r?.info
+          ? { title: r.info.title, uploader: r.info.uploader, duration: r.info.duration }
+          : null
+        if (i) infoCache.current[url] = i
+        setInfo(i)
+      })
+      .catch(() => { /* sem nome: o endereço do site continua ali */ })
+      .finally(() => { if (vivo) setBuscando(false) })
+    return () => { vivo = false }
+  }, [aberta, link])
+
   const armada = !!link && ligado
 
   // playlist copiada abre já apontando pro formato de playlist: baixar 40
   // músicas uma a uma seria castigo
   const sugerido = link?.playlist ? 'playlist' : 'music'
   const escolhida = FORMAS.find((f) => f.id === (sobre || sugerido)) || FORMAS[0]
+  // a explicação vem do próprio motor: texto copiado pra cá divergiria do que
+  // o download realmente faz na primeira vez que alguém mexesse num preset
+  const explica = (id) => presets.find((p) => p.id === id)?.description || ''
+
 
   const escolher = (id) => {
     const url = link.url
@@ -149,6 +193,9 @@ export default function Omnitrix({ ligado, onEscolher }) {
                     onClick={() => escolher(f.id)}
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
+                    {/* tooltip nativo além do mostrador: quem para em cima
+                        esperando explicação recebe nos dois lugares */}
+                    <title>{explica(f.id)}</title>
                     <path d={fatia(i, FORMAS.length)} />
                     <text x={tx} y={ty - 4} className="omni-rot">{f.rot}</text>
                     <text x={tx} y={ty + 14} className="omni-sub">{f.sub}</text>
@@ -166,7 +213,15 @@ export default function Omnitrix({ ligado, onEscolher }) {
               <i>{escolhida.sub}</i>
             </div>
 
-            <p className="omni-legenda">{link?.host} · Esc pra fechar</p>
+            <div className="omni-pe">
+              <p className="omni-explica">{explica(escolhida.id)}</p>
+              <p className="omni-alvo">
+                {info?.title
+                  ? <><b>{info.title}</b>{info.uploader ? ` · ${info.uploader}` : ''}{relogio(info.duration) ? ` · ${relogio(info.duration)}` : ''}</>
+                  : buscando ? <span className="omni-buscando">buscando o nome…</span> : link?.host}
+              </p>
+              <p className="omni-legenda">{link?.host} · Esc pra fechar</p>
+            </div>
           </div>
         </div>
       )}
