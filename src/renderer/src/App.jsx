@@ -39,14 +39,19 @@ function ZoomChip() {
 // ETIQUETA TÉCNICA de cada cartão: formato e o que ele entrega, em mono e
 // caixa-alta. É leitura de painel — o mesmo jeito do estúdio de dizer medida —
 // e resolve na hora a pergunta que o título não responde ("isso me dá o quê?").
-const PRESET_TAG = {
-  music: 'MP3 · MÁXIMA · COM CAPA',
-  playlist: 'MP3 · LOTE',
-  fast: 'MP3 · MÉDIA · LEVE',
-  audio_m4a: 'M4A · NATIVO · SEM PERDA',
-  audio_wav: 'WAV · SEM COMPRESSÃO',
-  video: 'MP4 · ATÉ 8K'
-}
+// OS QUATRO ATOS. A mesma lista que a roda usa, dita por extenso — aqui a
+// pessoa está lendo, não apontando, então cada um explica o que faz.
+const ATOS = [
+  { id: 'baixar', ico: 'music', nome: 'Música', tag: 'uma ou a lista',
+    desc: 'Baixa em MP3 com qualidade máxima e capa. Se o link for de playlist, abre a lista pra você escolher quais.' },
+  { id: 'video', ico: 'video', nome: 'Vídeo', tag: 'até 8K',
+    desc: 'Baixa o vídeo. Você escolhe a qualidade na hora.' },
+  { id: 'separar', ico: 'studio', nome: 'Separar instrumentos', tag: 'vai pro estúdio', destaque: true,
+    desc: 'Baixa o áudio sem reconverter e abre direto no Estúdio pra tirar voz, bateria, baixo e o resto.' },
+  { id: 'arquivo', ico: 'pasta', nome: 'Do computador', tag: 'já é sua',
+    desc: 'Abre uma música que já está no seu computador — gravação, pen drive, qualquer arquivo de som.' }
+]
+
 
 export default function App() {
   const [env, setEnv] = useState(null)
@@ -56,6 +61,8 @@ export default function App() {
   const [urlDaRoda, setUrlDaRoda] = useState(null)
   // quando a roda pede SEPARAR, o download deixa de ser o fim e vira o meio
   const [rodaPediuEstudio, setRodaPediuEstudio] = useState(false)
+  // link digitado na aba BAIXAR — quem chega por aqui não copiou nada ainda
+  const [urlAba, setUrlAba] = useState('')
   // o que a tela do estúdio está anunciando agora
   const fala = useFalaDaVez()
   const [history, setHistory] = useState([])
@@ -110,6 +117,51 @@ export default function App() {
     if (!path) return
     const title = path.split(/[\\/]/).pop().replace(/\.[a-z0-9]{2,5}$/i, '')
     setStudioSource({ path, title })
+  }
+
+  // ██████ OS QUATRO ATOS, NUM LUGAR SÓ ██████
+  //
+  // A roda e a aba BAIXAR são duas portas pro mesmo cômodo. Se cada uma
+  // tivesse a própria decisão elas discordariam com o tempo — alguém conserta
+  // um desvio numa e esquece a outra, e aí a mesma escolha passa a fazer
+  // coisas diferentes conforme por onde a pessoa entrou. Duas portas, um
+  // cérebro.
+  //
+  // Cada ato resolve sozinho o formato E a fonte: é isso que tira do usuário
+  // a conta que a máquina já sabe fazer.
+  const executarAto = (ato, url) => {
+    if (ato === 'arquivo') return openStudioFromFile()
+
+    if (ato === 'separar') {
+      // sem link não há o que baixar: separar vira "abrir um arquivo seu e
+      // mandar pro estúdio"
+      if (!url) return openStudioFromFile()
+      // M4A é a faixa NATIVA do YouTube, sem reconversão. Passar por MP3
+      // antes de separar jogaria fora informação que o separador usa, e quem
+      // quer os instrumentos quer o material mais limpo possível.
+      const p = presets.find((x) => x.id === 'audio_m4a')
+      if (!p) return
+      setRodaPediuEstudio(true)
+      setUrlDaRoda(url)
+      setActivePreset(p)
+      return
+    }
+
+    // "list=" sem "v=" quer dizer lista inteira, e os presets de música rodam
+    // com --no-playlist: sem o desvio a pessoa levaria um erro por ter pedido
+    // uma coisa razoável. Quem tem que saber disso é o app.
+    let alvo = ato === 'video' ? 'video' : 'music'
+    try {
+      const u = new URL(url)
+      if (u.searchParams.has('list') && !u.searchParams.get('v') && ato !== 'video') {
+        alvo = 'playlist'
+      }
+    } catch { /* sem link ou endereço estranho: segue o pedido */ }
+    const p = presets.find((x) => x.id === alvo)
+    if (!p) return
+    setRodaPediuEstudio(false)
+    setUrlDaRoda(url)
+    setActivePreset(p)
   }
 
   const openStudioFromEntry = (entry) => {
@@ -247,49 +299,7 @@ export default function App() {
             <Omnitrix
               ligado={binariesOk}
               presets={presets}
-              onEscolher={(alien, url) => {
-                // SEPARAR não é formato, é destino. Ele baixa em M4A porque
-                // essa é a faixa NATIVA do YouTube, sem reconversão — passar
-                // por MP3 antes de separar jogaria fora informação que o
-                // separador usa, e quem quer os instrumentos quer o material
-                // mais limpo possível.
-                // OS QUATRO CAMINHOS. Cada alien resolve sozinho o formato e
-                // a fonte — é isso que tira do usuário a conta que a máquina
-                // já sabe fazer.
-                if (alien === 'arquivo') return openStudioFromFile()
-
-                if (alien === 'separar') {
-                  // M4A é a faixa NATIVA do YouTube, sem reconversão. Passar
-                  // por MP3 antes de separar jogaria fora informação que o
-                  // separador usa.
-                  const p = presets.find((x) => x.id === 'audio_m4a')
-                  if (!p) return
-                  // sem link não há o que baixar: separar vira "abrir um
-                  // arquivo seu e mandar pro estúdio"
-                  if (!url) return openStudioFromFile()
-                  setRodaPediuEstudio(true)
-                  setUrlDaRoda(url)
-                  setActivePreset(p)
-                  return
-                }
-
-                // "list=" sem "v=" quer dizer lista inteira, e os presets de
-                // música rodam com --no-playlist: sem o desvio a pessoa
-                // levaria um erro por ter pedido uma coisa razoável. Quem tem
-                // que saber disso é o app.
-                let alvo = alien === 'video' ? 'video' : 'music'
-                try {
-                  const u = new URL(url)
-                  if (u.searchParams.has('list') && !u.searchParams.get('v') && alien !== 'video') {
-                    alvo = 'playlist'
-                  }
-                } catch { /* sem link ou endereço estranho: segue o pedido */ }
-                const p = presets.find((x) => x.id === alvo)
-                if (!p) return
-                setRodaPediuEstudio(false)
-                setUrlDaRoda(url)
-                setActivePreset(p)
-              }}
+              onEscolher={executarAto}
             />
           </div>
         )}
@@ -298,26 +308,57 @@ export default function App() {
           <div className="palco-in">
             <p className="palco-olho">02 / BAIXAR</p>
             <h1 className="palco-titulo">O que você<br />quer levar?</h1>
+
+            {/* AQUI ERAM SEIS CARTÕES DE FORMATO — música única, playlist,
+                rápido, M4A, WAV e vídeo. Quatro deles eram o mesmo ato de
+                roupa diferente, e o de playlist nem precisava existir: o app
+                descobre pelo link.
+                Agora são os MESMOS QUATRO ATOS da roda, e de propósito: a
+                roda é pra quem já copiou o link e quer velocidade; esta aba é
+                pra quem não sabia que existe atalho e entrou pelo mapa. Duas
+                portas, um cômodo. Os formatos não sumiram — passaram a ser
+                escolha do sistema, e continuam ajustáveis onde importam (por
+                música na tela de playlist, por qualidade na de vídeo). */}
+            <div className="baixar-campo">
+              <span className="baixar-rot">link do vídeo, da música ou da playlist</span>
+              <div className="baixar-poco">
+                <input
+                  type="url"
+                  value={urlAba}
+                  onChange={(e) => setUrlAba(e.target.value)}
+                  placeholder="cole aqui — ou deixe vazio e o app pergunta depois"
+                  spellCheck={false}
+                />
+                {urlAba && (
+                  <button className="baixar-x" onClick={() => setUrlAba('')} title="Limpar">×</button>
+                )}
+              </div>
+            </div>
+
             <div className="grade">
-              {presets.map((p, i) => (
-                <button
-                  key={p.id}
-                  className={`chip ${binariesOk ? '' : 'disabled'}`}
-                  onClick={() => binariesOk && setActivePreset(p)}
-                  disabled={!binariesOk}
-                >
-                  <span className="chip-borda" aria-hidden="true" />
-                  <span className="chip-in">
-                    <span className="chip-topo">
-                      <span className="chip-num">{String(i + 1).padStart(2, '0')}</span>
-                      <span className="chip-ico" aria-hidden="true"><Ico nome={p.id} tamanho={18} /></span>
+              {ATOS.map((a, i) => {
+                // sem yt-dlp/ffmpeg só o arquivo do computador funciona
+                const morto = !binariesOk && a.id !== 'arquivo'
+                return (
+                  <button
+                    key={a.id}
+                    className={`chip ${morto ? 'disabled' : ''} ${a.destaque ? 'chip-destaque' : ''}`}
+                    onClick={() => !morto && executarAto(a.id, urlAba.trim() || null)}
+                    disabled={morto}
+                  >
+                    <span className="chip-borda" aria-hidden="true" />
+                    <span className="chip-in">
+                      <span className="chip-topo">
+                        <span className="chip-num">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="chip-ico" aria-hidden="true"><Ico nome={a.ico} tamanho={18} /></span>
+                      </span>
+                      <span className="chip-nome">{a.nome}</span>
+                      <span className="chip-tag">{a.tag}</span>
+                      <span className="chip-desc">{a.desc}</span>
                     </span>
-                    <span className="chip-nome">{p.name}</span>
-                    {PRESET_TAG[p.id] && <span className="chip-tag">{PRESET_TAG[p.id]}</span>}
-                    <span className="chip-desc">{p.description}</span>
-                  </span>
-                </button>
-              ))}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

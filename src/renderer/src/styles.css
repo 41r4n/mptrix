@@ -9946,3 +9946,59 @@ ul.hlib-grid {
 }
 .queda-nota { margin: 0 0 18px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .queda-acoes { display: flex; gap: 8px; }
+
+/* --- campo de link da aba BAIXAR ---
+   Quem entra por esta aba não copiou nada ainda: ela é o caminho de quem não
+   sabia do atalho. Deixar vazio também funciona — aí a janela do download
+   pergunta, como sempre perguntou. */
+.baixar-campo { display: flex; flex-direction: column; gap: 7px; margin-bottom: 26px; max-width: 620px; }
+.baixar-rot {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.baixar-poco {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control), inset 0 2px 8px rgba(0, 0, 0, 0.8);
+  clip-path: var(--corte-sm);
+  transition: box-shadow 0.14s ease;
+}
+.baixar-poco:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent-border), inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 16px rgba(182, 255, 59, 0.14);
+}
+.baixar-poco input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+}
+.baixar-poco input::placeholder { color: var(--muted-2); }
+.baixar-x {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.baixar-x:hover { color: var(--accent); }
+
+/* SEPARAR tem peso diferente das outras: é a razão do app existir, não mais
+   um formato de arquivo. A "borda" do cartão é um fundo atrás dele, não uma
+   linha — então destacar é clarear esse fundo, e não mexer em border-color,
+   que aqui não pinta nada. */
+.chip-destaque .chip-borda { background: var(--accent-border); }
+.chip-destaque:hover .chip-borda { background: var(--accent); }
+.chip-destaque .chip-nome { color: var(--accent); }
