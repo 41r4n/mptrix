@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Ico from './Icones.jsx'
 
 function formatBytes(b) {
   if (!b) return '0 B'
@@ -64,7 +65,7 @@ export default function ShareApp() {
     <section className="share-app">
       <div className="share-app-head">
         <div>
-          <h3>📤 Compartilhar este app</h3>
+          <h3>Compartilhar este app</h3>
           <p className="muted small">
             Você tem um instalador pronto pra mandar pros seus amigos. {installer.name} ({formatBytes(installer.size)})
           </p>
@@ -73,31 +74,31 @@ export default function ShareApp() {
 
       <div className="share-app-grid">
         <button className="share-tile" onClick={copyToClipboard}>
-          <span className="share-tile-icon">📋</span>
+          <span className="share-tile-icon"><Ico nome="renomear" tamanho={18} /></span>
           <span className="share-tile-title">Copiar arquivo</span>
           <span className="share-tile-desc">Cola em WhatsApp Web, Discord, email… com Ctrl+V</span>
         </button>
 
         <button className="share-tile" onClick={showInExplorer}>
-          <span className="share-tile-icon">📁</span>
+          <span className="share-tile-icon"><Ico nome="pasta" tamanho={18} /></span>
           <span className="share-tile-title">Mostrar no Explorer</span>
           <span className="share-tile-desc">Abre a pasta com o instalador selecionado</span>
         </button>
 
         <button className="share-tile" onClick={zipIt} disabled={zipping}>
-          <span className="share-tile-icon">🗜️</span>
+          <span className="share-tile-icon"><Ico nome="baixar" tamanho={18} /></span>
           <span className="share-tile-title">{zipping ? 'Compactando…' : 'Compactar em ZIP'}</span>
           <span className="share-tile-desc">Cria .zip ao lado pra subir em serviços que limitam .exe</span>
         </button>
 
         <button className="share-tile" onClick={openDrive}>
-          <span className="share-tile-icon">🌐</span>
+          <span className="share-tile-icon"><Ico nome="buscar" tamanho={18} /></span>
           <span className="share-tile-title">Copiar + abrir Drive</span>
           <span className="share-tile-desc">Copia o instalador e abre o Drive. Cola com Ctrl+V em qualquer pasta.</span>
         </button>
 
         <button className="share-tile" onClick={openInstaller}>
-          <span className="share-tile-icon">▶️</span>
+          <span className="share-tile-icon"><Ico nome="tocar" tamanho={18} /></span>
           <span className="share-tile-title">Executar instalador</span>
           <span className="share-tile-desc">Testa você mesmo antes de mandar</span>
         </button>

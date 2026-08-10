@@ -10002,3 +10002,61 @@ ul.hlib-grid {
 .chip-destaque .chip-borda { background: var(--accent-border); }
 .chip-destaque:hover .chip-borda { background: var(--accent); }
 .chip-destaque .chip-nome { color: var(--accent); }
+
+/* --- O CRÉDITO DA NUVEM ---
+   O saldo não aparece aqui e isso é decisão, não esquecimento: a API do
+   Replicate não entrega esse número. Inventar uma estimativa de saldo seria
+   errar justamente na hora que importa — quando está acabando. Então o painel
+   mostra o que o app SABE (quanto ele gastou) e leva ao lugar que sabe o
+   resto. */
+.credito {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 16px 18px 16px 20px;
+  margin: 4px 0 10px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  clip-path: var(--corte-sm);
+  position: relative;
+}
+.credito::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(182, 255, 59, 0.45);
+}
+.credito-num { display: flex; flex-direction: column; gap: 2px; flex: none; }
+.credito-num b {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(182, 255, 59, 0.35);
+}
+.credito-num i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.credito-fio { width: 1px; align-self: stretch; background: var(--border); flex: none; }
+.credito-lado { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.credito-lado span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.credito-lado b { color: var(--text-2); font-size: 12px; font-weight: 500; }
+.credito-espaco { flex: 1 1 auto; }
+.credito-ir { display: inline-flex; align-items: center; gap: 9px; flex: none; }
