@@ -26,7 +26,9 @@ export const FALAS = [
   { verbo: 'Ler', resto: 'a letra', tag: 'letra' }
 ]
 
-const PAUSA = 3200
+// tempo de sobra pra ler sem pressa: a frase é curta, mas quem está lendo o
+// texto abaixo não pode ser interrompido a cada três segundos
+const PAUSA = 5200
 
 export function useFalaDaVez() {
   const [i, setI] = useState(0)

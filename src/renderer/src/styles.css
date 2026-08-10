@@ -8192,11 +8192,16 @@ section h2::after {
 .titulo-verbo,
 .titulo-resto {
   display: inline-block;
-  animation: titulo-entra 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+  animation: titulo-entra 0.9s cubic-bezier(0.16, 0.9, 0.28, 1) backwards;
 }
-.titulo-resto { animation-delay: 0.07s; }
+.titulo-resto { animation-delay: 0.13s; }
+/* ENTRA DE LADO, não de baixo. Texto alinhado à esquerda se lê da esquerda
+   pra direita — a palavra chegando pelo mesmo lado em que o olho já vai
+   parece a frase sendo escrita. Vindo de baixo, parece uma placa girando.
+   O deslize é em "em", não em pixel: assim ele acompanha o tamanho da letra
+   quando a janela encolhe e o título diminui junto. */
 @keyframes titulo-entra {
-  from { opacity: 0; transform: translateY(0.22em); filter: blur(6px); }
+  from { opacity: 0; transform: translateX(-0.5em); filter: blur(7px); }
   to { opacity: 1; transform: none; filter: none; }
 }
 /* quem pediu menos movimento recebe a troca sem deslize nem borrão */
