@@ -475,9 +475,19 @@ export default function NuvemConfig() {
                   para em 85%, antes de encostar, porque o gasto daqui é
                   ESTIMADO — parar em cima do valor exato deixaria a dívida
                   acontecer justamente por erro de arredondamento. */}
+              {/* A PERGUNTA É "QUANTO VOCÊ TEM", não "quanto você pôs".
+                  Parece a mesma coisa e não é. "Quanto pôs" quebra quando a
+                  pessoa recarrega antes de acabar: ela tinha 10, gastou 4,
+                  compra mais 10 e digita 20 — mas tem 16, e o app passaria a
+                  achar que tem 4 a mais do que tem.
+                  "Quanto tem agora" resolve dois problemas de uma vez: o
+                  número está escrito na página do Replicate, então é fácil de
+                  responder; e cada atualização CORRIGE qualquer desvio que a
+                  minha estimativa tenha acumulado, porque o contador
+                  recomeça do valor real em vez de continuar de um chute. */}
               <div className="freio">
                 <label className="freio-campo">
-                  <span>Quanto você pôs de crédito no Replicate?</span>
+                  <span>Quanto você tem de crédito agora?</span>
                   <div className="freio-linha">
                     <em>US$</em>
                     <input
@@ -494,16 +504,17 @@ export default function NuvemConfig() {
                     />
                     <span className="nuvem-unidade">
                       {estado.creditoInformado
-                        ? <>sobra mais ou menos <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong> — paro em {emDolar(estado.creditoInformado * 0.85)} pra não passar</>
-                        : <>me diga e eu paro sozinho antes de acabar</>}
+                        ? <>o número está na página do Replicate, em <strong>Crédito restante</strong> — sempre que você recarregar, atualize aqui</>
+                        : <>o número está na página do Replicate, em <strong>Crédito restante</strong></>}
                     </span>
                   </div>
                 </label>
 
                 <p className="nuvem-texto miudo">
                   {estado.creditoInformado
-                    ? <>Comprou mais crédito? Atualize o número aí em cima — o contador
-                      recomeça e a nuvem volta a funcionar.</>
+                    ? <>Sempre que atualizar esse número, meu contador recomeça do zero e
+                      passa a medir a partir dele — então não precisa somar nada de
+                      cabeça, e qualquer erro que eu tenha acumulado se corrige junto.</>
                     : <><strong>Sem esse número não existe freio.</strong> O crédito acabar
                       não trava o serviço: o que passar vira dívida e eles suspendem a conta
                       até quitar. Com ele, o MPTRIX para antes e volta a separar aqui.</>}
