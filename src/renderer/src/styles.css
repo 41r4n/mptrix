@@ -9480,3 +9480,258 @@ ul.hlib-grid {
   line-height: 1.4;
   color: var(--muted-2);
 }
+
+/* ██████████ AS JANELAS DO APP, NA LÍNGUA DA CASA ██████████
+   As telas de playlist e de período já tinham sido refeitas uma a uma, e o
+   resto (baixar, renomear, confirmar, ações em lote, ajuda de atualização)
+   continuava no visual velho: canto arredondado, botão de formulário, campo
+   com borda de caixa de texto. Duas línguas no mesmo app.
+
+   Em vez de remendar cada janela, aqui eu troco as PEÇAS COMPARTILHADAS — o
+   casco, o cabeçalho, o botão de fechar, o campo, os botões e o bloco de
+   resultado. Uma edição, todas as janelas. É o oposto do que eu vinha
+   fazendo, e é o certo: quando várias telas usam a mesma peça, arrumar a peça
+   arruma todas — e nenhuma sai do compasso depois. */
+
+/* --- casco --- */
+.modal {
+  background-color: var(--bg-tracks);
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--border-strong), 0 24px 70px rgba(0, 0, 0, 0.85);
+}
+/* O recorte só entra em quem NÃO tem chanfro próprio. As telas de playlist e
+   de período usam a classe .chanfro, que além de recortar desenha a linha da
+   diagonal — se eu recortasse por cima delas, a diagonal desenhada ficaria
+   fora do lugar e apareceria como risco solto na quina. Por isso :not(), e
+   não uma regra depois zerando: zerar depois é briga de quem vem por último,
+   e briga de ordem quebra sozinha quando alguém move um bloco de lugar. */
+.modal:not(.chanfro) {
+  clip-path: polygon(
+    0 0, calc(100% - 14px) 0, 100% 14px,
+    100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+/* --- cabeçalho: etiqueta pequena em cima do nome, como no resto do app --- */
+.modal-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px 17px 26px;
+  background-color: var(--bg-elev);
+  border-bottom: 1px solid var(--border-control);
+}
+.modal-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20px;
+  bottom: 16px;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(182, 255, 59, 0.5);
+}
+.modal-etiqueta {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(182, 255, 59, 0.4);
+  margin-bottom: 5px;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.2;
+}
+.modal-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+  max-width: 62ch;
+}
+
+.btn-close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-cava-2);
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.13s ease, background 0.13s ease, box-shadow 0.13s ease;
+}
+.btn-close:hover {
+  color: var(--bad);
+  background: rgba(248, 113, 113, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.6);
+}
+
+.modal-body { padding: 18px 22px 20px 26px; gap: 16px; }
+
+/* --- campo: poço cavado, rótulo em mono, foco acende em lima --- */
+.field span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.field input {
+  padding: 12px 13px;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control), inset 0 2px 7px rgba(0, 0, 0, 0.8);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: box-shadow 0.14s ease;
+}
+.field input::placeholder { color: var(--muted-2); }
+.field input:focus {
+  box-shadow: inset 0 0 0 1px var(--accent-border), inset 0 2px 7px rgba(0, 0, 0, 0.8), 0 0 14px rgba(182, 255, 59, 0.14);
+}
+
+.folder-mini { font-size: 12px; color: var(--muted-2); }
+.folder-mini code {
+  background: var(--bg-cava-2);
+  padding: 4px 8px;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+/* --- botões: mono em caixa-alta, canto reto, lima só na ação principal --- */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.13s ease, color 0.13s ease, box-shadow 0.13s ease;
+}
+.btn-primary:active,
+.btn-secondary:active,
+.btn-danger:active { transform: none; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #0b0c0f;
+  font-weight: 700;
+  padding: 0 22px;
+  box-shadow: 0 0 18px rgba(182, 255, 59, 0.32);
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+
+.btn-secondary {
+  background: none;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.btn-secondary:disabled { opacity: 0.3; cursor: default; }
+
+.btn-danger {
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.45);
+}
+.btn-danger:hover:not(:disabled) { background: rgba(248, 113, 113, 0.2); color: #fff; }
+
+.btn-small { height: 30px; padding: 0 13px; font-size: 9px; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* --- bloco de resultado: painel com barra de estado na lateral --- */
+.result {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px 16px 15px 18px;
+  border-radius: 0;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+}
+.result::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--muted-2);
+}
+.result-ok::before { background: var(--accent); box-shadow: 0 0 12px rgba(182, 255, 59, 0.5); }
+.result-err::before { background: var(--bad); box-shadow: 0 0 12px rgba(248, 113, 113, 0.45); }
+.result-warn::before { background: var(--warn); box-shadow: 0 0 12px rgba(234, 179, 8, 0.45); }
+.result-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-2);
+}
+.result-ok .result-icon { background: rgba(182, 255, 59, 0.14); color: var(--accent); }
+.result-err .result-icon { background: rgba(248, 113, 113, 0.14); color: var(--bad); }
+.result-warn .result-icon { background: rgba(234, 179, 8, 0.14); color: var(--warn); }
+.result-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.result-sub { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.result-sub code {
+  background: var(--bg-cava);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}

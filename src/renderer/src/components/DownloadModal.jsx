@@ -359,6 +359,7 @@ export default function DownloadModal({ preset, outputDir, onClose, onPickFolder
       <div className="modal" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
         <header className="modal-header">
           <div>
+            <span className="modal-etiqueta">baixar</span>
             <h3>{preset.name}</h3>
             <p className="modal-sub">{preset.description}</p>
           </div>
@@ -370,7 +371,7 @@ export default function DownloadModal({ preset, outputDir, onClose, onPickFolder
         {state === STATES.IDLE && (
           <div className="modal-body">
             <label className="field">
-              <span>Link do YouTube</span>
+              <span>link do vídeo</span>
               <input
                 ref={inputRef}
                 type="url"
