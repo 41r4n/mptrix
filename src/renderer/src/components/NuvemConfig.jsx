@@ -341,33 +341,63 @@ export default function NuvemConfig() {
                 O valor exato e o saldo estão no botão acima.
               </p>
 
-              <div className="nuvem-linha">
-                <label className="nuvem-teto">
-                  <span>Parar ao gastar (por mês)</span>
-                  {/* EM DÓLAR: pedir o teto em centavos obrigava a pessoa a
-                      multiplicar por cem de cabeça pra dizer "cinco dólares" */}
-                  <input
-                    type="number"
-                    className="nuvem-campo curto"
-                    min="0"
-                    step="1"
-                    value={estado.tetoCentavos ? (estado.tetoCentavos / 100) : 0}
-                    onChange={async (e) => {
-                      const dolares = Number(e.target.value) || 0
-                      setEstado(await window.mptrix.nuvem.teto(Math.round(dolares * 100)))
-                    }}
-                  />
-                  <span className="nuvem-unidade">dólares (0 = sem limite)</span>
+              {/* ██████ O FREIO ██████
+                  A pergunta mudou, e é isso que faz ela ter resposta.
+                  Antes: "quanto deixo gastar?" — ninguém sabe responder, e
+                  quem não sabe deixa em zero, que é ficar sem freio nenhum.
+                  Agora: "quanto você pôs de crédito?" — número que a pessoa
+                  acabou de digitar no cartão e tem na cabeça.
+                  Com ele o app faz a conta que o Replicate não deixa fazer:
+                  sobra = o que você pôs menos o que eu gastei desde então. E
+                  para em 85%, antes de encostar, porque o gasto daqui é
+                  ESTIMADO — parar em cima do valor exato deixaria a dívida
+                  acontecer justamente por erro de arredondamento. */}
+              <div className="freio">
+                <label className="freio-campo">
+                  <span>Quanto você pôs de crédito no Replicate?</span>
+                  <div className="freio-linha">
+                    <em>US$</em>
+                    <input
+                      type="number"
+                      className="nuvem-campo curto"
+                      min="0"
+                      step="1"
+                      value={estado.creditoInformado ? (estado.creditoInformado / 100) : ''}
+                      placeholder="0"
+                      onChange={async (e) => {
+                        const dolares = Number(e.target.value) || 0
+                        setEstado(await window.mptrix.nuvem.credito(Math.round(dolares * 100)))
+                      }}
+                    />
+                    <span className="nuvem-unidade">
+                      {estado.creditoInformado
+                        ? <>sobra mais ou menos <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong> — paro em {emDolar(estado.creditoInformado * 0.85)} pra não passar</>
+                        : <>me diga e eu paro sozinho antes de acabar</>}
+                    </span>
+                  </div>
                 </label>
-                <button className="btn-secondary" onClick={async () => setEstado(await window.mptrix.nuvem.zerarGasto())}>
-                  Zerar contador
-                </button>
+
+                {/* barra que enche: número é preciso, barra é imediata — dá pra
+                    ver de longe que está apertando, sem ler nada */}
+                {estado.creditoInformado > 0 && (
+                  <div className="freio-barra" title={`${emDolar(estado.gastoDesdeCredito)} de ${emDolar(estado.creditoInformado)}`}>
+                    <span
+                      className={`freio-cheio ${estado.gastoDesdeCredito >= estado.creditoInformado * 0.85 ? 'estourou' : ''}`}
+                      style={{ width: `${Math.min(100, (estado.gastoDesdeCredito / estado.creditoInformado) * 100)}%` }}
+                    />
+                    <span className="freio-marca" style={{ left: '85%' }} />
+                  </div>
+                )}
+
+                <p className="nuvem-texto miudo">
+                  {estado.creditoInformado
+                    ? <>Comprou mais crédito? Atualize o número aí em cima — o contador
+                      recomeça e a nuvem volta a funcionar.</>
+                    : <><strong>Sem esse número não existe freio.</strong> O crédito acabar
+                      não trava o serviço: o que passar vira dívida e eles suspendem a conta
+                      até quitar. Com ele, o MPTRIX para antes e volta a separar aqui.</>}
+                </p>
               </div>
-              <p className={`nuvem-texto miudo ${!estado.tetoCentavos ? 'aviso' : ''}`}>
-                {estado.tetoCentavos
-                  ? <>Chegando em {emDolar(estado.tetoCentavos)}, o MPTRIX volta a separar aqui no computador sozinho — sem te avisar depois do estrago.</>
-                  : <><strong>Sem teto, não existe freio deste lado.</strong> O crédito acabar não trava o serviço na hora: o que passar vira dívida na conta do Replicate e ele suspende o acesso até quitar. Marcar um valor aqui evita isso.</>}
-              </p>
             </>
           )}
 

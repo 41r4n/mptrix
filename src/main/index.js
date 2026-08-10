@@ -101,6 +101,7 @@ import {
   lerChaveNuvem,
   setNuvemLigada,
   setTetoNuvem,
+  informarCredito,
   zerarGastoNuvem,
   getSettings,
   setDownloadDir,
@@ -446,6 +447,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('nuvem:ligar', (_e, v) => setNuvemLigada(v))
   ipcMain.handle('nuvem:teto', (_e, centavos) => setTetoNuvem(centavos))
+  ipcMain.handle('nuvem:credito', (_e, centavos) => informarCredito(centavos))
   ipcMain.handle('nuvem:zerarGasto', () => zerarGastoNuvem())
 
   ipcMain.handle('history:get', () => getHistory())

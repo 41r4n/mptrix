@@ -29,6 +29,7 @@ const api = {
     apagarChave: () => ipcRenderer.invoke('nuvem:apagarChave'),
     ligar: (v) => ipcRenderer.invoke('nuvem:ligar', v),
     teto: (centavos) => ipcRenderer.invoke('nuvem:teto', centavos),
+    credito: (centavos) => ipcRenderer.invoke('nuvem:credito', centavos),
     zerarGasto: () => ipcRenderer.invoke('nuvem:zerarGasto')
   },
 

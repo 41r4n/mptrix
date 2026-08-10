@@ -10247,3 +10247,77 @@ ul.hlib-grid {
   margin-bottom: 7px;
 }
 .nuvem-parou p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+
+/* --- O FREIO ---
+   O app não consegue LER o saldo no Replicate: não existe endereço pra isso
+   (sondei seis na conta real; só /v1/account responde, e ele devolve quem
+   você é, não quanto tem). Mas quem comprou SABE o número.
+
+   Então a pergunta mudou, e é isso que faz ela ter resposta:
+     antes  "quanto deixo gastar?"   — ninguém sabe, e quem não sabe deixa em
+                                       zero, que é ficar sem freio nenhum
+     agora  "quanto você pôs?"       — número que a pessoa acabou de digitar
+                                       no cartão e tem na cabeça
+
+   Com ele o app faz a conta que a API não deixa fazer, e para em 85% — porque
+   o gasto daqui é ESTIMADO pelo tempo de máquina, e parar em cima do valor
+   exato deixaria a dívida acontecer por erro de arredondamento. */
+.freio {
+  margin: 6px 0 4px;
+  padding: 15px 18px 16px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  clip-path: var(--corte-sm);
+}
+.freio-campo { display: flex; flex-direction: column; gap: 9px; }
+.freio-campo > span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.freio-linha { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.freio-linha em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+.freio-linha .nuvem-unidade {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.freio-linha .nuvem-unidade strong { color: var(--accent); font-weight: 500; }
+
+/* a barra que enche: número é preciso, barra é imediata — dá pra ver de longe
+   que está apertando, sem ler nada */
+.freio-barra {
+  position: relative;
+  height: 6px;
+  margin: 14px 0 12px;
+  background: var(--bg-cava);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.freio-cheio {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(182, 255, 59, 0.5);
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.freio-cheio.estourou { background: var(--warn); box-shadow: 0 0 10px rgba(234, 179, 8, 0.6); }
+/* onde o app freia: a marca existe pra pessoa ver que a parada é ANTES do
+   fim, e não desconfiar que ficou sem crédito à toa */
+.freio-marca {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--text-2);
+  opacity: 0.55;
+}

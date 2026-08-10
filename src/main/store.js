@@ -99,6 +99,13 @@ export function getNuvem() {
       : Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100,
     musicasFeitas: n.musicasFeitas || 0,
     tetoCentavos: n.tetoCentavos ?? 500,
+    // QUANTO A PESSOA DISSE QUE PÔS, e quanto já foi desde então. O app não
+    // consegue ler o saldo no Replicate (não existe endereço pra isso — eu
+    // sondei seis), mas quem comprou SABE o número. Perguntando uma vez, a
+    // conta passa a ser possível: sobra = o que ela disse menos o que eu
+    // gastei desde então.
+    creditoInformado: n.creditoInformado || 0,
+    gastoDesdeCredito: n.gastoDesdeCredito || 0,
     mes: n.mes || mesAgora(),
     gastoMesPassado: n.gastoMesPassado || 0,
     // por que a nuvem se desligou sozinha, se foi o caso
@@ -118,6 +125,20 @@ export function getNuvem() {
  * volta a separar aqui. E guarda o motivo, pra tela poder explicar e oferecer
  * religar quando houver crédito de novo.
  */
+/**
+ * A PESSOA DIZ QUANTO PÔS, e o contador de sobra recomeça.
+ * É a única forma de o app saber quanto resta: ler o saldo não dá.
+ */
+export function informarCredito(centavos) {
+  const v = Math.max(0, Math.round(Number(centavos) || 0))
+  store.set('nuvem.creditoInformado', v)
+  store.set('nuvem.gastoDesdeCredito', 0)
+  // dizer que pôs crédito é dizer que a parede caiu: religa o que foi
+  // desligado por falta de dinheiro
+  if (store.get('nuvem.paradaPor') === 'sem-credito') store.set('nuvem.paradaPor', null)
+  return getNuvem()
+}
+
 export function desligarNuvemPor(motivo) {
   store.set('nuvem.ligada', false)
   store.set('nuvem.paradaPor', motivo || 'desconhecido')
@@ -184,6 +205,9 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
   // começar do zero apagaria todo o histórico no primeiro gasto novo — o teto
   // voltaria a achar que o crédito está intacto.
   store.set('nuvem.centavosGastos', gastoCentavos() + custo)
+  // conta separada, que NÃO vira no mês: crédito pré-pago não se renova, ele
+  // se esgota. Misturar as duas faria a sobra "voltar" todo dia primeiro.
+  store.set('nuvem.gastoDesdeCredito', (store.get('nuvem.gastoDesdeCredito') || 0) + custo)
   if (contaMusica) store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
   return getNuvem()
 }
@@ -193,11 +217,26 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
  * O teto existe porque o Replicate NÃO tem limite de gasto configurável: se
  * algo entrar em laço, a conta é do usuário. Zero significa sem teto.
  */
+// PARA ANTES DE ENCOSTAR, não em cima. O gasto daqui é ESTIMADO pelo tempo de
+// máquina de cada trabalho — perto do real, mas não idêntico. Se o app parasse
+// exatamente no valor informado, um erro de poucos centavos pra menos já viraria
+// dívida, que é justamente o que a pessoa quer evitar. Parando em 85% sobra
+// folga pro erro da estimativa e pro trabalho que já começou.
+const FOLGA_CREDITO = 0.85
+
 export function usarNuvem() {
   const n = getNuvem()
   if (!n.ligada || !n.temChave) return false
   if (n.tetoCentavos > 0 && gastoCentavos() >= n.tetoCentavos) return false
+  if (n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO) return false
   return true
+}
+
+/** O que ainda dá pra gastar sem encostar no crédito informado. */
+export function sobraEstimada() {
+  const n = getNuvem()
+  if (!n.creditoInformado) return null
+  return Math.max(0, Math.round((n.creditoInformado - n.gastoDesdeCredito) * 100) / 100)
 }
 
 // PREÇO POR SEGUNDO, do jeito que o Replicate cobra de verdade.
