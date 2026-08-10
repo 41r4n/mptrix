@@ -10149,3 +10149,72 @@ ul.hlib-grid {
   background: rgba(182, 255, 59, 0.06);
 }
 .passo .nuvem-chave { margin-top: 4px; }
+
+/* --- AS PERGUNTAS ---
+   Tem dinheiro envolvido e a pessoa está mexendo num serviço que nunca viu.
+   Ela VAI ter essas dúvidas — e dúvida sobre dinheiro e privacidade que não é
+   respondida na tela vira desistência, ou pior, vira "vou clicando e
+   torcendo".
+
+   Ficam fechadas por padrão porque seis respostas abertas soterrariam os
+   quatro passos, que são o assunto. Isto é o oposto do acordeão que eu tirei
+   desta mesma tela: aquele escondia o ÚNICO conteúdo; este esconde o apoio e
+   deixa o caminho à vista. */
+.duvidas {
+  margin: 22px 0 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.duvidas-titulo {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.duvida {
+  border-bottom: 1px solid var(--border);
+}
+.duvida > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 30px 11px 22px;
+  position: relative;
+  font-size: 13.5px;
+  color: var(--text-2);
+  transition: color 0.13s ease;
+}
+.duvida > summary::-webkit-details-marker { display: none; }
+.duvida > summary:hover { color: var(--text); }
+/* seta desenhada com borda, que gira ao abrir: o triângulo nativo do navegador
+   tem a cor e o tamanho dele, e não obedece nada daqui */
+.duvida > summary::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.6px solid var(--accent);
+  border-bottom: 1.6px solid var(--accent);
+  transform: translateY(-70%) rotate(-45deg);
+  transition: transform 0.18s ease;
+}
+.duvida[open] > summary::before { transform: translateY(-50%) rotate(45deg); }
+.duvida[open] > summary { color: var(--accent); }
+.duvida > p {
+  margin: 0 0 15px;
+  padding: 0 8px 0 22px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 78ch;
+  animation: duvida-abre 0.22s ease;
+}
+.duvida > p strong { color: var(--text-2); font-weight: 600; }
+.duvida > p em { color: var(--muted); font-style: italic; }
+@keyframes duvida-abre {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}

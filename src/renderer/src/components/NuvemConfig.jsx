@@ -162,6 +162,89 @@ export default function NuvemConfig() {
                 separa aqui no seu computador do mesmo jeito, só demora uns
                 minutos em vez de meio minuto.
               </p>
+
+              {/* ██████ AS PERGUNTAS ██████
+                  Tem dinheiro envolvido e a pessoa está mexendo num serviço
+                  que nunca viu. Ela VAI ter essas dúvidas — e dúvida sobre
+                  dinheiro e privacidade que não é respondida na tela vira
+                  desistência, ou pior, vira "vou clicando e torcendo".
+                  Ficam fechadas por padrão porque seis respostas abertas
+                  soterrariam os quatro passos, que são o assunto. Isto é o
+                  oposto do acordeão que eu tirei daqui: aquele escondia o
+                  ÚNICO conteúdo da tela; este esconde o apoio e deixa o
+                  caminho à vista. */}
+              <div className="duvidas">
+                <p className="duvidas-titulo">perguntas que você deve estar fazendo</p>
+
+                <details className="duvida">
+                  <summary>Por que preciso de conta em outro site? O MPTRIX não faz isso sozinho?</summary>
+                  <p>
+                    Separar música rápido exige placa de vídeo cara. Se o MPTRIX
+                    tivesse servidor próprio, alguém teria que pagar essa conta
+                    todo mês — e aí o app seria pago, ou teria anúncio, ou
+                    venderia seus dados. Com a sua chave, você aluga a máquina
+                    só nos segundos em que usa, e o app continua de graça e sem
+                    dono no meio.
+                  </p>
+                </details>
+
+                <details className="duvida">
+                  <summary>É seguro colocar minha chave aqui?</summary>
+                  <p>
+                    Ela vai pro cofre de senhas do Windows, embaralhada pelo
+                    próprio Windows e amarrada à sua conta de usuário — não fica
+                    num arquivo de texto que qualquer um abre. Depois de
+                    guardada, <strong>nem esta tela consegue ler ela de volta</strong>:
+                    só o motor do app usa, na hora de falar com o Replicate.
+                    E se o seu computador não tivesse esse cofre, o MPTRIX se
+                    recusaria a guardar em vez de gravar em texto puro.
+                  </p>
+                </details>
+
+                <details className="duvida">
+                  <summary>Minha música vai pra internet?</summary>
+                  <p>
+                    <strong>No modo "neste computador", não sai nada daqui.</strong>{' '}
+                    No modo nuvem sim: o áudio é enviado pro Replicate, porque é
+                    lá que a placa de vídeo separa. Eles guardam o arquivo por
+                    <strong> 24 horas</strong> e apagam sozinhos — conferi isso na
+                    conta de verdade. Se a música for algo que você não quer
+                    mandar pra fora, use o modo local; ele faz o mesmo trabalho,
+                    só mais devagar.
+                  </p>
+                </details>
+
+                <details className="duvida">
+                  <summary>Podem cobrar mais do que eu tenho? Vou levar susto na fatura?</summary>
+                  <p>
+                    O crédito é pré-pago: você põe US$ 5, e o serviço não tem
+                    como gastar além do que está lá. Fora isso, o MPTRIX tem o
+                    teto dele — chegando no valor que você marcar, ele volta a
+                    separar aqui no computador sozinho. Não existe assinatura
+                    nem cobrança recorrente.
+                  </p>
+                </details>
+
+                <details className="duvida">
+                  <summary>O MPTRIX fica com alguma parte do dinheiro?</summary>
+                  <p>
+                    Nenhuma. O app nunca toca no dinheiro — o pagamento é entre
+                    você e o Replicate, direto. Por isso o número que aparece
+                    aqui é uma <em>estimativa do que ele gastou</em>, e o valor
+                    de verdade está no painel deles.
+                  </p>
+                </details>
+
+                <details className="duvida">
+                  <summary>E se eu me arrepender?</summary>
+                  <p>
+                    Tem um botão "Apagar chave" assim que você configurar. Ele
+                    tira a chave deste computador e o app volta a separar
+                    localmente. Nada do que você já separou se perde, e você pode
+                    apagar a chave lá no Replicate também, quando quiser.
+                  </p>
+                </details>
+              </div>
             </>
           )}
 
