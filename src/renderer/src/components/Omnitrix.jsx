@@ -213,38 +213,46 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
               <i>{escolhida.sub}</i>
             </div>
 
-            {/* O MOSTRADOR. Era texto solto centralizado embaixo da roda —
-                informação certa, corpo nenhum. Agora é painel, na língua do
-                kit: colchete nos cantos, barra de estado na lateral, régua
-                sob o rótulo e hachura no fim da régua. */}
-            <div className="hud">
-              <span className="hud-canto tl" aria-hidden="true" />
-              <span className="hud-canto bl" aria-hidden="true" />
-              <div className="hud-cab">
-                <b>{escolhida.rot}</b>
-                <span className="hud-regua" aria-hidden="true" />
-                <span className="hud-hachura" aria-hidden="true" />
-                <span className="hud-esc">esc</span>
+            {/* O MOSTRADOR.
+                O NOME DO QUE FOI COPIADO VEM PRIMEIRO, e em cima. Antes ele
+                estava no rodapé, abaixo da explicação do formato — e isso
+                invertia a ordem da dúvida: quem abre a roda precisa confirmar
+                que copiou a música certa ANTES de escolher em que formato
+                levar. Formato errado se refaz num clique; baixar a música
+                errada inteira, não.
+                O nome também não pode ser classe "hud": esse nome já é da
+                leitura de painel do estúdio, e o display:flex dela jogava tudo
+                numa linha só. */}
+            <div className="mostra">
+              <span className="mostra-canto tl" aria-hidden="true" />
+              <span className="mostra-canto bl" aria-hidden="true" />
+
+              <div className="mostra-alvo">
+                <span className={`mostra-led ${info?.title ? 'ok' : buscando ? 'busca' : ''}`} aria-hidden="true" />
+                <span className="mostra-alvo-txt">
+                  {info?.title ? (
+                    <>
+                      <b>{info.title}</b>
+                      <i>{[info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')}</i>
+                    </>
+                  ) : (
+                    <>
+                      <b className={buscando ? 'mostra-piscando' : ''}>
+                        {buscando ? 'lendo o endereço…' : (link?.host || '')}
+                      </b>
+                      <i>{buscando ? 'buscando nome, canal e duração' : 'não deu pra ler o nome — o download funciona igual'}</i>
+                    </>
+                  )}
+                </span>
+                <span className="mostra-esc">esc</span>
               </div>
-              <p className="hud-corpo">{explica(escolhida.id)}</p>
-              <p className="hud-alvo">
-                <span className={`hud-led ${info?.title ? 'ok' : buscando ? 'busca' : ''}`} aria-hidden="true" />
-                {info?.title ? (
-                  <span className="hud-alvo-txt">
-                    <b>{info.title}</b>
-                    <i>
-                      {[info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')}
-                    </i>
-                  </span>
-                ) : (
-                  <span className="hud-alvo-txt">
-                    <b className={buscando ? 'omni-buscando' : ''}>
-                      {buscando ? 'lendo o endereço…' : (link?.host || '')}
-                    </b>
-                    <i>{buscando ? 'buscando nome, canal e duração' : 'não deu pra ler o nome — o download funciona do mesmo jeito'}</i>
-                  </span>
-                )}
-              </p>
+
+              <div className="mostra-forma">
+                <b>{escolhida.rot}</b>
+                <span className="mostra-regua" aria-hidden="true" />
+                <span className="mostra-hachura" aria-hidden="true" />
+              </div>
+              <p className="mostra-corpo">{explica(escolhida.id)}</p>
             </div>
           </div>
         </div>
