@@ -8157,49 +8157,6 @@ section h2::after {
   clip-path: var(--corte-sm);
 }
 .palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); }
-/* ação principal do palco */
-.acao {
-  position: relative;
-  display: inline-block;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-family: inherit;
-  clip-path: var(--corte-sm);
-}
-.acao-borda {
-  position: absolute;
-  inset: 0;
-  background: var(--accent);
-  clip-path: var(--corte-sm);
-}
-.acao-in {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 1px;
-  padding: 13px 22px;
-  background: var(--accent);
-  color: #0b0c0f;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  clip-path: var(--corte-sm);
-  transition: background 0.15s ease;
-}
-.acao:hover .acao-in { background: var(--accent-hover); }
-
-@media (max-width: 820px) {
-  .app { grid-template-columns: 1fr; }
-  .trilho { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
-  .trilho-itens { flex-direction: row; overflow-x: auto; }
-  .trilho-pe { display: none; }
-  .palco-in { padding: 32px 22px 44px; }
-}
-
-/* (o acervo em LISTA foi substituido pelo cartao com capa — ver abaixo) */
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }
 
 /* ██████████ ACERVO — cartão com capa de verdade ██████████
@@ -8831,6 +8788,16 @@ ul.hlib-grid {
 .omni-fatia.destino path { fill: rgba(182, 255, 59, 0.07); stroke: var(--accent-border); }
 .omni-fatia.destino .omni-rot { fill: var(--accent); }
 .omni-fatia.destino.on path { fill: var(--accent); stroke: var(--accent); }
+/* sem yt-dlp/ffmpeg só "do PC" funciona: as outras apagam em vez de prometer
+   o que não podem cumprir */
+.omni-fatia.morta { cursor: default; opacity: 0.28; }
+.omni-fatia.morta path { fill: var(--bg-cava-2); stroke: var(--border); }
+.omni-fatia.morta .omni-rot { fill: var(--muted-2); }
+
+/* com quatro fatias cada uma tem 90 graus: cabe letra maior, e o alvo fica
+   grande o bastante pra acertar sem mirar */
+.omni-rot { font-size: 16px; }
+.omni-sub { font-size: 10px; }
 
 .omni-rot {
   text-anchor: middle;

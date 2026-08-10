@@ -25,25 +25,42 @@ import Ico from './Icones.jsx'
 //   armada  — achou link. Bate devagar: chama sem gritar.
 //   cheia   — mão em cima. A areia sobe até encher, e aí pode apertar.
 
+// OS ALIENS. Quatro, e cada um faz uma coisa que os outros não fazem.
+//
+// Antes eram sete, e seis deles eram o mesmo alien de roupa diferente: MP3,
+// LISTA, RÁPIDO, M4A, WAV e VÍDEO são todos "baixar" — mudava o formato, não
+// o ato. Formato é ajuste técnico, e ajuste técnico é obrigação do sistema:
+// o app sabe que MP3 serve pra ouvir, que M4A é o material limpo pra separar,
+// e que "list=" sem "v=" quer dizer lista inteira. Perguntar isso era devolver
+// pra pessoa uma conta que a máquina já sabia fazer.
+//
+// O que sobrou são atos de verdade — e é isso que faz a roda ser rápida como
+// o relógio do desenho: liga, olha, escolhe. Sem submenu, sem menu de menu.
 const FORMAS = [
-  { id: 'music', rot: 'MP3', sub: 'música' },
-  { id: 'playlist', rot: 'LISTA', sub: 'playlist' },
-  { id: 'fast', rot: 'RÁPIDO', sub: 'mp3 leve' },
-  { id: 'audio_m4a', rot: 'M4A', sub: 'áudio' },
-  { id: 'audio_wav', rot: 'WAV', sub: 'sem perda' },
-  { id: 'video', rot: 'VÍDEO', sub: 'mp4' },
-  // A SEPARAÇÃO é a razão do app existir, então ela fica na roda também — e
-  // encostada no MP3, que é a vizinha natural. Ela não é um formato: é um
-  // destino. O arquivo é baixado do mesmo jeito (não dá pra separar o que não
-  // está no computador), mas em vez de parar na pasta ele vai direto pro
-  // estúdio.
-  { id: 'separar', rot: 'SEPARAR', sub: 'instrumentos', destino: true }
+  { id: 'baixar', rot: 'MÚSICA', sub: 'baixar' },
+  { id: 'video', rot: 'VÍDEO', sub: 'baixar' },
+  { id: 'separar', rot: 'SEPARAR', sub: 'instrumentos', destino: true },
+  { id: 'arquivo', rot: 'DO PC', sub: 'já é sua' }
 ]
 
-// A separação não é preset do motor, então a explicação dela mora aqui — e
-// precisa dizer a verdade inteira: que baixa, e por que baixa nesse formato.
-const EXPLICA_DESTINO = {
-  separar: 'Baixa o áudio na qualidade nativa (sem reconverter) e abre direto no Estúdio pra separar os instrumentos.'
+// A explicação de cada um. Ela muda com o que está na área de transferência,
+// porque o mesmo alien faz coisa diferente conforme o que encontra — que é
+// exatamente como o relógio do desenho se comporta.
+function explicar(id, { temLink, soLista }) {
+  if (id === 'baixar') {
+    if (soLista) return 'Abre a lista pra você escolher quais músicas quer, e baixa em MP3.'
+    if (temLink) return 'Baixa a música em MP3, com qualidade máxima e capa do vídeo.'
+    return 'Baixa uma música em MP3. Como não tem link copiado, ele vai pedir o endereço.'
+  }
+  if (id === 'video') {
+    if (temLink) return 'Baixa o vídeo na qualidade que você escolher (até 8K).'
+    return 'Baixa um vídeo. Como não tem link copiado, ele vai pedir o endereço.'
+  }
+  if (id === 'separar') {
+    if (temLink) return 'Baixa o áudio na qualidade nativa (sem reconverter) e abre direto no Estúdio pra separar os instrumentos.'
+    return 'Escolhe uma música do seu computador e abre no Estúdio pra separar os instrumentos.'
+  }
+  return 'Abre uma música que já está no seu computador — gravação, pen drive, qualquer arquivo de som.'
 }
 
 const R_EXT = 200   // raio de fora da coroa
@@ -82,7 +99,7 @@ function relogio(seg) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
+export default function Omnitrix({ ligado = true, onEscolher }) {
   const [link, setLink] = useState(null)
   const [aberta, setAberta] = useState(false)
   const [sobre, setSobre] = useState(null)
@@ -173,7 +190,11 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberta, link])
 
-  const armada = !!link && ligado
+  // ARMADA quer dizer "tem link copiado" — não quer dizer "pode usar". A roda
+  // existe sempre: sem link ela ainda abre música do computador e ainda pede
+  // o endereço pra baixar. Antes ela só nascia com link, e aí metade do que
+  // ela faz não tinha porta nenhuma.
+  const armada = !!link
 
   // playlist PURA: endereço de lista sem nenhum vídeo apontado. Se tem "v=",
   // é uma música que por acaso está dentro de uma lista — e aí quem a pessoa
@@ -185,17 +206,20 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
 
   // playlist copiada abre já apontando pro formato de playlist: baixar 40
   // músicas uma a uma seria castigo
-  const sugerido = link?.playlist ? 'playlist' : 'music'
+  const sugerido = 'baixar'
   const escolhida = FORMAS.find((f) => f.id === (sobre || sugerido)) || FORMAS[0]
   // a explicação vem do próprio motor: texto copiado pra cá divergiria do que
   // o download realmente faz na primeira vez que alguém mexesse num preset
-  const explica = (id) => EXPLICA_DESTINO[id] || presets.find((p) => p.id === id)?.description || ''
+  const explica = (id) => explicar(id, { temLink: !!link, soLista })
 
 
   const escolher = (id) => {
-    const url = link.url
+    const url = link?.url || null
     setAberta(false)
-    setLink(null)
+    // o link só é consumido por quem precisa dele: "do PC" não mexe na área
+    // de transferência, e apagá-lo ali faria a marca parar de bater sem
+    // motivo nenhum
+    if (id !== 'arquivo') setLink(null)
     onEscolher?.(id, url)
   }
 
@@ -205,9 +229,10 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
       <button
         className={`marca ${armada ? 'armada' : ''}`}
         type="button"
-        onClick={() => armada && setAberta(true)}
-        disabled={!armada}
-        title={armada ? `Link copiado de ${link.host} — escolher formato` : 'Copie um link de música ou vídeo e ele aparece aqui'}
+        onClick={() => setAberta(true)}
+        title={armada
+          ? `Link copiado de ${link.host} — escolher o que fazer`
+          : 'Abrir a roda. Com um link copiado ela já vem carregada.'}
       >
         <svg className="marca-svg" viewBox="0 0 24 24" aria-hidden="true">
           <defs>
@@ -239,21 +264,30 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
             <svg className="omni-roda" viewBox="0 0 440 440">
               {FORMAS.map((f, i) => {
                 const ativa = (sobre || sugerido) === f.id
+                // sem yt-dlp/ffmpeg só o arquivo do computador funciona; as
+                // outras três apagam em vez de prometer o que não podem fazer
+                const morta = !ligado && f.id !== 'arquivo'
                 const [tx, ty] = meio(i, FORMAS.length, (R_EXT + R_INT) / 2)
                 return (
                   <g
                     key={f.id}
-                    className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''} ${f.destino ? 'destino' : ''}`}
+                    className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''} ${f.destino ? 'destino' : ''} ${morta ? 'morta' : ''}`}
                     onMouseEnter={() => setSobre(f.id)}
-                    onClick={() => escolher(f.id)}
+                    onClick={() => { if (!morta) escolher(f.id) }}
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
                     {/* tooltip nativo além do mostrador: quem para em cima
                         esperando explicação recebe nos dois lugares */}
                     <title>{explica(f.id)}</title>
                     <path d={fatia(i, FORMAS.length)} />
-                    <text x={tx} y={ty - 4} className="omni-rot">{f.rot}</text>
-                    <text x={tx} y={ty + 14} className="omni-sub">{f.sub}</text>
+                    {/* o mesmo alien muda de nome conforme o que encontrou:
+                        link de lista faz "MÚSICA" virar "PLAYLIST" */}
+                    <text x={tx} y={ty - 4} className="omni-rot">
+                      {f.id === 'baixar' && soLista ? 'PLAYLIST' : f.rot}
+                    </text>
+                    <text x={tx} y={ty + 14} className="omni-sub">
+                      {f.id === 'baixar' && soLista ? `${info?.uploader || 'a lista inteira'}` : f.sub}
+                    </text>
                   </g>
                 )
               })}
@@ -297,7 +331,11 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                 </span>
                 <span className="mostra-alvo-txt">
                   <b className={!info?.title && buscando ? 'mostra-piscando' : ''}>
-                    {info?.title || (buscando ? 'lendo o endereço…' : (link?.host || ''))}
+                    {info?.title
+                      || (buscando ? 'lendo o endereço…'
+                        : link?.host
+                          ? link.host
+                          : 'nada copiado')}
                   </b>
                   <i>
                     {/* a lanterninha mora na linha da ficha: lima achou o
@@ -306,7 +344,9 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                     {info?.title
                       ? [info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')
                       : buscando ? 'buscando nome, canal e duração'
-                        : 'não deu pra ler o nome — o download funciona igual'}
+                        : link
+                          ? 'não deu pra ler o nome — o download funciona igual'
+                          : 'copie um link e ele aparece aqui'}
                   </i>
                 </span>
                 {/* Aqui morava um "esc fecha" que ninguém precisava ler:

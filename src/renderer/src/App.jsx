@@ -224,15 +224,14 @@ export default function App() {
             <div className="palco-etiquetas">
               <i>dissecação</i><i>tom</i><i>velocidade</i><i>metrônomo</i><i>cifra</i><i>letra</i>
             </div>
-            <button className="acao" onClick={openStudioFromFile}>
-              <span className="acao-borda" aria-hidden="true" />
-              <span className="acao-in">
-                <Ico nome="studio" tamanho={20} />
-                Escolher uma música do computador
-              </span>
-            </button>
+            {/* O botão "escolher uma música do computador" saiu daqui: ele
+                virou uma fatia da roda ("DO PC"). Nenhuma capacidade se
+                perdeu — mudou de porta. Ter um botão grande na cara pra UMA
+                das quatro formas de começar era dar a ele um peso que as
+                outras três não tinham. */}
             <p className="palco-nota">
-              Ou abra pelo botão de estúdio de qualquer item do acervo.
+              Toque a ampulheta pra começar — do link copiado, de um arquivo
+              seu, ou pelo botão de estúdio de qualquer item do acervo.
             </p>
             {/* A marca d'água daqui era desenho morto — enfeite pra dar peso ao
                 palco. Agora ela É o relógio: parada sem link, batendo quando
@@ -240,28 +239,46 @@ export default function App() {
             <Omnitrix
               ligado={binariesOk}
               presets={presets}
-              onEscolher={(presetId, url) => {
+              onEscolher={(alien, url) => {
                 // SEPARAR não é formato, é destino. Ele baixa em M4A porque
                 // essa é a faixa NATIVA do YouTube, sem reconversão — passar
                 // por MP3 antes de separar jogaria fora informação que o
                 // separador usa, e quem quer os instrumentos quer o material
                 // mais limpo possível.
-                const querEstudio = presetId === 'separar'
-                // ENDEREÇO DE LISTA PURA vai pra tela da lista, escolha o
-                // formato que escolher. Os presets de música rodam com
-                // "--no-playlist": num endereço sem vídeo apontado eles não
-                // teriam o que baixar, e a pessoa levaria um erro por ter
-                // pedido uma coisa razoável. Quem sabe que "list=" sem "v="
-                // é lista inteira é o app, não ela.
-                let alvo = querEstudio ? 'audio_m4a' : presetId
+                // OS QUATRO CAMINHOS. Cada alien resolve sozinho o formato e
+                // a fonte — é isso que tira do usuário a conta que a máquina
+                // já sabe fazer.
+                if (alien === 'arquivo') return openStudioFromFile()
+
+                if (alien === 'separar') {
+                  // M4A é a faixa NATIVA do YouTube, sem reconversão. Passar
+                  // por MP3 antes de separar jogaria fora informação que o
+                  // separador usa.
+                  const p = presets.find((x) => x.id === 'audio_m4a')
+                  if (!p) return
+                  // sem link não há o que baixar: separar vira "abrir um
+                  // arquivo seu e mandar pro estúdio"
+                  if (!url) return openStudioFromFile()
+                  setRodaPediuEstudio(true)
+                  setUrlDaRoda(url)
+                  setActivePreset(p)
+                  return
+                }
+
+                // "list=" sem "v=" quer dizer lista inteira, e os presets de
+                // música rodam com --no-playlist: sem o desvio a pessoa
+                // levaria um erro por ter pedido uma coisa razoável. Quem tem
+                // que saber disso é o app.
+                let alvo = alien === 'video' ? 'video' : 'music'
                 try {
                   const u = new URL(url)
-                  const listaPura = u.searchParams.has('list') && !u.searchParams.get('v')
-                  if (listaPura && !querEstudio) alvo = 'playlist'
-                } catch { /* endereço estranho: segue o que foi pedido */ }
+                  if (u.searchParams.has('list') && !u.searchParams.get('v') && alien !== 'video') {
+                    alvo = 'playlist'
+                  }
+                } catch { /* sem link ou endereço estranho: segue o pedido */ }
                 const p = presets.find((x) => x.id === alvo)
                 if (!p) return
-                setRodaPediuEstudio(querEstudio)
+                setRodaPediuEstudio(false)
                 setUrlDaRoda(url)
                 setActivePreset(p)
               }}
