@@ -108,6 +108,18 @@ const AMPULHETA_D = 'M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z'
 // leva a ampulheta de 24x24 pro meio do hexágono de 100x110
 const AMPULHETA_POSE = 'translate(17.6 22.6) scale(2.7)'
 
+// mm:ss — duração só ajuda se for legível de relance.
+// (Esta função já existia e eu a apaguei sem querer ao trocar o bloco da
+// marca: ela morava colada nele. Como só é chamada quando há informação
+// carregada, o erro ficou escondido até alguém abrir a roda com um nome já
+// buscado na memória — que é justamente o caso que quebrou.)
+function relogio(seg) {
+  if (!seg && seg !== 0) return null
+  const m = Math.floor(seg / 60)
+  const s = Math.round(seg % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 export default function Omnitrix({ ligado = true, onEscolher }) {
   const [link, setLink] = useState(null)
   const [aberta, setAberta] = useState(false)
@@ -154,7 +166,11 @@ export default function Omnitrix({ ligado = true, onEscolher }) {
   // mostrador dizia "não deu pra ler o nome" numa playlist inteira. Playlist
   // tem consulta própria, que devolve o nome da lista e quantas músicas tem.
   useEffect(() => {
-    if (!aberta || !link) return
+    // sem link, a ficha do que foi copiado tem que sumir junto: senão o
+    // mostrador continuaria exibindo a música da vez passada, dizendo que
+    // ela está copiada quando não está mais
+    if (!link) { setInfo(null); setBuscando(false); return }
+    if (!aberta) return
     const url = link.url
     const guardado = infoCache.current[url]
     // "thumbnail" AUSENTE não é o mesmo que "thumbnail vazio": ausente quer
