@@ -8137,15 +8137,48 @@ section h2::after {
 /* O TÍTULO GRANDE É O PONTO DA MUDANÇA: é ele que dá o "primeiro lugar onde o
    olho bate" que a tela não tinha. Sem isso, qualquer enfeite continua lendo
    como relatório. */
+/* O TÍTULO ACESO.
+   A luz é BRANCA, não lima. O lima do app quer dizer "o sistema está agindo"
+   — playhead, play, filtro ligado. Se o título brilhasse em lima, ele estaria
+   gritando uma coisa que não é verdade, e o lima perderia força justamente
+   onde ele precisa ter. Então o texto acende em branco, como letreiro
+   iluminado, e o lima entra só como respingo no ar em volta — reflexo, não
+   fonte.
+   Três camadas de halo em vez de uma: uma sombra só sai como borrão em volta
+   da letra; empilhando perto/médio/longe o brilho cai devagar e parece luz. */
 .palco-titulo {
+  position: relative;
   margin: 0 0 18px;
   font-family: var(--font-ui);
   font-size: clamp(40px, 6vw, 74px);
   font-weight: 700;
   line-height: 0.96;
   letter-spacing: -0.01em;
-  color: var(--text);
+  color: #fff;
+  text-shadow:
+    0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 22px rgba(255, 255, 255, 0.28),
+    0 0 60px rgba(214, 255, 160, 0.2),
+    0 0 120px rgba(182, 255, 59, 0.14);
 }
+/* o ar em volta do letreiro: degradê que morre longe, então não tem borda
+   pra aparecer */
+.palco-in::before {
+  content: '';
+  position: absolute;
+  left: -6%;
+  top: 0;
+  width: 78%;
+  height: 380px;
+  background: radial-gradient(60% 70% at 34% 42%, rgba(182, 255, 59, 0.07), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.palco-in > * { position: relative; z-index: 1; }
+/* a marca é filha do palco também: sem isto o z-index de cima a jogaria pro
+   mesmo plano do texto e o clique dela poderia ser roubado por um bloco
+   invisível vizinho */
+.palco-in > .marca { z-index: 2; }
 .palco-titulo small {
   font-size: 0.28em;
   font-family: var(--font-mono);
