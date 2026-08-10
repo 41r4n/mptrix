@@ -57,7 +57,31 @@ export function setDownloadDir(dir) {
 // no disco: o safeStorage cifra com a credencial do usuário do sistema
 // operacional. Em máquina sem esse recurso o guardar é recusado — prefiro
 // avisar que não dá do que gravar um token legível num JSON.
+// MÊS CORRENTE, no relógio de quem usa. O Replicate fecha a conta por mês, e
+// o teto só faz sentido se contar a mesma coisa que a fatura conta.
+function mesAgora() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// VIRADA DE MÊS. Sem isto o contador soma pra sempre e o teto vira uma parede
+// que uma hora bate — e a pessoa aprende a "zerar contador" toda vez, que é
+// justamente o hábito que anula a proteção. Contando por mês, o teto é um
+// orçamento que se renova sozinho e ninguém precisa mexer.
+function virarMesSePreciso() {
+  const mes = mesAgora()
+  if (store.get('nuvem.mes') === mes) return
+  const gastoAnterior = store.get('nuvem.centavosGastos') || 0
+  store.set('nuvem.mes', mes)
+  store.set('nuvem.centavosGastos', 0)
+  store.set('nuvem.segundosGastos', 0)
+  store.set('nuvem.musicasFeitas', 0)
+  // guarda o mês anterior pra tela poder mostrar "no mês passado você gastou"
+  if (gastoAnterior > 0) store.set('nuvem.gastoMesPassado', Math.round(gastoAnterior * 100) / 100)
+}
+
 export function getNuvem() {
+  virarMesSePreciso()
   const n = store.get('nuvem', {})
   return {
     ligada: !!n.ligada,
@@ -68,8 +92,30 @@ export function getNuvem() {
       ? Math.round(n.centavosGastos * 100) / 100
       : Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100,
     musicasFeitas: n.musicasFeitas || 0,
-    tetoCentavos: n.tetoCentavos ?? 500
+    tetoCentavos: n.tetoCentavos ?? 500,
+    mes: n.mes || mesAgora(),
+    gastoMesPassado: n.gastoMesPassado || 0,
+    // por que a nuvem se desligou sozinha, se foi o caso
+    paradaPor: n.paradaPor || null
   }
+}
+
+/**
+ * A NUVEM SE DESLIGA SOZINHA quando o serviço recusa por falta de crédito.
+ *
+ * Antes o app detectava a recusa, parava aquele trabalho e não fazia mais
+ * nada — a próxima separação tentava de novo e falhava de novo, e a pessoa
+ * ficava esperando 30 segundos pra receber erro, repetidamente, sem entender.
+ *
+ * Desligar é o único jeito de a proteção não depender de alguém configurar
+ * coisa nenhuma: o serviço disse que não dá, então o app para de pedir e
+ * volta a separar aqui. E guarda o motivo, pra tela poder explicar e oferecer
+ * religar quando houver crédito de novo.
+ */
+export function desligarNuvemPor(motivo) {
+  store.set('nuvem.ligada', false)
+  store.set('nuvem.paradaPor', motivo || 'desconhecido')
+  return getNuvem()
 }
 
 export function podeGuardarChave() {

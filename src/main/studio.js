@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
-import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos } from './store.js'
+import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos, desligarNuvemPor } from './store.js'
 import { freemem } from 'os'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -3861,7 +3861,15 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
           // sem dinheiro nem pra UMA pergunta: parar aqui e dizer por quê. Sem
           // isso a dissecação seguia varrendo trechos e rodadas em falso,
           // rodando o farejador três vezes por abertura pra nada.
-          if (r.semTeto) { motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'; break }
+          if (r.semTeto) {
+            motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'
+            // A NUVEM SE DESLIGA SOZINHA quando o serviço diz que não há
+            // crédito. Antes o app só parava ESTE trabalho — e a próxima
+            // separação tentava de novo, esperava, e falhava de novo. Quem
+            // não sabe o que é "crédito" ficava só vendo o app quebrar.
+            if (r.semCredito) desligarNuvemPor('sem-credito')
+            break
+          }
           // sonda paga vai pro disco AGORA: fechar o app (ou faltar luz) no meio
           // da dissecação não pode jogar fora o que já foi pago.
           // Falhar aqui EM SILÊNCIO era o pior dos mundos: o motor seguia
@@ -4074,7 +4082,14 @@ export function startAutoExtract({ key, ffmpegPath, onProgress, onStatus }) {
             })
             progresso.procurados.push(...r.sondados)
             diario(dir, `  revista ${faixa} ${trecho.ini}-${trecho.fim}: sondados=${r.sondados.length} perdi=${r.sumiram?.length || 0} dono=${r.dono || '-'} truncado=${r.truncado}`)
-            if (r.semTeto) { motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'; revistaLimpa = false; break }
+            if (r.semTeto) {
+              motivoParada = r.semCredito ? 'sem-credito' : 'nuvem-indisponivel'
+              // mesmo desligamento automático da varredura: o serviço recusou
+              // por falta de crédito, então o app para de pedir
+              if (r.semCredito) desligarNuvemPor('sem-credito')
+              revistaLimpa = false
+              break
+            }
             try { gravar() } catch (e) { diario(dir, `  NAO CONSEGUI GRAVAR a revista: ${e?.message || e}`) }
             if (r.dono) {
               onStatus({ id, state: 'running', auto: true, fase: 'separando', alvos: [r.dono] })

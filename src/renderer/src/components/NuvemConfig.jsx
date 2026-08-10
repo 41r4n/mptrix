@@ -264,6 +264,24 @@ export default function NuvemConfig() {
                   ORDEM: quem clicava achando que estava mandando usar a nuvem
                   na verdade desligava. Aqui os dois lados ficam à vista e o
                   aceso é o que vale — não dá pra errar o que o clique faz. */}
+              {/* A NUVEM SE DESLIGOU SOZINHA. Antes o app detectava a recusa
+                  por falta de crédito, parava aquele trabalho e não fazia mais
+                  nada: a próxima separação tentava de novo, esperava e falhava
+                  de novo. Agora ele desliga, volta a separar aqui, e diz por
+                  quê — que é a única forma dessa proteção não depender de
+                  alguém configurar coisa nenhuma. */}
+              {estado.paradaPor === 'sem-credito' && (
+                <div className="nuvem-parou">
+                  <b>desliguei a nuvem sozinho</b>
+                  <p>
+                    O Replicate recusou o último trabalho por falta de crédito, então
+                    parei de pedir e voltei a separar aqui no seu computador — sem isso
+                    cada separação ia esperar e falhar de novo. Quando puser crédito lá,
+                    é só marcar "Na nuvem" de novo aqui embaixo.
+                  </p>
+                </div>
+              )}
+
               <div className="nuvem-linha">
                 <div className="nuvem-escolha" role="group" aria-label="Onde separar">
                   <button
@@ -295,12 +313,15 @@ export default function NuvemConfig() {
               <div className="credito">
                 <div className="credito-num">
                   <b>{emDolar(gastoC)}</b>
-                  <i>gastos por aqui</i>
+                  <i>gastos este mês</i>
                 </div>
                 <span className="credito-fio" aria-hidden="true" />
                 <div className="credito-lado">
                   <span><b>{estado.musicasFeitas}</b> músicas</span>
                   <span><b>{porMusica ? emDolar(porMusica) : '—'}</b> cada</span>
+                  {estado.gastoMesPassado > 0 && (
+                    <span><b>{emDolar(estado.gastoMesPassado)}</b> mês passado</span>
+                  )}
                 </div>
                 <span className="credito-espaco" />
                 <button
@@ -322,7 +343,7 @@ export default function NuvemConfig() {
 
               <div className="nuvem-linha">
                 <label className="nuvem-teto">
-                  <span>Parar ao gastar</span>
+                  <span>Parar ao gastar (por mês)</span>
                   {/* EM DÓLAR: pedir o teto em centavos obrigava a pessoa a
                       multiplicar por cem de cabeça pra dizer "cinco dólares" */}
                   <input
