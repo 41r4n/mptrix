@@ -240,6 +240,12 @@ function lerLinkDaArea() {
 }
 
 let ultimoLinkVisto = null
+// O ACHADO FICA GUARDADO, e não é detalhe: a marca só existe na tela do
+// estúdio, então quem copia um link estando no acervo não tem ninguém
+// escutando. Como o aviso é disparado UMA vez por link, ele se perdia no ar e
+// a marca ficava parada pra sempre com um link válido na área. Guardado aqui,
+// a tela pergunta "tem algo?" toda vez que nasce e recupera o que perdeu.
+let linhaGuardada = null
 let vigiaArea = null
 
 function ligarVigiaDaArea() {
@@ -249,6 +255,7 @@ function ligarVigiaDaArea() {
     const chave = achado?.url || null
     if (chave === ultimoLinkVisto) return
     ultimoLinkVisto = chave
+    linhaGuardada = achado
     if (achado) send('clipboard:link', achado)
   }, 1000)
 }
@@ -511,6 +518,10 @@ app.whenReady().then(() => {
     send('history:changed', updated)
     return { updated, favorito: alvo }
   })
+
+  // a tela pergunta isto ao nascer: ver o quadro atual em vez de so escutar o
+  // proximo e o que faz a marca sobreviver a troca de aba
+  ipcMain.handle('clipboard:atual', () => linhaGuardada)
 
   ipcMain.handle('video:probe', async (_e, url) => {
     if (!existsSync(YT_DLP_PATH)) {

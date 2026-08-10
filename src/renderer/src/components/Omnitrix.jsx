@@ -68,6 +68,13 @@ export default function Omnitrix({ ligado, onEscolher }) {
   const [sobre, setSobre] = useState(null)
 
   useEffect(() => {
+    // pergunta o que já está na área ANTES de passar a escutar: a marca só
+    // existe na tela do estúdio, e o motor avisa uma vez por link. Quem
+    // copiou estando no acervo teria o aviso perdido no ar e chegaria aqui
+    // com a marca parada e um link válido na mão.
+    window.mptrix.clipboard.atual?.().then((achado) => {
+      if (achado) setLink((atual) => atual || achado)
+    })
     return window.mptrix.clipboard.onLink((achado) => {
       setLink(achado)
       setAberta(false)
