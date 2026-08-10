@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import DownloadModal from './components/DownloadModal.jsx'
 import Omnitrix from './components/Omnitrix.jsx'
+import TituloVivo, { useFalaDaVez } from './components/TituloVivo.jsx'
 import PlaylistModal from './components/PlaylistModal.jsx'
 import StudioView from './components/StudioView.jsx'
 import HistoryList from './components/HistoryList.jsx'
@@ -55,6 +56,8 @@ export default function App() {
   const [urlDaRoda, setUrlDaRoda] = useState(null)
   // quando a roda pede SEPARAR, o download deixa de ser o fim e vira o meio
   const [rodaPediuEstudio, setRodaPediuEstudio] = useState(false)
+  // o que a tela do estúdio está anunciando agora
+  const fala = useFalaDaVez()
   const [history, setHistory] = useState([])
   const [studioSource, setStudioSource] = useState(null)
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
@@ -215,14 +218,19 @@ export default function App() {
         {aba === 'estudio' && (
           <div className="palco-in">
             <p className="palco-olho">01 / ESTÚDIO DE ENSAIO <span className="beta-tag">BETA</span></p>
-            <h1 className="palco-titulo">Separar<br />instrumentos</h1>
+            <TituloVivo fala={fala} />
             <p className="palco-linha">
               Voz, bateria, baixo, guitarra, piano — e o resto que ninguém
               costuma achar. Depois mude o tom, deixe mais lento, marque o
               compasso e ensaie por cima.
             </p>
+            {/* a etiqueta do que o título está dizendo acende junto: as duas
+                deixam de repetir a mesma informação em tamanhos diferentes e
+                passam a apontar uma pra outra */}
             <div className="palco-etiquetas">
-              <i>dissecação</i><i>tom</i><i>velocidade</i><i>metrônomo</i><i>cifra</i><i>letra</i>
+              {['dissecação', 'tom', 'velocidade', 'metrônomo', 'cifra', 'letra'].map((t) => (
+                <i key={t} className={fala.tag === t ? 'on' : ''}>{t}</i>
+              ))}
             </div>
             {/* O botão "escolher uma música do computador" saiu daqui: ele
                 virou uma fatia da roda ("DO PC"). Nenhuma capacidade se
