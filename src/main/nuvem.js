@@ -166,7 +166,15 @@ async function criarPredicao(chave, versao, input, state) {
         // segue batendo na porta fechada a música inteira — enchendo o
         // caderninho de erro e a tela de "faltou perguntar" que nunca vai ser
         // respondido. Marcado, a dissecação para na hora e diz o motivo certo.
-        if (/insufficient credit/i.test(e.message)) e.semCredito = true
+        // "PAREDE DE DINHEIRO" tem mais de uma redação. Eu só pegava
+        // "insufficient credit" — mas a conta suspensa por saldo pendente
+        // recusa com outro texto, e nesse caso o motor tratava como falha
+        // qualquer: insistia, marcava o trecho como pendente e batia na porta
+        // fechada a música inteira. As duas coisas terminam do mesmo jeito
+        // (não vai rodar até mexer no dinheiro), então recebem a mesma marca.
+        if (/insufficient credit|payment required|billing|deactivat|delinquen|suspend|past due|outstanding balance/i.test(e.message) || r.status === 402) {
+          e.semCredito = true
+        }
         throw e
       }
       ultima = new Error(`o Replicate respondeu ${r.status}${j === null ? ' (não-JSON)' : ''}`)
