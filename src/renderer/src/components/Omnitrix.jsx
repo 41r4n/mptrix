@@ -213,14 +213,38 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
               <i>{escolhida.sub}</i>
             </div>
 
-            <div className="omni-pe">
-              <p className="omni-explica">{explica(escolhida.id)}</p>
-              <p className="omni-alvo">
-                {info?.title
-                  ? <><b>{info.title}</b>{info.uploader ? ` · ${info.uploader}` : ''}{relogio(info.duration) ? ` · ${relogio(info.duration)}` : ''}</>
-                  : buscando ? <span className="omni-buscando">buscando o nome…</span> : link?.host}
+            {/* O MOSTRADOR. Era texto solto centralizado embaixo da roda —
+                informação certa, corpo nenhum. Agora é painel, na língua do
+                kit: colchete nos cantos, barra de estado na lateral, régua
+                sob o rótulo e hachura no fim da régua. */}
+            <div className="hud">
+              <span className="hud-canto tl" aria-hidden="true" />
+              <span className="hud-canto bl" aria-hidden="true" />
+              <div className="hud-cab">
+                <b>{escolhida.rot}</b>
+                <span className="hud-regua" aria-hidden="true" />
+                <span className="hud-hachura" aria-hidden="true" />
+                <span className="hud-esc">esc</span>
+              </div>
+              <p className="hud-corpo">{explica(escolhida.id)}</p>
+              <p className="hud-alvo">
+                <span className={`hud-led ${info?.title ? 'ok' : buscando ? 'busca' : ''}`} aria-hidden="true" />
+                {info?.title ? (
+                  <span className="hud-alvo-txt">
+                    <b>{info.title}</b>
+                    <i>
+                      {[info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')}
+                    </i>
+                  </span>
+                ) : (
+                  <span className="hud-alvo-txt">
+                    <b className={buscando ? 'omni-buscando' : ''}>
+                      {buscando ? 'lendo o endereço…' : (link?.host || '')}
+                    </b>
+                    <i>{buscando ? 'buscando nome, canal e duração' : 'não deu pra ler o nome — o download funciona do mesmo jeito'}</i>
+                  </span>
+                )}
               </p>
-              <p className="omni-legenda">{link?.host} · Esc pra fechar</p>
             </div>
           </div>
         </div>
