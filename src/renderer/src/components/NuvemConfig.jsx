@@ -61,8 +61,8 @@ export default function NuvemConfig() {
     if (estado.paradaPor) {
       return {
         nivel: 'parou',
-        titulo: 'parei a nuvem',
-        txt: `Sobrou ${emDolar(sobra)} do que você informou, e eu parei antes de encostar — se passasse, viraria dívida e o Replicate suspende a conta até quitar. Pondo mais crédito e atualizando o valor, eu volto sozinho.`
+        titulo: 'sem crédito — nuvem trancada',
+        txt: `Sobrou ${emDolar(sobra)} do que você informou, e eu parei antes de encostar: se passasse viraria dívida e o Replicate suspende a conta até quitar. A nuvem fica trancada até você comprar crédito e atualizar o valor aqui embaixo — aí eu religo sozinho. Enquanto isso tudo continua funcionando neste computador.`
       }
     }
     if (fracao <= 0.25) {
@@ -104,6 +104,16 @@ export default function NuvemConfig() {
   }
 
   const alternar = async () => setEstado(await window.mptrix.nuvem.ligar(!estado.ligada))
+
+  // A NUVEM FICA TRANCADA enquanto o motivo da parada existir. Sem isto o
+  // botão "Na nuvem" continuava clicável: a pessoa ligava, o motor desligava
+  // de novo na primeira separação, e ela ficava achando que o botão estava
+  // quebrado. Botão que aceita o clique e desfaz sozinho é pior que botão
+  // desligado — ele mente sobre o que pode fazer.
+  const trancada = !!estado.paradaPor
+  const porQueTrancada = estado.paradaPor === 'teto-do-mes'
+    ? 'Você chegou no teto deste mês. Suba o teto aí embaixo pra liberar.'
+    : 'Sem crédito não dá pra usar a nuvem. Compre crédito e me diga o valor aí embaixo — eu religo sozinho.'
 
   return (
     /* O ACORDEÃO SAIU. Ele fazia sentido quando isto era um bloco dentro de
@@ -357,11 +367,14 @@ export default function NuvemConfig() {
                     Neste computador
                   </button>
                   <button
-                    className={estado.ligada ? 'on' : ''}
-                    onClick={() => !estado.ligada && alternar()}
+                    className={`${estado.ligada ? 'on' : ''} ${trancada ? 'trancada' : ''}`}
+                    onClick={() => !estado.ligada && !trancada && alternar()}
                     aria-pressed={estado.ligada}
+                    disabled={trancada}
+                    title={trancada ? porQueTrancada : 'Separar na nuvem, em cerca de 30 segundos'}
                   >
                     Na nuvem
+                    {trancada && <span className="trava" aria-hidden="true">·</span>}
                   </button>
                 </div>
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>

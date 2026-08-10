@@ -188,7 +188,23 @@ export function setNuvemLigada(v) {
 
 export function setTetoNuvem(centavos) {
   store.set('nuvem.tetoCentavos', Math.max(0, Number(centavos) || 0))
+  // subir o teto derruba a parada que ELE mesmo causou — quem acabou de dar
+  // mais espaço não deveria precisar religar a nuvem na mão
+  if (store.get('nuvem.paradaPor') === 'teto-do-mes' && usarNuvemPodePassar()) {
+    store.set('nuvem.paradaPor', null)
+    store.set('nuvem.ligada', true)
+  }
   return getNuvem()
+}
+
+/** O teto e o freio deixariam passar agora? (sem mexer em nada) */
+function usarNuvemPodePassar() {
+  const n = store.get('nuvem', {})
+  const teto = n.tetoCentavos ?? 500
+  if (teto > 0 && gastoCentavos() >= teto) return false
+  const cred = n.creditoInformado || 0
+  if (cred > 0 && (n.gastoDesdeCredito || 0) >= cred * 0.85) return false
+  return true
 }
 
 /**
