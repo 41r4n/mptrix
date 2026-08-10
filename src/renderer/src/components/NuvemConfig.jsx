@@ -401,12 +401,46 @@ export default function NuvemConfig() {
                 </button>
               </div>
 
+              {/* O JORNAL é um CARTÃO, não uma linha de texto. Ele estava
+                  escrito no mesmo peso do resto e sumia entre parágrafos — e
+                  ele é a única peça da tela que responde "posso continuar
+                  usando?". Informação que decide comportamento não pode ter o
+                  mesmo peso de informação que só contextualiza. */}
               <div className={`jornal ${jornal.nivel}`}>
-                <span className="jornal-luz" aria-hidden="true" />
-                <div>
+                <span className="jornal-canto tl" aria-hidden="true" />
+                <span className="jornal-canto br" aria-hidden="true" />
+                <div className="jornal-cab">
+                  <span className="jornal-luz" aria-hidden="true" />
                   <b>{jornal.titulo}</b>
-                  <p>{jornal.txt}</p>
+                  <span className="jornal-risco" aria-hidden="true" />
+                  <span className="jornal-hachura" aria-hidden="true" />
                 </div>
+
+                {estado.creditoInformado > 0 && (
+                  <div className="jornal-medida">
+                    <span className="jornal-sobra">
+                      {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
+                    </span>
+                    <span className="jornal-de">de {emDolar(estado.creditoInformado)}</span>
+                  </div>
+                )}
+
+                <p>{jornal.txt}</p>
+
+                {/* a barra mora AQUI, não no campo: ela é estado, não entrada.
+                    Número é preciso, barra é imediata — dá pra ver de longe que
+                    está apertando, sem ler nada. */}
+                {estado.creditoInformado > 0 && (
+                  <div className="jornal-barra" title={`${emDolar(estado.gastoDesdeCredito)} gastos de ${emDolar(estado.creditoInformado)}`}>
+                    <span
+                      className="jornal-cheio"
+                      style={{ width: `${Math.min(100, (estado.gastoDesdeCredito / estado.creditoInformado) * 100)}%` }}
+                    />
+                    <span className="jornal-marca" style={{ left: '85%' }}>
+                      <i>paro aqui</i>
+                    </span>
+                  </div>
+                )}
               </div>
 
               <p className="nuvem-texto miudo">
@@ -452,18 +486,6 @@ export default function NuvemConfig() {
                     </span>
                   </div>
                 </label>
-
-                {/* barra que enche: número é preciso, barra é imediata — dá pra
-                    ver de longe que está apertando, sem ler nada */}
-                {estado.creditoInformado > 0 && (
-                  <div className="freio-barra" title={`${emDolar(estado.gastoDesdeCredito)} de ${emDolar(estado.creditoInformado)}`}>
-                    <span
-                      className={`freio-cheio ${estado.gastoDesdeCredito >= estado.creditoInformado * 0.85 ? 'estourou' : ''}`}
-                      style={{ width: `${Math.min(100, (estado.gastoDesdeCredito / estado.creditoInformado) * 100)}%` }}
-                    />
-                    <span className="freio-marca" style={{ left: '85%' }} />
-                  </div>
-                )}
 
                 <p className="nuvem-texto miudo">
                   {estado.creditoInformado

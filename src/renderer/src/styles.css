@@ -10291,36 +10291,6 @@ ul.hlib-grid {
 }
 .freio-linha .nuvem-unidade strong { color: var(--accent); font-weight: 500; }
 
-/* a barra que enche: número é preciso, barra é imediata — dá pra ver de longe
-   que está apertando, sem ler nada */
-.freio-barra {
-  position: relative;
-  height: 6px;
-  margin: 14px 0 12px;
-  background: var(--bg-cava);
-  box-shadow: inset 0 0 0 1px var(--border);
-  overflow: hidden;
-}
-.freio-cheio {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--accent);
-  box-shadow: 0 0 10px rgba(182, 255, 59, 0.5);
-  transition: width 0.4s ease, background 0.3s ease;
-}
-.freio-cheio.estourou { background: var(--warn); box-shadow: 0 0 10px rgba(234, 179, 8, 0.6); }
-/* onde o app freia: a marca existe pra pessoa ver que a parada é ANTES do
-   fim, e não desconfiar que ficou sem crédito à toa */
-.freio-marca {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: var(--text-2);
-  opacity: 0.55;
-}
 
 /* --- O RECADO ---
    A nuvem pode se desligar sozinha NO MEIO de uma separação, e é justamente
@@ -10398,50 +10368,6 @@ ul.hlib-grid {
 }
 .recado-x:hover { color: var(--text); }
 
-/* --- O JORNAL DO CRÉDITO ---
-   Número sozinho não é notícia. "US$ 4,20" não diz se é muito ou pouco — quem
-   nunca usou não tem régua pra saber. A frase dá a régua: traduz o mesmo
-   número em "dá pra continuar" ou "é hora de comprar", e diz o que acontece
-   se ignorar. */
-.jornal {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin: 0 0 14px;
-  padding: 12px 14px 13px 15px;
-  background: var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-.jornal b {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-.jornal p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
-/* a luz de estado: um losango que muda de cor. Diz o nível de longe, antes de
-   qualquer palavra ser lida. */
-.jornal-luz {
-  flex: none;
-  width: 9px;
-  height: 9px;
-  margin-top: 4px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-.jornal.cheio b { color: var(--accent); }
-.jornal.cheio .jornal-luz { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.7); }
-.jornal.meio b { color: var(--stem-3); }
-.jornal.meio .jornal-luz { background: var(--stem-3); box-shadow: 0 0 10px rgba(126, 217, 122, 0.6); }
-.jornal.pouco b { color: var(--warn); }
-.jornal.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 10px rgba(234, 179, 8, 0.7); animation: jornal-bate 1.8s ease-in-out infinite; }
-.jornal.parou b { color: var(--bad); }
-.jornal.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 10px rgba(248, 113, 113, 0.7); }
-.jornal.mudo b { color: var(--muted-2); }
-.jornal.mudo .jornal-luz { background: var(--muted-2); }
-@keyframes jornal-bate { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
 /* o botão PEDE quando aperta: cor de aviso e batida devagar. Botão que muda de
    comportamento conforme a situação é o jeito de a tela falar sem escrever
    mais uma linha. */
@@ -10455,3 +10381,160 @@ ul.hlib-grid {
   0%, 100% { box-shadow: 0 0 0 rgba(234, 179, 8, 0); }
   55% { box-shadow: 0 0 24px rgba(234, 179, 8, 0.75); }
 }
+
+/* --- O JORNAL DO CRÉDITO: um cartão, não uma linha ---
+   Ele estava escrito no mesmo peso do resto e sumia entre parágrafos. Só que
+   ele é a ÚNICA peça da tela que responde "posso continuar usando?" —
+   informação que decide comportamento não pode ter o mesmo peso de informação
+   que só contextualiza.
+   Agora o cartão inteiro muda de cor com o nível: quando aperta, não é uma
+   palavra que muda, é a peça toda. Dá pra ler o estado com o olho de longe,
+   antes de qualquer texto. */
+.jornal {
+  position: relative;
+  margin: 2px 0 16px;
+  padding: 16px 18px 18px 20px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), transparent 60%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  clip-path: var(--corte-sm);
+  transition: box-shadow 0.35s ease, background 0.35s ease;
+}
+/* barra de estado na lateral, na cor do nível */
+.jornal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--muted-2);
+  transition: background 0.35s ease, box-shadow 0.35s ease;
+}
+/* colchetes: fazem a peça parecer encaixada num aparelho em vez de flutuar */
+.jornal-canto {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--border-strong);
+  pointer-events: none;
+}
+.jornal-canto.tl { top: 6px; left: 7px; border-right: none; border-bottom: none; }
+.jornal-canto.br { bottom: 6px; right: 7px; border-left: none; border-top: none; }
+
+.jornal-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.jornal b {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.jornal-risco { flex: 1; height: 1px; background: currentColor; opacity: 0.28; }
+.jornal-hachura {
+  flex: none;
+  width: 30px;
+  height: 8px;
+  background: repeating-linear-gradient(-52deg, currentColor 0 1.5px, transparent 1.5px 5px);
+  opacity: 0.4;
+}
+/* a luz de estado: um losango que muda de cor. Diz o nível de longe, antes de
+   qualquer palavra ser lida. */
+.jornal-luz {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--muted-2);
+}
+
+/* o número grande: a sobra é o que a pessoa veio ver */
+.jornal-medida { display: flex; align-items: baseline; gap: 9px; margin-bottom: 9px; }
+.jornal-sobra {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.jornal-de {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.jornal p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); max-width: 76ch; }
+
+/* a barra mora aqui, não no campo: ela é estado, não entrada */
+.jornal-barra {
+  position: relative;
+  height: 8px;
+  margin-top: 15px;
+  background: var(--bg-cava);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: visible;
+}
+.jornal-cheio {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: currentColor;
+  transition: width 0.4s ease;
+}
+/* onde o app freia, escrito na própria régua: a marca existe pra pessoa ver
+   que a parada é ANTES do fim, e não desconfiar que ficou sem crédito à toa */
+.jornal-marca {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--text-2);
+  opacity: 0.65;
+}
+.jornal-marca i {
+  position: absolute;
+  top: 12px;
+  left: -22px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+/* ▸ OS NÍVEIS. A cor é herdada por currentColor, então título, risco,
+   hachura e barra mudam juntos — uma linha por nível em vez de seis. */
+.jornal.cheio { color: var(--accent); }
+.jornal.cheio::before { background: var(--accent); box-shadow: 0 0 12px rgba(182, 255, 59, 0.5); }
+.jornal.cheio .jornal-luz { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.7); }
+
+.jornal.meio { color: var(--stem-3); }
+.jornal.meio::before { background: var(--stem-3); box-shadow: 0 0 12px rgba(126, 217, 122, 0.45); }
+.jornal.meio .jornal-luz { background: var(--stem-3); box-shadow: 0 0 10px rgba(126, 217, 122, 0.6); }
+
+/* apertando: o cartão INTEIRO esquenta, não só uma palavra */
+.jornal.pouco {
+  color: var(--warn);
+  background: linear-gradient(155deg, rgba(234, 179, 8, 0.1), transparent 62%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4);
+}
+.jornal.pouco::before { background: var(--warn); box-shadow: 0 0 14px rgba(234, 179, 8, 0.7); }
+.jornal.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 12px rgba(234, 179, 8, 0.8); animation: jornal-bate 1.8s ease-in-out infinite; }
+
+.jornal.parou {
+  color: var(--bad);
+  background: linear-gradient(155deg, rgba(248, 113, 113, 0.1), transparent 62%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.42);
+}
+.jornal.parou::before { background: var(--bad); box-shadow: 0 0 14px rgba(248, 113, 113, 0.65); }
+.jornal.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 12px rgba(248, 113, 113, 0.8); }
+
+.jornal.mudo { color: var(--muted-2); }
+.jornal.mudo .jornal-luz { background: var(--muted-2); }
+
+@keyframes jornal-bate { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
