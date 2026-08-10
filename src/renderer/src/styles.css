@@ -8110,6 +8110,19 @@ section h2::after {
   padding: 0;
   min-width: 0;
 }
+/* A CAPA: texto e marca no mesmo eixo, no meio da janela.
+   Antes o texto começava no topo e a marca ficava centrada na tela — os dois
+   certos sozinhos e errados juntos, com meia tela de vazio entre eles. Quando
+   um lado é fixo no meio, o outro tem que ir junto, senão a composição
+   quebra. */
+.palco-in.capa {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
 .palco-in {
   position: relative;
   padding: 54px 46px 60px;
