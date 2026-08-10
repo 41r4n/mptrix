@@ -134,8 +134,12 @@ export function informarCredito(centavos) {
   store.set('nuvem.creditoInformado', v)
   store.set('nuvem.gastoDesdeCredito', 0)
   // dizer que pôs crédito é dizer que a parede caiu: religa o que foi
-  // desligado por falta de dinheiro
-  if (store.get('nuvem.paradaPor') === 'sem-credito') store.set('nuvem.paradaPor', null)
+  // desligado por dinheiro, seja recusa do serviço ou freio meu
+  const motivo = store.get('nuvem.paradaPor')
+  if (motivo === 'sem-credito' || motivo === 'freio-credito') {
+    store.set('nuvem.paradaPor', null)
+    store.set('nuvem.ligada', true)
+  }
   return getNuvem()
 }
 
@@ -227,8 +231,19 @@ const FOLGA_CREDITO = 0.85
 export function usarNuvem() {
   const n = getNuvem()
   if (!n.ligada || !n.temChave) return false
-  if (n.tetoCentavos > 0 && gastoCentavos() >= n.tetoCentavos) return false
-  if (n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO) return false
+
+  // FREIO BATEU: desliga e DIZ. Antes ele só devolvia "não" — a separação
+  // seguia local, calada, e a pessoa ficava sem entender por que de repente
+  // demorava minutos de novo. Parar sem avisar é o mesmo que quebrar sem
+  // avisar: quem está do outro lado só vê o comportamento mudar sozinho.
+  if (n.tetoCentavos > 0 && gastoCentavos() >= n.tetoCentavos) {
+    desligarNuvemPor('teto-do-mes')
+    return false
+  }
+  if (n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO) {
+    desligarNuvemPor('freio-credito')
+    return false
+  }
   return true
 }
 

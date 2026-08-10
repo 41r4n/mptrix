@@ -270,15 +270,33 @@ export default function NuvemConfig() {
                   de novo. Agora ele desliga, volta a separar aqui, e diz por
                   quê — que é a única forma dessa proteção não depender de
                   alguém configurar coisa nenhuma. */}
-              {estado.paradaPor === 'sem-credito' && (
+              {estado.paradaPor && (
                 <div className="nuvem-parou">
                   <b>desliguei a nuvem sozinho</b>
-                  <p>
-                    O Replicate recusou o último trabalho por falta de crédito, então
-                    parei de pedir e voltei a separar aqui no seu computador — sem isso
-                    cada separação ia esperar e falhar de novo. Quando puser crédito lá,
-                    é só marcar "Na nuvem" de novo aqui embaixo.
-                  </p>
+                  {estado.paradaPor === 'freio-credito' && (
+                    <p>
+                      Seu crédito estava quase no fim, então parei <strong>antes</strong> de
+                      acabar e voltei a separar aqui no seu computador. É pra isso que
+                      serve o número que você me deu — assim você não fica devendo e a
+                      conta não é suspensa. Comprou mais? Atualize o valor aí embaixo que
+                      eu volto sozinho.
+                    </p>
+                  )}
+                  {estado.paradaPor === 'sem-credito' && (
+                    <p>
+                      O Replicate recusou o último trabalho por falta de crédito, então
+                      parei de pedir e voltei a separar aqui no seu computador — sem isso
+                      cada separação ia esperar e falhar de novo. Quando puser crédito lá,
+                      me diga o valor aí embaixo que eu volto sozinho.
+                    </p>
+                  )}
+                  {estado.paradaPor === 'teto-do-mes' && (
+                    <p>
+                      Você chegou no teto que marcou pra este mês, então voltei a separar
+                      aqui no computador. No dia 1º o contador zera e a nuvem volta
+                      sozinha — ou você sobe o teto agora, se quiser continuar.
+                    </p>
+                  )}
                 </div>
               )}
 
