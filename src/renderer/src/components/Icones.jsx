@@ -28,11 +28,11 @@ const D = {
   buscar: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
   calendario: <><rect width="18" height="17" x="3" y="4" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></>,
-  // A AMPULHETA do Omnitrix: silhueta cheia, com as laterais CÔNCAVAS.
-  // A primeira versão que fiz era de traço fino e reto — parecia ícone de
-  // "carregando", não a marca. O que faz a marca ser reconhecida é o vão
-  // curvo apertando o meio, não o contorno.
-  ampulheta: <path fill="currentColor" stroke="none" d="M5.4 2h13.2c0 4.6-4.6 7.6-4.6 10s4.6 5.4 4.6 10H5.4c0-4.6 4.6-7.6 4.6-10S5.4 6.6 5.4 2Z" />,
+  // A AMPULHETA do Omnitrix: silhueta cheia e ANGULOSA — duas cunhas retas se
+  // encontrando num pescoço fino. Já foi de traço fino (parecia ícone de
+  // "carregando") e já foi de lateral curva (ficava com cara de taça). O que
+  // dá personalidade a essa marca é a quina, não a curva.
+  ampulheta: <path fill="currentColor" stroke="none" d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z" />,
   // a estrela vem em duas: vazia e o convite, cheia e a marca. Mesma
   // silhueta, senao o item pula de forma ao ser favoritado.
   estrela: <path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.8l6.5-.9L12 3z" />,

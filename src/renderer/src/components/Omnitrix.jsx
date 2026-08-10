@@ -100,7 +100,11 @@ function meio(i, total, raio) {
 // cima — que é o carregador do relógio, não areia de ampulheta. O furo fica
 // preto o tempo todo, e é por isso que a marca se lê de longe.
 const HEX = 'M50 4 L93 29 L93 81 L50 106 L7 81 L7 29 Z'
-const AMPULHETA_D = 'M5.4 2h13.2c0 4.6-4.6 7.6-4.6 10s4.6 5.4 4.6 10H5.4c0-4.6 4.6-7.6 4.6-10S5.4 6.6 5.4 2Z'
+// Aresta reta, não curva. A primeira versão tinha as laterais em curva e
+// ficava com cara de taça — o símbolo do relógio é anguloso: duas cunhas
+// retas se encontrando num pescoço fino. Curva suaviza, e o que dá
+// personalidade a essa marca é justamente a quina.
+const AMPULHETA_D = 'M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z'
 // leva a ampulheta de 24x24 pro meio do hexágono de 100x110
 const AMPULHETA_POSE = 'translate(17.6 22.6) scale(2.7)'
 
