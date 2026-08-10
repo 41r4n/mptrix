@@ -8642,12 +8642,10 @@ ul.hlib-grid {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* parada ela não é botão: não clica, não muda o cursor, não intercepta o
-     ponteiro de quem está lendo o texto do palco */
-  pointer-events: none;
-  cursor: default;
+  /* ela clica sempre: sem link ainda abre música do computador e ainda pede
+     o endereço pra baixar. O link é estado, não permissão. */
+  cursor: pointer;
 }
-.marca.armada { pointer-events: auto; cursor: pointer; }
 
 .marca-svg {
   width: 100%;
@@ -8655,39 +8653,49 @@ ul.hlib-grid {
   overflow: visible;
   transition: filter 0.3s ease;
 }
-/* a ampulheta apagada: o mesmo fantasma discreto que a marca d'água sempre foi */
-.marca-fantasma { fill: var(--accent); opacity: 0.055; }
-/* a lima cheia, que só aparece dentro do retângulo da areia */
+/* a chapa apagada: o mesmo fantasma discreto que a marca d'água sempre foi */
+.marca-fantasma { fill: var(--accent); opacity: 0.07; }
+/* a chapa acesa, que só aparece dentro do retângulo da carga */
 .marca-cheia { fill: var(--accent); }
-/* O NÍVEL DA AREIA. Vazio = retângulo de altura zero no pé da ampulheta.
-   Chromium anima y e height de retângulo como propriedade de estilo, então
-   encher é uma transição normal — nada de contar quadro no JavaScript. */
+/* o aro sobrevive mesmo com a chapa apagada, então a marca nunca some de vez */
+.marca-aro {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  opacity: 0.18;
+  transition: opacity 0.3s ease, stroke-width 0.3s ease;
+}
+/* O NÍVEL DA CARGA. Vazio = retângulo de altura zero no pé da chapa. */
 .marca-nivel {
-  y: 24px;
+  y: 110px;
   height: 0px;
   transition: y 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), height 0.55s cubic-bezier(0.3, 0.9, 0.3, 1);
 }
 
-/* ARMADA: um dedo de areia no fundo e a batida devagar. NÃO enche — encher é
-   resposta à mão, e prometer antes da mão chegar é o mesmo erro de piscar sem
-   ter o quê mostrar. */
-.marca.armada .marca-fantasma { opacity: 0.1; }
-.marca.armada .marca-nivel { y: 19px; height: 5px; }
+/* ARMADA: um dedo de carga no fundo, o aro firma e a batida começa. NÃO
+   enche — encher é resposta à mão, e prometer antes da mão chegar é o mesmo
+   erro de piscar sem ter o quê mostrar. */
+.marca.armada .marca-fantasma { opacity: 0.13; }
+.marca.armada .marca-aro { opacity: 0.5; }
+.marca.armada .marca-nivel { y: 86px; height: 24px; }
 .marca.armada .marca-svg { animation: marca-bate 2.4s ease-in-out infinite; }
 @keyframes marca-bate {
   0%, 70%, 100% { filter: drop-shadow(0 0 0 rgba(182, 255, 59, 0)); }
-  85% { filter: drop-shadow(0 0 26px rgba(182, 255, 59, 0.5)); }
+  85% { filter: drop-shadow(0 0 30px rgba(182, 255, 59, 0.55)); }
 }
 
-/* CHEIA: a mão chegou, a areia sobe até o topo. */
-.marca.armada:hover .marca-svg,
-.marca.armada:focus-visible .marca-svg {
+/* CHEIA: a mão chegou, a chapa carrega até em cima e a ampulheta preta salta
+   do lima — que é o momento em que a marca vira o relógio de verdade. */
+.marca:hover .marca-svg,
+.marca:focus-visible .marca-svg {
   animation: none;
-  filter: drop-shadow(0 0 36px rgba(182, 255, 59, 0.6));
+  filter: drop-shadow(0 0 40px rgba(182, 255, 59, 0.65));
 }
-.marca.armada:hover .marca-nivel,
-.marca.armada:focus-visible .marca-nivel { y: 0px; height: 24px; }
-.marca.armada:active .marca-svg { transform: scale(0.97); }
+.marca:hover .marca-nivel,
+.marca:focus-visible .marca-nivel { y: 0px; height: 110px; }
+.marca:hover .marca-aro,
+.marca:focus-visible .marca-aro { opacity: 1; stroke-width: 2; }
+.marca:active .marca-svg { transform: scale(0.97); }
 
 .marca-fala {
   position: absolute;

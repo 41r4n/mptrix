@@ -88,16 +88,21 @@ function meio(i, total, raio) {
   return [CENTRO + raio * Math.cos(ang), CENTRO + raio * Math.sin(ang)]
 }
 
-// A silhueta, uma vez só, pra marca e núcleo desenharem a MESMA ampulheta.
-const AMPULHETA = 'M5.4 2h13.2c0 4.6-4.6 7.6-4.6 10s4.6 5.4 4.6 10H5.4c0-4.6 4.6-7.6 4.6-10S5.4 6.6 5.4 2Z'
-
-// mm:ss — duração só ajuda se for legível de relance
-function relogio(seg) {
-  if (!seg && seg !== 0) return null
-  const m = Math.floor(seg / 60)
-  const s = Math.round(seg % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
+// A MARCA, desenhada como o relógio de verdade.
+//
+// Eu tinha feito ao contrário: ampulheta lima desenhada no escuro. No
+// Omnitrix é o oposto — a CHAPA acende e a ampulheta é o vazio preto por
+// cima dela. Essa inversão é a marca inteira: sem a chapa acesa a silhueta
+// vira um risco verde no escuro, que foi exatamente o que ficou.
+//
+// Então a chapa é um hexágono (a forma da casa) e a ampulheta é um furo nela,
+// feito com máscara. O que "enche" agora é a CHAPA, subindo de baixo pra
+// cima — que é o carregador do relógio, não areia de ampulheta. O furo fica
+// preto o tempo todo, e é por isso que a marca se lê de longe.
+const HEX = 'M50 4 L93 29 L93 81 L50 106 L7 81 L7 29 Z'
+const AMPULHETA_D = 'M5.4 2h13.2c0 4.6-4.6 7.6-4.6 10s4.6 5.4 4.6 10H5.4c0-4.6 4.6-7.6 4.6-10S5.4 6.6 5.4 2Z'
+// leva a ampulheta de 24x24 pro meio do hexágono de 100x110
+const AMPULHETA_POSE = 'translate(17.6 22.6) scale(2.7)'
 
 export default function Omnitrix({ ligado = true, onEscolher }) {
   const [link, setLink] = useState(null)
@@ -234,21 +239,33 @@ export default function Omnitrix({ ligado = true, onEscolher }) {
           ? `Link copiado de ${link.host} — escolher o que fazer`
           : 'Abrir a roda. Com um link copiado ela já vem carregada.'}
       >
-        <svg className="marca-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <svg className="marca-svg" viewBox="0 0 100 110" aria-hidden="true">
           <defs>
-            {/* A AREIA. Duas ampulhetas iguais, empilhadas: a de baixo é o
-                fantasma apagado, a de cima é lima cheia e só aparece dentro
-                deste retângulo. Encher é subir o retângulo.
+            {/* A ampulheta é um FURO na chapa, não um desenho por cima: é
+                assim no relógio, e é o que faz a marca ser reconhecida. */}
+            <mask id="marca-chapa">
+              <path d={HEX} fill="#fff" />
+              <path d={AMPULHETA_D} transform={AMPULHETA_POSE} fill="#000" />
+            </mask>
+            {/* O NÍVEL DA CARGA. Vazio = retângulo de altura zero no pé.
+                Chromium anima y e height de retângulo como propriedade de
+                estilo, então encher é transição normal — nada de contar
+                quadro no JavaScript.
                 Não usei degradê com o ponto de corte animado porque "offset"
-                não é propriedade que o navegador saiba animar em parada de
-                degradê — no Chromium esse nome pertence ao caminho de
-                movimento. Altura de retângulo ele anima. */}
-            <clipPath id="marca-areia" clipPathUnits="userSpaceOnUse">
-              <rect className="marca-nivel" x="0" width="24" />
+                não é propriedade animável em parada de degradê: no Chromium
+                esse nome pertence ao caminho de movimento. */}
+            <clipPath id="marca-carga">
+              <rect className="marca-nivel" x="0" width="100" />
             </clipPath>
           </defs>
-          <path d={AMPULHETA} className="marca-fantasma" />
-          <path d={AMPULHETA} className="marca-cheia" clipPath="url(#marca-areia)" />
+
+          <g mask="url(#marca-chapa)">
+            <rect className="marca-fantasma" x="0" y="0" width="100" height="110" />
+            <rect className="marca-cheia" x="0" y="0" width="100" height="110" clipPath="url(#marca-carga)" />
+          </g>
+          {/* aro por fora: dá borda à chapa e sobrevive mesmo com ela apagada,
+              então a marca nunca some de vez */}
+          <path d={HEX} className="marca-aro" />
         </svg>
         {armada && <span className="marca-fala">{link.host}</span>}
       </button>
