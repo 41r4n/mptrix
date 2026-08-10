@@ -235,9 +235,6 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                 leitura de painel do estúdio, e o display:flex dela jogava tudo
                 numa linha só. */}
             <div className="mostra">
-              <span className="mostra-canto tl" aria-hidden="true" />
-              <span className="mostra-canto bl" aria-hidden="true" />
-
               <div className="mostra-alvo">
                 {/* A CAPA. O painel perguntava "é isso mesmo que você copiou?"
                     sem mostrar nada — e a imagem é justamente como a pessoa
@@ -266,7 +263,7 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                         : 'não deu pra ler o nome — o download funciona igual'}
                   </i>
                 </span>
-                <span className="mostra-esc">esc</span>
+                <span className="mostra-esc">esc fecha</span>
               </div>
 
               <div className="mostra-forma">
