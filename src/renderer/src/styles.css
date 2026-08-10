@@ -3971,6 +3971,9 @@ section h2 {
 }
 
 /* ---------- Lupinha (zoom da interface) ---------- */
+/* A LUPA. Ficou pra trás quando o resto virou console: pastilha arredondada,
+   botões redondos e um emoji de lupa que muda de desenho conforme o Windows.
+   Agora fala a mesma língua — canto reto, mono, poço cavado. */
 .zoom-chip {
   position: fixed;
   bottom: 14px;
@@ -3978,43 +3981,54 @@ section h2 {
   z-index: 95;
   display: flex;
   align-items: center;
-  gap: 3px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  padding: 4px 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  gap: 2px;
+  background: var(--bg-cava);
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--border-control), 0 10px 28px rgba(0, 0, 0, 0.6);
+  padding: 3px 8px 3px 9px;
 }
 
 .zoom-lupa {
-  font-size: 12px;
-  margin-right: 2px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-2);
+  margin-right: 4px;
 }
 
 .zoom-btn {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--border-control);
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
   background: transparent;
-  color: var(--text-2);
+  color: var(--muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
+  transition: color 0.13s ease, box-shadow 0.13s ease, background 0.13s ease;
 }
 
 .zoom-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
+/* o número não tem moldura: ele é leitura, e só vira ação no hover — borda em
+   volta de texto quer dizer clicável, e aqui o clique é o atalho pra voltar
+   ao normal, não a função principal da peça */
 .zoom-pct {
   border: none;
   background: transparent;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 11px;
-  min-width: 40px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  min-width: 42px;
   cursor: pointer;
+  transition: color 0.13s ease;
 }
 
 .zoom-pct:hover {
@@ -8632,24 +8646,28 @@ ul.hlib-grid {
 
 .marca {
   position: absolute;
-  right: -22px;
-  bottom: -40px;
-  width: 320px;
-  height: 320px;
+  right: 6px;
+  bottom: 10px;
+  width: 260px;
   padding: 0;
   border: none;
   background: none;
+  /* COLUNA, não empilhamento. O rótulo estava pendurado com posição absoluta
+     dentro da caixa e caía em cima do hexágono — de novo número na mão contra
+     conteúdo que muda. Em coluna o desenho ocupa o que precisa e o texto vem
+     depois, sem cruzar com nada. */
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
   /* ela clica sempre: sem link ainda abre música do computador e ainda pede
      o endereço pra baixar. O link é estado, não permissão. */
   cursor: pointer;
 }
 
 .marca-svg {
-  width: 100%;
-  height: 100%;
+  width: 190px;
+  height: 209px;
   overflow: visible;
   transition: filter 0.3s ease;
 }
@@ -8675,9 +8693,12 @@ ul.hlib-grid {
 /* ARMADA: um dedo de carga no fundo, o aro firma e a batida começa. NÃO
    enche — encher é resposta à mão, e prometer antes da mão chegar é o mesmo
    erro de piscar sem ter o quê mostrar. */
-.marca.armada .marca-fantasma { opacity: 0.13; }
+.marca.armada .marca-fantasma { opacity: 0.22; }
 .marca.armada .marca-aro { opacity: 0.5; }
-.marca.armada .marca-nivel { y: 86px; height: 24px; }
+/* ARMADA NÃO CARREGA. A carga parcial pegava só a ponta de baixo do
+   hexágono e saía como um triângulo lima solto — forma que não quer dizer
+   nada. Quem avisa aqui é o aro e a batida; a carga fica inteira pro hover,
+   onde ela vai de zero a cheia e aí a leitura é clara. */
 .marca.armada .marca-svg { animation: marca-bate 2.4s ease-in-out infinite; }
 @keyframes marca-bate {
   0%, 70%, 100% { filter: drop-shadow(0 0 0 rgba(182, 255, 59, 0)); }
@@ -8698,10 +8719,6 @@ ul.hlib-grid {
 .marca:active .marca-svg { transform: scale(0.97); }
 
 .marca-fala {
-  position: absolute;
-  bottom: 58px;
-  left: 50%;
-  transform: translateX(-50%);
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;

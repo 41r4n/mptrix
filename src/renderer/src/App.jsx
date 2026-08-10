@@ -23,7 +23,7 @@ function ZoomChip() {
   if (!window.mptrix.ui) return null
   return (
     <div className="zoom-chip" title="Tamanho da tela — atalhos: Ctrl+= aproxima, Ctrl+- afasta, Ctrl+0 normal">
-      <span className="zoom-lupa">🔍</span>
+      <span className="zoom-lupa" aria-hidden="true"><Ico nome="buscar" tamanho={12} /></span>
       <button className="zoom-btn" onClick={() => window.mptrix.ui.zoom(-1)} aria-label="Diminuir tela">−</button>
       <button className="zoom-pct" onClick={() => window.mptrix.ui.zoom(0)} title="Clique pra voltar ao tamanho normal">
         {Math.round(z * 100)}%
