@@ -566,7 +566,12 @@ function summarizeFormats(info) {
   return {
     title: info.title || '(sem título)',
     duration: info.duration || null,
-    thumbnail: info.thumbnail || null,
+    // capa: alguns sites nao preenchem o campo direto, mas mandam a lista.
+    // A ultima e a maior — yt-dlp entrega em ordem crescente de tamanho.
+    thumbnail: info.thumbnail
+      || (Array.isArray(info.thumbnails) && info.thumbnails.length
+        ? info.thumbnails[info.thumbnails.length - 1].url
+        : null),
     uploader: info.uploader || info.channel || null,
     qualities
   }

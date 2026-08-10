@@ -113,7 +113,11 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
     if (!aberta || !link) return
     const url = link.url
     const guardado = infoCache.current[url]
-    if (guardado) { setInfo(guardado); return }
+    // "thumbnail" AUSENTE não é o mesmo que "thumbnail vazio": ausente quer
+    // dizer que este endereço foi consultado quando eu ainda nem guardava a
+    // capa, e o guardado velho ficaria pra sempre sem ela. Cache tem que se
+    // curar sozinho quando o que a gente guarda muda de forma.
+    if (guardado && 'thumbnail' in guardado) { setInfo(guardado); return }
     setInfo(null)
     setBuscando(true)
     let vivo = true
