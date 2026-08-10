@@ -121,6 +121,12 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
   // título custa uma chamada de rede pelo yt-dlp; fazer isso a cada link
   // copiado seria gastar banda por conta própria pra 90% dos links que a
   // pessoa nem vai baixar. Abrir a roda é intenção declarada.
+  //
+  // E A PERGUNTA MUDA CONFORME O LINK. A consulta de vídeo roda com
+  // "--no-playlist": num endereço de playlist pura não existe vídeo nenhum
+  // pra ela descrever, e ela voltava de mãos vazias — era por isso que o
+  // mostrador dizia "não deu pra ler o nome" numa playlist inteira. Playlist
+  // tem consulta própria, que devolve o nome da lista e quantas músicas tem.
   useEffect(() => {
     if (!aberta || !link) return
     const url = link.url
@@ -133,21 +139,49 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
     setInfo(null)
     setBuscando(true)
     let vivo = true
-    window.mptrix.video.probe(url)
-      .then((r) => {
-        if (!vivo) return
-        const i = r?.info
-          ? { title: r.info.title, uploader: r.info.uploader, duration: r.info.duration, thumbnail: r.info.thumbnail }
-          : null
-        if (i) infoCache.current[url] = i
-        setInfo(i)
+
+    const guardar = (i) => {
+      if (!vivo) return
+      if (i) infoCache.current[url] = i
+      setInfo(i)
+    }
+
+    const pedido = soLista
+      ? window.mptrix.playlist.probe(url).then((r) => {
+        const pl = r?.playlist || r?.info || r
+        if (!pl?.title) return null
+        const n = pl.totalCount || pl.entries?.length || 0
+        return {
+          title: pl.title,
+          uploader: n ? `${n} música${n !== 1 ? 's' : ''}` : null,
+          duration: null,
+          // a capa da lista é a capa da primeira música: playlist não tem
+          // imagem própria, e a primeira é a que a pessoa viu ao copiar
+          thumbnail: pl.entries?.[0]?.thumbnail || null,
+          lista: true
+        }
       })
+      : window.mptrix.video.probe(url).then((r) => (r?.info
+        ? { title: r.info.title, uploader: r.info.uploader, duration: r.info.duration, thumbnail: r.info.thumbnail }
+        : null))
+
+    pedido
+      .then(guardar)
       .catch(() => { /* sem nome: o endereço do site continua ali */ })
       .finally(() => { if (vivo) setBuscando(false) })
     return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberta, link])
 
   const armada = !!link && ligado
+
+  // playlist PURA: endereço de lista sem nenhum vídeo apontado. Se tem "v=",
+  // é uma música que por acaso está dentro de uma lista — e aí quem a pessoa
+  // copiou foi a música.
+  const soLista = (() => {
+    if (!link?.playlist) return false
+    try { return !new URL(link.url).searchParams.get('v') } catch { return false }
+  })()
 
   // playlist copiada abre já apontando pro formato de playlist: baixar 40
   // músicas uma a uma seria castigo

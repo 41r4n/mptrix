@@ -49,7 +49,9 @@ export const PRESETS = {
   playlist: {
     id: 'playlist',
     name: 'Playlist (MP3)',
-    description: 'Baixa todas as músicas de uma playlist em MP3.',
+    // "todas" nao era verdade: a tela de playlist deixa marcar e desmarcar
+    // uma a uma. Prometer todas assusta quem quer tres musicas de cem.
+    description: 'Abre a lista pra você escolher quais músicas quer, e baixa em MP3.',
     outputExt: 'mp3',
     needsQualityChoice: false,
     args: () => [
