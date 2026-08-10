@@ -121,7 +121,7 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
       .then((r) => {
         if (!vivo) return
         const i = r?.info
-          ? { title: r.info.title, uploader: r.info.uploader, duration: r.info.duration }
+          ? { title: r.info.title, uploader: r.info.uploader, duration: r.info.duration, thumbnail: r.info.thumbnail }
           : null
         if (i) infoCache.current[url] = i
         setInfo(i)
@@ -228,21 +228,32 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
               <span className="mostra-canto bl" aria-hidden="true" />
 
               <div className="mostra-alvo">
-                <span className={`mostra-led ${info?.title ? 'ok' : buscando ? 'busca' : ''}`} aria-hidden="true" />
+                {/* A CAPA. O painel perguntava "é isso mesmo que você copiou?"
+                    sem mostrar nada — e a imagem é justamente como a pessoa
+                    reconhece uma música antes de ler o nome. Ela já vinha na
+                    mesma resposta que trouxe o título; eu é que estava
+                    jogando fora. */}
+                <span className={`mostra-capa ${info?.thumbnail ? 'tem' : ''}`}>
+                  {info?.thumbnail
+                    ? <img src={info.thumbnail} alt="" referrerPolicy="no-referrer" />
+                    : <Ico nome="ampulheta" tamanho={26} />}
+                  <i className="mostra-mira tl" aria-hidden="true" />
+                  <i className="mostra-mira br" aria-hidden="true" />
+                  {buscando && <i className="mostra-varredura" aria-hidden="true" />}
+                </span>
                 <span className="mostra-alvo-txt">
-                  {info?.title ? (
-                    <>
-                      <b>{info.title}</b>
-                      <i>{[info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')}</i>
-                    </>
-                  ) : (
-                    <>
-                      <b className={buscando ? 'mostra-piscando' : ''}>
-                        {buscando ? 'lendo o endereço…' : (link?.host || '')}
-                      </b>
-                      <i>{buscando ? 'buscando nome, canal e duração' : 'não deu pra ler o nome — o download funciona igual'}</i>
-                    </>
-                  )}
+                  <b className={!info?.title && buscando ? 'mostra-piscando' : ''}>
+                    {info?.title || (buscando ? 'lendo o endereço…' : (link?.host || ''))}
+                  </b>
+                  <i>
+                    {/* a lanterninha mora na linha da ficha: lima achou o
+                        nome, âmbar procurando, apagada não deu */}
+                    <span className={`mostra-led ${info?.title ? 'ok' : buscando ? 'busca' : ''}`} aria-hidden="true" />
+                    {info?.title
+                      ? [info.uploader, relogio(info.duration), link?.host].filter(Boolean).join('  ·  ')
+                      : buscando ? 'buscando nome, canal e duração'
+                        : 'não deu pra ler o nome — o download funciona igual'}
+                  </i>
                 </span>
                 <span className="mostra-esc">esc</span>
               </div>
