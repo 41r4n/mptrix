@@ -229,10 +229,10 @@ export default function App() {
                 perdeu — mudou de porta. Ter um botão grande na cara pra UMA
                 das quatro formas de começar era dar a ele um peso que as
                 outras três não tinham. */}
-            <p className="palco-nota">
-              Toque a ampulheta pra começar — do link copiado, de um arquivo
-              seu, ou pelo botão de estúdio de qualquer item do acervo.
-            </p>
+            {/* curto de propósito: a roda já mostra as quatro entradas quando
+                abre, e explicar as três aqui só fazia a linha crescer até
+                encostar na marca */}
+            <p className="palco-nota">Toque a ampulheta pra começar.</p>
             {/* A marca d'água daqui era desenho morto — enfeite pra dar peso ao
                 palco. Agora ela É o relógio: parada sem link, batendo quando
                 acha um, enchendo quando a mão chega. */}

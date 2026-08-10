@@ -8151,14 +8151,24 @@ section h2::after {
   vertical-align: middle;
   margin-left: 10px;
 }
+/* TETO DE LARGURA PRO TEXTO DO PALCO. A marca mora na metade direita, e sem
+   teto qualquer frase mais longa cresce até encostar nela — foi o que
+   aconteceu. Com o teto, o encontro deixa de depender de quem escreve a
+   frase. */
 .palco-linha {
   margin: 0 0 20px;
   font-size: 14.5px;
   line-height: 1.6;
   color: var(--muted);
-  max-width: 54ch;
+  max-width: min(54ch, 52%);
 }
-.palco-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 26px; }
+.palco-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 26px;
+  max-width: min(60ch, 56%);
+}
 .palco-etiquetas i {
   font-style: normal;
   font-family: var(--font-mono);
@@ -8170,7 +8180,7 @@ section h2::after {
   padding: 5px 9px;
   clip-path: var(--corte-sm);
 }
-.palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); }
+.palco-nota { margin: 12px 0 0; font-size: 12px; color: var(--muted-2); max-width: min(48ch, 50%); }
 .search-icon { display: inline-flex; align-items: center; color: var(--muted-2); }
 
 /* ██████████ ACERVO — cartão com capa de verdade ██████████
@@ -8646,9 +8656,13 @@ ul.hlib-grid {
 
 .marca {
   position: absolute;
-  right: 6px;
-  bottom: 10px;
-  width: 260px;
+  /* CENTRADA na altura do bloco de texto, não pendurada na quina de baixo.
+     E o texto do palco ganhou teto de largura (--texto-max) pra nunca chegar
+     perto dela: encostar era questão de alguém escrever uma frase maior. */
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 330px;
   padding: 0;
   border: none;
   background: none;
@@ -8666,8 +8680,8 @@ ul.hlib-grid {
 }
 
 .marca-svg {
-  width: 190px;
-  height: 209px;
+  width: 270px;
+  height: 297px;
   overflow: visible;
   transition: filter 0.3s ease;
 }
