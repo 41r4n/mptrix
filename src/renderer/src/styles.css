@@ -8655,11 +8655,14 @@ ul.hlib-grid {
      cheia   — mão em cima. A areia sobe até encher, e aí pode apertar. */
 
 .marca {
-  position: absolute;
-  /* CENTRADA na altura do bloco de texto, não pendurada na quina de baixo.
-     E o texto do palco ganhou teto de largura (--texto-max) pra nunca chegar
-     perto dela: encostar era questão de alguém escrever uma frase maior. */
-  right: -8px;
+  /* CENTRADA NA JANELA, não no bloco de texto. Eu tinha usado top: 50% dentro
+     do palco — só que o palco tem a altura do TEXTO (uns 420px), e metade
+     disso cai lá em cima numa tela alta. Centrar em relação a uma caixa que
+     não é a tela não centra em nada.
+     Fixa resolve: ela não tem altura de conteúdo pra herdar, e como a marca
+     só existe nesta aba, não sobra nada dela em lugar nenhum. */
+  position: fixed;
+  right: 7vw;
   top: 50%;
   transform: translateY(-50%);
   width: 330px;
@@ -8732,8 +8735,20 @@ ul.hlib-grid {
 .marca:focus-visible .marca-aro { opacity: 1; stroke-width: 2; }
 .marca:active .marca-svg { transform: scale(0.97); }
 
+/* janela estreita: a marca encolhe e chega mais pra borda, pra nunca disputar
+   espaço com o texto do palco */
+@media (max-width: 1280px) {
+  .marca { right: 3vw; width: 240px; }
+  .marca-svg { width: 200px; height: 220px; }
+}
+@media (max-width: 1040px) {
+  .marca { right: 1.5vw; width: 180px; }
+  .marca-svg { width: 150px; height: 165px; }
+  .marca-fala { display: none; }
+}
+
 .marca-fala {
-  max-width: 220px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
