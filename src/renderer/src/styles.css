@@ -7701,6 +7701,10 @@ section h2::after {
 /* corte de canto: a forma-assinatura do kit, como variável pra ser a mesma em
    todo lugar */
 :root {
+  /* largura do trilho, uma vez só: a marca precisa dela pra achar o meio da
+     área de trabalho, e dois números iguais escritos em lugares diferentes
+     saem do lugar assim que alguém mexe num deles */
+  --trilho-w: 232px;
   --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
@@ -7987,7 +7991,7 @@ section h2::after {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: var(--trilho-w) 1fr;
   gap: 0;
   min-height: 100vh;
   align-items: stretch;
@@ -8109,19 +8113,6 @@ section h2::after {
   overflow-x: hidden;
   padding: 0;
   min-width: 0;
-}
-/* A CAPA: texto e marca no mesmo eixo, no meio da janela.
-   Antes o texto começava no topo e a marca ficava centrada na tela — os dois
-   certos sozinhos e errados juntos, com meia tela de vazio entre eles. Quando
-   um lado é fixo no meio, o outro tem que ir junto, senão a composição
-   quebra. */
-.palco-in.capa {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding-top: 40px;
-  padding-bottom: 40px;
 }
 .palco-in {
   position: relative;
@@ -8675,9 +8666,12 @@ ul.hlib-grid {
      Fixa resolve: ela não tem altura de conteúdo pra herdar, e como a marca
      só existe nesta aba, não sobra nada dela em lugar nenhum. */
   position: fixed;
-  right: 7vw;
+  /* No meio da área de trabalho — a metade da janela DESCONTANDO o trilho.
+     Centrar em 50% da janela jogaria ela pra esquerda do centro visível,
+     porque os 232px do trilho não fazem parte do palco. */
+  left: calc(var(--trilho-w) + (100vw - var(--trilho-w)) / 2);
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   width: 330px;
   padding: 0;
   border: none;
@@ -8751,11 +8745,11 @@ ul.hlib-grid {
 /* janela estreita: a marca encolhe e chega mais pra borda, pra nunca disputar
    espaço com o texto do palco */
 @media (max-width: 1280px) {
-  .marca { right: 3vw; width: 240px; }
+  .marca { width: 240px; }
   .marca-svg { width: 200px; height: 220px; }
 }
 @media (max-width: 1040px) {
-  .marca { right: 1.5vw; width: 180px; }
+  .marca { width: 180px; }
   .marca-svg { width: 150px; height: 165px; }
   .marca-fala { display: none; }
 }

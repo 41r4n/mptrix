@@ -213,11 +213,7 @@ export default function App() {
         )}
 
         {aba === 'estudio' && (
-          /* "capa" porque esta tela é capa de revista, não formulário: pouco
-             conteúdo e muito ar. Sem centrar, o texto ficava colado no topo,
-             a marca no meio da janela, e sobrava meia tela de vazio entre os
-             dois — o vazio virava o assunto. */
-          <div className="palco-in capa">
+          <div className="palco-in">
             <p className="palco-olho">01 / ESTÚDIO DE ENSAIO <span className="beta-tag">BETA</span></p>
             <h1 className="palco-titulo">Separar<br />instrumentos</h1>
             <p className="palco-linha">
