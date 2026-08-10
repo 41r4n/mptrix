@@ -142,7 +142,7 @@ function RunProgress({ stages, progress, elapsedSec, filesCount, lastLog, estima
   )
 }
 
-export default function DownloadModal({ preset, outputDir, onClose, onPickFolder, history, urlInicial }) {
+export default function DownloadModal({ preset, outputDir, onClose, onPickFolder, history, urlInicial, aoConcluir }) {
   // link vindo da roda: a pessoa ja copiou la fora, colar de novo aqui seria
   // pedir duas vezes a mesma coisa
   const [url, setUrl] = useState(urlInicial || '')
@@ -165,6 +165,14 @@ export default function DownloadModal({ preset, outputDir, onClose, onPickFolder
   const pendingIssueRef = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  // QUEM PEDIU SEPARAÇÃO não pediu um arquivo na pasta: pediu a música aberta
+  // no estúdio. Baixar é meio, não fim — então, terminado o download, este
+  // modal sai da frente e entrega o arquivo pra quem mandou.
+  useEffect(() => {
+    if (state === STATES.DONE && aoConcluir && primaryFile) aoConcluir(primaryFile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, primaryFile])
 
   useEffect(() => {
     const offProgress = window.mptrix.download.onProgress((p) => {

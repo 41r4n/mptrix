@@ -53,6 +53,8 @@ export default function App() {
   const [activePreset, setActivePreset] = useState(null)
   // link que a roda entregou, pra chegar ja preenchido no modal
   const [urlDaRoda, setUrlDaRoda] = useState(null)
+  // quando a roda pede SEPARAR, o download deixa de ser o fim e vira o meio
+  const [rodaPediuEstudio, setRodaPediuEstudio] = useState(false)
   const [history, setHistory] = useState([])
   const [studioSource, setStudioSource] = useState(null)
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
@@ -239,8 +241,15 @@ export default function App() {
               ligado={binariesOk}
               presets={presets}
               onEscolher={(presetId, url) => {
-                const p = presets.find((x) => x.id === presetId)
+                // SEPARAR não é formato, é destino. Ele baixa em M4A porque
+                // essa é a faixa NATIVA do YouTube, sem reconversão — passar
+                // por MP3 antes de separar jogaria fora informação que o
+                // separador usa, e quem quer os instrumentos quer o material
+                // mais limpo possível.
+                const querEstudio = presetId === 'separar'
+                const p = presets.find((x) => x.id === (querEstudio ? 'audio_m4a' : presetId))
                 if (!p) return
+                setRodaPediuEstudio(querEstudio)
                 setUrlDaRoda(url)
                 setActivePreset(p)
               }}
@@ -316,7 +325,13 @@ export default function App() {
           outputDir={outputDir}
           history={history}
           urlInicial={urlDaRoda}
-          onClose={() => { setActivePreset(null); setUrlDaRoda(null) }}
+          aoConcluir={rodaPediuEstudio ? ((arquivo) => {
+            setActivePreset(null)
+            setUrlDaRoda(null)
+            setRodaPediuEstudio(false)
+            setStudioSource({ path: arquivo, title: 'Estúdio' })
+          }) : undefined}
+          onClose={() => { setActivePreset(null); setUrlDaRoda(null); setRodaPediuEstudio(false) }}
           onPickFolder={pickFolder}
         />
       )}

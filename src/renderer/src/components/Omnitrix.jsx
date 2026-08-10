@@ -31,8 +31,20 @@ const FORMAS = [
   { id: 'fast', rot: 'RÁPIDO', sub: 'mp3 leve' },
   { id: 'audio_m4a', rot: 'M4A', sub: 'áudio' },
   { id: 'audio_wav', rot: 'WAV', sub: 'sem perda' },
-  { id: 'video', rot: 'VÍDEO', sub: 'mp4' }
+  { id: 'video', rot: 'VÍDEO', sub: 'mp4' },
+  // A SEPARAÇÃO é a razão do app existir, então ela fica na roda também — e
+  // encostada no MP3, que é a vizinha natural. Ela não é um formato: é um
+  // destino. O arquivo é baixado do mesmo jeito (não dá pra separar o que não
+  // está no computador), mas em vez de parar na pasta ele vai direto pro
+  // estúdio.
+  { id: 'separar', rot: 'SEPARAR', sub: 'instrumentos', destino: true }
 ]
+
+// A separação não é preset do motor, então a explicação dela mora aqui — e
+// precisa dizer a verdade inteira: que baixa, e por que baixa nesse formato.
+const EXPLICA_DESTINO = {
+  separar: 'Baixa o áudio na qualidade nativa (sem reconverter) e abre direto no Estúdio pra separar os instrumentos.'
+}
 
 const R_EXT = 200   // raio de fora da coroa
 const R_INT = 96    // raio de dentro (o buraco onde mora a ampulheta)
@@ -143,7 +155,7 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
   const escolhida = FORMAS.find((f) => f.id === (sobre || sugerido)) || FORMAS[0]
   // a explicação vem do próprio motor: texto copiado pra cá divergiria do que
   // o download realmente faz na primeira vez que alguém mexesse num preset
-  const explica = (id) => presets.find((p) => p.id === id)?.description || ''
+  const explica = (id) => EXPLICA_DESTINO[id] || presets.find((p) => p.id === id)?.description || ''
 
 
   const escolher = (id) => {
@@ -197,7 +209,7 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
                 return (
                   <g
                     key={f.id}
-                    className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''}`}
+                    className={`omni-fatia ${ativa ? 'on' : ''} ${f.id === sugerido ? 'sugerida' : ''} ${f.destino ? 'destino' : ''}`}
                     onMouseEnter={() => setSobre(f.id)}
                     onClick={() => escolher(f.id)}
                     style={{ animationDelay: `${i * 30}ms` }}

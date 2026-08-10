@@ -8825,6 +8825,12 @@ ul.hlib-grid {
    baixar 40 músicas uma a uma seria castigo */
 .omni-fatia.sugerida path { stroke: var(--accent-border); }
 .omni-fatia.on path { fill: var(--accent); stroke: var(--accent); }
+/* SEPARAR não é formato, é destino — e destino merece peso diferente do
+   resto. Ela fica sempre com o fio aceso, mesmo sem o ponteiro em cima:
+   é a razão do app existir, e as outras seis só levam arquivo pra pasta. */
+.omni-fatia.destino path { fill: rgba(182, 255, 59, 0.07); stroke: var(--accent-border); }
+.omni-fatia.destino .omni-rot { fill: var(--accent); }
+.omni-fatia.destino.on path { fill: var(--accent); stroke: var(--accent); }
 
 .omni-rot {
   text-anchor: middle;
