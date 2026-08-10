@@ -373,14 +373,27 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
 
   return (
     <div className="modal-overlay" onClick={() => { if (state !== STATES.RUNNING && state !== STATES.PROBING) onClose() }}>
-      <div className="modal modal-playlist" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
-        <header className="modal-header">
-          <div>
-            <h3>📀 Playlist</h3>
-            <p className="modal-sub">Cole o link de uma playlist. Você escolhe quais baixar e em que qualidade.</p>
+      <div className="modal modal-playlist chanfro" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
+        {/* O cabeçalho e a ficha da lista eram dois blocos empilhados dizendo
+            quase a mesma coisa. Viraram um: o nome DA LISTA é o título, e
+            "playlist" vira etiqueta pequena — a pessoa não abriu isto sem
+            saber que é uma playlist. */}
+        <header className="pl-cab">
+          <div className="pl-cab-txt">
+            <span className="pl-etiqueta">playlist</span>
+            <h3>{playlist?.title || 'Playlist'}</h3>
+            {playlist && (
+              <p className="pl-cab-meta">
+                {playlist.uploader ? `${playlist.uploader}  ·  ` : ''}
+                {playlist.entries.length} música{playlist.entries.length !== 1 ? 's' : ''}
+              </p>
+            )}
+            {!playlist && (
+              <p className="pl-cab-meta">cole o link e escolha quais quer</p>
+            )}
           </div>
           {state !== STATES.RUNNING && state !== STATES.PROBING && (
-            <button className="btn-close" onClick={onClose} aria-label="Fechar">×</button>
+            <button className="pl-x" onClick={onClose} aria-label="Fechar" type="button">×</button>
           )}
         </header>
 
@@ -426,93 +439,59 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
         )}
 
         {state === STATES.CHOOSE && playlist && (
-          <div className="modal-body">
-            <div className="playlist-info">
-              <div>
-                <div className="playlist-title">{playlist.title}</div>
-                <div className="playlist-meta muted">
-                  {playlist.uploader && <span>{playlist.uploader} · </span>}
-                  {playlist.entries.length} vídeo{playlist.entries.length !== 1 ? 's' : ''}
+          <div className="modal-body pl-corpo">
+            {/* ▸ COMANDO — o que baixar, e o que aparece na lista.
+                Eram cinco blocos empilhados antes da primeira música: dois
+                cartões de formato, a barra de progresso, o aviso, o filtro,
+                três caixas de total e a linha de marcar/desmarcar. Cada um
+                deles é uma decisão pequena ocupando espaço de tela grande, e
+                juntos empurravam a lista — que é o assunto — pra fora da
+                vista. Agora são duas fileiras. */}
+            <div className="pl-comando">
+              <div className="pl-linha">
+                <span className="pl-rot">levar como</span>
+                <div className="pl-segmento">
+                  <button
+                    type="button"
+                    className={`pl-seg ${globalKind === 'audio' ? 'on' : ''}`}
+                    onClick={() => setGlobalKind('audio')}
+                  >som</button>
+                  <button
+                    type="button"
+                    className={`pl-seg ${globalKind === 'video' ? 'on' : ''}`}
+                    onClick={() => setGlobalKind('video')}
+                  >vídeo</button>
                 </div>
+                {globalKind === 'audio' ? (
+                  <select
+                    className="pl-sel"
+                    value={globalAudioId}
+                    onChange={(e) => { setGlobalAudioId(e.target.value); setGlobalKind('audio') }}
+                  >
+                    {AUDIO_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                ) : (
+                  <select
+                    className="pl-sel"
+                    value={globalVideoId}
+                    onChange={(e) => { setGlobalVideoId(e.target.value); setGlobalKind('video') }}
+                  >
+                    {visibleVideoOptionsFinal.map((o) => (
+                      <option key={o.id} value={o.id}>{o._label}</option>
+                    ))}
+                  </select>
+                )}
+                <span className="pl-espaco" />
+                <span className="pl-peso">
+                  <b>~{formatBytesSmart(totalSelectedBytes)}</b>
+                  <i>no total</i>
+                </span>
               </div>
-            </div>
 
-            <div className="playlist-global-split">
-              <label className={`kind-card ${globalKind === 'audio' ? 'active' : ''}`}>
-                <div className="kind-card-head">
-                  <input
-                    type="radio"
-                    checked={globalKind === 'audio'}
-                    onChange={() => setGlobalKind('audio')}
-                  />
-                  <span className="kind-card-title">🎵 Áudio</span>
-                </div>
+              <div className="pl-linha">
+                <span className="pl-rot">mostrar</span>
                 <select
-                  className="filter-select kind-card-select"
-                  value={globalAudioId}
-                  onChange={(e) => { setGlobalAudioId(e.target.value); setGlobalKind('audio') }}
-                >
-                  {AUDIO_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </label>
-              <label className={`kind-card ${globalKind === 'video' ? 'active' : ''}`}>
-                <div className="kind-card-head">
-                  <input
-                    type="radio"
-                    checked={globalKind === 'video'}
-                    onChange={() => setGlobalKind('video')}
-                  />
-                  <span className="kind-card-title">🎬 Vídeo</span>
-                </div>
-                <select
-                  className="filter-select kind-card-select"
-                  value={globalVideoId}
-                  onChange={(e) => { setGlobalVideoId(e.target.value); setGlobalKind('video') }}
-                >
-                  {visibleVideoOptionsFinal.map((o) => (
-                    <option key={o.id} value={o.id}>{o._label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {qualityProbeProgress.total > 0 && (
-              qualityProbeRateLimited ? (
-                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'rgba(234,179,8,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <strong style={{ color: 'var(--warn)', fontSize: 12.5 }}>⚠ YouTube bloqueou a análise automática</strong>
-                    <span>
-                      Isso é temporário — o YouTube limita quando muitas requests vêm da mesma conexão.
-                      <strong> Você pode baixar mesmo assim:</strong> escolha a qualidade manualmente nos dropdowns e clique em Baixar — o yt-dlp tenta a qualidade pedida e cai pra menor se o vídeo não tiver.
-                    </span>
-                    <span style={{ fontSize: 11.5, opacity: 0.85 }}>
-                      Pra recuperar a detecção automática: aguarde 30-60min OU use outra rede (Wi-Fi do celular, VPN). Clicar "tentar de novo" agora dá no mesmo.
-                    </span>
-                  </div>
-                  <button className="link-btn" onClick={retryQualityProbe} style={{ flexShrink: 0, alignSelf: 'flex-start' }}>↻ tentar de novo</button>
-                </div>
-              ) : !probeDone ? (
-                <div className="quality-probe-status muted small">
-                  <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                  Analisando qualidades dos vídeos… {qualityProbeProgress.done}/{qualityProbeProgress.total}
-                </div>
-              ) : probeFailed ? (
-                <div className="quality-probe-status muted small" style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'rgba(234,179,8,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <span>⚠ Não consegui detectar qualidades. Mostrando todas as opções.</span>
-                  <button className="link-btn" onClick={retryQualityProbe} style={{ flexShrink: 0 }}>↻ tentar de novo</button>
-                </div>
-              ) : null
-            )}
-
-            <p className="muted small" style={{ padding: '6px 2px 10px', lineHeight: 1.4 }}>
-              💡 Se algum vídeo não tem a qualidade escolhida, baixa a maior disponível (nunca aumenta artificialmente). Vídeos privados/removidos são automaticamente pulados.
-            </p>
-
-            <div className="quality-filter-row">
-              <label className="muted small" style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                🎯 Filtrar lista por qualidade:
-                <select
-                  className="filter-select"
+                  className="pl-sel"
                   value={qualityFilter}
                   onChange={(e) => setQualityFilter(e.target.value)}
                   disabled={Object.keys(videoMaxHeights).length === 0}
@@ -528,75 +507,101 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
                     )
                   })}
                 </select>
-              </label>
-              {qualityFilter !== 'all' && (
-                <span className="muted small">
-                  {filteredIndices.length} de {playlist.entries.length} vídeos
+                <span className="pl-espaco" />
+                {/* a contagem é o número que a pessoa mais olha nesta tela:
+                    ela responde "quanto eu já escolhi?" */}
+                <span className="pl-conta">
+                  <b>{selected.size}</b>
+                  <span>de {playlist.entries.length}</span>
                 </span>
-              )}
-            </div>
-
-            <div className="playlist-totals">
-              <div className="playlist-totals-cell">
-                <span className="muted small">Playlist toda</span>
-                <strong>~{formatBytesSmart(totalAllBytes)}</strong>
-              </div>
-              <div className="playlist-totals-cell">
-                <span className="muted small">Visíveis (após filtro)</span>
-                <strong>~{formatBytesSmart(totalVisibleBytes)}</strong>
-              </div>
-              <div className="playlist-totals-cell playlist-totals-selected">
-                <span className="muted small">Selecionado</span>
-                <strong>~{formatBytesSmart(totalSelectedBytes)}</strong>
-              </div>
-            </div>
-
-            <div className="playlist-actions-row">
-              <span className="muted">
-                <strong style={{ color: 'var(--accent)' }}>{selected.size}</strong> de {playlist.entries.length} selecionado{selected.size !== 1 ? 's' : ''}
-              </span>
-              <div style={{ display: 'flex', gap: 10 }}>
                 {qualityFilter !== 'all' && filteredIndices.length > 0 ? (
                   <>
-                    <button className="link-btn" onClick={selectFiltered}>marcar visíveis</button>
-                    <button className="link-btn" onClick={deselectFiltered}>desmarcar visíveis</button>
+                    <button className="pl-btn" onClick={selectFiltered}>marcar visíveis</button>
+                    <button className="pl-btn" onClick={deselectFiltered}>desmarcar</button>
                   </>
                 ) : (
                   <>
-                    <button className="link-btn" onClick={selectAll}>marcar todos</button>
-                    <button className="link-btn" onClick={selectNone}>desmarcar todos</button>
+                    <button className="pl-btn" onClick={selectAll}>marcar todas</button>
+                    <button className="pl-btn" onClick={selectNone}>desmarcar</button>
                   </>
                 )}
               </div>
+
+              {/* progresso da análise: fio fino, não caixa. Ele informa sem
+                  virar mais um bloco na pilha. */}
+              {qualityProbeProgress.total > 0 && !probeDone && !qualityProbeRateLimited && (
+                <div className="pl-varrendo">
+                  <span
+                    className="pl-varrendo-fio"
+                    style={{ width: `${Math.round((qualityProbeProgress.done / qualityProbeProgress.total) * 100)}%` }}
+                  />
+                  <span className="pl-varrendo-txt">
+                    lendo qualidades · {qualityProbeProgress.done}/{qualityProbeProgress.total}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <ul className="playlist-list">
+            {/* AVISO DE VERDADE ganha o painel do kit — aqui ele tem vizinho,
+                então a moldura serve pra separar, não pra enfeitar. */}
+            {qualityProbeRateLimited && (
+              <div className="pl-aviso">
+                <span className="pl-aviso-canto tl" aria-hidden="true" />
+                <span className="pl-aviso-canto bl" aria-hidden="true" />
+                <b>O YouTube barrou a leitura automática</b>
+                <p>
+                  É temporário — ele limita quando muitos pedidos saem da mesma conexão.
+                  <strong> Dá pra baixar do mesmo jeito:</strong> escolha a qualidade na mão e mande baixar.
+                  Se o vídeo não tiver aquela qualidade, ele cai pra maior que tiver.
+                </p>
+                <p className="pl-aviso-pe">
+                  Pra voltar ao automático: esperar 30–60 min ou usar outra rede.
+                  <button className="pl-btn" onClick={retryQualityProbe}>tentar de novo</button>
+                </p>
+              </div>
+            )}
+            {probeFailed && !qualityProbeRateLimited && (
+              <div className="pl-aviso">
+                <span className="pl-aviso-canto tl" aria-hidden="true" />
+                <span className="pl-aviso-canto bl" aria-hidden="true" />
+                <b>Não deu pra ler as qualidades</b>
+                <p>Mostrando todas as opções — o download funciona igual.
+                  <button className="pl-btn" onClick={retryQualityProbe}>tentar de novo</button>
+                </p>
+              </div>
+            )}
+
+            <ul className="pl-lista">
               {visibleEntries.map(({ entry, index }) => {
                 const isSelected = selected.has(index)
                 const currentOpt = optionFor(index)
                 const isOverride = perItemOption[index] && perItemOption[index] !== globalOption
+                const opt = ALL_OPTIONS.find((o) => o.id === currentOpt)
+                const bytes = estimateItemBytes(entry.duration, opt, videoMaxHeights[index])
                 return (
-                  <li key={`${entry.id || index}`} className={`playlist-item ${isSelected ? 'selected' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleItem(index)}
-                      className="playlist-check"
-                    />
-                    <span className="playlist-item-num">{index + 1}</span>
-                    <div className="playlist-item-main">
-                      <div className="playlist-item-title" title={entry.title}>{entry.title}</div>
-                      <div className="playlist-item-meta muted">
-                        {entry.duration ? formatDuration(entry.duration) : '—'}
-                        {(() => {
-                          const opt = ALL_OPTIONS.find((o) => o.id === optionFor(index))
-                          const bytes = estimateItemBytes(entry.duration, opt, videoMaxHeights[index])
-                          return bytes > 0 ? <> · ~{formatBytesSmart(bytes)}</> : null
-                        })()}
-                      </div>
-                    </div>
+                  <li key={`${entry.id || index}`} className={`pl-item ${isSelected ? 'on' : ''}`}>
+                    {/* a linha inteira liga e desliga. Alvo de 13px de
+                        caixinha é mira de precisão pra uma coisa que se faz
+                        noventa vezes seguidas. */}
+                    <button
+                      type="button"
+                      className="pl-item-toque"
+                      onClick={() => toggleItem(index)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="pl-marca" aria-hidden="true" />
+                      <span className="pl-num">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="pl-item-txt">
+                        <span className="pl-item-nome" title={entry.title}>{entry.title}</span>
+                        <span className="pl-item-ficha">
+                          {entry.duration ? formatDuration(entry.duration) : '—'}
+                          {bytes > 0 ? `  ·  ~${formatBytesSmart(bytes)}` : ''}
+                          {isOverride ? '  ·  formato próprio' : ''}
+                        </span>
+                      </span>
+                    </button>
                     <select
-                      className="filter-select playlist-item-select"
+                      className="pl-sel pl-item-sel"
                       value={currentOpt}
                       onChange={(e) => {
                         const v = e.target.value
@@ -608,13 +613,12 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
                         })
                       }}
                       disabled={!isSelected}
-                      title={isOverride ? 'Customizado' : 'Usa o padrão'}
+                      title={isOverride ? 'Formato próprio desta música' : 'Usa o formato escolhido em cima'}
                     >
                       {globalKind === 'audio' ? (
                         AUDIO_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)
                       ) : (() => {
                         const myMax = videoMaxHeights[index]
-                        // Renderiza TODAS as opções de vídeo, mas as auto ficam com label dinâmico
                         return VIDEO_OPTIONS.map((o) => {
                           let label = o.label
                           if (o.auto) {
@@ -631,16 +635,22 @@ export default function PlaylistModal({ outputDir, onClose, onPickFolder, urlIni
                 )
               })}
               {visibleEntries.length === 0 && qualityFilter !== 'all' && (
-                <li className="muted small" style={{ padding: 20, textAlign: 'center' }}>
-                  Nenhum vídeo nesse filtro. <button className="link-btn" onClick={() => setQualityFilter('all')}>limpar filtro</button>
+                <li className="pl-vazio">
+                  Nenhum vídeo nesse filtro.{' '}
+                  <button className="pl-btn" onClick={() => setQualityFilter('all')}>limpar filtro</button>
                 </li>
               )}
             </ul>
 
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setState(STATES.IDLE)}>← Voltar</button>
-              <button className="btn-primary" disabled={selected.size === 0} onClick={startBatch}>
-                Baixar {selected.size} item{selected.size !== 1 ? 's' : ''}
+            <div className="pl-pe">
+              <span className="pl-nota">
+                Sem a qualidade escolhida, baixa a maior que o vídeo tiver — nunca inventa qualidade.
+                Vídeo privado ou removido é pulado.
+              </span>
+              <span className="pl-espaco" />
+              <button className="pl-btn" onClick={() => setState(STATES.IDLE)}>voltar</button>
+              <button className="pl-btn forte" disabled={selected.size === 0} onClick={startBatch}>
+                baixar {selected.size}
               </button>
             </div>
           </div>
