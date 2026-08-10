@@ -184,7 +184,12 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
 
       {aberta && (
         <div className="omni-palco" onClick={() => setAberta(false)}>
-          <div className="omni-roda-caixa" onClick={(e) => e.stopPropagation()}>
+          {/* coroa e mostrador empilhados numa coluna. Antes o mostrador era
+              pendurado com posição absoluta e um número na mão — e bastava o
+              texto crescer uma linha pra ele subir por cima das fatias de
+              baixo. Empilhar deixa a conta com o navegador. */}
+          <div className="omni-conjunto" onClick={(e) => e.stopPropagation()}>
+          <div className="omni-roda-caixa">
             <svg className="omni-roda" viewBox="0 0 440 440">
               {FORMAS.map((f, i) => {
                 const ativa = (sobre || sugerido) === f.id
@@ -216,6 +221,8 @@ export default function Omnitrix({ ligado, onEscolher, presets = [] }) {
               <b>{escolhida.rot}</b>
               <i>{escolhida.sub}</i>
             </div>
+
+          </div>
 
             {/* O MOSTRADOR.
                 O NOME DO QUE FOI COPIADO VEM PRIMEIRO, e em cima. Antes ele

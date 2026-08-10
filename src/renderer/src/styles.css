@@ -8763,13 +8763,37 @@ ul.hlib-grid {
   backdrop-filter: blur(8px);
   animation: fadeIn 0.16s ease;
 }
+/* coroa e mostrador empilhados. Antes o mostrador era pendurado com posição
+   absoluta e um número escrito na mão (bottom: -152px) — e bastava o texto
+   crescer uma linha pra ele subir por cima das fatias de baixo. Empilhar
+   deixa a conta com o navegador, e aí nenhum tamanho de texto invade a
+   roda. */
+.omni-conjunto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  max-height: 100vh;
+}
 .omni-roda-caixa {
   position: relative;
   width: 440px;
   height: 440px;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* janela baixa: a coroa encolhe pra caber com o mostrador, em vez de um dos
+   dois ser cortado */
+@media (max-height: 800px) {
+  .omni-roda-caixa { width: 360px; height: 360px; }
+  .omni-conjunto { gap: 22px; }
+}
+@media (max-height: 680px) {
+  .omni-roda-caixa { width: 300px; height: 300px; }
+  .omni-rot { font-size: 12px; }
+  .omni-nucleo { width: 132px; height: 132px; }
 }
 
 .omni-roda {
@@ -8891,10 +8915,8 @@ ul.hlib-grid {
       o nome vem primeiro, grande, e é a única coisa em corpo de leitura no
       painel — todo o resto é mono pequeno. */
 .mostra {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -152px;
+  position: relative;
+  flex: none;
   width: 660px;
   max-width: 90vw;
   padding: 15px 18px 16px 22px;
@@ -8904,8 +8926,8 @@ ul.hlib-grid {
   animation: mostra-entra 0.3s ease 0.1s backwards;
 }
 @keyframes mostra-entra {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-  to { opacity: 1; transform: translateX(-50%); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 /* barra de estado na lateral, igual à das mensagens do kit */
 .mostra::before {
