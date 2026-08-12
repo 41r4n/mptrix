@@ -60,7 +60,12 @@ export default function NuvemConfig() {
   if (!estado) return null
 
   // gasto real, calculado no processo principal pelo preço de cada máquina
-  const gastoC = estado.centavosGastos || 0
+  // OS DOIS NÚMEROS GRANDES SAEM DO MESMO CICLO. Antes o "já gastou" era o
+  // total do MÊS e o "você tem" era do ciclo de crédito — dois períodos
+  // diferentes lado a lado, que nunca fechavam entre si. O gasto do mês
+  // continua existindo, mas embaixo, dito pelo nome.
+  const gastoC = estado.gastoDesdeCredito || 0
+  const gastoDoMes = estado.centavosGastos || 0
   const porMusica = estado.musicasFeitas ? gastoC / estado.musicasFeitas : 0
   // EM DÓLAR, não em centavo. "1356.29 centavos de dólar" obriga a pessoa a
   // dividir por cem de cabeça pra saber se gastou muito — e é justamente o
@@ -505,6 +510,7 @@ export default function NuvemConfig() {
                     <i>
                       {estado.musicasFeitas} música{estado.musicasFeitas !== 1 ? 's' : ''}
                       {porMusica ? <> · {emDolar(porMusica)} cada</> : null}
+                      {gastoDoMes > 0 ? <> · {emDolar(gastoDoMes)} no mês</> : null}
                       {estado.gastoMesPassado > 0 ? <> · {emDolar(estado.gastoMesPassado)} mês passado</> : null}
                     </i>
                   </div>
@@ -720,9 +726,8 @@ export default function NuvemConfig() {
                 <h3>O que já aconteceu</h3>
                 <p className="modal-sub">
                   Cada carga e cada vez que o crédito acabou, com hora e valores.
-                  Verde é entrada, vermelho é fim. <strong>É o recibo, não a
-                  carteira</strong> — apagar uma linha apaga o registro, e não
-                  mexe no saldo.
+                  Verde é entrada, vermelho é fim. <strong>O saldo sai daqui</strong> —
+                  apagar uma linha refaz a conta sem ela.
                 </p>
               </div>
               <button className="btn-close" onClick={() => setVerLivro(false)} aria-label="Fechar">×</button>
@@ -792,7 +797,7 @@ export default function NuvemConfig() {
                 )}
                 {linhasMarcadas.size > 0 && (
                   <span className="livro-nota">
-                    apaga só o registro — o saldo continua {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
+                    a conta é refeita sem elas
                   </span>
                 )}
                 <span className="modal-espaco" />

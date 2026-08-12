@@ -87,33 +87,67 @@ function virarMesSePreciso() {
   if (gastoAnterior > 0) store.set('nuvem.gastoMesPassado', Math.round(gastoAnterior * 100) / 100)
 }
 
+/**
+ * ██████ O LIVRO É A VERDADE ██████
+ *
+ * O saldo NÃO é mais guardado em separado: ele é calculado do livro, toda vez.
+ *
+ * Antes eram duas verdades pro mesmo fato — um número guardado e um registro
+ * do que aconteceu — e elas podiam discordar. Foi o que aconteceu: o dono
+ * apagou a linha da recarga e o saldo continuou de pé, porque o número morava
+ * noutro lugar. Aí eu ia consertar isso com um AVISO explicando que apagar o
+ * recibo não mexe na carteira. Errado: se apagar o registro não muda o
+ * resultado, o registro não é registro, é enfeite.
+ *
+ * Agora:
+ *   informado = valor da carga mais recente
+ *   gasto     = soma dos usos que vieram DEPOIS dela
+ *
+ * Apagar uma carga faz a anterior valer. Apagar um uso devolve aquele
+ * dinheiro. A conta nunca discorda do que está escrito, porque ela É o que
+ * está escrito.
+ */
+function contasDoLivro(livro) {
+  const lista = Array.isArray(livro) ? livro : []
+  // a lista é do mais novo pro mais velho: a primeira carga que aparece é a
+  // que vale, e o que está ACIMA dela veio depois dela
+  const iCarga = lista.findIndex((l) => l && l.tipo === 'carga')
+  const informado = iCarga >= 0 ? (lista[iCarga].valor || 0) : 0
+  const depois = iCarga >= 0 ? lista.slice(0, iCarga) : lista
+  const usos = depois.filter((l) => l && l.tipo === 'uso')
+  const gasto = usos.reduce((soma, l) => soma + (l.valor || 0), 0)
+  return {
+    informado,
+    gasto: Math.round(gasto * 100) / 100,
+    musicas: usos.length
+  }
+}
+
 export function getNuvem() {
   virarMesSePreciso()
   garantirIdsDoLivro()
   const n = store.get('nuvem', {})
+  const livro = Array.isArray(n.livro) ? n.livro : []
+  const contas = contasDoLivro(livro)
   return {
     ligada: !!n.ligada,
     temChave: !!n.chave,
     segundosGastos: n.segundosGastos || 0,
-    // gasto de verdade, pelo preço da máquina que fez cada trabalho
+    // gasto do MÊS: este continua guardado, porque conta dinheiro real que o
+    // livro não mostra linha a linha (sondas, letra, cifra). É a conta do
+    // teto mensal, não a do ciclo de crédito.
     centavosGastos: n.centavosGastos != null
       ? Math.round(n.centavosGastos * 100) / 100
       : Math.round((n.segundosGastos || 0) * 0.000307 * 100 * 100) / 100,
-    musicasFeitas: n.musicasFeitas || 0,
     tetoCentavos: n.tetoCentavos ?? 500,
-    // QUANTO A PESSOA DISSE QUE PÔS, e quanto já foi desde então. O app não
-    // consegue ler o saldo no Replicate (não existe endereço pra isso — eu
-    // sondei seis), mas quem comprou SABE o número. Perguntando uma vez, a
-    // conta passa a ser possível: sobra = o que ela disse menos o que eu
-    // gastei desde então.
-    creditoInformado: n.creditoInformado || 0,
-    gastoDesdeCredito: n.gastoDesdeCredito || 0,
+    // ▼ tudo daqui pra baixo SAI DO LIVRO, não do disco
+    creditoInformado: contas.informado,
+    gastoDesdeCredito: contas.gasto,
+    musicasFeitas: contas.musicas,
     mes: n.mes || mesAgora(),
     gastoMesPassado: n.gastoMesPassado || 0,
-    // por que a nuvem se desligou sozinha, se foi o caso
     paradaPor: n.paradaPor || null,
-    // o livro: cada carga e cada esgotamento, com hora
-    livro: Array.isArray(n.livro) ? n.livro : []
+    livro
   }
 }
 
@@ -170,13 +204,28 @@ export function simularGasto(centavos) {
   const c = Math.max(0, Number(centavos) || 0)
   if (!c) return getNuvem()
   store.set('nuvem.centavosGastos', gastoCentavos() + c)
-  store.set('nuvem.gastoDesdeCredito', (store.get('nuvem.gastoDesdeCredito') || 0) + c)
-  store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
   anotarNoLivro({ tipo: 'uso', valor: Math.round(c * 100) / 100, titulo: null, simulado: true })
   // é isto que faz o teste valer: quem decide parar é a mesma função que o
   // motor chama antes de cada trabalho de verdade
   usarNuvem()
   return getNuvem()
+}
+
+/**
+ * A TRAVA É CONSEQUÊNCIA, não estado guardado à parte.
+ * Se o que sobrou voltou a ser suficiente — porque uma linha foi apagada ou
+ * uma carga nova entrou — ela sai sozinha. Trava que sobrevive ao motivo que
+ * a criou é a conta antiga mandando no presente.
+ */
+function reavaliarTrava() {
+  const motivo = store.get('nuvem.paradaPor')
+  if (motivo !== 'freio-credito' && motivo !== 'sem-credito') return
+  const n = getNuvem()
+  const aperta = n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO
+  if (!aperta) {
+    store.set('nuvem.paradaPor', null)
+    store.set('nuvem.ligada', true)
+  }
 }
 
 /** Apaga linhas escolhidas do livro, por id. */
@@ -186,6 +235,10 @@ export function apagarLinhasDoLivro(ids) {
   const livro = store.get('nuvem.livro')
   const lista = Array.isArray(livro) ? livro : []
   store.set('nuvem.livro', lista.filter((l) => !alvo.has(l.id)))
+  // APAGAR RECALCULA TUDO. Se a linha que fez o freio bater sumiu, o freio
+  // não tem mais motivo pra existir — deixar travado seria a conta antiga
+  // sobrevivendo ao fato que a criou.
+  reavaliarTrava()
   return getNuvem()
 }
 
@@ -207,23 +260,22 @@ export function apagarLinhasDoLivro(ids) {
  */
 export function informarCredito(centavos) {
   const v = Math.max(0, Math.round(Number(centavos) || 0))
-  const antes = store.get('nuvem.creditoInformado') || 0
-  const gastoAntes = store.get('nuvem.gastoDesdeCredito') || 0
-  const motivoAntes = store.get('nuvem.paradaPor')
-  store.set('nuvem.creditoInformado', v)
-  store.set('nuvem.gastoDesdeCredito', 0)
-  // VIRA LINHA quando a declaração muda alguma coisa — não só quando o número
-  // muda. Gastar US$10, recarregar US$10 e informar 10 de novo é o caso mais
-  // comum que existe: o número é igual, mas houve gasto pra zerar e trava pra
-  // soltar. Comparar só o valor deixava esse caso mudo, e a pessoa ficava
-  // olhando pra tela sem entender por que nada aconteceu.
-  const travada = motivoAntes === 'sem-credito' || motivoAntes === 'freio-credito'
-  if (v > 0 && (v !== antes || gastoAntes > 0 || travada)) {
-    anotarNoLivro({ tipo: 'carga', valor: v, sobrava: Math.max(0, antes - gastoAntes) })
+  const antes = getNuvem()
+  const sobrava = Math.max(0, antes.creditoInformado - antes.gastoDesdeCredito)
+
+  // ZERO NÃO É CARGA, é apagar a declaração. Escrever "carreguei US$0" no
+  // livro seria mentira; o certo é tirar a carga que valia.
+  if (!v) {
+    const livro = (store.get('nuvem.livro') || []).filter((l) => l && l.tipo !== 'carga')
+    store.set('nuvem.livro', livro)
+    store.set('nuvem.paradaPor', null)
+    return getNuvem()
   }
-  // dizer que pôs crédito é dizer que a parede caiu: religa o que foi
-  // desligado por dinheiro, seja recusa do serviço ou freio meu
-  if (travada) {
+
+  anotarNoLivro({ tipo: 'carga', valor: v, sobrava })
+  // carga nova derruba a parada por dinheiro: a parede caiu
+  const motivo = store.get('nuvem.paradaPor')
+  if (motivo === 'sem-credito' || motivo === 'freio-credito') {
     store.set('nuvem.paradaPor', null)
     store.set('nuvem.ligada', true)
   }
@@ -245,9 +297,8 @@ export function informarCredito(centavos) {
 export function somarCredito(centavos) {
   const add = Math.max(0, Math.round(Number(centavos) || 0))
   if (!add) return getNuvem()
-  const antes = store.get('nuvem.creditoInformado') || 0
-  const gastoAntes = store.get('nuvem.gastoDesdeCredito') || 0
-  const sobrava = Math.max(0, antes - gastoAntes)
+  const n = getNuvem()
+  const sobrava = Math.max(0, n.creditoInformado - n.gastoDesdeCredito)
   return informarCredito(sobrava + add)
 }
 
@@ -261,14 +312,14 @@ export function somarCredito(centavos) {
  */
 export function apagarDadosNuvem({ livro, credito, contadores, chave } = {}) {
   if (livro) store.set('nuvem.livro', [])
+  // "crédito" agora quer dizer as cargas do livro: é lá que ele mora
   if (credito) {
-    store.set('nuvem.creditoInformado', 0)
-    store.set('nuvem.gastoDesdeCredito', 0)
+    const livro = (store.get('nuvem.livro') || []).filter((l) => l && l.tipo !== 'carga')
+    store.set('nuvem.livro', livro)
   }
   if (contadores) {
     store.set('nuvem.centavosGastos', 0)
     store.set('nuvem.segundosGastos', 0)
-    store.set('nuvem.musicasFeitas', 0)
     store.set('nuvem.gastoMesPassado', 0)
   }
   if (chave) {
@@ -375,11 +426,8 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
   // começar do zero apagaria todo o histórico no primeiro gasto novo — o teto
   // voltaria a achar que o crédito está intacto.
   store.set('nuvem.centavosGastos', gastoCentavos() + custo)
-  // conta separada, que NÃO vira no mês: crédito pré-pago não se renova, ele
-  // se esgota. Misturar as duas faria a sobra "voltar" todo dia primeiro.
-  store.set('nuvem.gastoDesdeCredito', (store.get('nuvem.gastoDesdeCredito') || 0) + custo)
+  // o gasto do ciclo não é mais guardado: ele sai do livro. Ver contasDoLivro.
   if (contaMusica) {
-    store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
     // SÓ A SEPARAÇÃO DA MÚSICA vira linha no livro. As sondas, a letra e a
     // cifra também custam, mas viram dezenas de linhas de centavos que
     // enterrariam as duas que importam — a carga e o fim. O gasto delas
