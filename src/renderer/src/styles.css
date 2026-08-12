@@ -10440,8 +10440,22 @@ ul.hlib-grid {
    junto com as linhas — com 500 registros a pessoa teria que rolar tudo pra
    achar o "Fechar". O que muda de tamanho é a lista; o resto é moldura, e
    moldura fica parada. */
-.modal-livro { width: 640px; }
+/* A JANELA NÃO PASSA DA TELA, e quem encolhe é a LISTA.
+   Com a gaveta da correção aberta, a janela crescia além do monitor e o
+   "Fechar" ia junto — o mesmo defeito que o dono já tinha apontado.
+   A corrente é: janela com teto de altura → corpo como flex que pode encolher
+   → lista com min-height 0, que é a peça que cede. Sem o min-height: 0 o item
+   de flex se recusa a ficar menor que o conteúdo e o teto não serve pra nada. */
+.modal-livro {
+  width: 640px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-livro .modal-header { flex: none; }
 .modal-livro .modal-body {
+  flex: 1 1 auto;
   max-height: none;
   overflow: visible;
   display: flex;
@@ -10459,11 +10473,19 @@ ul.hlib-grid {
   flex: 1 1 auto;
   min-height: 0;
   max-height: min(calc(var(--livro-linha) * 10), 62vh);
+  min-height: calc(var(--livro-linha) * 3);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 4px;
 }
 .modal-livro .modal-actions { flex: none; }
+.modal-livro .livro-conta-linha { flex: none; }
+/* A GAVETA TAMBÉM CEDE. Medido: tela de 768 com a gaveta aberta espremia a
+   lista até ZERO linha — a janela ficava sobre um histórico que não mostrava
+   histórico nenhum. Agora as duas encolhem e cada uma rola por dentro, com a
+   lista guardando um piso de três linhas: uma lista de altura zero não é lista
+   apertada, é lista que sumiu. */
+.modal-livro .conserto { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 
 /* USO EM CINZA, nao em vermelho. Vermelho quer dizer "acabou" — se toda
    separacao fosse vermelha, a cor perderia o sentido justamente na hora que
@@ -11274,3 +11296,168 @@ ul.hlib-grid {
 .freio-num::-webkit-outer-spin-button,
 .freio-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .freio-num[type=number] { -moz-appearance: textfield; }
+
+/* ██████████ A CORREÇÃO DO SALDO ██████████
+   Ela saiu de perto do "acabei de comprar" porque não é irmã dele: uma é o ato
+   de todo dia (somar), a outra é rara e CONSERTA — fecha a conta em andamento
+   e recomeça a contagem. Ato comum e ato de correção com o mesmo tamanho, a
+   mesma linha e o mesmo campo é o desenho que fez o dono errar duas vezes.
+   Aqui ela tem espaço pra ser explicada em três partes: por que existe, como
+   se faz, e o que acontece depois. Âmbar, não vermelho: não apaga nada — muda
+   o que o app acredita. */
+.conserto {
+  --chanfro: 10px;
+  --fio: rgba(234, 179, 8, 0.3);
+  margin-top: 16px;
+  padding: 15px 17px 16px;
+  background-color: var(--bg-cava-2);
+  background-image: var(--diag), var(--diag),
+    linear-gradient(150deg, rgba(234, 179, 8, 0.06), transparent 58%);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro), auto;
+  background-position: top right, bottom left, 0 0;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
+  clip-path: var(--corte-sm);
+}
+.conserto-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.conserto-sinal {
+  flex: none;
+  width: 26px;
+  height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(234, 179, 8, 0.15);
+  color: var(--warn);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.conserto-cab b { font-size: 14px; font-weight: 600; color: var(--text); }
+.conserto-txt {
+  margin: 0 0 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 86ch;
+}
+.conserto-txt strong { color: var(--text-2); font-weight: 600; }
+
+/* OS PASSOS numerados: quem nunca abriu a página do Replicate não sabe que o
+   número tem nome ("Crédito restante"). Dizer "veja seu saldo" manda a pessoa
+   procurar sozinha numa tela em inglês cheia de número. */
+.conserto-passos { list-style: none; margin: 0 0 14px; padding: 0; }
+.conserto-passos li { display: flex; align-items: center; gap: 10px; }
+.conserto-passos li + li { margin-top: 7px; }
+.conserto-passos li > span {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(234, 179, 8, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.32);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+.conserto-passos li > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.conserto-passos em { font-style: normal; color: var(--warn); font-weight: 500; }
+.conserto-ir {
+  height: 26px;
+  padding: 0 11px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.13s ease;
+}
+.conserto-ir:hover { background: rgba(234, 179, 8, 0.14); }
+
+.conserto-linha { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.conserto-caixa { --fio: rgba(234, 179, 8, 0.32); }
+.conserto-caixa:focus-within { --fio: var(--warn); box-shadow: inset 0 0 0 1px var(--fio), 0 0 18px rgba(234, 179, 8, 0.16); }
+.conserto-caixa:focus-within .freio-num { color: var(--warn); }
+/* O VALOR ENTRA NO RÓTULO. A última coisa lida antes do clique tem que ser
+   exatamente o que vai acontecer — "confirmar" não diz nada. */
+.conserto-ok {
+  height: 46px;
+  padding: 0 18px;
+  background: var(--warn);
+  border: none;
+  color: #0b0c0f;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease, opacity 0.13s ease;
+}
+.conserto-ok:hover:not(:disabled) { background: #f5c518; }
+.conserto-ok:disabled { opacity: 0.28; cursor: default; }
+
+/* O EFEITO, com os números do caso. "Isso reinicia a contagem" é frase de
+   manual; dizer que os US$ 3,40 já gastos voltam a zero é o que a pessoa
+   precisa saber antes de apertar. Acende quando há valor digitado, que é
+   quando ele deixa de ser aviso genérico e vira o que vai acontecer. */
+.conserto-efeito {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: rgba(234, 179, 8, 0.05);
+  box-shadow: inset 2px 0 0 rgba(234, 179, 8, 0.35);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+}
+.conserto-efeito svg { flex: none; margin-top: 2px; color: var(--muted-2); }
+.conserto-efeito strong { color: var(--text-2); font-weight: 600; }
+.conserto-efeito.ligado {
+  background: rgba(234, 179, 8, 0.1);
+  box-shadow: inset 2px 0 0 var(--warn);
+  color: var(--text-2);
+}
+.conserto-efeito.ligado svg { color: var(--warn); }
+.conserto-efeito.ligado strong { color: var(--warn); }
+
+
+/* A TAMPA DA GAVETA. A pergunta fica sempre à mostra porque é ela que faz o
+   bloco ser achado: quem precisa disto chega pensando "a conta não está
+   batendo" — ninguém procura por "informar saldo total". */
+.conserto > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  margin-bottom: 0;
+}
+.conserto > summary::-webkit-details-marker { display: none; }
+.conserto[open] > summary { margin-bottom: 12px; }
+.conserto-seta {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 1.5px solid var(--warn);
+  border-bottom: 1.5px solid var(--warn);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.16s ease;
+  opacity: 0.8;
+}
+.conserto[open] .conserto-seta { transform: rotate(-135deg) translate(-2px, -2px); }
+.conserto > summary:hover .conserto-seta { opacity: 1; }

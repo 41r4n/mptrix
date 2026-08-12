@@ -40,6 +40,9 @@ export default function NuvemConfig() {
   // linhas escolhidas no livro. Some ao fechar a janela: seleção que sobrevive
   // fechada volta a existir sem a pessoa lembrar do que marcou.
   const [linhasMarcadas, setLinhasMarcadas] = useState(() => new Set())
+  // campo separado do de cima de propósito: são atos diferentes, e um rascunho
+  // que vaza de um pro outro é o começo do engano
+  const [rascunhoReal, setRascunhoReal] = useState('')
   // o que está marcado pra ir embora. A chave começa DESMARCADA de propósito:
   // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
   // caminho do Replicate.
@@ -568,7 +571,16 @@ export default function NuvemConfig() {
                       Uma pergunta só, por melhor escrita que seja, não vence o
                       jeito de pensar de quem usa. Então o mesmo número serve
                       pras duas, e o botão diz qual delas é. */}
-                  <span className="freio-rot">quanto de crédito?</span>
+                  {/* UMA AÇÃO SÓ AQUI. Antes eram duas dividindo o mesmo
+                      campo — e aí o que você digita muda de significado
+                      conforme o botão que você aperta depois. Ambíguo por
+                      construção, e foi o que pegou o dono duas vezes: ele
+                      digitou o que TINHA COMPRADO e esperava ver a soma.
+                      A correção (dizer o total de verdade) mudou pra dentro da
+                      janela do histórico: ela é rara, ela conserta, e ela apaga
+                      a conta em andamento — nada disso pode ter o mesmo tamanho
+                      e a mesma linha do ato de todo dia, que é "comprei mais". */}
+                  <span className="freio-rot">quanto você acabou de comprar?</span>
                   <div className="freio-linha">
                     <div className="freio-caixa">
                       <em>US$</em>
@@ -597,30 +609,17 @@ export default function NuvemConfig() {
                     >
                       acabei de comprar
                     </button>
-                    <button
-                      type="button"
-                      className="freio-alt"
-                      disabled={!String(rascunho ?? '').length}
-                      onClick={async () => {
-                        const d = Number(String(rascunho ?? '').replace(',', '.')) || 0
-                        setRascunho(null)
-                        setEstado(await window.mptrix.nuvem.credito(Math.round(d * 100)))
-                      }}
-                    >
-                      tenho isso no total
-                    </button>
                   </div>
 
                   <p className="freio-txt">
                     {estado.creditoInformado > 0
                       ? <>
-                        <strong>“Acabei de comprar”</strong> soma ao que sobrou — hoje sobram{' '}
+                        O valor <strong>soma</strong> ao que sobrou — hoje sobram{' '}
                         <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong>,
                         então comprando US$ 10 você fica com{' '}
                         {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito) + 1000)}.{' '}
-                        <strong>“Tenho isso no total”</strong> troca a conta pelo número que está na
-                        página do Replicate, em <em>Crédito restante</em> — use esse quando quiser
-                        corrigir a minha estimativa pelo valor de verdade.
+                        Se a minha conta desandar e o Replicate mostrar outro número, o conserto
+                        está no <strong>histórico</strong> — no quadro aqui em cima.
                       </>
                       : <><strong>Sem esse número não existe freio.</strong> O crédito acabar não trava
                         o serviço: o que passar vira dívida e eles suspendem a conta até quitar. Com
@@ -813,6 +812,111 @@ export default function NuvemConfig() {
                       </li>
                 ))}
               </ul>
+              {/* ██████████ A CORREÇÃO ██████████
+                  Ela mora aqui porque esta janela já é o lugar de "isto é o
+                  que aconteceu, conserta o que está errado". E porque ela é
+                  séria: informar um total FECHA O CICLO. O gasto acumulado
+                  volta a zero e a contagem recomeça do número novo — as linhas
+                  antigas continuam guardadas, mas param de contar.
+                  Por isso ela é explicada em três partes, e não em uma frase:
+                  POR QUE existe (o MPTRIX estima, e estima pra mais), COMO se
+                  faz (abrir a página, achar o número, digitar), e O QUE
+                  acontece depois — este último em âmbar e com os números do
+                  caso, não em texto genérico. O valor entra no rótulo do botão
+                  pra que a última coisa lida antes do clique seja exatamente o
+                  que vai acontecer. */}
+              {/* FECHADO POR PADRÃO, mas com a PERGUNTA à mostra. Aberto, ele
+                  empurrava o "Fechar" pra fora da tela — o mesmo defeito que o
+                  dono já tinha apontado na lista. E a pergunta na tampa é o que
+                  faz ele ser achado: quem precisa disto chega aqui pensando
+                  exatamente "a conta não está batendo". Ninguém procura por
+                  "informar saldo total". */}
+              <details className="conserto">
+                <summary className="conserto-cab">
+                  <span className="conserto-sinal" aria-hidden="true">
+                    <Ico nome="aviso" tamanho={15} />
+                  </span>
+                  <b>A minha conta não bate com o Replicate?</b>
+                  <span className="conserto-seta" aria-hidden="true" />
+                </summary>
+
+                <p className="conserto-txt">
+                  O MPTRIX não consegue ler o seu saldo — a conta deles não entrega esse
+                  número. Ele <strong>estima</strong> o que gastou pelo preço da máquina de
+                  cada trabalho, e estima <strong>pra mais</strong> de propósito, pra frear
+                  antes e não deixar você furar o crédito. Só que erro pra mais se acumula:
+                  um dia eu digo que acabou e ainda tem dinheiro lá. Quando isso acontecer,
+                  o número certo é o deles — e este é o lugar de me dizer qual é.
+                </p>
+
+                <ol className="conserto-passos">
+                  <li>
+                    <span>1</span>
+                    <div>
+                      Abra a página do crédito
+                      <button
+                        className="conserto-ir"
+                        type="button"
+                        onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
+                      >abrir no navegador</button>
+                    </div>
+                  </li>
+                  <li><span>2</span><div>Procure <em>Crédito restante</em> — é o que sobrou de verdade</div></li>
+                  <li><span>3</span><div>Digite esse número aqui embaixo</div></li>
+                </ol>
+
+                <div className="conserto-linha">
+                  <div className="freio-caixa conserto-caixa">
+                    <em>US$</em>
+                    <input
+                      type="number"
+                      className="freio-num"
+                      min="0"
+                      step="0.01"
+                      value={rascunhoReal}
+                      placeholder="0,00"
+                      aria-label="o saldo real que está no Replicate"
+                      onChange={(e) => setRascunhoReal(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="conserto-ok"
+                    disabled={!Number(String(rascunhoReal).replace(',', '.'))}
+                    onClick={async () => {
+                      const d = Number(String(rascunhoReal).replace(',', '.')) || 0
+                      if (d <= 0) return
+                      setRascunhoReal('')
+                      setEstado(await window.mptrix.nuvem.credito(Math.round(d * 100)))
+                    }}
+                  >
+                    {Number(String(rascunhoReal).replace(',', '.'))
+                      ? <>corrigir para {emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</>
+                      : 'corrigir'}
+                  </button>
+                </div>
+
+                {/* O AVISO COM OS NÚMEROS DO CASO. "Isso reinicia a contagem" é
+                    frase de manual; dizer que os US$ 3,40 já gastos voltam a
+                    zero é o que a pessoa precisa saber antes de apertar. */}
+                <p className={`conserto-efeito ${Number(String(rascunhoReal).replace(',', '.')) ? 'ligado' : ''}`}>
+                  <Ico nome="aviso" tamanho={13} />
+                  <span>
+                    {Number(String(rascunhoReal).replace(',', '.'))
+                      ? <>
+                        Isto <strong>fecha a conta atual</strong>: o gasto de{' '}
+                        <strong>{emDolar(estado.gastoDesdeCredito)}</strong> volta a zero e eu
+                        recomeço a contar a partir de{' '}
+                        <strong>{emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</strong>.
+                        {' '}Os registros de cima continuam guardados — só param de contar.
+                      </>
+                      : <>Isto <strong>fecha a conta atual</strong>: o gasto acumulado volta a zero e a
+                        contagem recomeça do número que você digitar. Não é o mesmo que comprar
+                        mais crédito — pra somar, use o campo do painel.</>}
+                  </span>
+                </p>
+              </details>
+
               {/* a limpeza mora AQUI dentro: esta janela é sobre esses dados,
                   então o botão de apagá-los é vizinho deles, não de um menu
                   do outro lado da tela. */}
