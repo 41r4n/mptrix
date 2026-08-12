@@ -10252,82 +10252,6 @@ ul.hlib-grid {
 .freio-ok:hover { background: var(--accent-hover); }
 
 
-/* --- O RECADO ---
-   A nuvem pode se desligar sozinha NO MEIO de uma separação, e é justamente
-   aí que a pessoa não está olhando pra aba da nuvem. Sem isto o trabalho de
-   repente volta a demorar minutos e ninguém conta por quê.
-   Ele aparece por cima de qualquer tela, e só na TRANSIÇÃO: mostrar o mesmo
-   recado a cada leitura viraria parede, e parede a pessoa aprende a ignorar. */
-.recado {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  z-index: 200;
-  width: 420px;
-  max-width: calc(100vw - 44px);
-  display: flex;
-  align-items: flex-start;
-  gap: 13px;
-  padding: 15px 16px 16px 18px;
-  background: linear-gradient(160deg, #16171a, #0b0c0f 72%);
-  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.35), 0 18px 44px rgba(0, 0, 0, 0.8);
-  animation: recado-entra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-@keyframes recado-entra {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
-}
-.recado-barra {
-  position: absolute;
-  left: 0;
-  top: 11px;
-  bottom: 11px;
-  width: 3px;
-  background: var(--warn);
-  box-shadow: 0 0 12px rgba(234, 179, 8, 0.55);
-}
-.recado-txt { flex: 1; min-width: 0; }
-.recado-txt b {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--warn);
-  margin-bottom: 7px;
-}
-.recado-txt p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
-.recado-txt strong { color: var(--text); font-weight: 600; }
-.recado-ir {
-  flex: none;
-  align-self: center;
-  height: 32px;
-  padding: 0 14px;
-  background: var(--warn);
-  border: none;
-  color: #0b0c0f;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 700;
-  cursor: pointer;
-}
-.recado-ir:hover { background: #f5c518; }
-.recado-x {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  background: none;
-  border: none;
-  color: var(--muted-2);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-.recado-x:hover { color: var(--text); }
-
 /* o botão PEDE quando aperta: cor de aviso e batida devagar. Botão que muda de
    comportamento conforme a situação é o jeito de a tela falar sem escrever
    mais uma linha. */
@@ -10901,3 +10825,132 @@ ul.hlib-grid {
 
 /* o botão de comprar, dentro do painel */
 .credito-ir { display: inline-flex; align-items: center; gap: 9px; }
+
+/* ██████████ O RECADO ██████████
+   A nuvem pode se desligar durante QUALQUER coisa: no meio de uma separação,
+   com o estúdio aberto ocupando a tela inteira, ou com a pessoa em outra aba
+   escolhendo música. Ela não pode depender de estar olhando pro canto certo
+   pra ficar sabendo que o dinheiro acabou.
+
+   Por isso ele mudou de canto pra meio: escurece e embaça o resto, aparece
+   por cima de tudo (400 — acima do estúdio em 90, das janelas em 100, da roda
+   em 120 e do balãozinho de dica em 300), e NÃO fecha por clique fora. Recado
+   sobre dinheiro que some porque a mão escorregou é recado que não foi lido. */
+.recado-palco {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 4, 7, 0.82);
+  backdrop-filter: blur(7px);
+  animation: fadeIn 0.16s ease;
+}
+.recado {
+  position: relative;
+  width: 520px;
+  max-width: 100%;
+  padding: 20px 22px 20px 24px;
+  background: linear-gradient(160deg, #17181c, #0b0c0f 72%);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4), 0 24px 60px rgba(0, 0, 0, 0.85);
+  animation: recado-entra 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes recado-entra {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.recado-barra {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  background: var(--warn);
+  box-shadow: 0 0 14px rgba(234, 179, 8, 0.6);
+}
+.recado-canto {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--warn);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.recado-canto.tl { top: -4px; left: -4px; border-right: none; border-bottom: none; }
+.recado-canto.br { bottom: -4px; right: -4px; border-left: none; border-top: none; }
+
+.recado-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.recado-luz {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--warn);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.8);
+  animation: jornal-bate 1.8s ease-in-out infinite;
+}
+.recado-cab b {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+.recado p { margin: 0 0 16px; font-size: 13.5px; line-height: 1.55; color: var(--text-2); }
+.recado p strong { color: var(--text); font-weight: 600; }
+
+.recado-acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.recado-ir {
+  height: 34px;
+  padding: 0 16px;
+  background: var(--warn);
+  border: none;
+  color: #0b0c0f;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+}
+.recado-ir:hover { background: #f5c518; }
+.recado-ok {
+  height: 34px;
+  padding: 0 16px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.13s ease, box-shadow 0.13s ease;
+}
+.recado-ok:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
+/* com o estúdio na frente não há pra onde levar: dizer onde fica é mais
+   honesto do que um botão que parece não fazer nada */
+.recado-onde {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  flex: 1 1 220px;
+}
+.recado-x {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--muted-2);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 5px;
+}
+.recado-x:hover { color: var(--text); }

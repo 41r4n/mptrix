@@ -201,6 +201,10 @@ export default function App() {
     )
   }
 
+  // com o estúdio na frente, trocar de aba mexeria numa tela que está ATRÁS
+  // dele — a pessoa clicaria e não veria nada acontecer
+  const estudioAberto = !!studioSource
+
   return (
     <UpdatesProvider>
       <div className="app">
@@ -400,35 +404,6 @@ export default function App() {
 
 
 
-      {/* O RECADO. Aparece por cima de qualquer tela, porque a parada
-          acontece durante o trabalho — não na aba da nuvem. */}
-      {avisoNuvem && (
-        <div className="recado">
-          <span className="recado-barra" aria-hidden="true" />
-          <div className="recado-txt">
-            <b>
-              {avisoNuvem === 'teto-do-mes'
-                ? 'Cheguei no teto do mês'
-                : avisoNuvem === 'freio-credito'
-                  ? 'Seu crédito está acabando'
-                  : 'Seu crédito acabou'}
-            </b>
-            <p>
-              Desliguei a nuvem e voltei a separar aqui no seu computador.{' '}
-              <strong>Seu trabalho continua normalmente</strong> — só vai levar
-              alguns minutos em vez de meio.
-              {avisoNuvem === 'freio-credito' && ' Parei antes de acabar pra você não ficar devendo.'}
-            </p>
-          </div>
-          <button
-            className="recado-ir"
-            onClick={() => { setAba('nuvem'); setAvisoNuvem(null) }}
-          >
-            ver crédito
-          </button>
-          <button className="recado-x" onClick={() => setAvisoNuvem(null)} title="Dispensar">×</button>
-        </div>
-      )}
 
       {activePreset && activePreset.id === 'playlist' && (
         <PlaylistModal
@@ -463,6 +438,65 @@ export default function App() {
         <UpdateFooter />
       </div>
       <ZoomChip />
+      {/* O RECADO — no MEIO da tela, por cima de tudo, e só sai no ×.
+          A nuvem pode se desligar durante qualquer coisa: no meio de uma
+          separação, com o estúdio aberto, ou com a pessoa em outra aba
+          escolhendo música. Ela não pode depender de estar olhando pro canto
+          certo pra ficar sabendo que o dinheiro acabou.
+          Por isso: centralizado, com o resto embaçado atrás, e sem fechar por
+          clique fora — recado sobre dinheiro que some porque a mão escorregou
+          é recado que não foi lido. */}
+      {avisoNuvem && (
+        <div className="recado-palco">
+          <div className="recado" role="alertdialog" aria-modal="true">
+            <span className="recado-barra" aria-hidden="true" />
+            <span className="recado-canto tl" aria-hidden="true" />
+            <span className="recado-canto br" aria-hidden="true" />
+            <button className="recado-x" onClick={() => setAvisoNuvem(null)} title="Fechar">×</button>
+
+            <div className="recado-cab">
+              <span className="recado-luz" aria-hidden="true" />
+              <b>
+                {avisoNuvem === 'teto-do-mes'
+                  ? 'Cheguei no teto do mês'
+                  : avisoNuvem === 'freio-credito'
+                    ? 'Seu crédito está acabando'
+                    : 'Seu crédito acabou'}
+              </b>
+            </div>
+
+            <p>
+              Desliguei a nuvem e voltei a separar aqui no seu computador.{' '}
+              <strong>Seu trabalho continua normalmente</strong> — só vai levar
+              bem mais tempo. Dependendo da música e do computador, o que a nuvem
+              fazia em meio minuto aqui pode levar de alguns minutos a algumas
+              horas.
+              {avisoNuvem === 'freio-credito' && ' Parei antes de acabar pra você não ficar devendo.'}
+            </p>
+
+            <div className="recado-acoes">
+              {/* com o estúdio aberto, trocar de aba mexeria numa tela que está
+                  ATRÁS dele — a pessoa clicaria e não veria nada acontecer.
+                  Melhor dizer onde fica do que fingir que levou. */}
+              {estudioAberto ? (
+                <span className="recado-onde">o crédito fica na aba NUVEM, quando você fechar o estúdio</span>
+              ) : (
+                <button
+                  className="recado-ir"
+                  onClick={() => { setAba('nuvem'); setAvisoNuvem(null) }}
+                >
+                  ver crédito
+                </button>
+              )}
+              <button className="recado-ok" onClick={() => setAvisoNuvem(null)}>
+                entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </UpdatesProvider>
   )
 }
