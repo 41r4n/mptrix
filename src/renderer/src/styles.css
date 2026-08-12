@@ -10718,3 +10718,16 @@ ul.hlib-grid {
 /* a janela do histórico: estreita e alta, porque a lista é de linhas curtas */
 .modal-livro { width: 640px; }
 .modal-livro .modal-body { max-height: 60vh; overflow-y: auto; }
+
+/* USO EM CINZA, nao em vermelho. Vermelho quer dizer "acabou" — se toda
+   separacao fosse vermelha, a cor perderia o sentido justamente na hora que
+   importa. Uso e o dia a dia; ele fica discreto e deixa as duas linhas que
+   decidem alguma coisa (carga e fim) aparecerem. */
+.livro-lista li.uso {
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  opacity: 0.78;
+}
+.livro-lista li.uso::before { background: var(--border-strong); }
+.livro-lista li.uso .livro-txt { color: var(--muted); }
+.livro-lista li.uso .livro-txt b { color: var(--text-2); font-weight: 500; }

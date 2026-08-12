@@ -584,7 +584,16 @@ export default function NuvemConfig() {
                     )}
                     <span className="nuvem-unidade">
                       {estado.creditoInformado
-                        ? <>o número está na página do Replicate, em <strong>Crédito restante</strong> — sempre que você recarregar, atualize aqui</>
+                        ? <>
+                          esse número <strong>já inclui o que sobrou</strong> — o Replicate soma
+                          sozinho, você não precisa fazer conta.
+                          {(() => {
+                            const sobra = Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito)
+                            return sobra > 0
+                              ? <> Pela minha conta sobram <strong>{emDolar(sobra)}</strong>: se comprar US$ 10, deve dar por volta de {emDolar(sobra + 1000)}.</>
+                              : null
+                          })()}
+                        </>
                         : <>o número está na página do Replicate, em <strong>Crédito restante</strong></>}
                     </span>
                   </div>
@@ -629,16 +638,18 @@ export default function NuvemConfig() {
               <ul className="livro-lista">
 
                     {estado.livro.map((l, i) => (
-                      <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
+                      <li key={i} className={l.tipo}>
                         <span className="livro-quando">{quandoFoi(l.quando)}</span>
                         <span className="livro-txt">
                           {l.tipo === 'carga'
                             ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
-                            : <>
+                            : l.tipo === 'uso'
+                              ? <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}</>
+                              : <>
                               <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
                               {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}
                               {l.motivo === 'sem-credito' ? ' · pode haver saldo pendente lá' : ''}
-                            </>}
+                              </>}
                         </span>
                       </li>
                 ))}

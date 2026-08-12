@@ -254,7 +254,7 @@ function usarNuvemPodePassar() {
  * letra, cifra) e o painel diria "37 músicas" pra quem separou três, com um
  * "por música" que despenca pro preço de uma sonda.
  */
-export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu' } = {}) {
+export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu', titulo = null } = {}) {
   store.set('nuvem.segundosGastos', (store.get('nuvem.segundosGastos') || 0) + (segundos || 0))
   // O que manda no teto é o CENTAVO, medido pelo preço da máquina que fez o
   // trabalho — não mais um chute de pior caso igual pra tudo.
@@ -267,7 +267,14 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
   // conta separada, que NÃO vira no mês: crédito pré-pago não se renova, ele
   // se esgota. Misturar as duas faria a sobra "voltar" todo dia primeiro.
   store.set('nuvem.gastoDesdeCredito', (store.get('nuvem.gastoDesdeCredito') || 0) + custo)
-  if (contaMusica) store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
+  if (contaMusica) {
+    store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
+    // SÓ A SEPARAÇÃO DA MÚSICA vira linha no livro. As sondas, a letra e a
+    // cifra também custam, mas viram dezenas de linhas de centavos que
+    // enterrariam as duas que importam — a carga e o fim. O gasto delas
+    // continua contado; ele só não vira notícia.
+    anotarNoLivro({ tipo: 'uso', valor: Math.round(custo * 100) / 100, titulo: titulo || null })
+  }
   return getNuvem()
 }
 

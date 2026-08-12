@@ -1349,7 +1349,7 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
           // única chamada que conta como "música feita" no placar: é a
           // separação da música em si. O resto (sondas, especialistas, letra,
           // cifra) soma segundos mas não inventa músicas.
-          somarGastoNuvem(r.segundos, { contaMusica: true, maquina: 'a100' })
+          somarGastoNuvem(r.segundos, { contaMusica: true, maquina: 'a100', titulo: title || null })
           feitoNaNuvem = true
         } catch (err) {
           if (err?.segundosGastos) somarGastoNuvem(err.segundosGastos, { maquina: 'a100' }) // GPU queimada antes de morrer tambem e dinheiro
