@@ -758,7 +758,9 @@ export default function NuvemConfig() {
                         <span className="livro-quando">{quandoFoi(l.quando)}</span>
                         <span className="livro-txt">
                           {l.tipo === 'carga'
-                            ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
+                            ? (l.adicionado
+                              ? <><b>adicionou</b> {emDolar(l.adicionado)} · ficou com {emDolar(l.valor)}{l.sobrava > 0 ? <> (tinha {emDolar(l.sobrava)})</> : null}</>
+                              : <><b>informou</b> {emDolar(l.valor)} no total{l.sobrava > 0 ? <> · tinha {emDolar(l.sobrava)} antes</> : null}</>)
                             : l.tipo === 'uso'
                               ? <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}{l.simulado ? <span className="livro-selo">simulado</span> : null}</>
                               : <>

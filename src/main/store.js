@@ -258,7 +258,7 @@ export function apagarLinhasDoLivro(ids) {
  * A PESSOA DIZ QUANTO PÔS, e o contador de sobra recomeça.
  * É a única forma de o app saber quanto resta: ler o saldo não dá.
  */
-export function informarCredito(centavos) {
+export function informarCredito(centavos, extra = {}) {
   const v = Math.max(0, Math.round(Number(centavos) || 0))
   const antes = getNuvem()
   const sobrava = Math.max(0, antes.creditoInformado - antes.gastoDesdeCredito)
@@ -272,7 +272,19 @@ export function informarCredito(centavos) {
     return getNuvem()
   }
 
-  anotarNoLivro({ tipo: 'carga', valor: v, sobrava })
+  // A LINHA CONTA O ATO, não só o resultado.
+  //
+  // "valor" é o total depois (é dele que a conta sai), mas quem adicionou US$4
+  // com US$11 sobrando fez UM ATO DE 4 — e a linha dizia "carregou US$15".
+  // Registro que conta o resultado em vez do ato faz a pessoa duvidar da
+  // própria memória: ela sabe que pôs 4.
+  // Então guardo os dois: o total pra conta, e o que foi feito pra leitura.
+  anotarNoLivro({
+    tipo: 'carga',
+    valor: v,
+    sobrava,
+    ...(extra.adicionado ? { adicionado: extra.adicionado } : { declarado: true })
+  })
   // carga nova derruba a parada por dinheiro: a parede caiu
   const motivo = store.get('nuvem.paradaPor')
   if (motivo === 'sem-credito' || motivo === 'freio-credito') {
@@ -299,7 +311,7 @@ export function somarCredito(centavos) {
   if (!add) return getNuvem()
   const n = getNuvem()
   const sobrava = Math.max(0, n.creditoInformado - n.gastoDesdeCredito)
-  return informarCredito(sobrava + add)
+  return informarCredito(sobrava + add, { adicionado: add })
 }
 
 /**
