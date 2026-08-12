@@ -30,6 +30,12 @@ export default function NuvemConfig() {
   const [chave, setChave] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [recado, setRecado] = useState(null)
+  // RASCUNHO DO CAMPO. Antes cada tecla ia direto pro motor: digitar "100"
+  // gravava 1, depois 10, depois 100 — três cargas no livro pra uma só de
+  // verdade, e o contador zerando três vezes no caminho. Valor de dinheiro
+  // se confirma, não se transmite letra por letra.
+  const [rascunho, setRascunho] = useState(null)
+  const [verLivro, setVerLivro] = useState(false)
 
   const recarregar = async () => setEstado(await window.mptrix.nuvem.estado())
   useEffect(() => { recarregar() }, [])
@@ -475,7 +481,20 @@ export default function NuvemConfig() {
 
               {estado.livro?.length > 0 && (
                 <div className="livro">
-                  <p className="livro-titulo">o que já aconteceu com seu crédito</p>
+                  {/* fechado por padrão: o histórico é consulta, não leitura de
+                      todo dia — e aberto ele empurrava pra fora da tela o
+                      campo e o jornal, que são o assunto */}
+                  <button
+                    className="livro-abrir"
+                    onClick={() => setVerLivro((v) => !v)}
+                    aria-expanded={verLivro}
+                    type="button"
+                  >
+                    <span className={`livro-seta ${verLivro ? 'on' : ''}`} aria-hidden="true" />
+                    ver histórico
+                    <span className="livro-conta">{estado.livro.length}</span>
+                  </button>
+                  {verLivro && (
                   <ul>
                     {estado.livro.slice(0, 8).map((l, i) => (
                       <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
@@ -492,6 +511,7 @@ export default function NuvemConfig() {
                       </li>
                     ))}
                   </ul>
+                  )}
                 </div>
               )}
 
@@ -553,14 +573,27 @@ export default function NuvemConfig() {
                       type="number"
                       className="nuvem-campo curto"
                       min="0"
-                      step="1"
-                      value={estado.creditoInformado ? (estado.creditoInformado / 100) : ''}
-                      placeholder="0"
-                      onChange={async (e) => {
-                        const dolares = Number(e.target.value) || 0
+                      step="0.01"
+                      value={rascunho ?? (estado.creditoInformado ? (estado.creditoInformado / 100) : '')}
+                      placeholder="0,00"
+                      onChange={(e) => setRascunho(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                      onBlur={async () => {
+                        if (rascunho === null) return
+                        const dolares = Number(String(rascunho).replace(',', '.')) || 0
+                        setRascunho(null)
+                        // não incomoda o motor se o número não mudou
+                        if (Math.round(dolares * 100) === estado.creditoInformado) return
                         setEstado(await window.mptrix.nuvem.credito(Math.round(dolares * 100)))
                       }}
                     />
+                    {rascunho !== null && (
+                      <button
+                        className="freio-ok"
+                        onClick={(e) => e.currentTarget.previousElementSibling?.blur()}
+                        type="button"
+                      >confirmar</button>
+                    )}
                     <span className="nuvem-unidade">
                       {estado.creditoInformado
                         ? <>o número está na página do Replicate, em <strong>Crédito restante</strong> — sempre que você recarregar, atualize aqui</>
