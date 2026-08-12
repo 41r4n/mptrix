@@ -10003,63 +10003,7 @@ ul.hlib-grid {
 .chip-destaque:hover .chip-borda { background: var(--accent); }
 .chip-destaque .chip-nome { color: var(--accent); }
 
-/* --- O CRÉDITO DA NUVEM ---
-   O saldo não aparece aqui e isso é decisão, não esquecimento: a API do
-   Replicate não entrega esse número. Inventar uma estimativa de saldo seria
-   errar justamente na hora que importa — quando está acabando. Então o painel
-   mostra o que o app SABE (quanto ele gastou) e leva ao lugar que sabe o
-   resto. */
-.credito {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 16px 18px 16px 20px;
-  margin: 4px 0 10px;
-  background: var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  clip-path: var(--corte-sm);
-  position: relative;
-}
-.credito::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  background: var(--accent);
-  box-shadow: 0 0 12px rgba(182, 255, 59, 0.45);
-}
-.credito-num { display: flex; flex-direction: column; gap: 2px; flex: none; }
-.credito-num b {
-  font-family: var(--font-mono);
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--accent);
-  text-shadow: 0 0 18px rgba(182, 255, 59, 0.35);
-}
-.credito-num i {
-  font-style: normal;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-.credito-fio { width: 1px; align-self: stretch; background: var(--border); flex: none; }
-.credito-lado { display: flex; flex-direction: column; gap: 4px; flex: none; }
-.credito-lado span {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-.credito-lado b { color: var(--text-2); font-size: 12px; font-weight: 500; }
-.credito-espaco { flex: 1 1 auto; }
-.credito-ir { display: inline-flex; align-items: center; gap: 9px; flex: none; }
+
 
 /* --- O CAMINHO: quatro passos com o porquê ao lado do quê ---
    Antes eram um parágrafo, um campo de senha e um link "onde eu pego essa
@@ -10398,162 +10342,7 @@ ul.hlib-grid {
   55% { box-shadow: 0 0 24px rgba(234, 179, 8, 0.75); }
 }
 
-/* --- O JORNAL DO CRÉDITO: um cartão, não uma linha ---
-   Ele estava escrito no mesmo peso do resto e sumia entre parágrafos. Só que
-   ele é a ÚNICA peça da tela que responde "posso continuar usando?" —
-   informação que decide comportamento não pode ter o mesmo peso de informação
-   que só contextualiza.
-   Agora o cartão inteiro muda de cor com o nível: quando aperta, não é uma
-   palavra que muda, é a peça toda. Dá pra ler o estado com o olho de longe,
-   antes de qualquer texto. */
-.jornal {
-  position: relative;
-  margin: 2px 0 16px;
-  padding: 16px 18px 18px 20px;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), transparent 60%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  clip-path: var(--corte-sm);
-  transition: box-shadow 0.35s ease, background 0.35s ease;
-}
-/* barra de estado na lateral, na cor do nível */
-.jornal::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  background: var(--muted-2);
-  transition: background 0.35s ease, box-shadow 0.35s ease;
-}
-/* colchetes: fazem a peça parecer encaixada num aparelho em vez de flutuar */
-.jornal-canto {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border: 1px solid var(--border-strong);
-  pointer-events: none;
-}
-.jornal-canto.tl { top: 6px; left: 7px; border-right: none; border-bottom: none; }
-.jornal-canto.br { bottom: 6px; right: 7px; border-left: none; border-top: none; }
 
-.jornal-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.jornal b {
-  flex: none;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  margin: 0;
-}
-.jornal-risco { flex: 1; height: 1px; background: currentColor; opacity: 0.28; }
-.jornal-hachura {
-  flex: none;
-  width: 30px;
-  height: 8px;
-  background: repeating-linear-gradient(-52deg, currentColor 0 1.5px, transparent 1.5px 5px);
-  opacity: 0.4;
-}
-/* a luz de estado: um losango que muda de cor. Diz o nível de longe, antes de
-   qualquer palavra ser lida. */
-.jornal-luz {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background: var(--muted-2);
-}
-
-/* o número grande: a sobra é o que a pessoa veio ver */
-.jornal-medida { display: flex; align-items: baseline; gap: 9px; margin-bottom: 9px; }
-.jornal-sobra {
-  font-family: var(--font-mono);
-  font-size: 30px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1;
-}
-.jornal-de {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-
-.jornal p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); max-width: 76ch; }
-
-/* a barra mora aqui, não no campo: ela é estado, não entrada */
-.jornal-barra {
-  position: relative;
-  height: 8px;
-  margin-top: 15px;
-  background: var(--bg-cava);
-  box-shadow: inset 0 0 0 1px var(--border);
-  overflow: visible;
-}
-.jornal-cheio {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: currentColor;
-  transition: width 0.4s ease;
-}
-/* onde o app freia, escrito na própria régua: a marca existe pra pessoa ver
-   que a parada é ANTES do fim, e não desconfiar que ficou sem crédito à toa */
-.jornal-marca {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  background: var(--text-2);
-  opacity: 0.65;
-}
-.jornal-marca i {
-  position: absolute;
-  top: 12px;
-  left: -22px;
-  font-style: normal;
-  font-family: var(--font-mono);
-  font-size: 7.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  white-space: nowrap;
-}
-
-/* ▸ OS NÍVEIS. A cor é herdada por currentColor, então título, risco,
-   hachura e barra mudam juntos — uma linha por nível em vez de seis. */
-.jornal.cheio { color: var(--accent); }
-.jornal.cheio::before { background: var(--accent); box-shadow: 0 0 12px rgba(182, 255, 59, 0.5); }
-.jornal.cheio .jornal-luz { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.7); }
-
-.jornal.meio { color: var(--stem-3); }
-.jornal.meio::before { background: var(--stem-3); box-shadow: 0 0 12px rgba(126, 217, 122, 0.45); }
-.jornal.meio .jornal-luz { background: var(--stem-3); box-shadow: 0 0 10px rgba(126, 217, 122, 0.6); }
-
-/* apertando: o cartão INTEIRO esquenta, não só uma palavra */
-.jornal.pouco {
-  color: var(--warn);
-  background: linear-gradient(155deg, rgba(234, 179, 8, 0.1), transparent 62%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4);
-}
-.jornal.pouco::before { background: var(--warn); box-shadow: 0 0 14px rgba(234, 179, 8, 0.7); }
-.jornal.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 12px rgba(234, 179, 8, 0.8); animation: jornal-bate 1.8s ease-in-out infinite; }
-
-.jornal.parou {
-  color: var(--bad);
-  background: linear-gradient(155deg, rgba(248, 113, 113, 0.1), transparent 62%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.42);
-}
-.jornal.parou::before { background: var(--bad); box-shadow: 0 0 14px rgba(248, 113, 113, 0.65); }
-.jornal.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 12px rgba(248, 113, 113, 0.8); }
-
-.jornal.mudo { color: var(--muted-2); }
-.jornal.mudo .jornal-luz { background: var(--muted-2); }
-
-@keyframes jornal-bate { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* a nuvem trancada: o botao mostra que NAO pode, em vez de aceitar o clique e
    desfazer sozinho na primeira separacao. Botao que aceita e desfaz mente
@@ -10901,3 +10690,214 @@ ul.hlib-grid {
   color: var(--warn);
   box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.45);
 }
+
+/* ██████████ O PAINEL DO CRÉDITO — um só ██████████
+   Eram dois cartões falando do mesmo dinheiro: um com o gasto, outro com a
+   sobra. E a informação mais importante — quanto AINDA TEM — aparecia depois
+   da menos importante. Duas caixas pro mesmo assunto obrigam a pessoa a
+   juntar as pontas de cabeça.
+
+   Agora é um, e a leitura tem lado: à esquerda o que você TEM, em verde,
+   primeiro, porque é o que decide se dá pra continuar. À direita o que JÁ
+   FOI, em vermelho, porque é dinheiro que saiu. Nada se perdeu — músicas,
+   custo por música e mês passado seguem ali, no tamanho de apoio que é o
+   deles. */
+.painel {
+  position: relative;
+  margin: 2px 0 16px;
+  padding: 16px 18px 18px 20px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), transparent 60%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  clip-path: var(--corte-sm);
+  transition: box-shadow 0.35s ease, background 0.35s ease;
+}
+/* barra de estado na lateral, na cor do nível */
+.painel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--muted-2);
+  transition: background 0.35s ease, box-shadow 0.35s ease;
+}
+
+.painel-numeros {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.painel-tem,
+.painel-gastou { display: flex; flex-direction: column; gap: 3px; flex: none; min-width: 0; }
+.painel-rot {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.painel-tem b,
+.painel-gastou b {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+.painel-tem i,
+.painel-gastou i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* VERDE É O QUE TEM: é o número que responde "posso continuar?" */
+.painel-tem b { color: var(--accent); text-shadow: 0 0 18px rgba(182, 255, 59, 0.32); }
+/* VERMELHO É O QUE SAIU: dinheiro que foi embora não volta, e a cor diz isso
+   sem precisar de palavra */
+.painel-gastou b { color: var(--bad); text-shadow: 0 0 18px rgba(248, 113, 113, 0.22); }
+/* trancado, o "tem" deixa de ser boa notícia: ele vira zero e perde o verde */
+.painel.parou .painel-tem b { color: var(--muted); text-shadow: none; }
+
+.painel-fio { width: 1px; align-self: stretch; background: var(--border); flex: none; }
+.painel-espaco { flex: 1 1 auto; }
+.painel-numeros .credito-ir { align-self: center; flex: none; }
+
+.painel-frase {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 82ch;
+}
+
+/* ▸ OS NÍVEIS. currentColor leva a cor pro título, risco, hachura e barra de
+   uma vez — uma linha por nível em vez de seis. */
+.painel.cheio { color: var(--accent); }
+.painel.cheio::before { background: var(--accent); box-shadow: 0 0 12px rgba(182, 255, 59, 0.5); }
+.painel.cheio .jornal-luz { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.7); }
+
+.painel.meio { color: var(--stem-3); }
+.painel.meio::before { background: var(--stem-3); box-shadow: 0 0 12px rgba(126, 217, 122, 0.45); }
+.painel.meio .jornal-luz { background: var(--stem-3); box-shadow: 0 0 10px rgba(126, 217, 122, 0.6); }
+
+.painel.pouco {
+  color: var(--warn);
+  background: linear-gradient(155deg, rgba(234, 179, 8, 0.1), transparent 62%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4);
+}
+.painel.pouco::before { background: var(--warn); box-shadow: 0 0 14px rgba(234, 179, 8, 0.7); }
+.painel.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 12px rgba(234, 179, 8, 0.8); animation: jornal-bate 1.8s ease-in-out infinite; }
+
+.painel.parou {
+  color: var(--bad);
+  background: linear-gradient(155deg, rgba(248, 113, 113, 0.1), transparent 62%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.42);
+}
+.painel.parou::before { background: var(--bad); box-shadow: 0 0 14px rgba(248, 113, 113, 0.65); }
+.painel.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 12px rgba(248, 113, 113, 0.8); }
+
+.painel.mudo { color: var(--muted-2); }
+.painel.mudo .jornal-luz { background: var(--muted-2); }
+.painel.mudo .painel-tem b { color: var(--muted-2); text-shadow: none; }
+
+/* a barra fecha o painel, encostada no pé */
+.painel .jornal-barra { margin-top: 16px; }
+
+/* janela estreita: os números descem em vez de espremer */
+@media (max-width: 1180px) {
+  .painel-numeros { gap: 14px; }
+  .painel-fio { display: none; }
+  .painel-numeros .credito-ir { align-self: flex-start; }
+}
+
+/* --- as peças do painel: cabeçalho, colchetes e barra ---
+   Elas moravam no bloco do jornal e vieram junto quando ele saiu. Ficam aqui
+   com o nome que o markup usa; renomear tudo só pra ficar bonito no CSS
+   custaria mexer no componente sem ganhar nada. */
+.jornal-canto {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--border-strong);
+  pointer-events: none;
+}
+.jornal-canto.tl { top: 6px; left: 7px; border-right: none; border-bottom: none; }
+.jornal-canto.br { bottom: 6px; right: 7px; border-left: none; border-top: none; }
+
+.jornal-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.jornal-cab b {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0;
+}
+/* a luz de estado: diz o nível de longe, antes de qualquer palavra ser lida */
+.jornal-luz {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--muted-2);
+}
+.jornal-risco { flex: 1; height: 1px; background: currentColor; opacity: 0.28; }
+.jornal-hachura {
+  flex: none;
+  width: 30px;
+  height: 8px;
+  background: repeating-linear-gradient(-52deg, currentColor 0 1.5px, transparent 1.5px 5px);
+  opacity: 0.4;
+}
+
+/* a barra: número é preciso, barra é imediata — dá pra ver de longe que está
+   apertando, sem ler nada */
+.jornal-barra {
+  position: relative;
+  height: 8px;
+  background: var(--bg-cava);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: visible;
+}
+.jornal-cheio {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: currentColor;
+  transition: width 0.4s ease;
+}
+/* onde o app freia, escrito na própria régua: a marca existe pra pessoa ver
+   que a parada é ANTES do fim, e não desconfiar que ficou sem crédito à toa */
+.jornal-marca {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--text-2);
+  opacity: 0.65;
+}
+.jornal-marca i {
+  position: absolute;
+  top: 12px;
+  left: -22px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+@keyframes jornal-bate { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* o botão de comprar, dentro do painel */
+.credito-ir { display: inline-flex; align-items: center; gap: 9px; }

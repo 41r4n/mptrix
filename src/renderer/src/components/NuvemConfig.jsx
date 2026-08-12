@@ -454,40 +454,21 @@ export default function NuvemConfig() {
                   importa, que é quando está acabando. Então o painel mostra o
                   que o MPTRIX SABE (quanto ele mesmo gastou) e leva você ao
                   lugar que sabe o resto, num clique. */}
-              <div className="credito">
-                <div className="credito-num">
-                  <b>{emDolar(gastoC)}</b>
-                  <i>gastos este mês</i>
-                </div>
-                <span className="credito-fio" aria-hidden="true" />
-                <div className="credito-lado">
-                  <span><b>{estado.musicasFeitas}</b> músicas</span>
-                  <span><b>{porMusica ? emDolar(porMusica) : '—'}</b> cada</span>
-                  {estado.gastoMesPassado > 0 && (
-                    <span><b>{emDolar(estado.gastoMesPassado)}</b> mês passado</span>
-                  )}
-                </div>
-                <span className="credito-espaco" />
-                {/* o botão PEDE quando aperta: cor de aviso e batida devagar.
-                    Botão que muda de comportamento conforme a situação é o
-                    jeito de a tela falar sem escrever mais uma linha. */}
-                <button
-                  className={`btn-primary credito-ir ${jornal.nivel === 'parou' || jornal.nivel === 'pouco' ? 'pedindo' : ''}`}
-                  onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
-                >
-                  <Ico nome="baixar" tamanho={15} />
-                  Ver saldo e comprar crédito
-                </button>
-              </div>
-
-              {/* O JORNAL é um CARTÃO, não uma linha de texto. Ele estava
-                  escrito no mesmo peso do resto e sumia entre parágrafos — e
-                  ele é a única peça da tela que responde "posso continuar
-                  usando?". Informação que decide comportamento não pode ter o
-                  mesmo peso de informação que só contextualiza. */}
-              <div className={`jornal ${jornal.nivel}`}>
+              {/* ██████ UM PAINEL SÓ ██████
+                  Eram dois cartões falando do mesmo dinheiro — um com o gasto,
+                  outro com a sobra — e a informação mais importante, quanto
+                  AINDA TEM, aparecia depois da menos importante. Duas caixas
+                  pro mesmo assunto obrigam a pessoa a juntar as pontas de
+                  cabeça.
+                  Agora é um: à esquerda o que você tem (verde, e primeiro
+                  porque é o que decide se dá pra continuar), à direita o que já
+                  foi (vermelho, porque é dinheiro que saiu). Nada se perdeu —
+                  músicas, custo por música e mês passado seguem ali, no tamanho
+                  de apoio que é o deles. */}
+              <div className={`painel ${jornal.nivel}`}>
                 <span className="jornal-canto tl" aria-hidden="true" />
                 <span className="jornal-canto br" aria-hidden="true" />
+
                 <div className="jornal-cab">
                   <span className="jornal-luz" aria-hidden="true" />
                   <b>{jornal.titulo}</b>
@@ -495,29 +476,53 @@ export default function NuvemConfig() {
                   <span className="jornal-hachura" aria-hidden="true" />
                 </div>
 
-                {estado.creditoInformado > 0 && (
-                  <div className="jornal-medida">
-                    {/* TRANCADO = ZERO UTILIZÁVEL. O que sobrou continua na
-                        conta lá, mas pra este app é dinheiro que não pode ser
-                        tocado — mostrar a sobra como se fosse saldo daria a
-                        entender que ainda dá pra usar. O valor real aparece do
-                        lado, dito pelo nome certo. */}
-                    <span className="jornal-sobra">
-                      {estado.paradaPor ? emDolar(0) : emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
-                    </span>
-                    <span className="jornal-de">
-                      {estado.paradaPor
-                        ? <>utilizável · sobraram {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))} parados lá</>
-                        : <>de {emDolar(estado.creditoInformado)}</>}
-                    </span>
+                <div className="painel-numeros">
+                  {/* TEM — verde, e primeiro. TRANCADO = ZERO UTILIZÁVEL: o que
+                      sobrou continua na conta lá, mas pra este app é dinheiro
+                      que não pode ser tocado. */}
+                  <div className="painel-tem">
+                    <span className="painel-rot">você tem</span>
+                    <b>
+                      {estado.creditoInformado
+                        ? (estado.paradaPor ? emDolar(0) : emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito)))
+                        : '—'}
+                    </b>
+                    <i>
+                      {!estado.creditoInformado
+                        ? 'não sei ainda'
+                        : estado.paradaPor
+                          ? <>utilizável · {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))} parados lá</>
+                          : <>de {emDolar(estado.creditoInformado)}</>}
+                    </i>
                   </div>
-                )}
 
-                <p>{jornal.txt}</p>
+                  <span className="painel-fio" aria-hidden="true" />
 
-                {/* a barra mora AQUI, não no campo: ela é estado, não entrada.
-                    Número é preciso, barra é imediata — dá pra ver de longe que
-                    está apertando, sem ler nada. */}
+                  {/* JÁ GASTOU — vermelho: é dinheiro que saiu. */}
+                  <div className="painel-gastou">
+                    <span className="painel-rot">já gastou</span>
+                    <b>{emDolar(gastoC)}</b>
+                    <i>
+                      {estado.musicasFeitas} música{estado.musicasFeitas !== 1 ? 's' : ''}
+                      {porMusica ? <> · {emDolar(porMusica)} cada</> : null}
+                      {estado.gastoMesPassado > 0 ? <> · {emDolar(estado.gastoMesPassado)} mês passado</> : null}
+                    </i>
+                  </div>
+
+                  <span className="painel-espaco" />
+
+                  {/* o botão PEDE quando aperta: cor de aviso e batida devagar */}
+                  <button
+                    className={`btn-primary credito-ir ${jornal.nivel === 'parou' || jornal.nivel === 'pouco' ? 'pedindo' : ''}`}
+                    onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
+                  >
+                    <Ico nome="baixar" tamanho={15} />
+                    Ver saldo e comprar crédito
+                  </button>
+                </div>
+
+                <p className="painel-frase">{jornal.txt}</p>
+
                 {estado.creditoInformado > 0 && (
                   <div className="jornal-barra" title={`${emDolar(estado.gastoDesdeCredito)} gastos de ${emDolar(estado.creditoInformado)}`}>
                     <span
