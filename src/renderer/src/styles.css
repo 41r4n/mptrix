@@ -10441,13 +10441,17 @@ ul.hlib-grid {
   flex-direction: column;
   min-height: 0;
 }
-/* teto pela ALTURA DA TELA, não por número de linhas: numa janela baixa até
-   seis linhas já enchem, numa alta cabem quinze — quem decide é o espaço que
-   existe, não uma contagem fixa. */
+/* DEZ LINHAS, que foi o pedido. O "min" com a altura da tela não é
+   contra-ordem: ele é o que impede a janela de estourar pra fora numa tela
+   baixa, onde dez linhas não caberiam. Em tela normal manda o dez.
+   A altura de linha é uma medida só (--livro-linha) porque ela aparece na
+   conta e no estilo — dois números iguais em lugares diferentes saem do lugar
+   assim que alguém mexe num deles. */
 .modal-livro .livro-lista {
+  --livro-linha: 45px;
   flex: 1 1 auto;
   min-height: 0;
-  max-height: min(52vh, 560px);
+  max-height: min(calc(var(--livro-linha) * 10), 62vh);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 4px;
