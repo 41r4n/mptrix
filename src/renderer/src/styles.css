@@ -10659,25 +10659,32 @@ ul.hlib-grid {
   padding-left: 7px;
   border-left: 1px solid var(--border);
 }
+/* AS LINHAS DO LIVRO.
+   Elas estavam presas a ".livro li" — e quando a lista mudou de lugar (foi pra
+   dentro da janela), saiu de dentro do ".livro" e TODO o estilo parou de
+   valer: sumiu a cor, o fundo, a barra lateral, e sobrou texto cru.
+   Agora o alvo é a própria lista (.livro-lista), que viaja junto com as linhas
+   pra onde elas forem. Estilo amarrado ao ancestral quebra quando o conteúdo
+   se muda; amarrado ao próprio elemento, não. */
 .livro-lista { list-style: none; margin: 0; padding: 0; }
-.livro li {
+.livro-lista li {
   position: relative;
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 8px 12px 8px 14px;
-  font-size: 12.5px;
-  line-height: 1.4;
+  gap: 14px;
+  padding: 11px 14px 11px 16px;
+  font-size: 13px;
+  line-height: 1.45;
   background: var(--bg-cava-2);
   box-shadow: inset 0 0 0 1px var(--border);
 }
-.livro li + li { margin-top: 3px; }
-.livro li::before {
+.livro-lista li + li { margin-top: 4px; }
+.livro-lista li::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 5px;
-  bottom: 5px;
+  top: 6px;
+  bottom: 6px;
   width: 3px;
 }
 .livro-quando {
@@ -10687,18 +10694,26 @@ ul.hlib-grid {
   letter-spacing: 0.08em;
   color: var(--muted-2);
 }
-.livro-txt { min-width: 0; color: var(--muted); }
+.livro-txt { min-width: 0; color: var(--text-2); }
 .livro-txt b { font-weight: 600; }
 
-.livro li.carga { background: linear-gradient(120deg, rgba(182, 255, 59, 0.09), transparent 55%), var(--bg-cava-2); }
-.livro li.carga::before { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.5); }
-.livro li.carga .livro-txt { color: var(--text-2); }
-.livro li.carga .livro-txt b { color: var(--accent); }
+/* VERDE É ENTRADA, VERMELHO É FIM — a linha inteira, não só a palavra. É o que
+   faz o histórico se ler como uma fita, de relance, sem ler nada. */
+.livro-lista li.carga {
+  background: linear-gradient(120deg, rgba(182, 255, 59, 0.12), rgba(182, 255, 59, 0.02) 60%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.24);
+}
+.livro-lista li.carga::before { background: var(--accent); box-shadow: 0 0 10px rgba(182, 255, 59, 0.6); }
+.livro-lista li.carga .livro-quando { color: rgba(182, 255, 59, 0.55); }
+.livro-lista li.carga .livro-txt b { color: var(--accent); }
 
-.livro li.fim { background: linear-gradient(120deg, rgba(248, 113, 113, 0.09), transparent 55%), var(--bg-cava-2); }
-.livro li.fim::before { background: var(--bad); box-shadow: 0 0 10px rgba(248, 113, 113, 0.45); }
-.livro li.fim .livro-txt { color: var(--text-2); }
-.livro li.fim .livro-txt b { color: var(--bad); }
+.livro-lista li.fim {
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.12), rgba(248, 113, 113, 0.02) 60%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.26);
+}
+.livro-lista li.fim::before { background: var(--bad); box-shadow: 0 0 10px rgba(248, 113, 113, 0.55); }
+.livro-lista li.fim .livro-quando { color: rgba(248, 113, 113, 0.6); }
+.livro-lista li.fim .livro-txt b { color: var(--bad); }
 
 /* a janela do histórico: estreita e alta, porque a lista é de linhas curtas */
 .modal-livro { width: 640px; }

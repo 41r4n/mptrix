@@ -628,7 +628,7 @@ export default function NuvemConfig() {
             <div className="modal-body">
               <ul className="livro-lista">
 
-                    {estado.livro.slice(0, 8).map((l, i) => (
+                    {estado.livro.map((l, i) => (
                       <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
                         <span className="livro-quando">{quandoFoi(l.quando)}</span>
                         <span className="livro-txt">
