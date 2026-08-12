@@ -8508,7 +8508,8 @@ ul.hlib-grid {
 .mandamento,
 .livro-quadro,
 .freio-caixa,
-.baixar-poco {
+.baixar-poco,
+.conserto-abrir {
   --diag: linear-gradient(to top right,
     transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
     var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
