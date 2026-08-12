@@ -1,5 +1,6 @@
 import Store from 'electron-store'
 import { safeStorage } from 'electron'
+import { randomUUID } from 'crypto'
 
 // Guarda praticamente tudo — a interface mostra só os 100 mais recentes,
 // mas a busca encontra qualquer item do acervo inteiro
@@ -88,6 +89,7 @@ function virarMesSePreciso() {
 
 export function getNuvem() {
   virarMesSePreciso()
+  garantirIdsDoLivro()
   const n = store.get('nuvem', {})
   return {
     ligada: !!n.ligada,
@@ -129,8 +131,30 @@ export function getNuvem() {
 function anotarNoLivro(entrada) {
   const livro = store.get('nuvem.livro')
   const lista = Array.isArray(livro) ? livro : []
-  lista.unshift({ ...entrada, quando: new Date().toISOString() })
+  // ID PRÓPRIO em cada linha. Apagar por posição na lista quebra sozinho: uma
+  // linha nova entra no topo entre a pessoa escolher e confirmar, e some a
+  // errada. Com id, o que ela apontou é o que vai embora.
+  lista.unshift({ id: randomUUID(), ...entrada, quando: new Date().toISOString() })
   store.set('nuvem.livro', lista.slice(0, 40))
+}
+
+// linhas gravadas antes de existir id ficariam impossíveis de apagar uma a
+// uma. Recebem o seu na primeira leitura, e só uma vez.
+function garantirIdsDoLivro() {
+  const livro = store.get('nuvem.livro')
+  if (!Array.isArray(livro) || !livro.length) return
+  if (livro.every((l) => l && l.id)) return
+  store.set('nuvem.livro', livro.map((l) => (l?.id ? l : { ...l, id: randomUUID() })))
+}
+
+/** Apaga linhas escolhidas do livro, por id. */
+export function apagarLinhasDoLivro(ids) {
+  const alvo = new Set(Array.isArray(ids) ? ids : [])
+  if (!alvo.size) return getNuvem()
+  const livro = store.get('nuvem.livro')
+  const lista = Array.isArray(livro) ? livro : []
+  store.set('nuvem.livro', lista.filter((l) => !alvo.has(l.id)))
+  return getNuvem()
 }
 
 /**

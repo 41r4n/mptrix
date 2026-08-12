@@ -31,6 +31,7 @@ const api = {
     teto: (centavos) => ipcRenderer.invoke('nuvem:teto', centavos),
     credito: (centavos) => ipcRenderer.invoke('nuvem:credito', centavos),
     apagarDados: (o) => ipcRenderer.invoke('nuvem:apagarDados', o),
+    apagarLinhas: (ids) => ipcRenderer.invoke('nuvem:apagarLinhas', ids),
     zerarGasto: () => ipcRenderer.invoke('nuvem:zerarGasto')
   },
 

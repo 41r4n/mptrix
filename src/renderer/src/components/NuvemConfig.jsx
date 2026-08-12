@@ -37,6 +37,9 @@ export default function NuvemConfig() {
   const [rascunho, setRascunho] = useState(null)
   const [verLivro, setVerLivro] = useState(false)
   const [verApagar, setVerApagar] = useState(false)
+  // linhas escolhidas no livro. Some ao fechar a janela: seleção que sobrevive
+  // fechada volta a existir sem a pessoa lembrar do que marcou.
+  const [linhasMarcadas, setLinhasMarcadas] = useState(() => new Set())
   // o que está marcado pra ir embora. A chave começa DESMARCADA de propósito:
   // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
   // caminho do Replicate.
@@ -697,7 +700,7 @@ export default function NuvemConfig() {
       )}
 
       {verLivro && (
-        <div className="modal-overlay" onClick={() => setVerLivro(false)}>
+        <div className="modal-overlay" onClick={() => { setVerLivro(false); setLinhasMarcadas(new Set()) }}>
           <div className="modal modal-livro" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <div>
@@ -720,7 +723,19 @@ export default function NuvemConfig() {
               <ul className="livro-lista">
 
                     {estado.livro.map((l, i) => (
-                      <li key={i} className={l.tipo}>
+                      <li key={l.id || i} className={`${l.tipo} ${linhasMarcadas.has(l.id) ? 'marcada' : ''}`}>
+                        <button
+                          type="button"
+                          className="livro-toque"
+                          aria-pressed={linhasMarcadas.has(l.id)}
+                          onClick={() => setLinhasMarcadas((v) => {
+                            const n = new Set(v)
+                            if (n.has(l.id)) n.delete(l.id); else n.add(l.id)
+                            return n
+                          })}
+                        >
+                          <span className="livro-marca" aria-hidden="true" />
+                        </button>
                         <span className="livro-quando">{quandoFoi(l.quando)}</span>
                         <span className="livro-txt">
                           {l.tipo === 'carga'
@@ -740,14 +755,37 @@ export default function NuvemConfig() {
                   então o botão de apagá-los é vizinho deles, não de um menu
                   do outro lado da tela. */}
               <div className="modal-actions">
-                <button
-                  className="btn-danger"
-                  onClick={() => { setVerLivro(false); setVerApagar(true) }}
-                >
-                  Apagar dados…
-                </button>
+                {/* o botão do que está marcado só existe quando há marcação:
+                    botão de apagar sempre à mostra, sem alvo, é convite ao
+                    clique errado */}
+                {linhasMarcadas.size > 0 ? (
+                  <button
+                    className="btn-danger"
+                    onClick={async () => {
+                      setEstado(await window.mptrix.nuvem.apagarLinhas([...linhasMarcadas]))
+                      setLinhasMarcadas(new Set())
+                    }}
+                  >
+                    Apagar {linhasMarcadas.size} linha{linhasMarcadas.size !== 1 ? 's' : ''}
+                  </button>
+                ) : (
+                  <button
+                    className="btn-danger"
+                    onClick={() => { setVerLivro(false); setVerApagar(true) }}
+                  >
+                    Apagar dados…
+                  </button>
+                )}
                 <span className="modal-espaco" />
-                <button className="btn-secondary" onClick={() => setVerLivro(false)}>Fechar</button>
+                {linhasMarcadas.size > 0 && (
+                  <button className="btn-secondary" onClick={() => setLinhasMarcadas(new Set())}>
+                    Desmarcar
+                  </button>
+                )}
+                <button
+                  className="btn-secondary"
+                  onClick={() => { setVerLivro(false); setLinhasMarcadas(new Set()) }}
+                >Fechar</button>
               </div>
             </div>
           </div>
