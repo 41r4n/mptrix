@@ -404,11 +404,6 @@ export default function NuvemConfig() {
                     {trancada && <span className="trava" aria-hidden="true">·</span>}
                   </button>
                 </div>
-                {/* as duas ações de apagar moram JUNTAS. A de dados estava
-                    sozinha lá no rodapé e o dono não achou — discrição virou
-                    esconderijo. Aqui elas ficam onde a pessoa já vem quando
-                    quer desfazer alguma coisa. */}
-                <button className="btn-secondary" onClick={() => setVerApagar(true)}>Apagar dados…</button>
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>
               </div>
 
@@ -497,8 +492,11 @@ export default function NuvemConfig() {
                 )}
               </div>
 
-              {estado.livro?.length > 0 && (
-                <div className="livro">
+              {/* SEMPRE VISÍVEL, mesmo sem nenhuma linha: esta janela deixou de
+                  ser só o histórico — ela é a porta de "o que aconteceu e como
+                  limpar". Escondê-la quando não há registro trancaria a
+                  limpeza junto. */}
+              <div className="livro">
                   {/* o botão abre uma JANELA, não uma gaveta: histórico é coisa
                       que se lê com atenção, e a janela trava o resto pra isso */}
                   <button
@@ -507,11 +505,10 @@ export default function NuvemConfig() {
                     type="button"
                   >
                     <span className="livro-ico" aria-hidden="true" />
-                    ver histórico
-                    <span className="livro-conta">{estado.livro.length}</span>
+                    histórico e limpeza
+                    <span className="livro-conta">{estado.livro?.length || 0}</span>
                   </button>
                 </div>
-              )}
 
               <p className="nuvem-texto miudo">
                 <strong>O saldo fica com o Replicate.</strong> A conta deles não
@@ -714,6 +711,12 @@ export default function NuvemConfig() {
               <button className="btn-close" onClick={() => setVerLivro(false)} aria-label="Fechar">×</button>
             </header>
             <div className="modal-body">
+              {(estado.livro?.length || 0) === 0 && (
+                <p className="livro-vazio">
+                  Nada registrado ainda. As linhas aparecem aqui assim que você
+                  informar um crédito ou separar uma música na nuvem.
+                </p>
+              )}
               <ul className="livro-lista">
 
                     {estado.livro.map((l, i) => (
@@ -733,7 +736,17 @@ export default function NuvemConfig() {
                       </li>
                 ))}
               </ul>
+              {/* a limpeza mora AQUI dentro: esta janela é sobre esses dados,
+                  então o botão de apagá-los é vizinho deles, não de um menu
+                  do outro lado da tela. */}
               <div className="modal-actions">
+                <button
+                  className="btn-danger"
+                  onClick={() => { setVerLivro(false); setVerApagar(true) }}
+                >
+                  Apagar dados…
+                </button>
+                <span className="modal-espaco" />
                 <button className="btn-secondary" onClick={() => setVerLivro(false)}>Fechar</button>
               </div>
             </div>
