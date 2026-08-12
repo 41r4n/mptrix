@@ -7,6 +7,13 @@ import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import { resolverYtDlp } from './binpath.js'
 import {
+  prepararAtualizacaoDoApp,
+  estadoDaAtualizacao,
+  procurarAtualizacao,
+  baixarAtualizacao,
+  instalarAtualizacao
+} from './appupdate.js'
+import {
   MODELS as STUDIO_MODELS,
   getEngineStatus,
   getCachedSession,
@@ -333,6 +340,16 @@ function createWindow() {
   })
 
   mainWindow.on('ready-to-show', () => mainWindow.show())
+
+  // O app se atualizando: só OLHA sozinho — baixar e instalar são por clique.
+  // Os 6 segundos são pra não disputar rede com a abertura do app; quem chega
+  // quer ver o acervo, não uma verificação.
+  prepararAtualizacaoDoApp({
+    janelaPrincipal: mainWindow,
+    empacotado: app.isPackaged,
+    versao: app.getVersion()
+  })
+  setTimeout(() => { procurarAtualizacao() }, 6000)
 
   // Se a tela travar (ex.: falta de memória), recarrega em vez de ficar preta
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
@@ -889,6 +906,12 @@ app.whenReady().then(() => {
       return { error: err.message, bytesPerSec: 3 * 1024 * 1024 }
     }
   })
+
+  // ▸ o MPTRIX se atualizando (o app inteiro, não o motor de baixar)
+  ipcMain.handle('app-update:estado', () => estadoDaAtualizacao())
+  ipcMain.handle('app-update:procurar', () => procurarAtualizacao())
+  ipcMain.handle('app-update:baixar', () => baixarAtualizacao())
+  ipcMain.handle('app-update:instalar', () => instalarAtualizacao())
 
   ipcMain.handle('updates:getVersions', async () => {
     const [ytDlp, ffmpeg] = await Promise.all([

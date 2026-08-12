@@ -18,7 +18,8 @@
     "confere:motor": "node scripts/confere-motor.mjs"
   },
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

@@ -12,7 +12,20 @@ const api = {
   getEnvironment: () => ipcRenderer.invoke('app:getEnvironment'),
 
   app: {
-    findInstaller: () => ipcRenderer.invoke('app:findInstaller')
+    findInstaller: () => ipcRenderer.invoke('app:findInstaller'),
+    // o MPTRIX se atualizando. "onEstado" devolve a função de desligar, senão
+    // cada recarga da tela deixaria um ouvinte pendurado no processo principal.
+    atualizacao: {
+      estado: () => ipcRenderer.invoke('app-update:estado'),
+      procurar: () => ipcRenderer.invoke('app-update:procurar'),
+      baixar: () => ipcRenderer.invoke('app-update:baixar'),
+      instalar: () => ipcRenderer.invoke('app-update:instalar'),
+      onEstado: (cb) => {
+        const h = (_e, v) => cb(v)
+        ipcRenderer.on('app-update:estado', h)
+        return () => ipcRenderer.removeListener('app-update:estado', h)
+      }
+    }
   },
 
   settings: {

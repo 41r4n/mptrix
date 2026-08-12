@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useUpdates } from '../contexts/UpdatesContext.jsx'
 import UpdateHelpModal from './UpdateHelpModal.jsx'
+import AppUpdate from './AppUpdate.jsx'
 
 function computeStatus({ versions, checkInfo, errorMsg, checking }) {
   if (!versions.ytDlp) return { key: 'missing', label: 'Faltando', title: 'yt-dlp não encontrado' }
@@ -33,6 +34,12 @@ export default function UpdateFooter() {
 
   return (
     <>
+      {/* O APP PRIMEIRO, O MOTOR DEPOIS — e não por hierarquia de código:
+          quando o MPTRIX está velho, é o app inteiro que está velho. O motor
+          de baixar é peça de dentro, e peça de dentro não disputa a linha de
+          cima com o todo. */}
+      <AppUpdate />
+
       <footer className="version-footer">
         <div className="version-info">
           <span className={`status-dot status-${status.key}`} title={status.title}>●</span>

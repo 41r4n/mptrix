@@ -8433,7 +8433,8 @@ ul.hlib-grid {
 .baixar-poco,
 .conserto-abrir,
 .share-app,
-.share-tile {
+.share-tile,
+.appup {
   --diag: linear-gradient(to top right,
     transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
     var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
@@ -11536,3 +11537,123 @@ ul.hlib-grid {
 .share-tile:hover:not(:disabled) .share-tile-ico { color: var(--accent); }
 .share-tile-titulo { font-size: 13px; font-weight: 600; color: var(--text); }
 .share-tile-txt { font-size: 11.5px; line-height: 1.45; color: var(--muted-2); }
+
+
+/* ██████████ A LINHA DE ATUALIZAÇÃO DO APP ██████████
+   Ela fica ACIMA da linha do motor de baixar. Não é ordem de código: quando o
+   MPTRIX está velho, é o app inteiro que está velho — e peça de dentro não
+   disputa a linha de cima com o todo.
+   A luz muda de cor com a situação e é a única coisa que se lê de longe: verde
+   parado é "tudo certo, siga", lima batendo é "tem coisa te esperando". */
+.appup {
+  --chanfro: 10px;
+  --fio: var(--border);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  margin: 18px 0 8px;
+  padding: 10px 14px;
+  background-color: var(--bg-cava-2);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
+  clip-path: var(--corte-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.appup-luz {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--muted-2);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.appup-versao {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.appup-versao b { color: var(--text-2); font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
+.appup-txt { min-width: 0; }
+.appup-txt b { color: var(--text); font-weight: 600; }
+.appup-espaco { flex: 1 1 auto; }
+
+/* EM DIA: verde parado. Nada pra fazer, e a tela não pede nada. */
+.appup.fase-em-dia { --fio: rgba(126, 217, 122, 0.22); }
+.appup.fase-em-dia .appup-luz { background: var(--stem-3); box-shadow: 0 0 9px rgba(126, 217, 122, 0.6); }
+
+/* TEM VERSÃO NOVA: lima batendo devagar. É o único estado que PEDE alguma
+   coisa, então é o único que se mexe. */
+.appup.fase-tem-nova,
+.appup.fase-baixada {
+  --fio: var(--accent-border);
+  background-color: rgba(182, 255, 59, 0.05);
+  color: var(--text-2);
+}
+.appup.fase-tem-nova .appup-luz,
+.appup.fase-baixada .appup-luz {
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(182, 255, 59, 0.75);
+  animation: jornal-bate 1.8s ease-in-out infinite;
+}
+.appup.fase-erro { --fio: rgba(234, 179, 8, 0.3); }
+.appup.fase-erro .appup-luz { background: var(--warn); box-shadow: 0 0 9px rgba(234, 179, 8, 0.6); }
+.appup.fase-procurando .appup-luz,
+.appup.fase-baixando .appup-luz { background: var(--text-2); animation: jornal-bate 1s ease-in-out infinite; }
+
+.appup-barra {
+  flex: 1 1 130px;
+  min-width: 90px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.appup-barra i { display: block; height: 100%; background: var(--accent); transition: width 0.2s linear; }
+
+.appup-ir {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 30px;
+  padding: 0 13px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+.appup-ir:hover { background: rgba(182, 255, 59, 0.12); }
+.appup-ir.forte { background: var(--accent); color: #0b0c0f; font-weight: 700; box-shadow: 0 0 18px rgba(182, 255, 59, 0.3); }
+.appup-ir.forte:hover { background: var(--accent-hover); }
+.appup-link {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.appup-link:hover { color: var(--text-2); }
+.appup-link.mudo { text-decoration: none; cursor: default; }
+/* rodando do código: fica de fora e DIZ que está de fora, senão o dono caça um
+   defeito que não existe */
+.appup-fora { opacity: 0.55; }
+.appup-nota { font-size: 11.5px; color: var(--muted-2); }

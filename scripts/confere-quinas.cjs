@@ -31,6 +31,7 @@ app.whenReady().then(async () => {
     <button class="conserto-abrir" id="ca"><b>A minha conta não bate?</b></button>
     <section class="share-app" id="sa">compartilhar</section>
     <button class="share-tile" id="st">tile</button>
+    <div class="appup fase-em-dia" id="up">atualizacao</div>
     <button class="preset-chip chanfro" id="c1">chip</button>
     <button class="preset-chip chanfro active" id="c2">chip aceso</button>`
   await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
@@ -40,7 +41,7 @@ app.whenReady().then(async () => {
     const antes = g('f1')
     document.getElementById('inp').focus()
     return { p1: g('p1'), p2: g('p2'), p3: g('p3'), q1: g('q1'), b1: g('b1'),
-             m1: g('m1'), ca: g('ca'), sa: g('sa'), st: g('st'), c1: g('c1'), c2: g('c2'), fSolto: antes, fFoco: g('f1') }
+             m1: g('m1'), ca: g('ca'), sa: g('sa'), st: g('st'), up: g('up'), c1: g('c1'), c2: g('c2'), fSolto: antes, fFoco: g('f1') }
   })()`)
 
   // a primeira cor do degrade e o "transparent", que o Chromium computa como
@@ -63,6 +64,7 @@ app.whenReady().then(async () => {
     ['porta da correcao', 'ca', 'rgba(234,179,8'],
     ['bloco compartilhar', 'sa', 'rgba(255,255,255'],
     ['tile de compartilhar', 'st', 'rgba(255,255,255'],
+    ['linha de atualizacao', 'up', 'rgba(126,217,122'],
     ['-- chip apagado (acervo)', 'c1', 'rgba(255,255,255'],
     ['-- chip ACESO (acervo)', 'c2', 'rgb(182,255,59']
   ]
