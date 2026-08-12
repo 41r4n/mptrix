@@ -126,6 +126,10 @@ function contasDoLivro(livro) {
 export function getNuvem() {
   virarMesSePreciso()
   garantirIdsDoLivro()
+  // a trava anda junto com a conta: se o número mudou, ela é refeita ANTES de
+  // alguém ler qualquer coisa. Sem isso a tela mostra a barra passando da
+  // marca com a nuvem ligada, que foi o que aconteceu.
+  reavaliarTrava()
   const n = store.get('nuvem', {})
   const livro = Array.isArray(n.livro) ? n.livro : []
   const contas = contasDoLivro(livro)
@@ -212,17 +216,44 @@ export function simularGasto(centavos) {
 }
 
 /**
- * A TRAVA É CONSEQUÊNCIA, não estado guardado à parte.
- * Se o que sobrou voltou a ser suficiente — porque uma linha foi apagada ou
- * uma carga nova entrou — ela sai sozinha. Trava que sobrevive ao motivo que
- * a criou é a conta antiga mandando no presente.
+ * A TRAVA É CONSEQUÊNCIA DA CONTA, nos DOIS sentidos.
+ *
+ * Eu escrevi esta função só na direção de soltar: se a conta melhorasse, ela
+ * destravava. Faltou a outra metade — se a conta PIORA (uma linha apagada faz
+ * o gasto voltar a passar da marca), nada travava de novo. O dono apagou
+ * registros, o gasto passou de 85% na barra, e a nuvem seguiu ligada.
+ *
+ * O erro de fundo é o mesmo que eu vinha consertando: a trava era decidida em
+ * UM lugar (na hora de rodar um trabalho) e o número em outro. Agora ela é
+ * recalculada junto com o número, toda leitura — porque ela É o número.
+ *
+ * Não chama getNuvem() de propósito: getNuvem chama esta, e uma chamaria a
+ * outra pra sempre. Lê o livro direto.
  */
 function reavaliarTrava() {
-  const motivo = store.get('nuvem.paradaPor')
-  if (motivo !== 'freio-credito' && motivo !== 'sem-credito') return
-  const n = getNuvem()
-  const aperta = n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO
-  if (!aperta) {
+  const n = store.get('nuvem', {})
+  const contas = contasDoLivro(n.livro)
+  const aperta = contas.informado > 0 && contas.gasto >= contas.informado * FOLGA_CREDITO
+  const motivo = n.paradaPor
+  const travadaPorDinheiro = motivo === 'freio-credito' || motivo === 'sem-credito'
+
+  if (aperta && !travadaPorDinheiro) {
+    // passou da marca e estava solta: trava agora
+    store.set('nuvem.ligada', false)
+    store.set('nuvem.paradaPor', 'freio-credito')
+    if (motivo !== 'freio-credito') {
+      anotarNoLivro({
+        tipo: 'fim',
+        motivo: 'freio-credito',
+        informado: contas.informado,
+        gasto: contas.gasto,
+        sobra: Math.max(0, contas.informado - contas.gasto)
+      })
+    }
+    return
+  }
+  if (!aperta && travadaPorDinheiro) {
+    // a conta melhorou: solta
     store.set('nuvem.paradaPor', null)
     store.set('nuvem.ligada', true)
   }
