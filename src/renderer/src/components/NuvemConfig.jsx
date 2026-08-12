@@ -40,20 +40,12 @@ export default function NuvemConfig() {
   const recarregar = async () => setEstado(await window.mptrix.nuvem.estado())
   useEffect(() => { recarregar() }, [])
 
-  // A JANELA DO HISTÓRICO fecha clicando fora e com Esc. Painel flutuante sem
-  // saída óbvia vira armadilha: ele cobre o que está atrás e a pessoa procura
-  // um × que pode nem existir.
-  const caixaLivro = useRef(null)
+  // Esc fecha a janela do histórico. Clicar fora também, pelo overlay.
   useEffect(() => {
     if (!verLivro) return
-    const fora = (e) => { if (!caixaLivro.current?.contains(e.target)) setVerLivro(false) }
     const tecla = (e) => { if (e.key === 'Escape') setVerLivro(false) }
-    document.addEventListener('mousedown', fora)
     window.addEventListener('keydown', tecla)
-    return () => {
-      document.removeEventListener('mousedown', fora)
-      window.removeEventListener('keydown', tecla)
-    }
+    return () => window.removeEventListener('keydown', tecla)
   }, [verLivro])
 
   if (!estado) return null
@@ -496,38 +488,18 @@ export default function NuvemConfig() {
               </div>
 
               {estado.livro?.length > 0 && (
-                <div className="livro" ref={caixaLivro}>
-                  {/* fechado por padrão: o histórico é consulta, não leitura de
-                      todo dia — e aberto ele empurrava pra fora da tela o
-                      campo e o jornal, que são o assunto */}
+                <div className="livro">
+                  {/* o botão abre uma JANELA, não uma gaveta: histórico é coisa
+                      que se lê com atenção, e a janela trava o resto pra isso */}
                   <button
                     className="livro-abrir"
-                    onClick={() => setVerLivro((v) => !v)}
-                    aria-expanded={verLivro}
+                    onClick={() => setVerLivro(true)}
                     type="button"
                   >
-                    <span className={`livro-seta ${verLivro ? 'on' : ''}`} aria-hidden="true" />
+                    <span className="livro-ico" aria-hidden="true" />
                     ver histórico
                     <span className="livro-conta">{estado.livro.length}</span>
                   </button>
-                  {verLivro && (
-                  <ul className="livro-flutua">
-                    {estado.livro.slice(0, 8).map((l, i) => (
-                      <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
-                        <span className="livro-quando">{quandoFoi(l.quando)}</span>
-                        <span className="livro-txt">
-                          {l.tipo === 'carga'
-                            ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
-                            : <>
-                              <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
-                              {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}
-                              {l.motivo === 'sem-credito' ? ' · pode haver saldo pendente lá' : ''}
-                            </>}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  )}
                 </div>
               )}
 
@@ -633,6 +605,51 @@ export default function NuvemConfig() {
 
         {recado && <p className={`nuvem-recado ${recado.tipo}`}>{recado.txt}</p>}
       </div>
+
+      {/* JANELA DE VERDADE, no meio da tela, com o resto travado atrás. A
+          caixa flutuante ainda deixava clicar no que estava embaixo — e
+          histórico é coisa que se lê com atenção, não de canto de olho.
+          Usa a mesma janela das outras telas do app: quem já fechou uma sabe
+          fechar esta. */}
+      {verLivro && (
+        <div className="modal-overlay" onClick={() => setVerLivro(false)}>
+          <div className="modal modal-livro" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <div>
+                <span className="modal-etiqueta">crédito</span>
+                <h3>O que já aconteceu</h3>
+                <p className="modal-sub">
+                  Cada carga e cada vez que o crédito acabou, com hora e valores.
+                  Verde é entrada, vermelho é fim.
+                </p>
+              </div>
+              <button className="btn-close" onClick={() => setVerLivro(false)} aria-label="Fechar">×</button>
+            </header>
+            <div className="modal-body">
+              <ul className="livro-lista">
+
+                    {estado.livro.slice(0, 8).map((l, i) => (
+                      <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
+                        <span className="livro-quando">{quandoFoi(l.quando)}</span>
+                        <span className="livro-txt">
+                          {l.tipo === 'carga'
+                            ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
+                            : <>
+                              <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
+                              {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}
+                              {l.motivo === 'sem-credito' ? ' · pode haver saldo pendente lá' : ''}
+                            </>}
+                        </span>
+                      </li>
+                ))}
+              </ul>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => setVerLivro(false)}>Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
