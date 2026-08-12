@@ -19,3 +19,5 @@ dist/
 # O arquivo continua aqui no disco (o app precisa dele), e o instalador leva
 # ele junto. Como repor num computador novo: veja INSTALAR-FFMPEG.md
 resources/bin/ffmpeg.exe
+
+release-teste/
