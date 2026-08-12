@@ -102,6 +102,7 @@ import {
   setNuvemLigada,
   setTetoNuvem,
   informarCredito,
+  somarCredito,
   apagarDadosNuvem,
   apagarLinhasDoLivro,
   simularGasto,
@@ -451,6 +452,7 @@ app.whenReady().then(() => {
   ipcMain.handle('nuvem:ligar', (_e, v) => setNuvemLigada(v))
   ipcMain.handle('nuvem:teto', (_e, centavos) => setTetoNuvem(centavos))
   ipcMain.handle('nuvem:credito', (_e, centavos) => informarCredito(centavos))
+  ipcMain.handle('nuvem:somarCredito', (_e, centavos) => somarCredito(centavos))
   ipcMain.handle('nuvem:apagarDados', (_e, o) => apagarDadosNuvem(o || {}))
   ipcMain.handle('nuvem:apagarLinhas', (_e, ids) => apagarLinhasDoLivro(ids))
   ipcMain.handle('nuvem:simular', (_e, centavos) => simularGasto(centavos))

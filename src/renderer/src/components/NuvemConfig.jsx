@@ -562,50 +562,18 @@ export default function NuvemConfig() {
                 O valor exato e o saldo estão no botão acima.
               </p>
 
-              {/* ██████ O FREIO ██████
-                  A pergunta mudou, e é isso que faz ela ter resposta.
-                  Antes: "quanto deixo gastar?" — ninguém sabe responder, e
-                  quem não sabe deixa em zero, que é ficar sem freio nenhum.
-                  Agora: "quanto você pôs de crédito?" — número que a pessoa
-                  acabou de digitar no cartão e tem na cabeça.
-                  Com ele o app faz a conta que o Replicate não deixa fazer:
-                  sobra = o que você pôs menos o que eu gastei desde então. E
-                  para em 85%, antes de encostar, porque o gasto daqui é
-                  ESTIMADO — parar em cima do valor exato deixaria a dívida
-                  acontecer justamente por erro de arredondamento. */}
-              {/* A PERGUNTA É "QUANTO VOCÊ TEM", não "quanto você pôs".
-                  Parece a mesma coisa e não é. "Quanto pôs" quebra quando a
-                  pessoa recarrega antes de acabar: ela tinha 10, gastou 4,
-                  compra mais 10 e digita 20 — mas tem 16, e o app passaria a
-                  achar que tem 4 a mais do que tem.
-                  "Quanto tem agora" resolve dois problemas de uma vez: o
-                  número está escrito na página do Replicate, então é fácil de
-                  responder; e cada atualização CORRIGE qualquer desvio que a
-                  minha estimativa tenha acumulado, porque o contador
-                  recomeça do valor real em vez de continuar de um chute. */}
-              {/* RECADO GRANDE, e não nota de rodapé. Se a pessoa não
-                  atualizar o número depois de recarregar, TODO o resto vira
-                  mentira: o jornal mostra sobra errada, o freio para na hora
-                  errada, e o app perde a única informação que ele não tem como
-                  descobrir sozinho. É a instrução mais importante desta tela,
-                  então tem o peso da mais importante. */}
-              <div className="mandamento">
-                <span className="mandamento-luz" aria-hidden="true" />
-                <div>
-                  <b>sempre atualize seu crédito</b>
-                  <p>
-                    Toda vez que comprar ou recarregar, venha aqui e escreva{' '}
-                    <strong>exatamente quanto você tem agora</strong> no Replicate — o
-                    número que aparece lá em <em>Crédito restante</em>, com centavos
-                    (ex.: 153,85). É só assim que eu sei a sua carga de verdade: eu não
-                    consigo ler esse valor sozinho.
-                  </p>
-                </div>
-              </div>
-
+              {/* DUAS AÇÕES, CADA UMA COM NOME PRÓPRIO.
+                  A pergunta "quanto você tem agora" é a certa — o número está
+                  na página deles e corrige qualquer desvio da minha conta. Só
+                  que ela pegou o dono duas vezes: sobrava US$1, ele comprou
+                  US$10 e digitou 10 esperando ver 11. Ninguém pensa em SALDO,
+                  pensa em RECARGA.
+                  Uma pergunta só, por melhor escrita que seja, não vence o
+                  jeito de pensar de quem usa. Então o mesmo número serve pras
+                  duas, e o botão diz qual delas é. */}
               <div className="freio">
                 <label className="freio-campo">
-                  <span>Quanto você tem de crédito agora?</span>
+                  <span>quanto de crédito?</span>
                   <div className="freio-linha">
                     <em>US$</em>
                     <input
@@ -613,58 +581,56 @@ export default function NuvemConfig() {
                       className="nuvem-campo curto"
                       min="0"
                       step="0.01"
-                      value={rascunho ?? (estado.creditoInformado ? (estado.creditoInformado / 100) : '')}
+                      value={rascunho ?? ''}
                       placeholder="0,00"
                       onChange={(e) => setRascunho(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                      onBlur={async () => {
-                        if (rascunho === null) return
-                        const dolares = Number(String(rascunho).replace(',', '.')) || 0
-                        setRascunho(null)
-                        // SEMPRE avisa o motor, mesmo com o mesmo número.
-                        // Eu tinha um atalho aqui — "se não mudou, não
-                        // incomoda" — e ele quebrava justamente o caso mais
-                        // comum: gastar os US$10, recarregar US$10 e digitar
-                        // 10 de novo. O valor é igual, mas a informação é
-                        // outra: "tenho 10 AGORA". Informar crédito é uma
-                        // declaração, não a edição de um campo.
-                        setEstado(await window.mptrix.nuvem.credito(Math.round(dolares * 100)))
-                      }}
                     />
-                    {rascunho !== null && (
-                      <button
-                        className="freio-ok"
-                        onClick={(e) => e.currentTarget.previousElementSibling?.blur()}
-                        type="button"
-                      >confirmar</button>
-                    )}
-                    <span className="nuvem-unidade">
-                      {estado.creditoInformado
-                        ? <>
-                          esse número <strong>já inclui o que sobrou</strong> — o Replicate soma
-                          sozinho, você não precisa fazer conta.
-                          {(() => {
-                            const sobra = Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito)
-                            return sobra > 0
-                              ? <> Pela minha conta sobram <strong>{emDolar(sobra)}</strong>: se comprar US$ 10, deve dar por volta de {emDolar(sobra + 1000)}.</>
-                              : null
-                          })()}
-                        </>
-                        : <>o número está na página do Replicate, em <strong>Crédito restante</strong></>}
-                    </span>
+                    <button
+                      type="button"
+                      className="freio-ok"
+                      disabled={!Number(String(rascunho ?? '').replace(',', '.'))}
+                      onClick={async () => {
+                        const d = Number(String(rascunho ?? '').replace(',', '.')) || 0
+                        if (d <= 0) return
+                        setRascunho(null)
+                        setEstado(await window.mptrix.nuvem.somarCredito(Math.round(d * 100)))
+                      }}
+                    >
+                      acabei de comprar
+                    </button>
+                    <button
+                      type="button"
+                      className="freio-alt"
+                      disabled={!String(rascunho ?? '').length}
+                      onClick={async () => {
+                        const d = Number(String(rascunho ?? '').replace(',', '.')) || 0
+                        setRascunho(null)
+                        setEstado(await window.mptrix.nuvem.credito(Math.round(d * 100)))
+                      }}
+                    >
+                      tenho isso no total
+                    </button>
                   </div>
                 </label>
 
                 <p className="nuvem-texto miudo">
-                  {estado.creditoInformado
-                    ? <>Sempre que atualizar esse número, meu contador recomeça do zero e
-                      passa a medir a partir dele — então não precisa somar nada de
-                      cabeça, e qualquer erro que eu tenha acumulado se corrige junto.</>
-                    : <><strong>Sem esse número não existe freio.</strong> O crédito acabar
-                      não trava o serviço: o que passar vira dívida e eles suspendem a conta
-                      até quitar. Com ele, o MPTRIX para antes e volta a separar aqui.</>}
+                  {estado.creditoInformado > 0
+                    ? <>
+                      <strong>“Acabei de comprar”</strong> soma ao que sobrou — hoje sobram{' '}
+                      <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong>,
+                      então comprando US$ 10 você fica com{' '}
+                      {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito) + 1000)}.{' '}
+                      <strong>“Tenho isso no total”</strong> troca a conta pelo número que está na
+                      página do Replicate, em <em>Crédito restante</em> — use esse quando quiser
+                      corrigir a minha estimativa pelo valor de verdade.
+                    </>
+                    : <><strong>Sem esse número não existe freio.</strong> O crédito acabar não trava
+                      o serviço: o que passar vira dívida e eles suspendem a conta até quitar. Com
+                      ele, o MPTRIX para antes e volta a separar aqui.</>}
                 </p>
               </div>
+
             </>
           )}
 

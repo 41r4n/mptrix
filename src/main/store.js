@@ -231,6 +231,27 @@ export function informarCredito(centavos) {
 }
 
 /**
+ * ACABEI DE COMPRAR TANTO — soma ao que sobrou.
+ *
+ * A pergunta "quanto você tem agora" é a certa, e mesmo assim pegou o dono
+ * duas vezes: sobrava US$1, ele comprou US$10 e digitou 10, esperando ver 11.
+ * O erro é do desenho, não dele — ninguém pensa em saldo, pensa em recarga.
+ *
+ * Então existem as duas, cada uma com nome próprio: informar o TOTAL (que
+ * corrige qualquer desvio meu, porque vem da página deles) e somar o que
+ * ACABOU DE COMPRAR (que é como a cabeça funciona na hora). Uma pergunta só,
+ * por mais bem escrita que seja, não vence o jeito de pensar de quem usa.
+ */
+export function somarCredito(centavos) {
+  const add = Math.max(0, Math.round(Number(centavos) || 0))
+  if (!add) return getNuvem()
+  const antes = store.get('nuvem.creditoInformado') || 0
+  const gastoAntes = store.get('nuvem.gastoDesdeCredito') || 0
+  const sobrava = Math.max(0, antes - gastoAntes)
+  return informarCredito(sobrava + add)
+}
+
+/**
  * APAGAR DADOS DA NUVEM, por partes.
  *
  * Um botão só de "apagar tudo" obriga quem queria limpar uma coisa a jogar

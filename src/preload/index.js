@@ -30,6 +30,7 @@ const api = {
     ligar: (v) => ipcRenderer.invoke('nuvem:ligar', v),
     teto: (centavos) => ipcRenderer.invoke('nuvem:teto', centavos),
     credito: (centavos) => ipcRenderer.invoke('nuvem:credito', centavos),
+    somarCredito: (centavos) => ipcRenderer.invoke('nuvem:somarCredito', centavos),
     apagarDados: (o) => ipcRenderer.invoke('nuvem:apagarDados', o),
     apagarLinhas: (ids) => ipcRenderer.invoke('nuvem:apagarLinhas', ids),
     simular: (centavos) => ipcRenderer.invoke('nuvem:simular', centavos),

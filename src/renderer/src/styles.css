@@ -10954,3 +10954,23 @@ ul.hlib-grid {
   padding: 2px 5px;
 }
 .recado-x:hover { color: var(--text); }
+
+/* a segunda ação do crédito: mesma caixa, outro significado. Ela é a menos
+   comum (corrigir pelo total), então vem com peso menor — mas escrita, não
+   escondida: as duas precisam ser legíveis pra escolha existir. */
+.freio-alt {
+  height: 30px;
+  padding: 0 12px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.13s ease, box-shadow 0.13s ease;
+}
+.freio-alt:hover:not(:disabled) { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.freio-alt:disabled, .freio-ok:disabled { opacity: 0.3; cursor: default; }
