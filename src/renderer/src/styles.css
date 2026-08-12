@@ -11047,3 +11047,24 @@ ul.hlib-grid {
   padding: 2px 5px;
 }
 .recado-x:hover { color: var(--text); }
+
+/* O USO QUE ENCOSTOU NA MARCA.
+   O fim do credito nao e um evento, e uma propriedade deste uso — ele fica
+   grudado nele e some junto se a linha for apagada. Antes era uma linha
+   vermelha separada que, apagada, nao mudava nada: registro inerte com cara
+   de registro de peso. */
+.livro-lista li.uso.encostou {
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.1), rgba(248, 113, 113, 0.02) 60%), var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.3);
+  opacity: 1;
+}
+.livro-lista li.uso.encostou::before { background: var(--bad); box-shadow: 0 0 10px rgba(248, 113, 113, 0.5); }
+.livro-fim {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bad);
+}

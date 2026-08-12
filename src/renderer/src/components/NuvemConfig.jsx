@@ -81,6 +81,27 @@ export default function NuvemConfig() {
   // quem nunca usou não tem régua pra saber. A frase dá a régua: traduz o
   // mesmo número em "dá pra continuar" ou "é hora de comprar", e diz o que
   // acontece se ignorar.
+  // QUAL USO ENCOSTOU NA MARCA.
+  //
+  // O fim do crédito não é um evento — é uma propriedade do uso que cruzou os
+  // 85%. Como linha separada ele ficava inerte (apagar não mudava nada,
+  // porque a conta vem das cargas e dos usos) e ainda assim tinha a cara de um
+  // registro de peso. Aqui ele volta pra onde pertence: grudado no uso que o
+  // causou, e some junto se aquele uso for apagado.
+  const idQueEncostou = (() => {
+    if (!estado.creditoInformado) return null
+    const livro = estado.livro || []
+    const iCarga = livro.findIndex((l) => l && l.tipo === 'carga')
+    const doCiclo = (iCarga >= 0 ? livro.slice(0, iCarga) : livro).filter((l) => l && l.tipo === 'uso')
+    // do mais VELHO pro mais novo: o primeiro que faz o acumulado cruzar é ele
+    let soma = 0
+    for (const l of [...doCiclo].reverse()) {
+      soma += l.valor || 0
+      if (soma >= estado.creditoInformado * 0.85) return l.id
+    }
+    return null
+  })()
+
   const jornal = (() => {
     if (!estado.creditoInformado) {
       return {
@@ -725,9 +746,10 @@ export default function NuvemConfig() {
                 <span className="modal-etiqueta">crédito</span>
                 <h3>O que já aconteceu</h3>
                 <p className="modal-sub">
-                  Cada carga e cada vez que o crédito acabou, com hora e valores.
-                  Verde é entrada, vermelho é fim. <strong>O saldo sai daqui</strong> —
-                  apagar uma linha refaz a conta sem ela.
+                  Cada entrada de crédito e cada uso, com hora e valores.
+                  <strong>O saldo sai daqui</strong> — apagar uma linha refaz a conta
+                  sem ela. A linha vermelha é o uso que encostou no limite: ela some
+                  junto se você apagar aquele uso.
                 </p>
               </div>
               <button className="btn-close" onClick={() => setVerLivro(false)} aria-label="Fechar">×</button>
@@ -742,7 +764,10 @@ export default function NuvemConfig() {
               <ul className="livro-lista">
 
                     {estado.livro.map((l, i) => (
-                      <li key={l.id || i} className={`${l.tipo} ${linhasMarcadas.has(l.id) ? 'marcada' : ''}`}>
+                      <li
+                        key={l.id || i}
+                        className={`${l.tipo} ${linhasMarcadas.has(l.id) ? 'marcada' : ''} ${l.id && l.id === idQueEncostou ? 'encostou' : ''}`}
+                      >
                         <button
                           type="button"
                           className="livro-toque"
@@ -762,7 +787,16 @@ export default function NuvemConfig() {
                               ? <><b>adicionou</b> {emDolar(l.adicionado)} · ficou com {emDolar(l.valor)}{l.sobrava > 0 ? <> (tinha {emDolar(l.sobrava)})</> : null}</>
                               : <><b>informou</b> {emDolar(l.valor)} no total{l.sobrava > 0 ? <> · tinha {emDolar(l.sobrava)} antes</> : null}</>)
                             : l.tipo === 'uso'
-                              ? <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}{l.simulado ? <span className="livro-selo">simulado</span> : null}</>
+                              ? <>
+                                <b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}
+                                {l.simulado ? <span className="livro-selo">simulado</span> : null}
+                                {l.id === idQueEncostou && (
+                                  <span className="livro-fim">
+                                    foi aqui que o crédito acabou · sobraram{' '}
+                                    {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
+                                  </span>
+                                )}
+                              </>
                               : <>
                               <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
                               {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}

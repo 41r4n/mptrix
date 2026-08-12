@@ -126,6 +126,7 @@ function contasDoLivro(livro) {
 export function getNuvem() {
   virarMesSePreciso()
   garantirIdsDoLivro()
+  limparFinsInertes()
   // a trava anda junto com a conta: se o número mudou, ela é refeita ANTES de
   // alguém ler qualquer coisa. Sem isso a tela mostra a barra passando da
   // marca com a nuvem ligada, que foi o que aconteceu.
@@ -178,6 +179,17 @@ function anotarNoLivro(entrada) {
 
 // linhas gravadas antes de existir id ficariam impossíveis de apagar uma a
 // uma. Recebem o seu na primeira leitura, e só uma vez.
+// LINHAS INERTES ANTIGAS. As de "freio-credito" foram gravadas quando o fim
+// era evento; agora ele é propriedade do uso que cruzou. Elas não somam nem
+// subtraem nada — só ocupam espaço parecendo importantes. Saem na primeira
+// leitura.
+function limparFinsInertes() {
+  const livro = store.get('nuvem.livro')
+  if (!Array.isArray(livro) || !livro.length) return
+  const limpo = livro.filter((l) => !(l && l.tipo === 'fim' && l.motivo === 'freio-credito'))
+  if (limpo.length !== livro.length) store.set('nuvem.livro', limpo)
+}
+
 function garantirIdsDoLivro() {
   const livro = store.get('nuvem.livro')
   if (!Array.isArray(livro) || !livro.length) return
@@ -238,18 +250,16 @@ function reavaliarTrava() {
   const travadaPorDinheiro = motivo === 'freio-credito' || motivo === 'sem-credito'
 
   if (aperta && !travadaPorDinheiro) {
-    // passou da marca e estava solta: trava agora
+    // passou da marca e estava solta: trava agora.
+    //
+    // E NÃO escreve linha nenhuma. O fim do crédito não é um evento à parte —
+    // é uma propriedade do último uso, aquele que encostou na marca. Como
+    // linha separada ela ficava INERTE: apagar não mudava nada, porque a conta
+    // vem das cargas e dos usos. Registro que não muda nada quando some não é
+    // registro, é comentário — e com a mesma cara dos que mudam, confunde.
+    // Quem desenha essa marca é a tela, calculando qual uso cruzou.
     store.set('nuvem.ligada', false)
     store.set('nuvem.paradaPor', 'freio-credito')
-    if (motivo !== 'freio-credito') {
-      anotarNoLivro({
-        tipo: 'fim',
-        motivo: 'freio-credito',
-        informado: contas.informado,
-        gasto: contas.gasto,
-        sobra: Math.max(0, contas.informado - contas.gasto)
-      })
-    }
     return
   }
   if (!aperta && travadaPorDinheiro) {
@@ -380,14 +390,18 @@ export function desligarNuvemPor(motivo) {
   const antes = store.get('nuvem.paradaPor')
   store.set('nuvem.ligada', false)
   store.set('nuvem.paradaPor', motivo || 'desconhecido')
-  if (antes !== motivo) {
-    const n = store.get('nuvem', {})
+  // SÓ O QUE VEIO DE FORA vira linha. A recusa do Replicate e o teto do mês
+  // são fatos que aconteceram e que a conta do livro não explica sozinha —
+  // esses precisam ficar escritos. Já o freio é consequência da própria
+  // conta: ele se lê nos usos, não numa linha extra.
+  if (antes !== motivo && motivo !== 'freio-credito') {
+    const n = getNuvem()
     anotarNoLivro({
       tipo: 'fim',
       motivo: motivo || 'desconhecido',
-      informado: n.creditoInformado || 0,
-      gasto: n.gastoDesdeCredito || 0,
-      sobra: Math.max(0, (n.creditoInformado || 0) - (n.gastoDesdeCredito || 0))
+      informado: n.creditoInformado,
+      gasto: n.gastoDesdeCredito,
+      sobra: Math.max(0, n.creditoInformado - n.gastoDesdeCredito)
     })
   }
   return getNuvem()
