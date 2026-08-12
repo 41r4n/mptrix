@@ -788,7 +788,9 @@ export default function NuvemConfig() {
                               : <><b>informou</b> {emDolar(l.valor)} no total{l.sobrava > 0 ? <> · tinha {emDolar(l.sobrava)} antes</> : null}</>)
                             : l.tipo === 'uso'
                               ? <>
-                                <b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}
+                                {l.miudo
+                                  ? <><b>sondas, letra e cifra</b> · {emDolar(l.valor)}</>
+                                  : <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}</>}
                                 {l.simulado ? <span className="livro-selo">simulado</span> : null}
                                 {l.id === idQueEncostou && (
                                   <span className="livro-fim">

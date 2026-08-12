@@ -11068,3 +11068,7 @@ ul.hlib-grid {
   text-transform: uppercase;
   color: var(--bad);
 }
+
+/* gasto miudo: sonda, letra, cifra. E dinheiro de verdade e entra na conta,
+   mas nao e o assunto — fica mais apagado que a separacao da musica. */
+.livro-lista li.uso .livro-txt b { font-weight: 600; }

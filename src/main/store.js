@@ -183,6 +183,26 @@ function anotarNoLivro(entrada) {
 // era evento; agora ele é propriedade do uso que cruzou. Elas não somam nem
 // subtraem nada — só ocupam espaço parecendo importantes. Saem na primeira
 // leitura.
+// GASTO MIÚDO: sonda, letra, cifra. Cada chamada custa centavos, e uma
+// separação faz dezenas — como linha própria, elas enterrariam a carga e o
+// uso. Somando na linha miúda da mesma leva (menos de 45 min), fica uma linha
+// por rajada de trabalho, e o dinheiro continua todo contado.
+const JANELA_MIUDO = 45 * 60 * 1000
+
+function anotarGastoMiudo(valor) {
+  const livro = store.get('nuvem.livro')
+  const lista = Array.isArray(livro) ? livro : []
+  const topo = lista[0]
+  const recente = topo && topo.tipo === 'uso' && topo.miudo
+    && (Date.now() - new Date(topo.quando).getTime()) < JANELA_MIUDO
+  if (recente) {
+    lista[0] = { ...topo, valor: Math.round((topo.valor + valor) * 100) / 100 }
+    store.set('nuvem.livro', lista)
+    return
+  }
+  anotarNoLivro({ tipo: 'uso', valor, miudo: true })
+}
+
 function limparFinsInertes() {
   const livro = store.get('nuvem.livro')
   if (!Array.isArray(livro) || !livro.length) return
@@ -219,7 +239,9 @@ function garantirIdsDoLivro() {
 export function simularGasto(centavos) {
   const c = Math.max(0, Number(centavos) || 0)
   if (!c) return getNuvem()
-  store.set('nuvem.centavosGastos', gastoCentavos() + c)
+  // NÃO soma no contador do mês: aquele conta dinheiro real e alimenta o teto
+  // mensal. Teste que entra na conta real é teste que estraga o que ele devia
+  // estar testando.
   anotarNoLivro({ tipo: 'uso', valor: Math.round(c * 100) / 100, titulo: null, simulado: true })
   // é isto que faz o teste valer: quem decide parar é a mesma função que o
   // motor chama antes de cada trabalho de verdade
@@ -483,13 +505,22 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
   // começar do zero apagaria todo o histórico no primeiro gasto novo — o teto
   // voltaria a achar que o crédito está intacto.
   store.set('nuvem.centavosGastos', gastoCentavos() + custo)
-  // o gasto do ciclo não é mais guardado: ele sai do livro. Ver contasDoLivro.
+  // TODO GASTO VAI PRO LIVRO — e este é um buraco que eu abri hoje.
+  //
+  // Quando o saldo passou a ser calculado do livro, só a separação da música
+  // escrevia linha. Sonda, letra e cifra continuavam custando dinheiro e
+  // sumiam da conta do ciclo — ou seja, o freio, que existe justamente pra
+  // evitar dívida, contava menos do que a pessoa estava gastando. Justo no
+  // trabalho onde o grosso do custo vem das sondas.
+  //
+  // Só que dezenas de linhas de centavos enterrariam a carga e o uso, que são
+  // o que se lê. Então o miúdo entra somando na linha miúda mais recente, se
+  // ela for da mesma leva: um gasto por rajada, em vez de um por chamada.
+  const valor = Math.round(custo * 100) / 100
   if (contaMusica) {
-    // SÓ A SEPARAÇÃO DA MÚSICA vira linha no livro. As sondas, a letra e a
-    // cifra também custam, mas viram dezenas de linhas de centavos que
-    // enterrariam as duas que importam — a carga e o fim. O gasto delas
-    // continua contado; ele só não vira notícia.
-    anotarNoLivro({ tipo: 'uso', valor: Math.round(custo * 100) / 100, titulo: titulo || null })
+    anotarNoLivro({ tipo: 'uso', valor, titulo: titulo || null })
+  } else if (valor > 0) {
+    anotarGastoMiudo(valor)
   }
   return getNuvem()
 }
