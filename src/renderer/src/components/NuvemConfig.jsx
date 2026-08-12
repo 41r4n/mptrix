@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Ico from './Icones.jsx'
 
 // Configuração da separação na nuvem.
@@ -652,7 +653,17 @@ export default function NuvemConfig() {
           limpar uma coisa a jogar fora as outras — e aqui as coisas têm pesos
           bem diferentes: histórico é memória, contador é conta, e a chave é o
           acesso. Escolher o que vai embora é o que separa faxina de estrago. */}
-      {verApagar && (
+      {/* ██████ AS JANELAS NASCEM NA RAIZ DA PÁGINA ██████
+          Elas moravam aqui dentro e ficavam PRESAS. A aba envolve cada filho
+          direto com "position: relative; z-index: 1" — isso levanta o conteúdo
+          acima do desenho de fundo do palco, mas de quebra faz de cada bloco um
+          mundo fechado de empilhamento. O z-index 100 da janela só valia DENTRO
+          da seção da nuvem; do lado de fora ela continuava valendo 1, empatada
+          com o bloco de compartilhar, que vem depois no HTML e por isso ganhava
+          — desenhando "Compartilhar este app" por cima da janela aberta.
+          Aumentar o número não resolveria: preso é preso, em qualquer número.
+          Janela que cobre a tela inteira tem que nascer na raiz da página. */}
+      {verApagar && createPortal((
         <div className="modal-overlay" onClick={() => setVerApagar(false)}>
           <div className="modal modal-apagar" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
@@ -714,9 +725,9 @@ export default function NuvemConfig() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
-      {verLivro && (
+      {verLivro && createPortal((
         <div className="modal-overlay" onClick={() => { setVerLivro(false); setLinhasMarcadas(new Set()) }}>
           <div className="modal modal-livro" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
@@ -959,7 +970,7 @@ export default function NuvemConfig() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </section>
   )
 }
