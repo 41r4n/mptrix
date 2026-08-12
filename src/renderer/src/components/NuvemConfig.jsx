@@ -621,8 +621,13 @@ export default function NuvemConfig() {
                         if (rascunho === null) return
                         const dolares = Number(String(rascunho).replace(',', '.')) || 0
                         setRascunho(null)
-                        // não incomoda o motor se o número não mudou
-                        if (Math.round(dolares * 100) === estado.creditoInformado) return
+                        // SEMPRE avisa o motor, mesmo com o mesmo número.
+                        // Eu tinha um atalho aqui — "se não mudou, não
+                        // incomoda" — e ele quebrava justamente o caso mais
+                        // comum: gastar os US$10, recarregar US$10 e digitar
+                        // 10 de novo. O valor é igual, mas a informação é
+                        // outra: "tenho 10 AGORA". Informar crédito é uma
+                        // declaração, não a edição de um campo.
                         setEstado(await window.mptrix.nuvem.credito(Math.round(dolares * 100)))
                       }}
                     />

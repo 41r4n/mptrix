@@ -209,17 +209,21 @@ export function informarCredito(centavos) {
   const v = Math.max(0, Math.round(Number(centavos) || 0))
   const antes = store.get('nuvem.creditoInformado') || 0
   const gastoAntes = store.get('nuvem.gastoDesdeCredito') || 0
+  const motivoAntes = store.get('nuvem.paradaPor')
   store.set('nuvem.creditoInformado', v)
   store.set('nuvem.gastoDesdeCredito', 0)
-  // só vira linha no livro se mudou de verdade e não é zero: corrigir um dígito
-  // enquanto digita não é um evento na vida de ninguém
-  if (v > 0 && v !== antes) {
+  // VIRA LINHA quando a declaração muda alguma coisa — não só quando o número
+  // muda. Gastar US$10, recarregar US$10 e informar 10 de novo é o caso mais
+  // comum que existe: o número é igual, mas houve gasto pra zerar e trava pra
+  // soltar. Comparar só o valor deixava esse caso mudo, e a pessoa ficava
+  // olhando pra tela sem entender por que nada aconteceu.
+  const travada = motivoAntes === 'sem-credito' || motivoAntes === 'freio-credito'
+  if (v > 0 && (v !== antes || gastoAntes > 0 || travada)) {
     anotarNoLivro({ tipo: 'carga', valor: v, sobrava: Math.max(0, antes - gastoAntes) })
   }
   // dizer que pôs crédito é dizer que a parede caiu: religa o que foi
   // desligado por dinheiro, seja recusa do serviço ou freio meu
-  const motivo = store.get('nuvem.paradaPor')
-  if (motivo === 'sem-credito' || motivo === 'freio-credito') {
+  if (travada) {
     store.set('nuvem.paradaPor', null)
     store.set('nuvem.ligada', true)
   }
