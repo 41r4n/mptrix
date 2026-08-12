@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Ico from './Icones.jsx'
 
 // Configuração da separação na nuvem.
@@ -39,6 +39,22 @@ export default function NuvemConfig() {
 
   const recarregar = async () => setEstado(await window.mptrix.nuvem.estado())
   useEffect(() => { recarregar() }, [])
+
+  // A JANELA DO HISTÓRICO fecha clicando fora e com Esc. Painel flutuante sem
+  // saída óbvia vira armadilha: ele cobre o que está atrás e a pessoa procura
+  // um × que pode nem existir.
+  const caixaLivro = useRef(null)
+  useEffect(() => {
+    if (!verLivro) return
+    const fora = (e) => { if (!caixaLivro.current?.contains(e.target)) setVerLivro(false) }
+    const tecla = (e) => { if (e.key === 'Escape') setVerLivro(false) }
+    document.addEventListener('mousedown', fora)
+    window.addEventListener('keydown', tecla)
+    return () => {
+      document.removeEventListener('mousedown', fora)
+      window.removeEventListener('keydown', tecla)
+    }
+  }, [verLivro])
 
   if (!estado) return null
 
@@ -480,7 +496,7 @@ export default function NuvemConfig() {
               </div>
 
               {estado.livro?.length > 0 && (
-                <div className="livro">
+                <div className="livro" ref={caixaLivro}>
                   {/* fechado por padrão: o histórico é consulta, não leitura de
                       todo dia — e aberto ele empurrava pra fora da tela o
                       campo e o jornal, que são o assunto */}
@@ -495,7 +511,7 @@ export default function NuvemConfig() {
                     <span className="livro-conta">{estado.livro.length}</span>
                   </button>
                   {verLivro && (
-                  <ul>
+                  <ul className="livro-flutua">
                     {estado.livro.slice(0, 8).map((l, i) => (
                       <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
                         <span className="livro-quando">{quandoFoi(l.quando)}</span>
