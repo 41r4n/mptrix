@@ -7706,21 +7706,6 @@ section h2::after {
   --trilho-w: 232px;
   --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  /* A LINHA DA QUINA CORTADA. O fio das peças é box-shadow inset, que desenha
-     um RETÂNGULO; o clip-path corta a quina depois e a aresta diagonal fica sem
-     linha nenhuma — o contorno abre um vão e o olho lê pedaço faltando.
-     Encolher o chanfro só encolhia o vão, e tirar o chanfro virava quadrado e
-     perdia a assinatura. O conserto é DESENHAR a diagonal.
-     Ela sai daqui e não de dentro de cada peça: a mesma linha em cinco lugares
-     escritos separados é a mesma linha errando em quatro deles no dia que
-     alguém mudar a espessura.
-     A cor vem de --fio, lida no elemento que usa (var() dentro de custom
-     property resolve no consumidor). Assim, quando a peça acende, a diagonal
-     acende junto — senão o contorno fica lima com duas gravetas cinzas nas
-     pontas. */
-  --diag: linear-gradient(to top right,
-    transparent calc(50% - 1px), var(--fio, var(--border-control)) calc(50% - 1px),
-    var(--fio, var(--border-control)) calc(50% + 1px), transparent calc(50% + 1px));
 }
 
 .console {
@@ -8496,6 +8481,39 @@ ul.hlib-grid {
    A cor sai de --fio, entao quando a peca acende (foco, filtro ligado) a
    diagonal acende junto — senao o contorno ficaria lima com duas gravetas
    brancas nas pontas. */
+/* ▚▚▚ A LINHA DA QUINA CORTADA ▚▚▚
+   O fio das peças é box-shadow inset, que desenha um RETÂNGULO. O clip-path
+   corta a quina depois e a aresta diagonal fica sem linha nenhuma — o contorno
+   abre um vão e o olho lê pedaço faltando. Encolher o chanfro só encolhia o
+   vão; tirar o chanfro virava quadrado e perdia a assinatura. O conserto é
+   DESENHAR a diagonal.
+
+   ESTA REGRA TEM QUE CASAR COM O PRÓPRIO ELEMENTO — e isso não é preferência
+   de organização, é o único jeito de funcionar. Eu tentei subir --diag pro
+   :root pra ter uma fonte só, e apaguei a cor de todas elas: var() dentro de
+   uma custom property é resolvido ONDE ELA É DECLARADA, não onde é usada. No
+   :root não existe --fio, então a cor do fallback (cinza) já nascia colada no
+   valor e descia assim pra tela inteira — inclusive pra barra do acervo, que
+   estava certa antes.
+
+   Declarada aqui, cada peça resolve var(--fio) com o SEU --fio. Aí a diagonal
+   acende junto quando a peça acende — senão o contorno fica lima com duas
+   gravetas cinzas nas pontas, mentindo sobre o próprio estado. */
+.chanfro,
+.barra,
+.barra-busca,
+.barra-sel,
+.barra-btn,
+.painel,
+.mandamento,
+.livro-quadro,
+.freio-caixa,
+.baixar-poco {
+  --diag: linear-gradient(to top right,
+    transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
+    var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
 .chanfro,
 .barra,
 .barra-busca,
@@ -8503,7 +8521,6 @@ ul.hlib-grid {
 .barra-btn {
   --chanfro: 6px;
   --fio: var(--border-control);
-  /* --diag mora no :root — ver lá o porquê */
   clip-path: polygon(
     0 0,
     calc(100% - var(--chanfro)) 0,
