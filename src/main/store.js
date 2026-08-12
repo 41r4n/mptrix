@@ -119,7 +119,10 @@ function contasDoLivro(livro) {
   return {
     informado,
     gasto: Math.round(gasto * 100) / 100,
-    musicas: usos.length
+    // MIÚDO NÃO É MÚSICA. A linha de sondas/letra/cifra também é 'uso', e
+    // contá-la como música fazia o "US$ X cada" mentir — dividia o gasto por
+    // um número inflado de músicas que nunca existiram.
+    musicas: usos.filter((l) => !l.miudo).length
   }
 }
 
@@ -174,7 +177,14 @@ function anotarNoLivro(entrada) {
   // linha nova entra no topo entre a pessoa escolher e confirmar, e some a
   // errada. Com id, o que ela apontou é o que vai embora.
   lista.unshift({ id: randomUUID(), ...entrada, quando: new Date().toISOString() })
-  store.set('nuvem.livro', lista.slice(0, 40))
+  // O CORTE NUNCA PODE COMER O CICLO CORRENTE. O saldo sai da carga mais
+  // recente e dos usos acima dela; se o corte apagasse um desses usos, o
+  // gasto DIMINUIRIA sozinho e a trava soltaria — o app passaria a achar que
+  // sobra dinheiro que já foi. Por isso o limite só vale pro que está abaixo
+  // da carga atual, que é história e não conta mais.
+  const iCarga = lista.findIndex((l) => l && l.tipo === 'carga')
+  const minimo = iCarga >= 0 ? iCarga + 1 : lista.length
+  store.set('nuvem.livro', lista.slice(0, Math.max(minimo, TETO_LIVRO)))
 }
 
 // linhas gravadas antes de existir id ficariam impossíveis de apagar uma a
@@ -187,7 +197,17 @@ function anotarNoLivro(entrada) {
 // separação faz dezenas — como linha própria, elas enterrariam a carga e o
 // uso. Somando na linha miúda da mesma leva (menos de 45 min), fica uma linha
 // por rajada de trabalho, e o dinheiro continua todo contado.
+// A FOLGA DO FREIO: paro em 85% do informado, não em 100%. O gasto daqui é
+// ESTIMADO pelo tempo de máquina; parar em cima do valor exato deixaria a
+// dívida acontecer por erro de arredondamento.
+// Declarada aqui em cima, antes de quem usa: `const` não sobe, e reavaliarTrava
+// roda dentro de getNuvem, que pode ser chamada de qualquer lugar.
+const FOLGA_CREDITO = 0.85
+
 const JANELA_MIUDO = 45 * 60 * 1000
+// quantas linhas guardar de história. O ciclo corrente nunca é cortado — ver
+// anotarNoLivro.
+const TETO_LIVRO = 120
 
 function anotarGastoMiudo(valor) {
   const livro = store.get('nuvem.livro')
@@ -269,6 +289,26 @@ function reavaliarTrava() {
   const contas = contasDoLivro(n.livro)
   const aperta = contas.informado > 0 && contas.gasto >= contas.informado * FOLGA_CREDITO
   const motivo = n.paradaPor
+
+  // TETO DO MÊS: mesma assimetria que o freio tinha. Ele era avaliado só na
+  // hora de rodar um trabalho, e a virada do mês zera o gasto sem soltar a
+  // trava — a nuvem ficaria desligada pra sempre depois de bater o teto uma
+  // vez. Aqui ele anda junto com o número, igual ao freio.
+  const teto = n.tetoCentavos ?? 500
+  const gastoMes = gastoCentavos()
+  if (motivo === 'teto-do-mes') {
+    if (!(teto > 0 && gastoMes >= teto)) {
+      store.set('nuvem.paradaPor', null)
+      store.set('nuvem.ligada', true)
+    }
+    return
+  }
+  if (teto > 0 && gastoMes >= teto && !motivo) {
+    store.set('nuvem.ligada', false)
+    store.set('nuvem.paradaPor', 'teto-do-mes')
+    return
+  }
+
   const travadaPorDinheiro = motivo === 'freio-credito' || motivo === 'sem-credito'
 
   if (aperta && !travadaPorDinheiro) {
@@ -468,23 +508,12 @@ export function setNuvemLigada(v) {
 
 export function setTetoNuvem(centavos) {
   store.set('nuvem.tetoCentavos', Math.max(0, Number(centavos) || 0))
-  // subir o teto derruba a parada que ELE mesmo causou — quem acabou de dar
-  // mais espaço não deveria precisar religar a nuvem na mão
-  if (store.get('nuvem.paradaPor') === 'teto-do-mes' && usarNuvemPodePassar()) {
-    store.set('nuvem.paradaPor', null)
-    store.set('nuvem.ligada', true)
-  }
+  // subir o teto derruba a parada que ELE mesmo causou. Quem reavalia é a
+  // função que reavalia tudo — antes havia uma cópia da regra aqui, lendo
+  // campos que deixaram de existir quando o saldo virou derivado. Regra
+  // copiada é regra que envelhece escondida.
+  reavaliarTrava()
   return getNuvem()
-}
-
-/** O teto e o freio deixariam passar agora? (sem mexer em nada) */
-function usarNuvemPodePassar() {
-  const n = store.get('nuvem', {})
-  const teto = n.tetoCentavos ?? 500
-  if (teto > 0 && gastoCentavos() >= teto) return false
-  const cred = n.creditoInformado || 0
-  if (cred > 0 && (n.gastoDesdeCredito || 0) >= cred * 0.85) return false
-  return true
 }
 
 /**
@@ -535,25 +564,21 @@ export function somarGastoNuvem(segundos, { contaMusica = false, maquina = 'gpu'
 // exatamente no valor informado, um erro de poucos centavos pra menos já viraria
 // dívida, que é justamente o que a pessoa quer evitar. Parando em 85% sobra
 // folga pro erro da estimativa e pro trabalho que já começou.
-const FOLGA_CREDITO = 0.85
 
+/**
+ * A nuvem deve ser usada agora?
+ *
+ * UMA LINHA, e é de propósito. Aqui existia uma cópia das regras de teto e
+ * freio — e cópia de regra é o erro que se repetiu o dia inteiro nesta tela:
+ * duas fontes pro mesmo fato, uma consertada e a outra esquecida.
+ *
+ * Agora quem decide é reavaliarTrava(), que roda dentro de getNuvem() a cada
+ * leitura. Quando esta função pergunta, a resposta já está no estado — ela só
+ * lê. Se um dia a regra mudar, muda num lugar só.
+ */
 export function usarNuvem() {
   const n = getNuvem()
-  if (!n.ligada || !n.temChave) return false
-
-  // FREIO BATEU: desliga e DIZ. Antes ele só devolvia "não" — a separação
-  // seguia local, calada, e a pessoa ficava sem entender por que de repente
-  // demorava minutos de novo. Parar sem avisar é o mesmo que quebrar sem
-  // avisar: quem está do outro lado só vê o comportamento mudar sozinho.
-  if (n.tetoCentavos > 0 && gastoCentavos() >= n.tetoCentavos) {
-    desligarNuvemPor('teto-do-mes')
-    return false
-  }
-  if (n.creditoInformado > 0 && n.gastoDesdeCredito >= n.creditoInformado * FOLGA_CREDITO) {
-    desligarNuvemPor('freio-credito')
-    return false
-  }
-  return true
+  return !!(n.ligada && n.temChave)
 }
 
 /** O que ainda dá pra gastar sem encostar no crédito informado. */
