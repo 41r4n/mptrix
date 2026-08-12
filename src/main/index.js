@@ -102,6 +102,7 @@ import {
   setNuvemLigada,
   setTetoNuvem,
   informarCredito,
+  apagarDadosNuvem,
   zerarGastoNuvem,
   getSettings,
   setDownloadDir,
@@ -448,6 +449,7 @@ app.whenReady().then(() => {
   ipcMain.handle('nuvem:ligar', (_e, v) => setNuvemLigada(v))
   ipcMain.handle('nuvem:teto', (_e, centavos) => setTetoNuvem(centavos))
   ipcMain.handle('nuvem:credito', (_e, centavos) => informarCredito(centavos))
+  ipcMain.handle('nuvem:apagarDados', (_e, o) => apagarDadosNuvem(o || {}))
   ipcMain.handle('nuvem:zerarGasto', () => zerarGastoNuvem())
 
   ipcMain.handle('history:get', () => getHistory())

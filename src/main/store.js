@@ -170,6 +170,36 @@ export function informarCredito(centavos) {
   return getNuvem()
 }
 
+/**
+ * APAGAR DADOS DA NUVEM, por partes.
+ *
+ * Um botão só de "apagar tudo" obriga quem queria limpar uma coisa a jogar
+ * fora as outras — e aqui as coisas têm pesos bem diferentes: histórico é
+ * memória, contador é conta, e a chave é o acesso. Escolher o que vai embora
+ * é o que separa faxina de estrago.
+ */
+export function apagarDadosNuvem({ livro, credito, contadores, chave } = {}) {
+  if (livro) store.set('nuvem.livro', [])
+  if (credito) {
+    store.set('nuvem.creditoInformado', 0)
+    store.set('nuvem.gastoDesdeCredito', 0)
+  }
+  if (contadores) {
+    store.set('nuvem.centavosGastos', 0)
+    store.set('nuvem.segundosGastos', 0)
+    store.set('nuvem.musicasFeitas', 0)
+    store.set('nuvem.gastoMesPassado', 0)
+  }
+  if (chave) {
+    store.set('nuvem.chave', null)
+    store.set('nuvem.ligada', false)
+  }
+  // sem crédito informado nem contador não existe motivo pra seguir travada:
+  // a parada era baseada em números que não existem mais
+  if (credito || contadores) store.set('nuvem.paradaPor', null)
+  return getNuvem()
+}
+
 export function desligarNuvemPor(motivo) {
   // não repete a linha se já estava desligada pelo mesmo motivo
   const antes = store.get('nuvem.paradaPor')

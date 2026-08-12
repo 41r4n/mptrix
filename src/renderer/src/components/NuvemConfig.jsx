@@ -36,6 +36,11 @@ export default function NuvemConfig() {
   // se confirma, não se transmite letra por letra.
   const [rascunho, setRascunho] = useState(null)
   const [verLivro, setVerLivro] = useState(false)
+  const [verApagar, setVerApagar] = useState(false)
+  // o que está marcado pra ir embora. A chave começa DESMARCADA de propósito:
+  // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
+  // caminho do Replicate.
+  const [aApagar, setAApagar] = useState({ livro: true, credito: true, contadores: true, chave: false })
 
   const recarregar = async () => setEstado(await window.mptrix.nuvem.estado())
   useEffect(() => { recarregar() }, [])
@@ -612,6 +617,14 @@ export default function NuvemConfig() {
             </>
           )}
 
+        {estado.temChave && (
+          <div className="apagar-linha">
+            <button className="apagar-abrir" onClick={() => setVerApagar(true)} type="button">
+              apagar dados desta tela
+            </button>
+          </div>
+        )}
+
         {recado && <p className={`nuvem-recado ${recado.tipo}`}>{recado.txt}</p>}
       </div>
 
@@ -620,6 +633,75 @@ export default function NuvemConfig() {
           histórico é coisa que se lê com atenção, não de canto de olho.
           Usa a mesma janela das outras telas do app: quem já fechou uma sabe
           fechar esta. */}
+
+      {/* APAGAR POR PARTES. Um botão só de "apagar tudo" obriga quem queria
+          limpar uma coisa a jogar fora as outras — e aqui as coisas têm pesos
+          bem diferentes: histórico é memória, contador é conta, e a chave é o
+          acesso. Escolher o que vai embora é o que separa faxina de estrago. */}
+      {verApagar && (
+        <div className="modal-overlay" onClick={() => setVerApagar(false)}>
+          <div className="modal modal-apagar" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <div>
+                <span className="modal-etiqueta">limpeza</span>
+                <h3>Apagar dados</h3>
+                <p className="modal-sub">
+                  Escolha o que vai embora. Nada disso apaga música, faixa separada
+                  ou download — só o que esta tela guarda sobre a nuvem.
+                </p>
+              </div>
+              <button className="btn-close" onClick={() => setVerApagar(false)} aria-label="Fechar">×</button>
+            </header>
+            <div className="modal-body">
+              <ul className="apagar-lista">
+                {[
+                  { id: 'livro', nome: 'Histórico do crédito', quanto: `${estado.livro?.length || 0} linha${(estado.livro?.length || 0) !== 1 ? 's' : ''}`, txt: 'As cargas, os usos e os fins registrados. Some a memória de para onde o dinheiro foi.' },
+                  { id: 'credito', nome: 'Crédito informado', quanto: estado.creditoInformado ? emDolar(estado.creditoInformado) : 'nenhum', txt: 'O valor que você me disse que tem. Sem ele eu volto a não ter freio até você informar de novo.' },
+                  { id: 'contadores', nome: 'Contadores de gasto', quanto: `${emDolar(gastoC)} · ${estado.musicasFeitas} música${estado.musicasFeitas !== 1 ? 's' : ''}`, txt: 'Quanto gastei e quantas músicas fiz. Zerar não devolve dinheiro nenhum — só apaga a minha conta.' },
+                  { id: 'chave', nome: 'Chave do Replicate', quanto: 'guardada', txt: 'O acesso. Apagando, a nuvem desliga e você precisa pegar a chave lá de novo.', perigo: true }
+                ].map((it) => (
+                  <li key={it.id} className={`${aApagar[it.id] ? 'on' : ''} ${it.perigo ? 'perigo' : ''}`}>
+                    <button
+                      type="button"
+                      className="apagar-item"
+                      onClick={() => setAApagar((v) => ({ ...v, [it.id]: !v[it.id] }))}
+                      aria-pressed={aApagar[it.id]}
+                    >
+                      <span className="apagar-marca" aria-hidden="true" />
+                      <span className="apagar-txt">
+                        <span className="apagar-nome">{it.nome} <i>{it.quanto}</i></span>
+                        <span className="apagar-desc">{it.txt}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="modal-actions">
+                <button
+                  className="btn-secondary"
+                  onClick={() => setAApagar({ livro: true, credito: true, contadores: true, chave: true })}
+                >
+                  Marcar tudo
+                </button>
+                <button className="btn-secondary" onClick={() => setVerApagar(false)}>Cancelar</button>
+                <button
+                  className="btn-danger"
+                  disabled={!Object.values(aApagar).some(Boolean)}
+                  onClick={async () => {
+                    setEstado(await window.mptrix.nuvem.apagarDados(aApagar))
+                    setVerApagar(false)
+                    setRecado({ tipo: 'ok', txt: 'Apagado.' })
+                  }}
+                >
+                  Apagar o que está marcado
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {verLivro && (
         <div className="modal-overlay" onClick={() => setVerLivro(false)}>
           <div className="modal modal-livro" onClick={(e) => e.stopPropagation()}>
