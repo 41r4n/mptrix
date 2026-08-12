@@ -10428,9 +10428,31 @@ ul.hlib-grid {
 .livro-lista li.fim .livro-quando { color: rgba(248, 113, 113, 0.6); }
 .livro-lista li.fim .livro-txt b { color: var(--bad); }
 
-/* a janela do histórico: estreita e alta, porque a lista é de linhas curtas */
+/* A JANELA DO HISTÓRICO: quem rola é a LISTA, não a janela.
+   Antes o corpo inteiro rolava, então o cabeçalho e o botão de fechar desciam
+   junto com as linhas — com 500 registros a pessoa teria que rolar tudo pra
+   achar o "Fechar". O que muda de tamanho é a lista; o resto é moldura, e
+   moldura fica parada. */
 .modal-livro { width: 640px; }
-.modal-livro .modal-body { max-height: 60vh; overflow-y: auto; }
+.modal-livro .modal-body {
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* teto pela ALTURA DA TELA, não por número de linhas: numa janela baixa até
+   seis linhas já enchem, numa alta cabem quinze — quem decide é o espaço que
+   existe, não uma contagem fixa. */
+.modal-livro .livro-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(52vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+.modal-livro .modal-actions { flex: none; }
 
 /* USO EM CINZA, nao em vermelho. Vermelho quer dizer "acabou" — se toda
    separacao fosse vermelha, a cor perderia o sentido justamente na hora que
