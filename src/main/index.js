@@ -795,8 +795,25 @@ app.whenReady().then(() => {
     })
   })
 
+  // Quando o app está empacotado não existe pasta src — aí não há como saber se
+  // o código andou, e a tela simplesmente não fala do assunto. Palpite sobre
+  // atualidade é pior do que silêncio.
+  const mtimeDoCodigo = () => {
+    const raiz = join(__dirname, '..', '..', 'src')
+    if (!existsSync(raiz)) return null
+    let novo = 0
+    const andar = (dir) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, e.name)
+        if (e.isDirectory()) andar(p)
+        else { const t = statSync(p).mtimeMs; if (t > novo) novo = t }
+      }
+    }
+    try { andar(raiz) } catch { return null }
+    return novo || null
+  }
+
   ipcMain.handle('app:findInstaller', async () => {
-    const { readdirSync } = await import('fs')
     const candidates = [
       join(__dirname, '..', '..', 'release'),
       join(process.cwd(), 'release')
@@ -814,7 +831,12 @@ app.whenReady().then(() => {
           .sort((a, b) => b.mtime - a.mtime)
         if (files.length > 0) {
           const f = files[0]
-          return { path: f.path, name: f.name, size: f.size }
+          // A DATA VAI JUNTO, e com ela a pergunta que importa: o código andou
+          // desde que este instalador foi feito? Um instalador de duas semanas
+          // atrás não é "o app" — é o app de duas semanas atrás, e quem receber
+          // não tem como saber disso. Mandar em silêncio é o app mentindo pelo
+          // dono.
+          return { path: f.path, name: f.name, size: f.size, feitoEm: f.mtime, codigoEm: mtimeDoCodigo() }
         }
       } catch {}
     }

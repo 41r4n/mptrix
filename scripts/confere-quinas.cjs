@@ -29,6 +29,8 @@ app.whenReady().then(async () => {
     <div class="baixar-poco" id="b1"></div>
     <div class="mandamento" id="m1">m</div>
     <button class="conserto-abrir" id="ca"><b>A minha conta não bate?</b></button>
+    <section class="share-app" id="sa">compartilhar</section>
+    <button class="share-tile" id="st">tile</button>
     <button class="preset-chip chanfro" id="c1">chip</button>
     <button class="preset-chip chanfro active" id="c2">chip aceso</button>`
   await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
@@ -38,7 +40,7 @@ app.whenReady().then(async () => {
     const antes = g('f1')
     document.getElementById('inp').focus()
     return { p1: g('p1'), p2: g('p2'), p3: g('p3'), q1: g('q1'), b1: g('b1'),
-             m1: g('m1'), ca: g('ca'), c1: g('c1'), c2: g('c2'), fSolto: antes, fFoco: g('f1') }
+             m1: g('m1'), ca: g('ca'), sa: g('sa'), st: g('st'), c1: g('c1'), c2: g('c2'), fSolto: antes, fFoco: g('f1') }
   })()`)
 
   // a primeira cor do degrade e o "transparent", que o Chromium computa como
@@ -59,6 +61,8 @@ app.whenReady().then(async () => {
     ['campo de link (BAIXAR)', 'b1', 'rgba(255,255,255'],
     ['mandamento', 'm1', 'rgba(182,255,59'],
     ['porta da correcao', 'ca', 'rgba(234,179,8'],
+    ['bloco compartilhar', 'sa', 'rgba(255,255,255'],
+    ['tile de compartilhar', 'st', 'rgba(255,255,255'],
     ['-- chip apagado (acervo)', 'c1', 'rgba(255,255,255'],
     ['-- chip ACESO (acervo)', 'c2', 'rgb(182,255,59']
   ]

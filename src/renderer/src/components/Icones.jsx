@@ -25,6 +25,15 @@ const D = {
   renomear: <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
   apagar: <path d="M18 6 6 18M6 6l12 12" />,
   lixeira: <><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></>,
+  // COPIAR: duas folhas, uma atrás da outra. Estava saindo o lápis de
+  // "renomear" — desenho de EDITAR num botão que só COPIA.
+  copiar: <><rect width="12" height="14" x="8" y="6" rx="2" /><path d="M4 16V4a2 2 0 0 1 2-2h9" /></>,
+  // CAIXA fechada com a fita: é o que .zip é. Estava saindo a seta de baixar,
+  // que promete download num botão que empacota.
+  caixa: <><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z" /><path d="M3 8.5 12 13l9-4.5M12 13v7" /></>,
+  // SAIR: seta que atravessa a moldura, pra ação que leva pra fora do app.
+  // Estava saindo a lupa de buscar num botão que abre o Drive.
+  sair: <><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M20 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6" /></>,
   buscar: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
   // sinal de aviso: triângulo anguloso, como placa de estrada — o desenho

@@ -2688,80 +2688,12 @@ section h2 {
   color: var(--accent);
 }
 
-/* ShareApp — seção pra distribuir o app */
-.share-app {
-  padding: 18px 20px;
-  background: rgba(182, 255, 59, 0.08);
-  border: 1px dashed rgba(182, 255, 59, 0.3);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.share-app-head h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-  color: var(--text);
-}
-
-.share-app-head p {
-  margin: 0;
-}
-
-.share-app-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.share-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  color: var(--text);
-  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
-}
-
-.share-tile:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--bg-elev-2);
-  transform: translateY(-1px);
-}
-
-.share-tile:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.share-tile-icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.share-tile-title {
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.share-tile-desc {
-  font-size: 11.5px;
-  color: var(--muted);
-  line-height: 1.4;
-}
-
 .share-status {
-  padding: 8px 12px;
-  border-radius: 7px;
+  padding: 10px 13px;
+  border-radius: 0;
   font-size: 12.5px;
-  border: 1px solid transparent;
+  line-height: 1.5;
+  border: none;
 }
 
 .share-status-ok {
@@ -4959,16 +4891,6 @@ section h2 {
 
 .modal {
   border-radius: 16px;
-}
-
-/* tiles de compartilhar acompanham o hover do sistema */
-.share-tile {
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.share-tile:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* rolagens na paleta nova */
@@ -8509,7 +8431,9 @@ ul.hlib-grid {
 .livro-quadro,
 .freio-caixa,
 .baixar-poco,
-.conserto-abrir {
+.conserto-abrir,
+.share-app,
+.share-tile {
   --diag: linear-gradient(to top right,
     transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
     var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
@@ -11473,3 +11397,142 @@ ul.hlib-grid {
    que entra depois — mas escrever o número evita depender da ordem de
    montagem, que muda sozinha se alguém reordenar o JSX um dia. */
 .modal-overlay.overlay-cima { z-index: 110; }
+
+
+/* ██████████ COMPARTILHAR O APP ██████████
+   Era um retângulo de cantos redondos com borda tracejada lima — de outra
+   casa. Aqui: chassi cavado, quina cortada, rótulo mono em caixa-alta, e o
+   lima só onde carrega informação.
+   O arquivo virou LEITURA DE PAINEL em vez de frase corrida. Nome, tamanho e
+   data são três fatos diferentes sobre a mesma coisa; enfileirados num
+   parágrafo, a data sumia no meio — e a data é justamente o que decide se vale
+   mandar. Sem borda em volta: isto não clica. */
+.share-app {
+  --chanfro: 16px;
+  --fio: var(--border);
+  margin-top: 22px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background-color: var(--bg-cava);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
+  clip-path: var(--corte);
+  border-radius: 0;
+}
+.share-cab { display: flex; flex-direction: column; gap: 5px; }
+.share-olho {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.share-cab h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
+
+.share-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 11px 14px;
+  background: var(--bg-cava-2);
+}
+.share-arq-nome {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-2);
+  word-break: break-all;
+}
+.share-arq-fio { width: 1px; align-self: stretch; background: var(--border); flex: none; }
+.share-arq-dado { display: flex; flex-direction: column; gap: 2px; flex: none; }
+.share-arq-dado i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.share-arq-dado b { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-2); }
+/* a idade em texto: "há 15 dias" responde o que a data crua não responde */
+.share-idade {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  padding: 4px 9px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.share-idade.velho { color: var(--warn); box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4); }
+
+/* O AVISO. Ele não impede nada — o dono pode ter motivo pra mandar a versão
+   antiga. Mas mandar sem saber é o programa mentindo pela boca dele. */
+.share-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 11px 13px;
+  background: rgba(234, 179, 8, 0.08);
+  box-shadow: inset 2px 0 0 var(--warn);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.share-aviso svg { flex: none; margin-top: 2px; color: var(--warn); }
+.share-aviso strong { color: var(--warn); font-weight: 600; }
+.share-aviso em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text);
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.share-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 9px;
+}
+.share-tile {
+  --chanfro: 10px;
+  --fio: var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 14px 14px 15px;
+  background-color: var(--bg-elev);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--fio);
+  clip-path: var(--corte-sm);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, background-color 0.14s ease, transform 0.14s ease;
+}
+.share-tile:hover:not(:disabled) {
+  --fio: var(--accent-border);
+  background-color: var(--bg-elev-2);
+  transform: translateY(-2px);
+}
+.share-tile:disabled { opacity: 0.45; cursor: default; }
+.share-tile-ico { color: var(--muted); transition: color 0.14s ease; }
+.share-tile:hover:not(:disabled) .share-tile-ico { color: var(--accent); }
+.share-tile-titulo { font-size: 13px; font-weight: 600; color: var(--text); }
+.share-tile-txt { font-size: 11.5px; line-height: 1.45; color: var(--muted-2); }
