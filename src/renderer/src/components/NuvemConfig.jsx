@@ -48,17 +48,24 @@ export default function NuvemConfig() {
   // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
   // caminho do Replicate.
   const [aApagar, setAApagar] = useState({ livro: true, credito: true, contadores: true, chave: false })
+  const [verConserto, setVerConserto] = useState(false)
 
   const recarregar = async () => setEstado(await window.mptrix.nuvem.estado())
   useEffect(() => { recarregar() }, [])
 
-  // Esc fecha a janela do histórico. Clicar fora também, pelo overlay.
+  // Esc fecha a janela de cima primeiro. Duas janelas abertas e uma tecla só:
+  // fechar as duas de uma vez faria a pessoa perder o histórico junto com a
+  // correção que ela só queria cancelar.
   useEffect(() => {
-    if (!verLivro) return
-    const tecla = (e) => { if (e.key === 'Escape') setVerLivro(false) }
+    if (!verLivro && !verConserto) return
+    const tecla = (e) => {
+      if (e.key !== 'Escape') return
+      if (verConserto) setVerConserto(false)
+      else setVerLivro(false)
+    }
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
-  }, [verLivro])
+  }, [verLivro, verConserto])
 
   if (!estado) return null
 
@@ -823,110 +830,25 @@ export default function NuvemConfig() {
                       </li>
                 ))}
               </ul>
-              {/* ██████████ A CORREÇÃO ██████████
-                  Ela mora aqui porque esta janela já é o lugar de "isto é o
-                  que aconteceu, conserta o que está errado". E porque ela é
-                  séria: informar um total FECHA O CICLO. O gasto acumulado
-                  volta a zero e a contagem recomeça do número novo — as linhas
-                  antigas continuam guardadas, mas param de contar.
-                  Por isso ela é explicada em três partes, e não em uma frase:
-                  POR QUE existe (o MPTRIX estima, e estima pra mais), COMO se
-                  faz (abrir a página, achar o número, digitar), e O QUE
-                  acontece depois — este último em âmbar e com os números do
-                  caso, não em texto genérico. O valor entra no rótulo do botão
-                  pra que a última coisa lida antes do clique seja exatamente o
-                  que vai acontecer. */}
-              {/* FECHADO POR PADRÃO, mas com a PERGUNTA à mostra. Aberto, ele
-                  empurrava o "Fechar" pra fora da tela — o mesmo defeito que o
-                  dono já tinha apontado na lista. E a pergunta na tampa é o que
-                  faz ele ser achado: quem precisa disto chega aqui pensando
-                  exatamente "a conta não está batendo". Ninguém procura por
-                  "informar saldo total". */}
-              <details className="conserto">
-                <summary className="conserto-cab">
-                  <span className="conserto-sinal" aria-hidden="true">
-                    <Ico nome="aviso" tamanho={15} />
-                  </span>
-                  <b>A minha conta não bate com o Replicate?</b>
-                  <span className="conserto-seta" aria-hidden="true" />
-                </summary>
+              {/* SÓ A PORTA MORA AQUI. A correção é assunto de janela
+                  própria: aberta aqui dentro, ela empurrava a lista e o
+                  "Fechar", e ainda dividia a atenção com o histórico — que é
+                  outra coisa. A pergunta fica à mostra porque é ela que faz o
+                  bloco ser achado: quem precisa disto chega pensando "a conta
+                  não está batendo", ninguém procura por "informar saldo
+                  total". */}
+              <button
+                className="conserto-abrir"
+                type="button"
+                onClick={() => setVerConserto(true)}
+              >
+                <span className="conserto-sinal" aria-hidden="true">
+                  <Ico nome="aviso" tamanho={14} />
+                </span>
+                <b>A minha conta não bate com o Replicate?</b>
+                <span className="conserto-abrir-cta">corrigir o saldo</span>
+              </button>
 
-                <p className="conserto-txt">
-                  O MPTRIX não consegue ler o seu saldo — a conta deles não entrega esse
-                  número. Ele <strong>estima</strong> o que gastou pelo preço da máquina de
-                  cada trabalho, e estima <strong>pra mais</strong> de propósito, pra frear
-                  antes e não deixar você furar o crédito. Só que erro pra mais se acumula:
-                  um dia eu digo que acabou e ainda tem dinheiro lá. Quando isso acontecer,
-                  o número certo é o deles — e este é o lugar de me dizer qual é.
-                </p>
-
-                <ol className="conserto-passos">
-                  <li>
-                    <span>1</span>
-                    <div>
-                      Abra a página do crédito
-                      <button
-                        className="conserto-ir"
-                        type="button"
-                        onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
-                      >abrir no navegador</button>
-                    </div>
-                  </li>
-                  <li><span>2</span><div>Procure <em>Crédito restante</em> — é o que sobrou de verdade</div></li>
-                  <li><span>3</span><div>Digite esse número aqui embaixo</div></li>
-                </ol>
-
-                <div className="conserto-linha">
-                  <div className="freio-caixa conserto-caixa">
-                    <em>US$</em>
-                    <input
-                      type="number"
-                      className="freio-num"
-                      min="0"
-                      step="0.01"
-                      value={rascunhoReal}
-                      placeholder="0,00"
-                      aria-label="o saldo real que está no Replicate"
-                      onChange={(e) => setRascunhoReal(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="conserto-ok"
-                    disabled={!Number(String(rascunhoReal).replace(',', '.'))}
-                    onClick={async () => {
-                      const d = Number(String(rascunhoReal).replace(',', '.')) || 0
-                      if (d <= 0) return
-                      setRascunhoReal('')
-                      setEstado(await window.mptrix.nuvem.credito(Math.round(d * 100)))
-                    }}
-                  >
-                    {Number(String(rascunhoReal).replace(',', '.'))
-                      ? <>corrigir para {emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</>
-                      : 'corrigir'}
-                  </button>
-                </div>
-
-                {/* O AVISO COM OS NÚMEROS DO CASO. "Isso reinicia a contagem" é
-                    frase de manual; dizer que os US$ 3,40 já gastos voltam a
-                    zero é o que a pessoa precisa saber antes de apertar. */}
-                <p className={`conserto-efeito ${Number(String(rascunhoReal).replace(',', '.')) ? 'ligado' : ''}`}>
-                  <Ico nome="aviso" tamanho={13} />
-                  <span>
-                    {Number(String(rascunhoReal).replace(',', '.'))
-                      ? <>
-                        Isto <strong>fecha a conta atual</strong>: o gasto de{' '}
-                        <strong>{emDolar(estado.gastoDesdeCredito)}</strong> volta a zero e eu
-                        recomeço a contar a partir de{' '}
-                        <strong>{emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</strong>.
-                        {' '}Os registros de cima continuam guardados — só param de contar.
-                      </>
-                      : <>Isto <strong>fecha a conta atual</strong>: o gasto acumulado volta a zero e a
-                        contagem recomeça do número que você digitar. Não é o mesmo que comprar
-                        mais crédito — pra somar, use o campo do painel.</>}
-                  </span>
-                </p>
-              </details>
 
               {/* a limpeza mora AQUI dentro: esta janela é sobre esses dados,
                   então o botão de apagá-los é vizinho deles, não de um menu
@@ -966,6 +888,121 @@ export default function NuvemConfig() {
                   className="btn-secondary"
                   onClick={() => { setVerLivro(false); setLinhasMarcadas(new Set()) }}
                 >Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {/* ██████████ A JANELA DA CORREÇÃO ██████████
+          Ela abre POR CIMA do histórico, no meio da tela, com o resto
+          embaçado. É a mesma língua das outras janelas do app: quem já fechou
+          uma sabe fechar esta.
+          Por que janela e não gaveta: aberta dentro do histórico, ela empurrava
+          a lista e o botão de fechar, e dividia a atenção com o assunto de lá.
+          Isto aqui muda o que o app acredita sobre o dinheiro de alguém — pede
+          a tela inteira, não um cantinho. */}
+      {verConserto && createPortal((
+        <div className="modal-overlay overlay-cima" onClick={() => setVerConserto(false)}>
+          <div className="modal modal-conserto" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <div>
+                <span className="modal-etiqueta">correção</span>
+                <h3>A minha conta não bate com o Replicate</h3>
+                <p className="modal-sub">
+                  O número certo é o <strong>deles</strong>. Aqui você me diz qual é, e eu
+                  recomeço a contar a partir dele.
+                </p>
+              </div>
+              <button className="btn-close" onClick={() => setVerConserto(false)} aria-label="Fechar">×</button>
+            </header>
+
+            <div className="modal-body conserto">
+              <p className="conserto-txt">
+                O MPTRIX não consegue ler o seu saldo — a conta deles não entrega esse
+                número. Ele <strong>estima</strong> o que gastou pelo preço da máquina de
+                cada trabalho, e estima <strong>pra mais</strong> de propósito, pra frear
+                antes e não deixar você furar o crédito. Só que erro pra mais se acumula:
+                um dia eu digo que acabou e ainda tem dinheiro lá.
+              </p>
+
+              <ol className="conserto-passos">
+                <li>
+                  <span>1</span>
+                  <div>
+                    Abra a página do crédito
+                    <button
+                      className="conserto-ir"
+                      type="button"
+                      onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
+                    >abrir no navegador</button>
+                  </div>
+                </li>
+                <li><span>2</span><div>Procure <em>Crédito restante</em> — é o que sobrou de verdade</div></li>
+                <li><span>3</span><div>Digite esse número aqui embaixo</div></li>
+              </ol>
+
+              <div className="conserto-linha">
+                <div className="freio-caixa conserto-caixa">
+                  <em>US$</em>
+                  <input
+                    type="number"
+                    className="freio-num"
+                    min="0"
+                    step="0.01"
+                    value={rascunhoReal}
+                    placeholder="0,00"
+                    autoFocus
+                    aria-label="o saldo real que está no Replicate"
+                    onChange={(e) => setRascunhoReal(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* O AVISO COM OS NÚMEROS DO CASO. "Isso reinicia a contagem" é
+                  frase de manual; dizer que os US$ 3,40 já gastos voltam a zero
+                  é o que a pessoa precisa saber antes de apertar. */}
+              <p className={`conserto-efeito ${Number(String(rascunhoReal).replace(',', '.')) ? 'ligado' : ''}`}>
+                <Ico nome="aviso" tamanho={13} />
+                <span>
+                  {Number(String(rascunhoReal).replace(',', '.'))
+                    ? <>
+                      Isto <strong>fecha a conta atual</strong>: o gasto de{' '}
+                      <strong>{emDolar(estado.gastoDesdeCredito)}</strong> volta a zero e eu
+                      recomeço a contar a partir de{' '}
+                      <strong>{emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</strong>.
+                      {' '}Os registros continuam guardados — só param de contar.
+                    </>
+                    : <>Isto <strong>fecha a conta atual</strong>: o gasto acumulado volta a zero e a
+                      contagem recomeça do número que você digitar. Não é o mesmo que comprar
+                      mais crédito — pra somar, use o campo do painel.</>}
+                </span>
+              </p>
+
+              <div className="modal-actions">
+                {/* O VALOR NO RÓTULO: a última coisa lida antes do clique tem
+                    que ser exatamente o que vai acontecer. */}
+                <button
+                  type="button"
+                  className="conserto-ok"
+                  disabled={!Number(String(rascunhoReal).replace(',', '.'))}
+                  onClick={async () => {
+                    const d = Number(String(rascunhoReal).replace(',', '.')) || 0
+                    if (d <= 0) return
+                    setRascunhoReal('')
+                    setVerConserto(false)
+                    setEstado(await window.mptrix.nuvem.credito(Math.round(d * 100)))
+                  }}
+                >
+                  {Number(String(rascunhoReal).replace(',', '.'))
+                    ? <>corrigir para {emDolar(Math.round(Number(String(rascunhoReal).replace(',', '.')) * 100))}</>
+                    : 'corrigir'}
+                </button>
+                <span className="modal-espaco" />
+                <button
+                  className="btn-secondary"
+                  onClick={() => { setRascunhoReal(''); setVerConserto(false) }}
+                >Cancelar</button>
               </div>
             </div>
           </div>
