@@ -10826,135 +10826,6 @@ ul.hlib-grid {
 /* o botão de comprar, dentro do painel */
 .credito-ir { display: inline-flex; align-items: center; gap: 9px; }
 
-/* ██████████ O RECADO ██████████
-   A nuvem pode se desligar durante QUALQUER coisa: no meio de uma separação,
-   com o estúdio aberto ocupando a tela inteira, ou com a pessoa em outra aba
-   escolhendo música. Ela não pode depender de estar olhando pro canto certo
-   pra ficar sabendo que o dinheiro acabou.
-
-   Por isso ele mudou de canto pra meio: escurece e embaça o resto, aparece
-   por cima de tudo (400 — acima do estúdio em 90, das janelas em 100, da roda
-   em 120 e do balãozinho de dica em 300), e NÃO fecha por clique fora. Recado
-   sobre dinheiro que some porque a mão escorregou é recado que não foi lido. */
-.recado-palco {
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(3, 4, 7, 0.82);
-  backdrop-filter: blur(7px);
-  animation: fadeIn 0.16s ease;
-}
-.recado {
-  position: relative;
-  width: 520px;
-  max-width: 100%;
-  padding: 20px 22px 20px 24px;
-  background: linear-gradient(160deg, #17181c, #0b0c0f 72%);
-  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4), 0 24px 60px rgba(0, 0, 0, 0.85);
-  animation: recado-entra 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-@keyframes recado-entra {
-  from { opacity: 0; transform: translateY(14px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-.recado-barra {
-  position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 3px;
-  background: var(--warn);
-  box-shadow: 0 0 14px rgba(234, 179, 8, 0.6);
-}
-.recado-canto {
-  position: absolute;
-  width: 13px;
-  height: 13px;
-  border: 1px solid var(--warn);
-  opacity: 0.7;
-  pointer-events: none;
-}
-.recado-canto.tl { top: -4px; left: -4px; border-right: none; border-bottom: none; }
-.recado-canto.br { bottom: -4px; right: -4px; border-left: none; border-top: none; }
-
-.recado-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
-.recado-luz {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  background: var(--warn);
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  box-shadow: 0 0 12px rgba(234, 179, 8, 0.8);
-  animation: jornal-bate 1.8s ease-in-out infinite;
-}
-.recado-cab b {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--warn);
-}
-.recado p { margin: 0 0 16px; font-size: 13.5px; line-height: 1.55; color: var(--text-2); }
-.recado p strong { color: var(--text); font-weight: 600; }
-
-.recado-acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.recado-ir {
-  height: 34px;
-  padding: 0 16px;
-  background: var(--warn);
-  border: none;
-  color: #0b0c0f;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 700;
-  cursor: pointer;
-}
-.recado-ir:hover { background: #f5c518; }
-.recado-ok {
-  height: 34px;
-  padding: 0 16px;
-  background: none;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.13s ease, box-shadow 0.13s ease;
-}
-.recado-ok:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
-/* com o estúdio na frente não há pra onde levar: dizer onde fica é mais
-   honesto do que um botão que parece não fazer nada */
-.recado-onde {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  flex: 1 1 220px;
-}
-.recado-x {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  color: var(--muted-2);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 5px;
-}
-.recado-x:hover { color: var(--text); }
-
 /* a segunda ação do crédito: mesma caixa, outro significado. Ela é a menos
    comum (corrigir pelo total), então vem com peso menor — mas escrita, não
    escondida: as duas precisam ser legíveis pra escolha existir. */
@@ -10989,3 +10860,190 @@ ul.hlib-grid {
   flex: 1 1 200px;
   line-height: 1.5;
 }
+
+/* ██████████ O RECADO ██████████
+   Era um parágrafo corrido: tudo com o mesmo peso, e as duas coisas que
+   importam — "seu trabalho continua" e "vai demorar mais" — enterradas no
+   meio do texto. Quem lê rápido saía sabendo que algo deu errado e não sabendo
+   se podia continuar.
+
+   Agora cada fato é uma linha com seu sinal: o verde diz que está tudo de pé,
+   o âmbar diz o que muda. E o número aparece no título, porque "está acabando"
+   sem dizer quanto sobra manda a pessoa procurar a informação que o aviso
+   devia ter trazido. */
+.recado-palco {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 4, 7, 0.84);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.16s ease;
+}
+.recado {
+  position: relative;
+  width: 560px;
+  max-width: 100%;
+  padding: 26px 24px 22px;
+  background: linear-gradient(165deg, #1a1a1c, #0b0c0f 70%);
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.45), 0 26px 70px rgba(0, 0, 0, 0.9);
+  animation: recado-entra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes recado-entra {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+/* FAIXA DE PERIGO no topo — a listra diagonal que toda máquina usa pra dizer
+   "atenção aqui". É o sinal antes da palavra: dá pra saber o que é antes de
+   ler qualquer coisa. */
+.recado-faixa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 7px;
+  background: repeating-linear-gradient(-45deg, var(--warn) 0 8px, #0b0c0f 8px 16px);
+  opacity: 0.9;
+}
+.recado-canto {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--warn);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.recado-canto.tl { top: -4px; left: -4px; border-right: none; border-bottom: none; }
+.recado-canto.br { bottom: -4px; right: -4px; border-left: none; border-top: none; }
+
+.recado-cab { display: flex; align-items: center; gap: 15px; margin-bottom: 18px; }
+/* o sinal: hexágono âmbar com o triângulo dentro, batendo devagar */
+.recado-sinal {
+  flex: none;
+  width: 52px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(234, 179, 8, 0.16);
+  color: var(--warn);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 26px rgba(234, 179, 8, 0.35);
+  animation: recado-pulsa 2.2s ease-in-out infinite;
+}
+@keyframes recado-pulsa {
+  0%, 70%, 100% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.28); }
+  85% { box-shadow: 0 0 40px rgba(234, 179, 8, 0.7); }
+}
+.recado-titulo { min-width: 0; }
+.recado-titulo b {
+  display: block;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.recado-titulo i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.recado-titulo i strong { color: var(--warn); font-weight: 600; font-size: 12px; }
+
+/* OS FATOS, um por linha. Cada um com seu sinal e sua cor: o que continua de
+   pé em lima, o que muda em âmbar. */
+.recado-fatos { list-style: none; margin: 0 0 20px; padding: 0; }
+.recado-fatos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 12px 11px 13px;
+  background: rgba(255, 255, 255, 0.028);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.recado-fatos li + li { margin-top: 5px; }
+.recado-fatos b {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.recado-fatos p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.recado-ico {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+.recado-fatos li.bom { box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.22); }
+.recado-fatos li.bom .recado-ico { background: rgba(182, 255, 59, 0.16); color: var(--accent); }
+.recado-fatos li.atencao { box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.22); }
+.recado-fatos li.atencao .recado-ico { background: rgba(234, 179, 8, 0.16); color: var(--warn); }
+
+.recado-acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.recado-ir {
+  height: 36px;
+  padding: 0 18px;
+  background: var(--warn);
+  border: none;
+  color: #0b0c0f;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.35);
+}
+.recado-ir:hover { background: #f5c518; }
+.recado-ok {
+  height: 36px;
+  padding: 0 18px;
+  background: none;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.13s ease, box-shadow 0.13s ease;
+}
+.recado-ok:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
+/* com o estúdio na frente não há pra onde levar: dizer onde fica é mais
+   honesto do que um botão que parece não fazer nada */
+.recado-onde {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  flex: 1 1 220px;
+  line-height: 1.5;
+}
+.recado-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--muted-2);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 5px;
+}
+.recado-x:hover { color: var(--text); }

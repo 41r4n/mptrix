@@ -91,7 +91,15 @@ export default function App() {
         // só avisa na TRANSIÇÃO: mostrar o mesmo recado a cada 3s viraria
         // parede, e parede a pessoa aprende a ignorar
         const parada = n?.paradaPor || null
-        if (parada && parada !== paradaVista.current) setAvisoNuvem(parada)
+        if (parada && parada !== paradaVista.current) {
+          // leva os números junto: "está acabando" sem dizer quanto sobra
+          // manda a pessoa procurar a informação que o aviso devia ter
+          setAvisoNuvem({
+            motivo: parada,
+            sobra: Math.max(0, (n.creditoInformado || 0) - (n.gastoDesdeCredito || 0)),
+            informado: n.creditoInformado || 0
+          })
+        }
         paradaVista.current = parada
       } catch { /* sem nuvem configurada: a leitura mostra DESLIGADA */ }
     }
@@ -438,46 +446,76 @@ export default function App() {
         <UpdateFooter />
       </div>
       <ZoomChip />
-      {/* O RECADO — no MEIO da tela, por cima de tudo, e só sai no ×.
+      {/* O RECADO — no MEIO da tela, por cima de tudo, e só sai no botão.
           A nuvem pode se desligar durante qualquer coisa: no meio de uma
-          separação, com o estúdio aberto, ou com a pessoa em outra aba
-          escolhendo música. Ela não pode depender de estar olhando pro canto
-          certo pra ficar sabendo que o dinheiro acabou.
-          Por isso: centralizado, com o resto embaçado atrás, e sem fechar por
-          clique fora — recado sobre dinheiro que some porque a mão escorregou
-          é recado que não foi lido. */}
+          separação, com o estúdio aberto, ou com a pessoa em outra aba. Ela
+          não pode depender de estar olhando pro canto certo pra saber que o
+          dinheiro acabou.
+
+          Era um parágrafo corrido: tudo com o mesmo peso, e as duas coisas que
+          importam — "seu trabalho continua" e "vai demorar mais" — enterradas
+          no meio do texto. Agora cada uma é uma linha com seu sinal, e o
+          número aparece, porque "está acabando" sem dizer quanto sobra manda a
+          pessoa procurar a informação que o aviso devia ter. */}
       {avisoNuvem && (
         <div className="recado-palco">
           <div className="recado" role="alertdialog" aria-modal="true">
-            <span className="recado-barra" aria-hidden="true" />
+            <span className="recado-faixa" aria-hidden="true" />
             <span className="recado-canto tl" aria-hidden="true" />
             <span className="recado-canto br" aria-hidden="true" />
             <button className="recado-x" onClick={() => setAvisoNuvem(null)} title="Fechar">×</button>
 
             <div className="recado-cab">
-              <span className="recado-luz" aria-hidden="true" />
-              <b>
-                {avisoNuvem === 'teto-do-mes'
-                  ? 'Cheguei no teto do mês'
-                  : avisoNuvem === 'freio-credito'
-                    ? 'Seu crédito está acabando'
-                    : 'Seu crédito acabou'}
-              </b>
+              <span className="recado-sinal" aria-hidden="true">
+                <Ico nome="aviso" tamanho={26} />
+              </span>
+              <div className="recado-titulo">
+                <b>
+                  {avisoNuvem.motivo === 'teto-do-mes'
+                    ? 'Cheguei no teto do mês'
+                    : avisoNuvem.motivo === 'freio-credito'
+                      ? 'Seu crédito está acabando'
+                      : 'Seu crédito acabou'}
+                </b>
+                {avisoNuvem.informado > 0 && (
+                  <i>
+                    sobra <strong>US$ {(avisoNuvem.sobra / 100).toFixed(2).replace('.', ',')}</strong>
+                    {' '}de US$ {(avisoNuvem.informado / 100).toFixed(2).replace('.', ',')}
+                  </i>
+                )}
+              </div>
             </div>
 
-            <p>
-              Desliguei a nuvem e voltei a separar aqui no seu computador.{' '}
-              <strong>Seu trabalho continua normalmente</strong> — só vai levar
-              bem mais tempo. Dependendo da música e do computador, o que a nuvem
-              fazia em meio minuto aqui pode levar de alguns minutos a algumas
-              horas.
-              {avisoNuvem === 'freio-credito' && ' Parei antes de acabar pra você não ficar devendo.'}
-            </p>
+            <ul className="recado-fatos">
+              <li className="bom">
+                <span className="recado-ico" aria-hidden="true"><Ico nome="certo" tamanho={15} /></span>
+                <div>
+                  <b>Seu trabalho continua</b>
+                  <p>Desliguei a nuvem e voltei a separar aqui no seu computador. Nada foi perdido.</p>
+                </div>
+              </li>
+              <li className="atencao">
+                <span className="recado-ico" aria-hidden="true"><Ico nome="tempo" tamanho={15} /></span>
+                <div>
+                  <b>Só vai levar bem mais tempo</b>
+                  <p>
+                    O que a nuvem fazia em meio minuto, aqui pode levar de alguns
+                    minutos a algumas horas — depende da música e do computador.
+                  </p>
+                </div>
+              </li>
+              {avisoNuvem.motivo === 'freio-credito' && (
+                <li>
+                  <span className="recado-ico" aria-hidden="true"><Ico nome="ampulheta" tamanho={13} /></span>
+                  <div>
+                    <b>Parei antes de acabar</b>
+                    <p>Assim você não fica devendo e a conta não é suspensa.</p>
+                  </div>
+                </li>
+              )}
+            </ul>
 
             <div className="recado-acoes">
-              {/* com o estúdio aberto, trocar de aba mexeria numa tela que está
-                  ATRÁS dele — a pessoa clicaria e não veria nada acontecer.
-                  Melhor dizer onde fica do que fingir que levou. */}
               {estudioAberto ? (
                 <span className="recado-onde">o crédito fica na aba NUVEM, quando você fechar o estúdio</span>
               ) : (
@@ -495,6 +533,7 @@ export default function App() {
           </div>
         </div>
       )}
+
 
 
     </UpdatesProvider>

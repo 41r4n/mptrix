@@ -27,6 +27,11 @@ const D = {
   lixeira: <><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></>,
   buscar: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   baixar: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
+  // sinal de aviso: triângulo anguloso, como placa de estrada — o desenho
+  // arredondado vira "informação", e isto não é informação, é aviso
+  aviso: <><path d="M12 3.2 22 20.4H2L12 3.2Z" /><path d="M12 10v4.6" /><path d="M12 17.4h.01" /></>,
+  tempo: <><circle cx="12" cy="12" r="9" /><path d="M12 7.2V12l3.2 2" /></>,
+  certo: <path d="M4 12.5 9.2 18 20 6.6" />,
   calendario: <><rect width="18" height="17" x="3" y="4" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></>,
   // A AMPULHETA do Omnitrix: silhueta cheia e ANGULOSA — duas cunhas retas se
   // encontrando num pescoço fino. Já foi de traço fino (parecia ícone de
