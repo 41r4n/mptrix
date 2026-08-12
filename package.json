@@ -84,6 +84,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MPTRIX"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "41r4n",
+        "repo": "mptrix"
+      }
+    ]
   }
 }
