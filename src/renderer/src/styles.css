@@ -7400,7 +7400,6 @@ body.studio-open .zoom-chip {
 }
 
 .nuvem-campo:disabled { opacity: 0.45; }
-.nuvem-campo.curto { flex: 0 0 88px; text-align: right; }
 
 .nuvem-link {
   align-self: flex-start;
@@ -10206,15 +10205,13 @@ ul.hlib-grid {
    Com ele o app faz a conta que a API não deixa fazer, e para em 85% — porque
    o gasto daqui é ESTIMADO pelo tempo de máquina, e parar em cima do valor
    exato deixaria a dívida acontecer por erro de arredondamento. */
-.freio {
-  margin: 6px 0 4px;
-  padding: 15px 18px 16px;
-  background: var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  clip-path: var(--corte-sm);
-}
-.freio-campo { display: flex; flex-direction: column; gap: 9px; }
-.freio-campo > span {
+/* O FREIO MORA DENTRO DO PAINEL — sem caixa própria, porque caixa dentro de
+   caixa é o que fazia parecer dois assuntos. O que separa dele os números de
+   cima é um fio, não uma parede. */
+.freio { margin: 0; }
+.freio-rot {
+  display: block;
+  margin-bottom: 10px;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.18em;
@@ -10222,12 +10219,15 @@ ul.hlib-grid {
   color: var(--muted-2);
 }
 .freio-linha { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.freio-linha em {
-  font-style: normal;
-  font-family: var(--font-mono);
-  font-size: 13px;
+.freio-txt {
+  margin: 11px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
   color: var(--muted);
+  max-width: 84ch;
 }
+.freio-txt strong { color: var(--text-2); font-weight: 600; }
+.freio-txt em { font-style: normal; color: var(--text-2); }
 .freio-linha .nuvem-unidade {
   font-size: 12px;
   color: var(--muted);
@@ -10237,8 +10237,8 @@ ul.hlib-grid {
 /* aparece só enquanto há rascunho: dinheiro se confirma, não se transmite
    letra por letra */
 .freio-ok {
-  height: 30px;
-  padding: 0 12px;
+  height: 46px;
+  padding: 0 18px;
   background: var(--accent);
   border: none;
   color: #0b0c0f;
@@ -10336,42 +10336,6 @@ ul.hlib-grid {
    fez com o dinheiro de alguém.
    Carga em verde, esgotamento em vermelho: a linha inteira muda de cor, então
    o histórico se lê de relance como uma fita, sem precisar ler palavra. */
-.livro { position: relative; margin: 4px 0 14px; }
-/* FECHADO POR PADRÃO: o histórico é consulta, não leitura de todo dia. Aberto,
-   ele empurrava pra fora da tela o campo e o jornal, que são o assunto. */
-.livro-abrir {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  height: 30px;
-  padding: 0 13px 0 11px;
-  background: none;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-  margin-bottom: 8px;
-  transition: color 0.13s ease, box-shadow 0.13s ease, background 0.13s ease;
-}
-.livro-abrir:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); background: rgba(255, 255, 255, 0.03); }
-/* quadradinho de janela, não seta: seta promete gaveta que abre no lugar, e
-   isto abre uma janela por cima */
-.livro-ico {
-  width: 9px;
-  height: 8px;
-  box-shadow: inset 0 0 0 1px var(--accent);
-  border-top: 2px solid var(--accent);
-}
-.livro-conta {
-  font-size: 9px;
-  color: var(--muted-2);
-  padding-left: 7px;
-  border-left: 1px solid var(--border);
-}
 /* AS LINHAS DO LIVRO.
    Elas estavam presas a ".livro li" — e quando a lista mudou de lugar (foi pra
    dentro da janela), saiu de dentro do ".livro" e TODO o estilo parou de
@@ -10593,42 +10557,6 @@ ul.hlib-grid {
 }
 .livro-lista li.marcada::before { background: var(--bad) !important; box-shadow: none !important; }
 
-/* --- SIMULADOR ---
-   So pra teste, e ele diz isso. Fica discreto e separado do resto por um fio:
-   ferramenta de teste com cara de funcao normal um dia vai ser usada como se
-   fosse uma. */
-.sim {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border-control);
-}
-.sim-rot {
-  display: block;
-  margin-bottom: 8px;
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-.sim-linha { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.sim-linha em { font-style: normal; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.sim-ir {
-  height: 32px;
-  padding: 0 14px;
-  background: none;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--border-control);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.13s ease, box-shadow 0.13s ease;
-}
-.sim-ir:hover { color: var(--warn); box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.5); }
-.sim-txt { font-size: 11.5px; line-height: 1.45; color: var(--muted-2); flex: 1 1 260px; min-width: 220px; }
 /* o selo que impede o livro de mentir */
 .livro-selo {
   margin-left: 8px;
@@ -10717,7 +10645,6 @@ ul.hlib-grid {
 
 .painel-fio { width: 1px; align-self: stretch; background: var(--border); flex: none; }
 .painel-espaco { flex: 1 1 auto; }
-.painel-numeros .credito-ir { align-self: center; flex: none; }
 
 .painel-frase {
   margin: 0;
@@ -10757,14 +10684,21 @@ ul.hlib-grid {
 .painel.mudo .jornal-luz { background: var(--muted-2); }
 .painel.mudo .painel-tem b { color: var(--muted-2); text-shadow: none; }
 
-/* a barra fecha o painel, encostada no pé */
+/* a barra vem depois da frase e antes do fio do crédito */
 .painel .jornal-barra { margin-top: 16px; }
 
-/* janela estreita: os números descem em vez de espremer */
+/* janela estreita: os números descem em vez de espremer. Quem desce agora é o
+   PAR de saídas, não o botão sozinho — ele deixou de andar solto. */
 @media (max-width: 1180px) {
   .painel-numeros { gap: 14px; }
   .painel-fio { display: none; }
-  .painel-numeros .credito-ir { align-self: flex-start; }
+  .painel-acoes { align-self: flex-start; }
+}
+/* apertado de verdade: o campo do crédito ganha a linha inteira, senão o
+   número grande fica espremido entre os dois botões */
+@media (max-width: 860px) {
+  .freio-caixa { flex: 1 1 100%; }
+  .freio-num { flex: 1 1 auto; width: auto; }
 }
 
 /* --- as peças do painel: cabeçalho, colchetes e barra ---
@@ -10856,8 +10790,8 @@ ul.hlib-grid {
    comum (corrigir pelo total), então vem com peso menor — mas escrita, não
    escondida: as duas precisam ser legíveis pra escolha existir. */
 .freio-alt {
-  height: 30px;
-  padding: 0 12px;
+  height: 46px;
+  padding: 0 16px;
   background: none;
   border: none;
   box-shadow: inset 0 0 0 1px var(--border-control);
@@ -11139,3 +11073,136 @@ ul.hlib-grid {
 }
 .livro-mini:hover:not(:disabled) { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
 .livro-mini:disabled { opacity: 0.3; cursor: default; }
+
+
+/* ██████████ O PAINEL DEPOIS DA JUNÇÃO ██████████
+   Eram três blocos soltos falando do mesmo dinheiro: o painel com os números,
+   um botãozinho de histórico e uma caixa de informar crédito. Três molduras
+   pra um assunto só — e a pessoa juntando as pontas de cabeça.
+   Agora é um painel com três andares: o que aconteceu (números), pra onde ir
+   (as duas saídas) e o que fazer (informar crédito). */
+
+/* AS DUAS SAÍDAS, do mesmo tamanho e lado a lado. O botão é a ação de fora
+   (abre o navegador), o quadro é a de dentro (abre a janela) — por isso um é
+   cheio de lima e o outro é contornado: mesma importância, destinos
+   diferentes. */
+.painel-acoes {
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+  flex: none;
+  align-self: center;
+}
+.painel-numeros .credito-ir {
+  align-self: stretch;
+  flex: none;
+  height: 68px;
+  padding: 0 20px;
+  max-width: 220px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.25;
+}
+
+/* O QUADRO DO HISTÓRICO. Antes era um botão de 30px, cinza, embaixo do painel
+   — do tamanho e da cor de quem não quer ser achado. E ele é a porta de "para
+   onde foi meu dinheiro" e de apagar dados: as duas coisas que alguém procura
+   quando desconfia da conta. */
+.livro-quadro {
+  position: relative;
+  width: 84px;
+  height: 68px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  color: var(--text-2);
+  cursor: pointer;
+  clip-path: var(--corte-sm);
+  transition: color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+.livro-quadro:hover {
+  color: var(--accent);
+  background: rgba(182, 255, 59, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.45);
+}
+.livro-quadro-rot {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.livro-quadro:hover .livro-quadro-rot { color: var(--accent); }
+/* a contagem no canto, como selo de pasta: diz que TEM coisa lá dentro antes
+   de qualquer palavra ser lida */
+.livro-quadro-n {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+/* o fio que separa os números do campo: parede vira "outro assunto", fio vira
+   "mesma coisa, outro andar" */
+.painel-corte {
+  height: 1px;
+  margin: 15px 0 14px;
+  background: linear-gradient(90deg, var(--border-strong), rgba(255, 255, 255, 0.02) 70%, transparent);
+}
+
+/* O CAMPO GRANDE. Ele estava do tamanho de um campo de busca e apagado — pra
+   receber o número que decide toda a tela: o freio, os dois mostradores, a
+   barra e a trava. Agora o "US$" mora dentro da caixa e o número é mono
+   grande, do mesmo tamanho de quem manda. */
+.freio-caixa {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 46px;
+  padding: 0 14px 0 13px;
+  background: var(--bg-inset);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  clip-path: var(--corte-sm);
+  transition: box-shadow 0.14s ease;
+}
+.freio-caixa:focus-within {
+  box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.55), 0 0 18px rgba(182, 255, 59, 0.14);
+}
+.freio-caixa em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+  flex: none;
+}
+.freio-num {
+  width: 108px;
+  border: none;
+  background: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 21px;
+  font-weight: 500;
+  text-align: right;
+  padding: 0;
+}
+.freio-num::placeholder { color: rgba(255, 255, 255, 0.18); }
+.freio-caixa:focus-within .freio-num { color: var(--accent); }
+/* as setinhas de número do Chromium não combinam com nada aqui e roubam
+   metade da largura do campo */
+.freio-num::-webkit-outer-spin-button,
+.freio-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.freio-num[type=number] { -moz-appearance: textfield; }

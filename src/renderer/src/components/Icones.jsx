@@ -32,6 +32,11 @@ const D = {
   aviso: <><path d="M12 3.2 22 20.4H2L12 3.2Z" /><path d="M12 10v4.6" /><path d="M12 17.4h.01" /></>,
   tempo: <><circle cx="12" cy="12" r="9" /><path d="M12 7.2V12l3.2 2" /></>,
   certo: <path d="M4 12.5 9.2 18 20 6.6" />,
+  // O LIVRO: caderno de registro aberto, com as linhas escritas. Não é
+  // "relógio de histórico" nem "seta pra trás" — o que está guardado ali é
+  // uma lista de lançamentos, e caderno é a figura que todo mundo já sabe
+  // ler pra isso.
+  livroReg: <><path d="M3 5.2C5.4 3.7 8.2 3.7 11 5.2v14.4c-2.8-1.5-5.6-1.5-8-0V5.2Z" /><path d="M21 5.2c-2.4-1.5-5.2-1.5-8 0v14.4c2.4-1.5 5.2-1.5 8 0V5.2Z" /><path d="M5.6 9h2.8M5.6 12.2h2.8M15.6 9h2.8M15.6 12.2h2.8" /></>,
   calendario: <><rect width="18" height="17" x="3" y="4" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></>,
   // A AMPULHETA do Omnitrix: silhueta cheia e ANGULOSA — duas cunhas retas se
   // encontrando num pescoço fino. Já foi de traço fino (parecia ícone de

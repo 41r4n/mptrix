@@ -255,6 +255,13 @@ function garantirIdsDoLivro() {
  * 2) A linha nasce marcada como simulada. O livro é a prova do que aconteceu
  *    com o dinheiro de alguém — misturar teste com gasto real ali seria
  *    estragar justamente o que ele serve pra guardar.
+ *
+ * SEM BOTÃO NA TELA desde 2026-08-12: o teste foi feito e passou, e ferramenta
+ * de teste morando na tela de dinheiro um dia é apertada achando que é função.
+ * O motor fica: ele é o único jeito de ver o freio, a trava e o livro reagindo
+ * sem gastar de verdade — o dono está com a conta suspensa por US$ 0,25, então
+ * "testa gastando" não é opção. Pra usar de novo é só chamar
+ * window.mptrix.nuvem.simular(centavos) no console do renderer.
  */
 export function simularGasto(centavos) {
   const c = Math.max(0, Number(centavos) || 0)

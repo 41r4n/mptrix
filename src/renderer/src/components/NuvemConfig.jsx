@@ -40,7 +40,6 @@ export default function NuvemConfig() {
   // linhas escolhidas no livro. Some ao fechar a janela: seleção que sobrevive
   // fechada volta a existir sem a pessoa lembrar do que marcou.
   const [linhasMarcadas, setLinhasMarcadas] = useState(() => new Set())
-  const [simValor, setSimValor] = useState('1')
   // o que está marcado pra ir embora. A chave começa DESMARCADA de propósito:
   // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
   // caminho do Replicate.
@@ -437,41 +436,6 @@ export default function NuvemConfig() {
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>
               </div>
 
-              {/* SIMULADOR. Existe pra dar pra ver o freio, o jornal, a trava e
-                  o livro reagindo — coisas que só acontecem quando o dinheiro
-                  anda, e que de outro jeito só se testaria gastando de
-                  verdade. Ele passa pelo mesmo caminho do gasto real; se fosse
-                  um caminho paralelo, provaria o comportamento dele mesmo. */}
-              <div className="sim">
-                <span className="sim-rot">simulador · só pra teste</span>
-                <div className="sim-linha">
-                  <em>US$</em>
-                  <input
-                    type="number"
-                    className="nuvem-campo curto"
-                    min="0"
-                    step="0.5"
-                    value={simValor}
-                    onChange={(e) => setSimValor(e.target.value)}
-                  />
-                  <button
-                    className="sim-ir"
-                    type="button"
-                    onClick={async () => {
-                      const d = Number(String(simValor).replace(',', '.')) || 0
-                      if (d <= 0) return
-                      setEstado(await window.mptrix.nuvem.simular(Math.round(d * 100)))
-                    }}
-                  >
-                    gastar
-                  </button>
-                  <span className="sim-txt">
-                    finge um gasto sem tocar na nuvem — a linha nasce marcada como
-                    simulada, pra não sujar o registro do dinheiro de verdade
-                  </span>
-                </div>
-              </div>
-
               {/* ▸ O CRÉDITO.
                   O saldo NÃO aparece aqui, e isso não é esquecimento: a API do
                   Replicate não entrega esse número — o endereço de conta
@@ -538,14 +502,34 @@ export default function NuvemConfig() {
 
                   <span className="painel-espaco" />
 
-                  {/* o botão PEDE quando aperta: cor de aviso e batida devagar */}
-                  <button
-                    className={`btn-primary credito-ir ${jornal.nivel === 'parou' || jornal.nivel === 'pouco' ? 'pedindo' : ''}`}
-                    onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
-                  >
-                    <Ico nome="baixar" tamanho={15} />
-                    Ver saldo e comprar crédito
-                  </button>
+                  {/* AS DUAS SAÍDAS DO PAINEL, LADO A LADO.
+                      O histórico era um botãozinho apagado num canto abaixo do
+                      painel — do tamanho e da cor de quem não quer ser achado,
+                      e ele é justamente a porta de "para onde foi meu
+                      dinheiro" e de apagar dados. Agora é um quadro do mesmo
+                      tamanho do botão, com a figura do caderno e a contagem em
+                      cima: dá pra ver que existe sem ler. */}
+                  <div className="painel-acoes">
+                    {/* o botão PEDE quando aperta: cor de aviso e batida devagar */}
+                    <button
+                      className={`btn-primary credito-ir ${jornal.nivel === 'parou' || jornal.nivel === 'pouco' ? 'pedindo' : ''}`}
+                      onClick={() => window.mptrix.shell.openExternal(PAINEL_CREDITO)}
+                    >
+                      <Ico nome="baixar" tamanho={16} />
+                      Ver saldo e comprar crédito
+                    </button>
+
+                    <button
+                      className="livro-quadro"
+                      type="button"
+                      onClick={() => setVerLivro(true)}
+                      title="Histórico do crédito e limpeza de dados"
+                    >
+                      <span className="livro-quadro-n">{estado.livro?.length || 0}</span>
+                      <Ico nome="livroReg" tamanho={21} />
+                      <span className="livro-quadro-rot">histórico</span>
+                    </button>
+                  </div>
                 </div>
 
                 <p className="painel-frase">{jornal.txt}</p>
@@ -561,58 +545,45 @@ export default function NuvemConfig() {
                     </span>
                   </div>
                 )}
-              </div>
 
-              {/* SEMPRE VISÍVEL, mesmo sem nenhuma linha: esta janela deixou de
-                  ser só o histórico — ela é a porta de "o que aconteceu e como
-                  limpar". Escondê-la quando não há registro trancaria a
-                  limpeza junto. */}
-              <div className="livro">
-                  {/* o botão abre uma JANELA, não uma gaveta: histórico é coisa
-                      que se lê com atenção, e a janela trava o resto pra isso */}
-                  <button
-                    className="livro-abrir"
-                    onClick={() => setVerLivro(true)}
-                    type="button"
-                  >
-                    <span className="livro-ico" aria-hidden="true" />
-                    histórico e limpeza
-                    <span className="livro-conta">{estado.livro?.length || 0}</span>
-                  </button>
-                </div>
+                {/* ██████ O CRÉDITO ENTRA NO PAINEL ██████
+                    Era uma caixa separada, embaixo. Mas informar crédito não é
+                    outro assunto — é O assunto do painel: os dois números de
+                    cima SÓ existem porque este campo foi preenchido, e quando
+                    eles ficam vermelhos é aqui que se resolve. Separado, virava
+                    um formulário perdido no fim da página, e o painel virava
+                    um mostrador sem botão.
+                    O campo cresceu junto: ele estava do tamanho de um campo de
+                    busca, apagado, pra receber o número que decide todo o resto
+                    da tela. */}
+                <div className="painel-corte" aria-hidden="true" />
 
-              <p className="nuvem-texto miudo">
-                <strong>O saldo fica com o Replicate.</strong> A conta deles não
-                deixa o MPTRIX ler quanto sobrou, então o número acima é só o que
-                ELE gastou — estimado pelo preço da máquina de cada trabalho, com
-                folga pros modelos próprios (a nuvem cobra o tempo de ligar deles).
-                O valor exato e o saldo estão no botão acima.
-              </p>
-
-              {/* DUAS AÇÕES, CADA UMA COM NOME PRÓPRIO.
-                  A pergunta "quanto você tem agora" é a certa — o número está
-                  na página deles e corrige qualquer desvio da minha conta. Só
-                  que ela pegou o dono duas vezes: sobrava US$1, ele comprou
-                  US$10 e digitou 10 esperando ver 11. Ninguém pensa em SALDO,
-                  pensa em RECARGA.
-                  Uma pergunta só, por melhor escrita que seja, não vence o
-                  jeito de pensar de quem usa. Então o mesmo número serve pras
-                  duas, e o botão diz qual delas é. */}
-              <div className="freio">
-                <label className="freio-campo">
-                  <span>quanto de crédito?</span>
+                <div className="freio">
+                  {/* DUAS AÇÕES, CADA UMA COM NOME PRÓPRIO.
+                      A pergunta "quanto você tem agora" é a certa — o número
+                      está na página deles e corrige qualquer desvio da minha
+                      conta. Só que ela pegou o dono duas vezes: sobrava US$1,
+                      ele comprou US$10 e digitou 10 esperando ver 11. Ninguém
+                      pensa em SALDO, pensa em RECARGA.
+                      Uma pergunta só, por melhor escrita que seja, não vence o
+                      jeito de pensar de quem usa. Então o mesmo número serve
+                      pras duas, e o botão diz qual delas é. */}
+                  <span className="freio-rot">quanto de crédito?</span>
                   <div className="freio-linha">
-                    <em>US$</em>
-                    <input
-                      type="number"
-                      className="nuvem-campo curto"
-                      min="0"
-                      step="0.01"
-                      value={rascunho ?? ''}
-                      placeholder="0,00"
-                      onChange={(e) => setRascunho(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                    />
+                    <div className="freio-caixa">
+                      <em>US$</em>
+                      <input
+                        type="number"
+                        className="freio-num"
+                        min="0"
+                        step="0.01"
+                        value={rascunho ?? ''}
+                        placeholder="0,00"
+                        aria-label="quanto de crédito"
+                        onChange={(e) => setRascunho(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                      />
+                    </div>
                     <button
                       type="button"
                       className="freio-ok"
@@ -639,24 +610,32 @@ export default function NuvemConfig() {
                       tenho isso no total
                     </button>
                   </div>
-                </label>
 
-                <p className="nuvem-texto miudo">
-                  {estado.creditoInformado > 0
-                    ? <>
-                      <strong>“Acabei de comprar”</strong> soma ao que sobrou — hoje sobram{' '}
-                      <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong>,
-                      então comprando US$ 10 você fica com{' '}
-                      {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito) + 1000)}.{' '}
-                      <strong>“Tenho isso no total”</strong> troca a conta pelo número que está na
-                      página do Replicate, em <em>Crédito restante</em> — use esse quando quiser
-                      corrigir a minha estimativa pelo valor de verdade.
-                    </>
-                    : <><strong>Sem esse número não existe freio.</strong> O crédito acabar não trava
-                      o serviço: o que passar vira dívida e eles suspendem a conta até quitar. Com
-                      ele, o MPTRIX para antes e volta a separar aqui.</>}
-                </p>
+                  <p className="freio-txt">
+                    {estado.creditoInformado > 0
+                      ? <>
+                        <strong>“Acabei de comprar”</strong> soma ao que sobrou — hoje sobram{' '}
+                        <strong>{emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}</strong>,
+                        então comprando US$ 10 você fica com{' '}
+                        {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito) + 1000)}.{' '}
+                        <strong>“Tenho isso no total”</strong> troca a conta pelo número que está na
+                        página do Replicate, em <em>Crédito restante</em> — use esse quando quiser
+                        corrigir a minha estimativa pelo valor de verdade.
+                      </>
+                      : <><strong>Sem esse número não existe freio.</strong> O crédito acabar não trava
+                        o serviço: o que passar vira dívida e eles suspendem a conta até quitar. Com
+                        ele, o MPTRIX para antes e volta a separar aqui.</>}
+                  </p>
+                </div>
               </div>
+
+              <p className="nuvem-texto miudo">
+                <strong>O saldo fica com o Replicate.</strong> A conta deles não
+                deixa o MPTRIX ler quanto sobrou, então o número acima é só o que
+                ELE gastou — estimado pelo preço da máquina de cada trabalho, com
+                folga pros modelos próprios (a nuvem cobra o tempo de ligar deles).
+                O valor exato e o saldo estão no botão acima.
+              </p>
 
             </>
           )}
