@@ -404,6 +404,11 @@ export default function NuvemConfig() {
                     {trancada && <span className="trava" aria-hidden="true">·</span>}
                   </button>
                 </div>
+                {/* as duas ações de apagar moram JUNTAS. A de dados estava
+                    sozinha lá no rodapé e o dono não achou — discrição virou
+                    esconderijo. Aqui elas ficam onde a pessoa já vem quando
+                    quer desfazer alguma coisa. */}
+                <button className="btn-secondary" onClick={() => setVerApagar(true)}>Apagar dados…</button>
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>
               </div>
 
@@ -616,14 +621,6 @@ export default function NuvemConfig() {
               </div>
             </>
           )}
-
-        {estado.temChave && (
-          <div className="apagar-linha">
-            <button className="apagar-abrir" onClick={() => setVerApagar(true)} type="button">
-              apagar dados desta tela
-            </button>
-          </div>
-        )}
 
         {recado && <p className={`nuvem-recado ${recado.tipo}`}>{recado.txt}</p>}
       </div>

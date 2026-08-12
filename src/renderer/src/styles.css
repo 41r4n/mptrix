@@ -10737,23 +10737,6 @@ ul.hlib-grid {
    fora as outras — e aqui as coisas têm pesos bem diferentes: histórico é
    memória, contador é conta, e a chave é o acesso. Escolher o que vai embora
    é o que separa faxina de estrago. */
-.apagar-linha { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
-/* discreto de propósito: apagar não é tarefa de todo dia, e botão de destruir
-   com peso de ação principal convida ao acidente */
-.apagar-abrir {
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  cursor: pointer;
-  transition: color 0.13s ease;
-}
-.apagar-abrir:hover { color: var(--bad); }
-
 .modal-apagar { width: 660px; }
 .apagar-lista { list-style: none; margin: 0; padding: 0; }
 .apagar-lista li + li { margin-top: 5px; }
