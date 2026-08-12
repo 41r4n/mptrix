@@ -92,5 +92,10 @@
         "repo": "mptrix"
       }
     ]
+  },
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/41r4n/mptrix.git"
   }
 }
