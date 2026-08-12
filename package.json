@@ -14,7 +14,8 @@
     "build:icon": "node scripts/build-icon.mjs",
     "postinstall": "electron-builder install-app-deps",
     "confere:quinas": "electron scripts/confere-quinas.cjs",
-    "confere:janela": "electron scripts/confere-janela.cjs"
+    "confere:janela": "electron scripts/confere-janela.cjs",
+    "confere:motor": "node scripts/confere-motor.mjs"
   },
   "dependencies": {
     "electron-store": "^8.2.0"

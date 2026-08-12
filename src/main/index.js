@@ -5,6 +5,7 @@ import { Readable } from 'stream'
 import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFileSync, readdirSync, unlinkSync } from 'fs'
 import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
+import { resolverYtDlp } from './binpath.js'
 import {
   MODELS as STUDIO_MODELS,
   getEngineStatus,
@@ -174,7 +175,15 @@ function getBinPath(name) {
   return join(__dirname, '../../resources/bin', name)
 }
 
-const YT_DLP_PATH = getBinPath('yt-dlp.exe')
+// Onde mora o yt-dlp: a decisão inteira, com o porquê, está em binpath.js —
+// ela vive lá fora pra poder ser medida sem subir o app.
+const ondeYtDlp = resolverYtDlp({
+  noPacote: getBinPath('yt-dlp.exe'),
+  pastaDeDados: app.getPath('userData'),
+  empacotado: app.isPackaged
+})
+if (ondeYtDlp.erro) console.error('[yt-dlp] pasta gravável falhou:', ondeYtDlp.erro)
+const YT_DLP_PATH = ondeYtDlp.caminho
 const FFMPEG_PATH = getBinPath('ffmpeg.exe')
 
 let mainWindow = null
