@@ -7706,6 +7706,21 @@ section h2::after {
   --trilho-w: 232px;
   --corte: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   --corte-sm: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  /* A LINHA DA QUINA CORTADA. O fio das peças é box-shadow inset, que desenha
+     um RETÂNGULO; o clip-path corta a quina depois e a aresta diagonal fica sem
+     linha nenhuma — o contorno abre um vão e o olho lê pedaço faltando.
+     Encolher o chanfro só encolhia o vão, e tirar o chanfro virava quadrado e
+     perdia a assinatura. O conserto é DESENHAR a diagonal.
+     Ela sai daqui e não de dentro de cada peça: a mesma linha em cinco lugares
+     escritos separados é a mesma linha errando em quatro deles no dia que
+     alguém mudar a espessura.
+     A cor vem de --fio, lida no elemento que usa (var() dentro de custom
+     property resolve no consumidor). Assim, quando a peça acende, a diagonal
+     acende junto — senão o contorno fica lima com duas gravetas cinzas nas
+     pontas. */
+  --diag: linear-gradient(to top right,
+    transparent calc(50% - 1px), var(--fio, var(--border-control)) calc(50% - 1px),
+    var(--fio, var(--border-control)) calc(50% + 1px), transparent calc(50% + 1px));
 }
 
 .console {
@@ -8488,9 +8503,7 @@ ul.hlib-grid {
 .barra-btn {
   --chanfro: 6px;
   --fio: var(--border-control);
-  --diag: linear-gradient(to top right,
-    transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
-    var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
+  /* --diag mora no :root — ver lá o porquê */
   clip-path: polygon(
     0 0,
     calc(100% - var(--chanfro)) 0,
@@ -9964,13 +9977,20 @@ ul.hlib-grid {
   align-items: center;
   height: 44px;
   padding: 0 12px;
-  background: var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control), inset 0 2px 8px rgba(0, 0, 0, 0.8);
+  --chanfro: 10px;
+  --fio: var(--border-control);
+  background-color: var(--bg-cava-2);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio), inset 0 2px 8px rgba(0, 0, 0, 0.8);
   clip-path: var(--corte-sm);
   transition: box-shadow 0.14s ease;
 }
 .baixar-poco:focus-within {
-  box-shadow: inset 0 0 0 1px var(--accent-border), inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 16px rgba(182, 255, 59, 0.14);
+  --fio: var(--accent-border);
+  box-shadow: inset 0 0 0 1px var(--fio), inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 16px rgba(182, 255, 59, 0.14);
 }
 .baixar-poco input {
   flex: 1;
@@ -10302,8 +10322,14 @@ ul.hlib-grid {
   gap: 13px;
   margin: 2px 0 14px;
   padding: 15px 18px 16px 18px;
-  background: linear-gradient(150deg, rgba(182, 255, 59, 0.09), transparent 62%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--accent-border);
+  --chanfro: 10px;
+  --fio: var(--accent-border);
+  background-color: var(--bg-cava-2);
+  background-image: var(--diag), var(--diag), linear-gradient(150deg, rgba(182, 255, 59, 0.09), transparent 62%);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro), auto;
+  background-position: top right, bottom left, 0 0;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
   clip-path: var(--corte-sm);
 }
 .mandamento-luz {
@@ -10584,10 +10610,22 @@ ul.hlib-grid {
   position: relative;
   margin: 2px 0 16px;
   padding: 16px 18px 18px 20px;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), transparent 60%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px var(--border-control);
+  /* O FIO E A TINTA SÃO VARIÁVEIS. Os estados (pouco, parou) reescreviam o
+     background inteiro pra trocar a cor — e background inteiro apagaria a
+     linha da quina junto. Agora eles trocam só as duas cores, e a diagonal
+     muda de cor com o resto: painel vermelho com a quina cinza seria o
+     contorno mentindo sobre o próprio estado. */
+  --chanfro: 10px;
+  --fio: var(--border-control);
+  --tinta: rgba(255, 255, 255, 0.035);
+  background-color: var(--bg-cava-2);
+  background-image: var(--diag), var(--diag), linear-gradient(155deg, var(--tinta), transparent 60%);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro), auto;
+  background-position: top right, bottom left, 0 0;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
   clip-path: var(--corte-sm);
-  transition: box-shadow 0.35s ease, background 0.35s ease;
+  transition: box-shadow 0.35s ease, background-color 0.35s ease, color 0.35s ease;
 }
 /* barra de estado na lateral, na cor do nível */
 .painel::before {
@@ -10666,16 +10704,16 @@ ul.hlib-grid {
 
 .painel.pouco {
   color: var(--warn);
-  background: linear-gradient(155deg, rgba(234, 179, 8, 0.1), transparent 62%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.4);
+  --fio: rgba(234, 179, 8, 0.4);
+  --tinta: rgba(234, 179, 8, 0.1);
 }
 .painel.pouco::before { background: var(--warn); box-shadow: 0 0 14px rgba(234, 179, 8, 0.7); }
 .painel.pouco .jornal-luz { background: var(--warn); box-shadow: 0 0 12px rgba(234, 179, 8, 0.8); animation: jornal-bate 1.8s ease-in-out infinite; }
 
 .painel.parou {
   color: var(--bad);
-  background: linear-gradient(155deg, rgba(248, 113, 113, 0.1), transparent 62%), var(--bg-cava-2);
-  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.42);
+  --fio: rgba(248, 113, 113, 0.42);
+  --tinta: rgba(248, 113, 113, 0.1);
 }
 .painel.parou::before { background: var(--bad); box-shadow: 0 0 14px rgba(248, 113, 113, 0.65); }
 .painel.parou .jornal-luz { background: var(--bad); box-shadow: 0 0 12px rgba(248, 113, 113, 0.8); }
@@ -11118,18 +11156,24 @@ ul.hlib-grid {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background: rgba(255, 255, 255, 0.035);
+  --chanfro: 10px;
+  --fio: var(--border-strong);
+  background-color: rgba(255, 255, 255, 0.035);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
   border: none;
-  box-shadow: inset 0 0 0 1px var(--border-strong);
+  box-shadow: inset 0 0 0 1px var(--fio);
   color: var(--text-2);
   cursor: pointer;
   clip-path: var(--corte-sm);
-  transition: color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  transition: color 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
 }
 .livro-quadro:hover {
   color: var(--accent);
-  background: rgba(182, 255, 59, 0.07);
-  box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.45);
+  --fio: rgba(182, 255, 59, 0.45);
+  background-color: rgba(182, 255, 59, 0.07);
 }
 .livro-quadro-rot {
   font-family: var(--font-mono);
@@ -11171,13 +11215,20 @@ ul.hlib-grid {
   gap: 2px;
   height: 46px;
   padding: 0 14px 0 13px;
-  background: var(--bg-inset);
-  box-shadow: inset 0 0 0 1px var(--border-control);
+  --chanfro: 10px;
+  --fio: var(--border-control);
+  background-color: var(--bg-inset);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
   clip-path: var(--corte-sm);
   transition: box-shadow 0.14s ease;
 }
 .freio-caixa:focus-within {
-  box-shadow: inset 0 0 0 1px rgba(182, 255, 59, 0.55), 0 0 18px rgba(182, 255, 59, 0.14);
+  --fio: rgba(182, 255, 59, 0.55);
+  box-shadow: inset 0 0 0 1px var(--fio), 0 0 18px rgba(182, 255, 59, 0.14);
 }
 .freio-caixa em {
   font-style: normal;
