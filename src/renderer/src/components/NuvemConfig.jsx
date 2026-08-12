@@ -17,6 +17,14 @@ const PAINEL_CHAVES = 'https://replicate.com/account/api-tokens'
 const PAINEL_CREDITO = 'https://replicate.com/account/billing'
 const CRIAR_CONTA = 'https://replicate.com/signin'
 
+// data e hora curtas, do jeito que a gente fala
+function quandoFoi(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d)) return '—'
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export default function NuvemConfig() {
   const [estado, setEstado] = useState(null)
   const [chave, setChave] = useState('')
@@ -431,10 +439,19 @@ export default function NuvemConfig() {
 
                 {estado.creditoInformado > 0 && (
                   <div className="jornal-medida">
+                    {/* TRANCADO = ZERO UTILIZÁVEL. O que sobrou continua na
+                        conta lá, mas pra este app é dinheiro que não pode ser
+                        tocado — mostrar a sobra como se fosse saldo daria a
+                        entender que ainda dá pra usar. O valor real aparece do
+                        lado, dito pelo nome certo. */}
                     <span className="jornal-sobra">
-                      {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
+                      {estado.paradaPor ? emDolar(0) : emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
                     </span>
-                    <span className="jornal-de">de {emDolar(estado.creditoInformado)}</span>
+                    <span className="jornal-de">
+                      {estado.paradaPor
+                        ? <>utilizável · sobraram {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))} parados lá</>
+                        : <>de {emDolar(estado.creditoInformado)}</>}
+                    </span>
                   </div>
                 )}
 
@@ -455,6 +472,28 @@ export default function NuvemConfig() {
                   </div>
                 )}
               </div>
+
+              {estado.livro?.length > 0 && (
+                <div className="livro">
+                  <p className="livro-titulo">o que já aconteceu com seu crédito</p>
+                  <ul>
+                    {estado.livro.slice(0, 8).map((l, i) => (
+                      <li key={i} className={l.tipo === 'carga' ? 'carga' : 'fim'}>
+                        <span className="livro-quando">{quandoFoi(l.quando)}</span>
+                        <span className="livro-txt">
+                          {l.tipo === 'carga'
+                            ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
+                            : <>
+                              <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
+                              {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}
+                              {l.motivo === 'sem-credito' ? ' · pode haver saldo pendente lá' : ''}
+                            </>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <p className="nuvem-texto miudo">
                 <strong>O saldo fica com o Replicate.</strong> A conta deles não
@@ -485,6 +524,26 @@ export default function NuvemConfig() {
                   responder; e cada atualização CORRIGE qualquer desvio que a
                   minha estimativa tenha acumulado, porque o contador
                   recomeça do valor real em vez de continuar de um chute. */}
+              {/* RECADO GRANDE, e não nota de rodapé. Se a pessoa não
+                  atualizar o número depois de recarregar, TODO o resto vira
+                  mentira: o jornal mostra sobra errada, o freio para na hora
+                  errada, e o app perde a única informação que ele não tem como
+                  descobrir sozinho. É a instrução mais importante desta tela,
+                  então tem o peso da mais importante. */}
+              <div className="mandamento">
+                <span className="mandamento-luz" aria-hidden="true" />
+                <div>
+                  <b>sempre atualize seu crédito</b>
+                  <p>
+                    Toda vez que comprar ou recarregar, venha aqui e escreva{' '}
+                    <strong>exatamente quanto você tem agora</strong> no Replicate — o
+                    número que aparece lá em <em>Crédito restante</em>, com centavos
+                    (ex.: 153,85). É só assim que eu sei a sua carga de verdade: eu não
+                    consigo ler esse valor sozinho.
+                  </p>
+                </div>
+              </div>
+
               <div className="freio">
                 <label className="freio-campo">
                   <span>Quanto você tem de crédito agora?</span>

@@ -109,8 +109,28 @@ export function getNuvem() {
     mes: n.mes || mesAgora(),
     gastoMesPassado: n.gastoMesPassado || 0,
     // por que a nuvem se desligou sozinha, se foi o caso
-    paradaPor: n.paradaPor || null
+    paradaPor: n.paradaPor || null,
+    // o livro: cada carga e cada esgotamento, com hora
+    livro: Array.isArray(n.livro) ? n.livro : []
   }
+}
+
+/**
+ * O LIVRO DO CRÉDITO.
+ *
+ * Sem ele, a nuvem trancar não deixa rastro: a pessoa abre o app dias depois,
+ * vê tudo parado e não tem como saber quando aconteceu, quanto sobrou, nem se
+ * já tinha recarregado. Registro não é enfeite — é a prova do que o sistema
+ * fez com o dinheiro de alguém.
+ *
+ * Guarda os 40 últimos. Passado disso não ajuda ninguém e só engorda o
+ * arquivo de configuração.
+ */
+function anotarNoLivro(entrada) {
+  const livro = store.get('nuvem.livro')
+  const lista = Array.isArray(livro) ? livro : []
+  lista.unshift({ ...entrada, quando: new Date().toISOString() })
+  store.set('nuvem.livro', lista.slice(0, 40))
 }
 
 /**
@@ -131,8 +151,15 @@ export function getNuvem() {
  */
 export function informarCredito(centavos) {
   const v = Math.max(0, Math.round(Number(centavos) || 0))
+  const antes = store.get('nuvem.creditoInformado') || 0
+  const gastoAntes = store.get('nuvem.gastoDesdeCredito') || 0
   store.set('nuvem.creditoInformado', v)
   store.set('nuvem.gastoDesdeCredito', 0)
+  // só vira linha no livro se mudou de verdade e não é zero: corrigir um dígito
+  // enquanto digita não é um evento na vida de ninguém
+  if (v > 0 && v !== antes) {
+    anotarNoLivro({ tipo: 'carga', valor: v, sobrava: Math.max(0, antes - gastoAntes) })
+  }
   // dizer que pôs crédito é dizer que a parede caiu: religa o que foi
   // desligado por dinheiro, seja recusa do serviço ou freio meu
   const motivo = store.get('nuvem.paradaPor')
@@ -144,8 +171,20 @@ export function informarCredito(centavos) {
 }
 
 export function desligarNuvemPor(motivo) {
+  // não repete a linha se já estava desligada pelo mesmo motivo
+  const antes = store.get('nuvem.paradaPor')
   store.set('nuvem.ligada', false)
   store.set('nuvem.paradaPor', motivo || 'desconhecido')
+  if (antes !== motivo) {
+    const n = store.get('nuvem', {})
+    anotarNoLivro({
+      tipo: 'fim',
+      motivo: motivo || 'desconhecido',
+      informado: n.creditoInformado || 0,
+      gasto: n.gastoDesdeCredito || 0,
+      sobra: Math.max(0, (n.creditoInformado || 0) - (n.gastoDesdeCredito || 0))
+    })
+  }
   return getNuvem()
 }
 
