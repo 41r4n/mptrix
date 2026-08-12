@@ -147,6 +147,38 @@ function garantirIdsDoLivro() {
   store.set('nuvem.livro', livro.map((l) => (l?.id ? l : { ...l, id: randomUUID() })))
 }
 
+/**
+ * SIMULADOR DE GASTO.
+ *
+ * Finge que uma separação custou tanto, sem tocar na nuvem. Existe pra dar
+ * pra ver o freio, o jornal, a trava e o livro reagindo — coisas que só
+ * acontecem quando o dinheiro anda, e que de outro jeito só se testaria
+ * gastando de verdade.
+ *
+ * Duas regras que fazem dele um teste honesto:
+ *
+ * 1) Ele passa pelo MESMO caminho do gasto real: soma nos dois contadores e
+ *    depois chama usarNuvem(), que é quem decide parar. Se eu tivesse escrito
+ *    um caminho paralelo, o simulador provaria o comportamento do simulador,
+ *    não o do app.
+ *
+ * 2) A linha nasce marcada como simulada. O livro é a prova do que aconteceu
+ *    com o dinheiro de alguém — misturar teste com gasto real ali seria
+ *    estragar justamente o que ele serve pra guardar.
+ */
+export function simularGasto(centavos) {
+  const c = Math.max(0, Number(centavos) || 0)
+  if (!c) return getNuvem()
+  store.set('nuvem.centavosGastos', gastoCentavos() + c)
+  store.set('nuvem.gastoDesdeCredito', (store.get('nuvem.gastoDesdeCredito') || 0) + c)
+  store.set('nuvem.musicasFeitas', (store.get('nuvem.musicasFeitas') || 0) + 1)
+  anotarNoLivro({ tipo: 'uso', valor: Math.round(c * 100) / 100, titulo: null, simulado: true })
+  // é isto que faz o teste valer: quem decide parar é a mesma função que o
+  // motor chama antes de cada trabalho de verdade
+  usarNuvem()
+  return getNuvem()
+}
+
 /** Apaga linhas escolhidas do livro, por id. */
 export function apagarLinhasDoLivro(ids) {
   const alvo = new Set(Array.isArray(ids) ? ids : [])

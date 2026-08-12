@@ -104,6 +104,7 @@ import {
   informarCredito,
   apagarDadosNuvem,
   apagarLinhasDoLivro,
+  simularGasto,
   zerarGastoNuvem,
   getSettings,
   setDownloadDir,
@@ -452,6 +453,7 @@ app.whenReady().then(() => {
   ipcMain.handle('nuvem:credito', (_e, centavos) => informarCredito(centavos))
   ipcMain.handle('nuvem:apagarDados', (_e, o) => apagarDadosNuvem(o || {}))
   ipcMain.handle('nuvem:apagarLinhas', (_e, ids) => apagarLinhasDoLivro(ids))
+  ipcMain.handle('nuvem:simular', (_e, centavos) => simularGasto(centavos))
   ipcMain.handle('nuvem:zerarGasto', () => zerarGastoNuvem())
 
   ipcMain.handle('history:get', () => getHistory())

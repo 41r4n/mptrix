@@ -40,6 +40,7 @@ export default function NuvemConfig() {
   // linhas escolhidas no livro. Some ao fechar a janela: seleção que sobrevive
   // fechada volta a existir sem a pessoa lembrar do que marcou.
   const [linhasMarcadas, setLinhasMarcadas] = useState(() => new Set())
+  const [simValor, setSimValor] = useState('1')
   // o que está marcado pra ir embora. A chave começa DESMARCADA de propósito:
   // ela é o acesso, não um dado — apagar por descuido custa refazer todo o
   // caminho do Replicate.
@@ -410,6 +411,41 @@ export default function NuvemConfig() {
                 <button className="btn-secondary" onClick={apagar}>Apagar chave</button>
               </div>
 
+              {/* SIMULADOR. Existe pra dar pra ver o freio, o jornal, a trava e
+                  o livro reagindo — coisas que só acontecem quando o dinheiro
+                  anda, e que de outro jeito só se testaria gastando de
+                  verdade. Ele passa pelo mesmo caminho do gasto real; se fosse
+                  um caminho paralelo, provaria o comportamento dele mesmo. */}
+              <div className="sim">
+                <span className="sim-rot">simulador · só pra teste</span>
+                <div className="sim-linha">
+                  <em>US$</em>
+                  <input
+                    type="number"
+                    className="nuvem-campo curto"
+                    min="0"
+                    step="0.5"
+                    value={simValor}
+                    onChange={(e) => setSimValor(e.target.value)}
+                  />
+                  <button
+                    className="sim-ir"
+                    type="button"
+                    onClick={async () => {
+                      const d = Number(String(simValor).replace(',', '.')) || 0
+                      if (d <= 0) return
+                      setEstado(await window.mptrix.nuvem.simular(Math.round(d * 100)))
+                    }}
+                  >
+                    gastar
+                  </button>
+                  <span className="sim-txt">
+                    finge um gasto sem tocar na nuvem — a linha nasce marcada como
+                    simulada, pra não sujar o registro do dinheiro de verdade
+                  </span>
+                </div>
+              </div>
+
               {/* ▸ O CRÉDITO.
                   O saldo NÃO aparece aqui, e isso não é esquecimento: a API do
                   Replicate não entrega esse número — o endereço de conta
@@ -741,7 +777,7 @@ export default function NuvemConfig() {
                           {l.tipo === 'carga'
                             ? <><b>carregou</b> {emDolar(l.valor)}{l.sobrava > 0 ? <> · sobravam {emDolar(l.sobrava)} antes</> : null}</>
                             : l.tipo === 'uso'
-                              ? <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}</>
+                              ? <><b>separou</b> {l.titulo ? <>“{l.titulo}”</> : 'uma música'} · {emDolar(l.valor)}{l.simulado ? <span className="livro-selo">simulado</span> : null}</>
                               : <>
                               <b>{l.motivo === 'sem-credito' ? 'o serviço recusou' : l.motivo === 'teto-do-mes' ? 'bateu no teto do mês' : 'crédito no fim'}</b>
                               {' '}· usei {emDolar(l.gasto)} de {emDolar(l.informado)} · sobraram {emDolar(l.sobra)}
