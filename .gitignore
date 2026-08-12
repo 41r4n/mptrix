@@ -11,3 +11,11 @@ dist/
 
 # chave de leitura do Figma (referencia de design) — nunca versionada
 .figma-token
+
+# O FFMPEG NAO SOBE. Ele tem 195 MB e o GitHub barra em 100 MB por arquivo —
+# a tentativa de enviar era recusada. Alem disso ele nao e nosso: qualquer um
+# baixa pronto, e guardar 195 MB em toda versao do historico faria o projeto
+# inteiro pesar mais que o app.
+# O arquivo continua aqui no disco (o app precisa dele), e o instalador leva
+# ele junto. Como repor num computador novo: veja INSTALAR-FFMPEG.md
+resources/bin/ffmpeg.exe
