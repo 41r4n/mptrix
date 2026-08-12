@@ -761,6 +761,32 @@ export default function NuvemConfig() {
                   informar um crédito ou separar uma música na nuvem.
                 </p>
               )}
+              {/* CONTAGEM antes da lista: com dez linhas à vista e o resto
+                  rolando, "quantos existem" deixa de ser visível — a pessoa vê
+                  dez e não sabe se tem doze ou duzentos. E o marcado precisa
+                  de número porque ele decide o que vai ser apagado. */}
+              <div className="livro-conta-linha">
+                <span className="livro-total">
+                  <b>{estado.livro?.length || 0}</b> registro{(estado.livro?.length || 0) !== 1 ? 's' : ''}
+                </span>
+                <span className="modal-espaco" />
+                {linhasMarcadas.size > 0 && (
+                  <span className="livro-marcados"><b>{linhasMarcadas.size}</b> marcado{linhasMarcadas.size !== 1 ? 's' : ''}</span>
+                )}
+                <button
+                  className="livro-mini"
+                  type="button"
+                  onClick={() => setLinhasMarcadas(new Set((estado.livro || []).map((l) => l.id)))}
+                  disabled={linhasMarcadas.size === (estado.livro?.length || 0)}
+                >marcar todos</button>
+                <button
+                  className="livro-mini"
+                  type="button"
+                  onClick={() => setLinhasMarcadas(new Set())}
+                  disabled={linhasMarcadas.size === 0}
+                >desmarcar</button>
+              </div>
+
               <ul className="livro-lista">
 
                     {estado.livro.map((l, i) => (
@@ -839,11 +865,9 @@ export default function NuvemConfig() {
                   </span>
                 )}
                 <span className="modal-espaco" />
-                {linhasMarcadas.size > 0 && (
-                  <button className="btn-secondary" onClick={() => setLinhasMarcadas(new Set())}>
-                    Desmarcar
-                  </button>
-                )}
+                {/* o "desmarcar" mora na linha da contagem, junto do número que
+                    ele muda — dois botões com o mesmo nome em cantos opostos da
+                    janela é a pessoa procurando qual dos dois é o de verdade */}
                 <button
                   className="btn-secondary"
                   onClick={() => { setVerLivro(false); setLinhasMarcadas(new Set()) }}
