@@ -720,7 +720,9 @@ export default function NuvemConfig() {
                 <h3>O que já aconteceu</h3>
                 <p className="modal-sub">
                   Cada carga e cada vez que o crédito acabou, com hora e valores.
-                  Verde é entrada, vermelho é fim.
+                  Verde é entrada, vermelho é fim. <strong>É o recibo, não a
+                  carteira</strong> — apagar uma linha apaga o registro, e não
+                  mexe no saldo.
                 </p>
               </div>
               <button className="btn-close" onClick={() => setVerLivro(false)} aria-label="Fechar">×</button>
@@ -787,6 +789,11 @@ export default function NuvemConfig() {
                   >
                     Apagar dados…
                   </button>
+                )}
+                {linhasMarcadas.size > 0 && (
+                  <span className="livro-nota">
+                    apaga só o registro — o saldo continua {emDolar(Math.max(0, estado.creditoInformado - estado.gastoDesdeCredito))}
+                  </span>
                 )}
                 <span className="modal-espaco" />
                 {linhasMarcadas.size > 0 && (

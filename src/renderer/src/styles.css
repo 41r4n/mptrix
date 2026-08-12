@@ -10974,3 +10974,18 @@ ul.hlib-grid {
 }
 .freio-alt:hover:not(:disabled) { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); }
 .freio-alt:disabled, .freio-ok:disabled { opacity: 0.3; cursor: default; }
+
+/* O LIVRO E O RECIBO, NAO A CARTEIRA. Eu construi o apagar-linha e nunca
+   disse que apagar o registro nao mexe no saldo — o dono apagou a carga e
+   estranhou o saldo continuar de pe, com razao. O aviso aparece na hora em
+   que a duvida nasce, que e com a linha ja marcada. */
+.livro-nota {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--warn);
+  padding-left: 12px;
+  flex: 1 1 200px;
+  line-height: 1.5;
+}
