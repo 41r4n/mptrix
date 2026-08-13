@@ -941,7 +941,11 @@ app.whenReady().then(() => {
     // as músicas apenas baixadas também aparecem no celular: nem sempre o dono
     // quer separar — às vezes ele quer só a música inteira, com o estúdio
     // rápido, pra tocar junto no ensaio
-    historico: () => getHistory()
+    historico: () => getHistory(),
+    // a porta é METADE do endereço: mudar ela é mudar o endereço, e o que o
+    // celular levou pro ensaio fica guardado POR endereço
+    portaSalva: lerAjuste('celular.porta', 8788),
+    guardarPorta: (n) => guardarAjuste('celular.porta', n)
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
 

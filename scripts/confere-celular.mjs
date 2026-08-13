@@ -17,7 +17,7 @@ const { ligarCelular, desligarCelular } = await import(pathToFileURL(copia).href
 
 const stemsDir = join(process.env.LOCALAPPDATA || '', 'MPTRIX', 'stems')
 const ffmpegPath = join(aqui, '..', 'resources', 'bin', 'ffmpeg.exe')
-const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina', ffmpegPath, senhaSalva: 'testefixo', guardarSenha: () => {} })
+const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina', ffmpegPath, senhaSalva: 'testefixo', guardarSenha: () => {}, portaSalva: 8790, guardarPorta: () => {} })
 
 const casos = []
 const caso = (nome, ok, extra) => { casos.push([nome, ok, extra]) }
@@ -104,6 +104,10 @@ caso('o guardador e servido da raiz', sw.ok && sw.headers.get('content-type').in
 caso('ele guarda o som e responde sem rede',
   swTxt.includes("caches.match") && swTxt.includes('ignoreSearch'),
   'ignoreSearch: a senha na URL nao pode atrapalhar o reencontro')
+
+// O ENDERECO INTEIRO E SEMPRE O MESMO. A senha era metade; a porta e a outra.
+// O dono digitou uma porta, reiniciou o app, e o telefone nao achou mais nada.
+caso('a porta pedida e respeitada', info.porta === 8790, 'porta = ' + info.porta)
 
 // A SENHA E SEMPRE A MESMA: o que foi levado esta preso ao endereco
 caso('a senha guardada e reusada', senha === 'testefixo', 'senha = ' + senha)

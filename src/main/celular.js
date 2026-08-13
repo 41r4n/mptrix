@@ -27,6 +27,10 @@ let servidor = null
 let senha = null
 let porta = 0
 let ffmpeg = null
+// nome diferente do parâmetro de propósito: com o mesmo nome, o parâmetro
+// tapa a variável e a atribuição vira "guardarPorta = guardarPorta", que não
+// guarda nada e não reclama
+let salvarPorta = null
 
 // ██████████ POR QUE O CELULAR RECEBE OUTRO ARQUIVO ██████████
 //
@@ -377,7 +381,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -386,6 +390,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   senha = senhaSalva || novaSenha()
   if (!senhaSalva && guardarSenha) guardarSenha(senha)
   ffmpeg = ffmpegPath
+  salvarPorta = guardarPorta
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -464,18 +469,42 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
     res.writeHead(404); res.end('nao achei')
   })
 
-  // ESPERAR O SERVIDOR SUBIR ANTES DE DAR O ENDEREÇO.
-  // "listen" é assíncrono: pedindo porta 0, quem escolhe o número é o sistema,
-  // e ele só existe quando o servidor está de pé. Eu li antes e devolvi "não
-  // consegui achar rede" — com a rede ali, funcionando. Erro que só aparece
-  // rodando: no papel a função estava linda.
+  // ██████████ A PORTA TAMBÉM PRECISA SER SEMPRE A MESMA ██████████
+  //
+  // Eu deixei a senha fixa e esqueci a porta — e a porta é metade do endereço.
+  // O dono digitou 63482 no celular, reiniciou o app, virou 56971, e o
+  // telefone não achou mais nada. Pior: o que ele tinha levado pro ensaio fica
+  // guardado POR ENDEREÇO, então porta nova jogaria fora tudo que ele baixou,
+  // silenciosamente, na hora de sair de casa.
+  //
+  // Meia solução é o mesmo que nenhuma, quando a outra metade quebra igual.
+  //
+  // Se a porta preferida estiver ocupada, tenta as seguintes. Só no fim aceita
+  // qualquer uma — melhor um endereço estranho do que app que não abre.
+  const preferida = Number(portaSalva) || 8788
+  const tentativas = [preferida, preferida + 1, preferida + 2, preferida + 3, 0]
+
   return new Promise((resolve) => {
-    servidor.on('error', () => { servidor = null; resolve({ ligado: false, enderecos: [] }) })
+    let i = 0
+    const tentar = () => {
+      servidor.listen(tentativas[i], '0.0.0.0')
+    }
+    servidor.on('error', (err) => {
+      if (err && err.code === 'EADDRINUSE' && i < tentativas.length - 1) {
+        i++
+        setImmediate(tentar)
+        return
+      }
+      servidor = null
+      resolve({ ligado: false, enderecos: [] })
+    })
     // 0.0.0.0: precisa aceitar de FORA da máquina, senão o celular não alcança
-    servidor.listen(0, '0.0.0.0', () => {
+    servidor.on('listening', () => {
       porta = servidor.address().port
+      if (salvarPorta) salvarPorta(porta)
       resolve(infoCelular())
     })
+    tentar()
   })
 }
 
