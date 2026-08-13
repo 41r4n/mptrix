@@ -65,6 +65,19 @@ if (m) {
     'HTTP ' + a.status + ' · ' + buf.byteLength + ' bytes · ' + (a.headers.get('content-type') || ''))
 }
 
+// AS MESMAS FAIXAS QUE O PC MOSTRA. O computador esconde faixa muda e faixa
+// que ja foi somada ao "Outros" — a segunda, tocada em separado, faz o mesmo
+// instrumento soar dobrado e ligeiramente fora de fase.
+if (m) {
+  const meta = JSON.parse((await import('fs')).readFileSync(join(stemsDir, m.chave, 'meta.json'), 'utf8'))
+  const info = meta.stemInfo || {}
+  const deviaEsconder = Object.keys(info).filter((id) => info[id].present === false || info[id].dentroDeOutros)
+  const mostradas = m.faixas.map((f) => f.id)
+  const vazou = deviaEsconder.filter((id) => mostradas.includes(id))
+  caso('nao mostra faixa que o PC esconde', vazou.length === 0,
+    deviaEsconder.length ? 'escondidas: ' + deviaEsconder.join(', ') : 'nao ha nenhuma pra esconder')
+}
+
 // 5b. O CELULAR RECEBE O ARQUIVO LEVE, nao o cru. Medido no aparelho do dono:
 // com FLAC de 40 MB por faixa, o telefone tocava so parte delas e escolhia
 // quais pelo criterio dele — sumia justo a voz.

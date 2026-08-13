@@ -80,13 +80,26 @@ function lerAcervo(stemsDir) {
     let m
     try { m = JSON.parse(readFileSync(meta, 'utf8')) } catch { continue }
 
-    // As faixas "_orig" são cópias de antes do tratamento — servem ao motor,
-    // não a quem toca. Mandar as duas faria o celular tocar a mesma coisa
-    // duas vezes e ainda gastar rede pra isso.
+    // ██████ AS MESMAS REGRAS DO ESTÚDIO DO COMPUTADOR ██████
+    // Ler a pasta e mostrar tudo que está lá dentro parecia inofensivo, e não
+    // é: o computador esconde faixas por três motivos, e cada um deles vira um
+    // defeito diferente se o celular ignorar.
+    //
+    //   present: false        faixa muda. Na Girlfriend o órgão está em -72 dB
+    //                         e o PC não mostra; o celular mostrava um "Órgão"
+    //                         que não faz som nenhum.
+    //   dentroDeOutros        o som dela JÁ FOI SOMADO ao "Outros". Tocar as
+    //                         duas toca o mesmo instrumento DOBRADO, mais alto
+    //                         e ligeiramente fora de fase. É o pior dos três, e
+    //                         é inaudível como defeito: soa só "esquisito".
+    //   _orig                 cópia de antes do tratamento, serve ao motor.
+    const info = m.stemInfo || {}
+    const escondida = (id) => info[id]?.present === false || info[id]?.dentroDeOutros
     const faixas = readdirSync(base)
       .filter((f) => /\.(flac|wav|mp3|m4a)$/i.test(f))
       .filter((f) => !/_orig\./i.test(f))
       .filter((f) => !/^song\./i.test(f))
+      .filter((f) => !escondida(f.replace(/\.[^.]+$/, '')))
       .map((f) => ({
         id: f.replace(/\.[^.]+$/, ''),
         arquivo: f,
