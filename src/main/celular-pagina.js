@@ -32,157 +32,256 @@ export function paginaCelular() {
 <meta name="theme-color" content="#0b0c0f">
 <title>MPTRIX</title>
 <style>
-  :root {
-    --bg: #0b0c0f; --painel: #101216; --card: #15171c; --cava: #08090c;
-    --linha: rgba(255,255,255,0.07); --linha2: rgba(255,255,255,0.14);
-    --txt: #f2f4f7; --txt2: #d1d5db; --mudo: #9ba3af; --mudo2: #8a93a0;
-    --lima: #b6ff3b; --amarelo: #eab308;
-    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
-    margin: 0; background: var(--bg); color: var(--txt);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 16px; border-bottom: 1px solid var(--linha);
-    position: sticky; top: 0; background: var(--bg); z-index: 5;
-  }
-  .marca { font-weight: 700; letter-spacing: 0.04em; font-size: 15px; }
-  .marca b { color: var(--lima); }
-  .voltar {
-    background: none; border: none; color: var(--mudo); font-size: 22px;
-    padding: 0 6px 0 0; cursor: pointer; line-height: 1;
-  }
-  .rot {
-    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--mudo2);
-  }
+:root {
+  --bg: #0b0c0f; --painel: #101216; --card: #15171c; --cava: #08090c; --cava2: #050609;
+  --linha: rgba(255,255,255,0.07); --linha2: rgba(255,255,255,0.14); --linha3: rgba(255,255,255,0.22);
+  --txt: #f2f4f7; --txt2: #d1d5db; --mudo: #9ba3af; --mudo2: #8a93a0;
+  --lima: #b6ff3b; --lima-b: rgba(182,255,59,0.3); --amarelo: #eab308; --ruim: #f87171;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --corte: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  --corte-sm: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; background: var(--bg); color: var(--txt);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+}
+button, input { font-family: inherit; }
 
-  /* ── lista de músicas ── */
-  ul { list-style: none; margin: 0; padding: 10px 12px; }
-  li + li { margin-top: 8px; }
-  .musica {
-    display: block; width: 100%; text-align: left; cursor: pointer;
-    background: var(--card); border: none; color: var(--txt);
-    padding: 13px 14px; font: inherit;
-    box-shadow: inset 0 0 0 1px var(--linha);
-    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  }
-  .musica b { display: block; font-size: 14.5px; font-weight: 600; line-height: 1.3; }
-  .musica .dados {
-    margin-top: 6px; font-family: var(--mono); font-size: 10px;
-    letter-spacing: 0.1em; color: var(--mudo2);
-  }
-  .musica .dados i { font-style: normal; color: var(--lima); }
-  .vazio { padding: 40px 20px; text-align: center; color: var(--mudo); line-height: 1.6; }
+/* ── A MARCA. O hexágono com a ampulheta é a assinatura da casa: quem abre no
+      celular precisa reconhecer o mesmo app, não achar que é outro site. ── */
+header {
+  display: flex; align-items: center; gap: 11px;
+  padding: calc(12px + env(safe-area-inset-top)) 15px 12px;
+  border-bottom: 1px solid var(--linha);
+  position: sticky; top: 0; background: var(--bg); z-index: 6;
+}
+.hex {
+  width: 30px; height: 30px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(182,255,59,0.12); color: var(--lima);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.marca { font-weight: 700; letter-spacing: 0.06em; font-size: 15px; line-height: 1; }
+.marca b { color: var(--lima); text-shadow: 0 0 14px rgba(182,255,59,0.45); }
+.marca span {
+  display: block; margin-top: 3px;
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--mudo2); font-weight: 400;
+}
+.voltar {
+  background: none; border: none; color: var(--mudo); font-size: 21px;
+  padding: 4px 8px 4px 0; cursor: pointer; line-height: 1; flex: none;
+}
+.cabeca-fim { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.icone-btn {
+  width: 34px; height: 34px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; box-shadow: inset 0 0 0 1px var(--linha2);
+  color: var(--mudo); cursor: pointer; clip-path: var(--corte-sm);
+}
+.icone-btn.ativo { color: var(--lima); box-shadow: inset 0 0 0 1px var(--lima-b); }
 
-  /* ── o estúdio ── */
-  .transporte {
-    position: sticky; top: 53px; z-index: 4;
-    background: var(--painel); border-bottom: 1px solid var(--linha);
-    padding: 12px 14px;
-  }
-  .tempo {
-    display: flex; align-items: baseline; gap: 8px;
-    font-family: var(--mono); font-size: 22px; color: var(--lima);
-    text-shadow: 0 0 18px rgba(182,255,59,0.35);
-  }
-  .tempo small { font-size: 12px; color: var(--mudo2); text-shadow: none; }
-  .barra {
-    width: 100%; margin: 10px 0 12px; height: 26px;
-    background: none; -webkit-appearance: none; appearance: none;
-  }
-  .barra::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,0.12); }
-  .barra::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px;
-    background: var(--lima); border-radius: 50%;
-    box-shadow: 0 0 12px rgba(182,255,59,0.6);
-  }
-  .botoes { display: flex; align-items: center; gap: 10px; }
-  .play {
-    width: 52px; height: 52px; border-radius: 50%; border: none; flex: none;
-    background: var(--lima); color: #0b0c0f; font-size: 20px; cursor: pointer;
-    box-shadow: 0 0 24px rgba(182,255,59,0.4);
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .zerar {
-    height: 36px; padding: 0 14px; background: none; border: none;
-    box-shadow: inset 0 0 0 1px var(--linha2); color: var(--mudo);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
-    text-transform: uppercase; cursor: pointer;
-  }
-  .info { margin-left: auto; text-align: right; font-family: var(--mono); font-size: 10px; color: var(--mudo2); }
-  .info b { color: var(--txt2); }
+/* ── BUSCA E FILTROS ── */
+.peneira { padding: 12px 12px 0; display: flex; flex-direction: column; gap: 9px; }
+.busca {
+  display: flex; align-items: center; gap: 9px;
+  padding: 0 12px; height: 42px;
+  background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha2);
+  clip-path: var(--corte-sm);
+}
+.busca input {
+  flex: 1 1 auto; min-width: 0; height: 100%;
+  background: none; border: none; outline: none; color: var(--txt); font-size: 15px;
+}
+.busca input::placeholder { color: var(--mudo2); }
+.busca .limpar { background: none; border: none; color: var(--mudo2); font-size: 18px; padding: 0 2px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.chip {
+  flex: none; height: 30px; padding: 0 13px;
+  background: none; border: none; box-shadow: inset 0 0 0 1px var(--linha2);
+  color: var(--mudo); font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+  clip-path: var(--corte-sm);
+}
+.chip.on { background: var(--lima); color: #0b0c0f; font-weight: 700; box-shadow: none; }
+.conta {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--mudo2); padding: 0 1px;
+}
 
-  /* ── as faixas ── */
-  .faixas { padding: 12px 12px 30px; }
-  .faixa {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--card); padding: 10px 12px; margin-bottom: 8px;
-    box-shadow: inset 0 0 0 1px var(--linha);
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  }
-  .faixa.calada { opacity: 0.42; }
-  .cor { width: 4px; align-self: stretch; flex: none; border-radius: 2px; }
-  .nome { flex: 1 1 auto; min-width: 0; }
-  .nome b { display: block; font-size: 13px; font-weight: 600; }
-  .vol { width: 100%; margin-top: 6px; height: 22px; -webkit-appearance: none; appearance: none; background: none; }
-  .vol::-webkit-slider-runnable-track { height: 3px; background: rgba(255,255,255,0.12); }
-  .vol::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 13px; height: 13px; margin-top: -5px;
-    background: currentColor; border-radius: 50%;
-  }
-  .ms { display: flex; flex-direction: column; gap: 5px; flex: none; }
-  .ms button {
-    width: 34px; height: 26px; background: none; border: none;
-    box-shadow: inset 0 0 0 1px var(--linha2); color: var(--mudo);
-    font-family: var(--mono); font-size: 10px; font-weight: 700; cursor: pointer;
-  }
-  .ms button[aria-pressed="true"] { color: #0b0c0f; }
-  .ms .m[aria-pressed="true"] { background: var(--amarelo); box-shadow: none; }
-  .ms .s[aria-pressed="true"] { background: var(--lima); box-shadow: none; }
+/* ── OS CARTÕES DO ACERVO ── */
+ul { list-style: none; margin: 0; padding: 10px 12px 0; }
+li { margin-bottom: 9px; }
+.musica {
+  display: flex; align-items: stretch; gap: 11px; width: 100%;
+  text-align: left; cursor: pointer; padding: 10px;
+  background: var(--card); border: none; color: var(--txt);
+  box-shadow: inset 0 0 0 1px var(--linha);
+  clip-path: var(--corte);
+}
+/* A CAPA dá o reconhecimento antes da leitura: numa lista de trinta nomes
+   parecidos, a pessoa acha pela imagem, não pelo texto. */
+.capa {
+  width: 62px; height: 62px; flex: none; object-fit: cover;
+  background: var(--cava2); clip-path: var(--corte-sm);
+}
+.capa-vazia {
+  width: 62px; height: 62px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--cava2); color: var(--linha3); clip-path: var(--corte-sm);
+}
+.corpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.corpo b { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.marcas { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.tag {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 6px; color: var(--mudo2);
+  box-shadow: inset 0 0 0 1px var(--linha);
+}
+.tag.faixas { color: var(--lima); box-shadow: inset 0 0 0 1px var(--lima-b); }
+.tag.tom, .tag.bpm { color: var(--txt2); }
+.tag.aqui { background: var(--lima); color: #0b0c0f; font-weight: 700; box-shadow: none; }
 
-  /* LEVAR PRO ENSAIO. Fica na linha da música, não escondido num menu: é a
-     decisão que a pessoa toma ANTES de sair de casa, e ela precisa ver de
-     relance o que já está garantido. */
-  .levar {
-    display: flex; align-items: center; gap: 8px; width: 100%;
-    margin-top: 8px; padding: 8px 10px;
-    background: none; border: none; color: var(--mudo);
-    box-shadow: inset 0 0 0 1px var(--linha2);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
-    text-transform: uppercase; cursor: pointer; text-align: left;
-  }
-  .levar.tem { color: var(--lima); box-shadow: inset 0 0 0 1px rgba(182,255,59,0.45); background: rgba(182,255,59,0.06); }
-  .levar.indo { color: var(--amarelo); box-shadow: inset 0 0 0 1px rgba(234,179,8,0.5); }
-  .selo {
-    display: inline-block; margin-left: 6px; padding: 2px 6px;
-    font-family: var(--mono); font-size: 8px; letter-spacing: 0.14em;
-    color: #0b0c0f; background: var(--lima);
-  }
-  .semrede {
-    margin: 10px 12px 0; padding: 9px 11px;
-    background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
-    font-size: 12px; line-height: 1.5; color: var(--amarelo);
-  }
-  .preparando {
-    margin-top: 10px; padding: 7px 10px;
-    background: rgba(234,179,8,0.1);
-    box-shadow: inset 2px 0 0 var(--amarelo);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
-    color: var(--amarelo);
-  }
-  .carregando { padding: 30px; text-align: center; color: var(--mudo); font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+/* LEVAR: fica colado na música, não num menu — é a decisão que se toma antes
+   de sair de casa, e ela precisa ser vista de relance. */
+.levar {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  margin-top: -3px; padding: 9px 10px;
+  background: none; border: none; color: var(--mudo);
+  box-shadow: inset 0 0 0 1px var(--linha2);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.levar.tem { color: var(--lima); box-shadow: inset 0 0 0 1px var(--lima-b); background: rgba(182,255,59,0.06); }
+.levar.indo { color: var(--amarelo); box-shadow: inset 0 0 0 1px rgba(234,179,8,0.5); }
+
+.vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
+.vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
+.carregando {
+  padding: 34px; text-align: center; color: var(--mudo);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+}
+.semrede {
+  margin: 12px 12px 0; padding: 10px 12px;
+  background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
+  font-size: 12.5px; line-height: 1.5; color: var(--amarelo);
+}
+
+/* ── O ESTÚDIO ── */
+.transporte {
+  position: sticky; top: 55px; z-index: 5;
+  background: var(--painel); border-bottom: 1px solid var(--linha); padding: 13px 14px;
+}
+.faixa-nome { font-size: 14px; font-weight: 600; margin-bottom: 9px; line-height: 1.3; }
+.tempo {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 26px; color: var(--lima);
+  text-shadow: 0 0 20px rgba(182,255,59,0.35); letter-spacing: 0.02em;
+}
+.tempo small { font-size: 12px; color: var(--mudo2); text-shadow: none; }
+.tempo .hud { margin-left: auto; text-align: right; font-size: 10px; color: var(--mudo2); text-shadow: none; letter-spacing: 0.12em; }
+.tempo .hud b { display: block; color: var(--txt2); font-size: 13px; }
+.barra { width: 100%; margin: 10px 0 12px; height: 28px; background: none; -webkit-appearance: none; appearance: none; }
+.barra::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,0.12); }
+.barra::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 17px; height: 17px; margin-top: -6.5px;
+  background: var(--lima); border-radius: 50%; box-shadow: 0 0 12px rgba(182,255,59,0.6);
+}
+.botoes { display: flex; align-items: center; gap: 10px; }
+.play {
+  width: 54px; height: 54px; border-radius: 50%; border: none; flex: none;
+  background: var(--lima); color: #0b0c0f; font-size: 20px; cursor: pointer;
+  box-shadow: 0 0 26px rgba(182,255,59,0.4);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.zerar {
+  height: 38px; padding: 0 15px; background: none; border: none;
+  box-shadow: inset 0 0 0 1px var(--linha2); color: var(--mudo);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer; clip-path: var(--corte-sm);
+}
+
+.faixas { padding: 12px 12px 30px; }
+.faixa {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); padding: 10px 12px; margin-bottom: 8px;
+  box-shadow: inset 0 0 0 1px var(--linha); clip-path: var(--corte-sm);
+}
+.faixa.calada { opacity: 0.4; }
+.cor { width: 4px; align-self: stretch; flex: none; }
+.nome { flex: 1 1 auto; min-width: 0; }
+.nome b { display: block; font-size: 13px; font-weight: 600; }
+.vol { width: 100%; margin-top: 6px; height: 24px; -webkit-appearance: none; appearance: none; background: none; }
+.vol::-webkit-slider-runnable-track { height: 3px; background: rgba(255,255,255,0.12); }
+.vol::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5.5px; background: currentColor; border-radius: 50%; }
+.ms { display: flex; gap: 5px; flex: none; }
+.ms button {
+  width: 36px; height: 34px; background: none; border: none;
+  box-shadow: inset 0 0 0 1px var(--linha2); color: var(--mudo);
+  font-family: var(--mono); font-size: 10px; font-weight: 700; cursor: pointer;
+}
+.ms button[aria-pressed="true"] { color: #0b0c0f; box-shadow: none; }
+.ms .m[aria-pressed="true"] { background: var(--amarelo); }
+.ms .s[aria-pressed="true"] { background: var(--lima); }
+.preparando {
+  margin-top: 10px; padding: 8px 10px;
+  background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--amarelo);
+}
+
+/* ── AJUSTES: uma folha que sobe, não outra página. O que ela mostra é o
+      estado do APARELHO, e o estado do aparelho se consulta sem sair de onde
+      você está. ── */
+.folha-fundo { position: fixed; inset: 0; background: rgba(3,4,7,0.7); z-index: 20; }
+.folha {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  background: var(--painel); border-top: 1px solid var(--linha2);
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  max-height: 82vh; overflow-y: auto;
+}
+.folha h3 { margin: 0 0 4px; font-size: 16px; }
+.folha .olho {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--mudo2); display: block; margin-bottom: 3px;
+}
+.folha p { font-size: 12.5px; line-height: 1.55; color: var(--mudo); margin: 10px 0; }
+.linha-dado {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; margin-top: 8px;
+  background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
+}
+.linha-dado .rot { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mudo2); }
+.linha-dado b { margin-left: auto; font-family: var(--mono); font-size: 14px; color: var(--txt2); }
+.linha-dado b.lima { color: var(--lima); }
+.folha-btn {
+  width: 100%; margin-top: 12px; height: 42px;
+  background: none; border: none; box-shadow: inset 0 0 0 1px var(--linha2);
+  color: var(--mudo); font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; clip-path: var(--corte-sm);
+}
+.folha-btn.perigo { color: var(--ruim); box-shadow: inset 0 0 0 1px rgba(248,113,113,0.4); }
+.folha-fechar { width: 100%; margin-top: 8px; height: 44px; background: var(--lima); color: #0b0c0f; border: none; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
 </style>
 </head>
 <body>
 <header>
   <button class="voltar" id="voltar" hidden aria-label="Voltar">&#8592;</button>
-  <span class="marca">MP<b>TRIX</b></span>
-  <span class="rot" id="onde">acervo</span>
+  <!-- o hexágono com a ampulheta: a assinatura da casa. Quem abre no celular
+       tem que reconhecer o mesmo app, não achar que caiu noutro site. -->
+  <span class="hex" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z"/></svg>
+  </span>
+  <span class="marca">MP<b>TRIX</b><span id="onde">acervo</span></span>
+  <span class="cabeca-fim">
+    <button class="icone-btn" id="btAjustes" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>
+      </svg>
+    </button>
+  </span>
 </header>
 <div id="tela"><p class="carregando">carregando…</p></div>
 
@@ -222,26 +321,71 @@ function mmss(s) {
   return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
 }
 
+var busca = '';
+var filtro = 'todas';
+
 function abrirAcervo() {
   sessao && pararTudo();
   voltar.hidden = true; onde.textContent = 'acervo';
+
   if (!acervo.length) {
-    tela.innerHTML = '<p class="vazio">Nenhuma música separada ainda.<br><br>' +
-      'Separe no computador e ela aparece aqui sozinha.</p>';
+    tela.innerHTML = '<p class="vazio"><b>Nada aqui ainda</b>' +
+      'Baixe ou separe uma música no computador — ela aparece aqui sozinha.</p>';
     return;
   }
-  var html = '<ul>';
-  for (var i = 0; i < acervo.length; i++) {
-    var m = acervo[i];
-    html += '<li><button class="musica" data-i="' + i + '"><b>' + esc(m.titulo) +
-      '<span class="selo" data-selo="' + m.chave + '" hidden>no celular</span></b>' +
-      '<span class="dados">' + (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
-      (m.duracao ? ' · ' + mmss(m.duracao) : '') +
-      (m.tom ? ' · tom <i>' + m.tom + '</i>' : '') +
-      (m.bpm ? ' · <i>' + m.bpm + '</i> bpm' : '') + '</span></button>' +
-      '<button class="levar" data-levar="' + m.chave + '" data-i="' + i + '">levar pro ensaio</button></li>';
+
+  // FILTRAR É O QUE SALVA UMA LISTA DE CEM. "no celular" é o filtro que
+  // importa na hora do ensaio: é o único que responde "o que eu posso tocar
+  // agora, sem o computador?".
+  var lista = acervo.filter(function (m) {
+    if (filtro === 'separadas' && m.inteira) return false;
+    if (filtro === 'celular' && !guardadas[m.chave]) return false;
+    if (busca && m.titulo.toLowerCase().indexOf(busca.toLowerCase()) < 0) return false;
+    return true;
+  });
+
+  var html = '<div class="peneira">' +
+    '<div class="busca">' +
+      '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a93a0" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+      '<input id="qBusca" type="search" placeholder="procurar música" value="' + esc(busca) + '">' +
+      (busca ? '<button class="limpar" id="qLimpar">&times;</button>' : '') +
+    '</div>' +
+    '<div class="chips">' +
+      chip('todas', 'todas') + chip('separadas', 'com mixer') + chip('celular', 'no celular') +
+    '</div>' +
+    '<span class="conta">' + lista.length + (lista.length === 1 ? ' música' : ' músicas') +
+      (lista.length !== acervo.length ? ' de ' + acervo.length : '') + '</span>' +
+    '</div>';
+
+  if (!lista.length) {
+    html += '<p class="vazio"><b>Nada com esse filtro</b>' +
+      (filtro === 'celular' ? 'Nenhuma música foi levada pro ensaio ainda.' : 'Tente outro nome.') + '</p>';
+    tela.innerHTML = html;
+    ligarPeneira();
+    return;
+  }
+
+  html += '<ul>';
+  for (var i = 0; i < lista.length; i++) {
+    var m = lista[i], n = acervo.indexOf(m);
+    html += '<li><button class="musica" data-i="' + n + '">' +
+      (m.capa
+        ? '<img class="capa" src="' + m.capa + '" alt="">'
+        : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+      '<span class="corpo"><b>' + esc(m.titulo) + '</b><span class="marcas">' +
+        (m.inteira
+          ? '<span class="tag">música completa</span>'
+          : '<span class="tag faixas">' + m.faixas.length + ' faixas</span>') +
+        (m.tom ? '<span class="tag tom">tom ' + m.tom + '</span>' : '') +
+        (m.bpm ? '<span class="tag bpm">' + m.bpm + ' bpm</span>' : '') +
+        (m.duracao ? '<span class="tag">' + mmss(m.duracao) + '</span>' : '') +
+        '<span class="tag aqui" data-selo="' + m.chave + '" hidden>no celular</span>' +
+      '</span></span></button>' +
+      '<button class="levar" data-levar="' + m.chave + '" data-i="' + n + '">levar pro ensaio</button></li>';
   }
   tela.innerHTML = html + '</ul>';
+
+  ligarPeneira();
   tela.querySelectorAll('.musica').forEach(function (b) {
     b.onclick = function () { abrirMusica(acervo[+b.dataset.i]); };
   });
@@ -259,36 +403,28 @@ function abrirAcervo() {
   pintarLevar();
 }
 
-// Sem o computador por perto, só o que foi levado toca. Dizer isso ANTES da
-// pessoa apertar play evita a conclusão errada ("quebrou") na hora do ensaio.
-function pintarLevar() {
-  var qualquer = false;
-  document.querySelectorAll('.levar').forEach(function (b) {
-    var tem = !!guardadas[b.dataset.levar];
-    if (tem) qualquer = true;
-    if (b.className.indexOf('indo') >= 0) return;
-    b.className = 'levar' + (tem ? ' tem' : '');
-    b.textContent = tem ? 'está no celular · tirar' : 'levar pro ensaio';
-  });
-  document.querySelectorAll('.selo').forEach(function (s) { s.hidden = !guardadas[s.dataset.selo]; });
-  var aviso = document.querySelector('.semrede');
-  if (!navigator.onLine && !aviso) {
-    var d = document.createElement('div');
-    d.className = 'semrede';
-    d.textContent = qualquer
-      ? 'Sem o computador por perto: só tocam as músicas marcadas "no celular".'
-      : 'Sem o computador por perto e nenhuma música foi levada. Em casa, aperte "levar pro ensaio".';
-    tela.insertBefore(d, tela.firstChild);
-  }
+function chip(id, rotulo) {
+  return '<button class="chip' + (filtro === id ? ' on' : '') + '" data-chip="' + id + '">' + rotulo + '</button>';
 }
 
-function marcarLevando(chave, feito, total) {
-  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar indo'; b.textContent = 'levando… ' + feito + ' de ' + total; }
-}
-function marcarFalhou(chave) {
-  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar'; b.textContent = 'não deu pra levar — tente de novo'; }
+// A BUSCA NÃO REDESENHA A LISTA A CADA LETRA sem guardar o cursor: redesenhar
+// tira o foco do campo e o teclado do celular fecha na segunda letra.
+function ligarPeneira() {
+  var q = document.getElementById('qBusca');
+  if (q) {
+    q.oninput = function () {
+      busca = q.value;
+      var pos = q.selectionStart;
+      abrirAcervo();
+      var novo = document.getElementById('qBusca');
+      if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (e) {} }
+    };
+  }
+  var l = document.getElementById('qLimpar');
+  if (l) l.onclick = function () { busca = ''; abrirAcervo(); };
+  tela.querySelectorAll('.chip').forEach(function (c) {
+    c.onclick = function () { filtro = c.dataset.chip; abrirAcervo(); };
+  });
 }
 
 function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]; }); }
@@ -296,12 +432,16 @@ function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return ({'<'
 function abrirMusica(m) {
   voltar.hidden = false; onde.textContent = 'estúdio';
   var html = '<div class="transporte">' +
-    '<div class="tempo"><span id="agora">0:00</span><small>/ ' + mmss(m.duracao) + '</small></div>' +
+    '<div class="faixa-nome">' + esc(m.titulo) + '</div>' +
+    '<div class="tempo"><span id="agora">0:00</span><small>/ ' + mmss(m.duracao) + '</small>' +
+      ((m.tom || m.bpm) ? '<span class="hud">' +
+        (m.tom ? 'TOM<b>' + m.tom + '</b>' : '') +
+        (m.bpm ? 'BPM<b>' + m.bpm + '</b>' : '') + '</span>' : '') +
+    '</div>' +
     '<input class="barra" id="seek" type="range" min="0" max="' + Math.floor(m.duracao) + '" value="0" step="1">' +
     '<div class="botoes">' +
       '<button class="play" id="play" aria-label="Tocar">&#9654;</button>' +
       '<button class="zerar" id="zerar">voltar ao início</button>' +
-      '<div class="info">' + (m.tom ? '<b>' + m.tom + '</b> · ' : '') + (m.bpm ? '<b>' + m.bpm + '</b> bpm' : '') + '</div>' +
     '</div></div><div class="faixas">';
   for (var i = 0; i < m.faixas.length; i++) {
     var f = m.faixas[i], cor = CORES[i % CORES.length];
@@ -420,6 +560,41 @@ function pararTudo() {
   sessao.audios.forEach(function (a) { try { a.pause(); a.src = ''; } catch (e) {} });
   sessao = null;
 }
+
+// ██████████ AJUSTES ██████████
+// O que ela mostra é o estado do APARELHO: o que está guardado aqui, quanto
+// ocupa, e se o computador está por perto. Nada de "configuração" — não há o
+// que configurar; há o que CONFERIR antes de sair de casa.
+function abrirAjustes() {
+  var levadas = acervo.filter(function (m) { return guardadas[m.chave]; });
+  var bytes = 0;
+  levadas.forEach(function (m) { m.faixas.forEach(function (f) { bytes += (f.bytes || 0) / 6; }); });
+  var mb = Math.round(bytes / 1048576);
+
+  var f = document.createElement('div');
+  f.className = 'folha-fundo';
+  f.innerHTML = '<div class="folha" onclick="event.stopPropagation()">' +
+    '<span class="olho">este aparelho</span><h3>O que está no celular</h3>' +
+    '<p>Só o que você levou toca sem o computador. O resto vem dele, pela rede de casa.</p>' +
+    '<div class="linha-dado"><span class="rot">músicas levadas</span><b class="lima">' + levadas.length + '</b></div>' +
+    '<div class="linha-dado"><span class="rot">espaço, mais ou menos</span><b>' + (mb || '<1') + ' MB</b></div>' +
+    '<div class="linha-dado"><span class="rot">computador</span><b>' + (navigator.onLine ? 'por perto' : 'longe') + '</b></div>' +
+    (levadas.length ? '<button class="folha-btn perigo" id="tirarTudo">tirar todas do celular</button>' : '') +
+    '<button class="folha-fechar" id="fecharFolha">fechar</button>' +
+    '</div>';
+  f.onclick = function () { f.remove(); };
+  document.body.appendChild(f);
+  document.getElementById('fecharFolha').onclick = function () { f.remove(); };
+  var t = document.getElementById('tirarTudo');
+  if (t) t.onclick = function () {
+    levadas.forEach(function (m) {
+      aoGuardador({ tipo: 'largar', chave: m.chave,
+        urls: m.faixas.map(function (x) { return '/audio/' + m.chave + '/' + encodeURIComponent(x.arquivo); }) });
+    });
+    f.remove();
+  };
+}
+document.getElementById('btAjustes').onclick = abrirAjustes;
 
 voltar.onclick = abrirAcervo;
 

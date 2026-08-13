@@ -2,7 +2,7 @@ import { createServer } from 'http'
 import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync } from 'fs'
 import { join, isAbsolute, basename } from 'path'
 import { spawn } from 'child_process'
-import { randomBytes } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { networkInterfaces } from 'os'
 
 // ██████████ O ESTÚDIO NO CELULAR ██████████
@@ -114,6 +114,7 @@ function lerAcervo(stemsDir) {
       duracao: m.duration || 0,
       tom: m.analysis?.key ? `${m.analysis.key}${m.analysis.scale === 'minor' ? 'm' : ''}` : null,
       bpm: m.analysis?.bpm ? Math.round(m.analysis.bpm) : null,
+      capa: capaDe(m.sourceFile, stemsDir),
       faixas
     })
   }
@@ -123,9 +124,28 @@ function lerAcervo(stemsDir) {
 function acervoCompleto(stemsDir, historico) {
   const separadas = lerAcervo(stemsDir)
   const nomes = new Set(separadas.map((m) => m.titulo))
-  const inteiras = lerBaixadas(historico, nomes)
+  const inteiras = lerBaixadas(historico, nomes, stemsDir)
   // separadas primeiro: são as que dão mixer, que é o motivo de existir isto
   return separadas.concat(inteiras.sort((a, b) => a.titulo.localeCompare(b.titulo)))
+}
+
+// ── A CAPA ──
+// O computador já baixou e guardou as capas de todas as músicas. A chave é
+// calculada do arquivo (caminho, tamanho, data) — a MESMA conta do app, senão
+// a capa existiria e nunca seria encontrada. Duas contas pra mesma chave é o
+// erro que eu já cometi com os nomes e com as regras; aqui a conta é uma só,
+// copiada linha a linha do lado que a criou.
+const CAPA_V = 2
+function capaDe(arquivo, stemsDir) {
+  try {
+    if (!arquivo || !existsSync(arquivo)) return null
+    const st = statSync(arquivo)
+    const chave = createHash('sha1')
+      .update(`${arquivo}|${st.size}|${st.mtimeMs}|v${CAPA_V}`).digest('hex').slice(0, 16)
+    const alvo = join(stemsDir, '_capas', 'img', `${chave}.jpg`)
+    if (!existsSync(alvo) || statSync(alvo).size === 0) return null
+    return `/capa/${chave}.jpg`
+  } catch { return null }
 }
 
 // ── AS MÚSICAS BAIXADAS, sem separação ──
@@ -136,7 +156,7 @@ function acervoCompleto(stemsDir, historico) {
 // quebrou, quando na verdade ele nunca ia mostrar nada.
 //
 // Uma faixa só, chamada "Música completa". É o estúdio rápido.
-function lerBaixadas(historico, jaSeparadas) {
+function lerBaixadas(historico, jaSeparadas, stemsDir) {
   const itens = []
   const vistos = new Set()
   for (const h of historico || []) {
@@ -162,6 +182,7 @@ function lerBaixadas(historico, jaSeparadas) {
       tom: null,
       bpm: null,
       inteira: true,
+      capa: capaDe(caminho, stemsDir),
       faixas: [{ id: 'song', arquivo: basename(caminho), bytes: statSync(caminho).size }]
     })
   }
@@ -397,6 +418,15 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
     if (caminho === '/sw.js') {
       res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' })
       res.end(GUARDADOR)
+      return
+    }
+
+    const capa = /^\/capa\/([\w-]+\.jpg)$/.exec(caminho)
+    if (capa) {
+      const arq = join(stemsDir, '_capas', 'img', capa[1])
+      if (!existsSync(arq)) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=604800' })
+      createReadStream(arq).pipe(res)
       return
     }
 
