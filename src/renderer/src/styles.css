@@ -991,7 +991,15 @@ section h2 {
 }
 
 /* Version footer */
+/* O RODAPÉ ATRAVESSA A TELA INTEIRA, e isso precisa estar ESCRITO.
+   A tela é uma grade de duas colunas (trilho | conteúdo) e ninguém tinha dito
+   onde o rodapé mora — ele ia caindo na célula que sobrasse. Enquanto foi um
+   elemento só, deu certo por acaso; no dia em que nasceu a linha de
+   atualização ao lado dele, uma foi pra coluna estreita e ficou por cima do pé
+   do trilho.
+   Layout por sobra funciona até alguém acrescentar uma peça. */
 .version-footer {
+  grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -11545,6 +11553,9 @@ ul.hlib-grid {
    disputa a linha de cima com o todo.
    A luz muda de cor com a situação e é a única coisa que se lê de longe: verde
    parado é "tudo certo, siga", lima batendo é "tem coisa te esperando". */
+/* ela ocupa a LINHA INTEIRA dentro do rodapé: o rodapé é flex com quebra, e
+   sem isto ela viraria mais uma coluna espremida ao lado das pastilhas */
+.version-footer .appup { flex: 1 1 100%; margin: 0 0 6px; }
 .appup {
   --chanfro: 10px;
   --fio: var(--border);

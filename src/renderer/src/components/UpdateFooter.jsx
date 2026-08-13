@@ -34,13 +34,17 @@ export default function UpdateFooter() {
 
   return (
     <>
-      {/* O APP PRIMEIRO, O MOTOR DEPOIS — e não por hierarquia de código:
-          quando o MPTRIX está velho, é o app inteiro que está velho. O motor
-          de baixar é peça de dentro, e peça de dentro não disputa a linha de
-          cima com o todo. */}
-      <AppUpdate />
-
       <footer className="version-footer">
+        {/* DENTRO do rodapé, e não ao lado dele. A tela é uma grade de duas
+            colunas (trilho | conteúdo) e os filhos entram um em cada célula —
+            então soltar mais um elemento aqui empurrava tudo e a linha ia
+            parar em cima do pé do trilho. Dentro do rodapé ela herda o lugar
+            que o rodapé já tem.
+            E vem PRIMEIRO: quando o MPTRIX está velho, é o app inteiro que
+            está velho. O motor de baixar é peça de dentro, e peça de dentro
+            não disputa a linha de cima com o todo. */}
+        <AppUpdate />
+
         <div className="version-info">
           <span className={`status-dot status-${status.key}`} title={status.title}>●</span>
           {versions.ytDlp ? (
