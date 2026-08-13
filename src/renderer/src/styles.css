@@ -991,15 +991,19 @@ section h2 {
 }
 
 /* Version footer */
-/* O RODAPÉ ATRAVESSA A TELA INTEIRA, e isso precisa estar ESCRITO.
+/* O RODAPÉ MORA NA COLUNA DO CONTEÚDO, e isso precisa estar ESCRITO.
    A tela é uma grade de duas colunas (trilho | conteúdo) e ninguém tinha dito
    onde o rodapé mora — ele ia caindo na célula que sobrasse. Enquanto foi um
    elemento só, deu certo por acaso; no dia em que nasceu a linha de
    atualização ao lado dele, uma foi pra coluna estreita e ficou por cima do pé
    do trilho.
+   E atravessar a tela inteira (1 / -1) foi a MINHA segunda tentativa errada:
+   o trilho é grudado e ocupa a altura toda, então o rodapé passava por baixo
+   dele e a sobreposição continuou, só que maior. O lugar certo é a coluna 2 —
+   medido em npm run confere:rodape, que compara as bordas das duas caixas.
    Layout por sobra funciona até alguém acrescentar uma peça. */
 .version-footer {
-  grid-column: 1 / -1;
+  grid-column: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;

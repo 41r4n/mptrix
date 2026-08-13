@@ -16,7 +16,8 @@
     "confere:quinas": "electron scripts/confere-quinas.cjs",
     "confere:janela": "electron scripts/confere-janela.cjs",
     "confere:motor": "node scripts/confere-motor.mjs",
-    "confere:atualizacao": "electron scripts/confere-atualizacao.cjs 0.3.9 tem-nova && electron scripts/confere-atualizacao.cjs 0.4.0 em-dia"
+    "confere:atualizacao": "electron scripts/confere-atualizacao.cjs 0.3.9 tem-nova && electron scripts/confere-atualizacao.cjs 0.4.0 em-dia",
+    "confere:rodape": "electron scripts/confere-rodape.cjs"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
