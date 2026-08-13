@@ -226,6 +226,103 @@ li { margin-bottom: 9px; }
 .ms button[aria-pressed="true"] { color: #0b0c0f; box-shadow: none; }
 .ms .m[aria-pressed="true"] { background: var(--amarelo); }
 .ms .s[aria-pressed="true"] { background: var(--lima); }
+/* ██████████ AS ABAS ██████████
+   Elas ficam EMBAIXO, e não em cima como no computador: o polegar alcança o
+   pé da tela, não o topo. Copiar o trilho lateral do PC seria copiar a forma
+   e perder a razão dela. */
+.abas {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
+  display: flex; background: var(--painel);
+  border-top: 1px solid var(--linha);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.abas button {
+  flex: 1 1 0; min-width: 0; padding: 9px 4px 10px;
+  background: none; border: none; color: var(--mudo2);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer;
+}
+.abas button.on { color: var(--lima); }
+.abas button.on svg { filter: drop-shadow(0 0 8px rgba(182,255,59,0.5)); }
+.abas .n { font-size: 7px; opacity: 0.55; }
+body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+
+/* ██████████ A RODA ██████████
+   A ampulheta fica parada até haver um link. Com link, ela bate — e batendo
+   ela está DIZENDO que tem coisa pra fazer, não enfeitando. Tocar nela abre os
+   caminhos.
+   Os quatro atos são os mesmos do computador porque são as mesmas quatro
+   coisas que existem pra fazer com um link. */
+.palco-roda { padding: 18px 14px 10px; text-align: center; }
+.ampulheta {
+  width: 92px; height: 104px; margin: 6px auto 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(182,255,59,0.08); color: var(--lima);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 30px rgba(182,255,59,0.12);
+  border: none; cursor: pointer;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.ampulheta.pronta {
+  background: rgba(182,255,59,0.18);
+  animation: bate 1.6s ease-in-out infinite;
+}
+@keyframes bate {
+  0%, 70%, 100% { box-shadow: 0 0 24px rgba(182,255,59,0.25); }
+  85% { box-shadow: 0 0 46px rgba(182,255,59,0.7); }
+}
+.ampulheta.parada { color: var(--mudo2); background: rgba(255,255,255,0.04); }
+.roda-dica { font-size: 13px; color: var(--mudo); line-height: 1.6; margin: 0 0 14px; }
+.roda-dica b { color: var(--txt2); }
+
+.campo-link {
+  display: flex; align-items: center; gap: 9px; margin: 0 0 12px;
+  padding: 0 12px; height: 46px;
+  background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha2);
+  clip-path: var(--corte-sm);
+}
+.campo-link input {
+  flex: 1 1 auto; min-width: 0; height: 100%;
+  background: none; border: none; outline: none; color: var(--txt); font-size: 14px;
+}
+.campo-link input::placeholder { color: var(--mudo2); }
+.campo-link button {
+  flex: none; height: 32px; padding: 0 11px; background: none; border: none;
+  box-shadow: inset 0 0 0 1px var(--linha2); color: var(--mudo);
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* OS ATOS. Cada um é uma coisa diferente de fazer com o mesmo link — não são
+   variações do mesmo botão. */
+.atos { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.ato {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  padding: 14px 13px; text-align: left;
+  background: var(--card); border: none; color: var(--txt);
+  box-shadow: inset 0 0 0 1px var(--linha); clip-path: var(--corte);
+  cursor: pointer;
+}
+.ato:disabled { opacity: 0.35; }
+.ato svg { color: var(--lima); }
+.ato b { font-size: 13.5px; font-weight: 600; }
+.ato span { font-size: 11.5px; line-height: 1.45; color: var(--mudo2); }
+
+/* AS TAREFAS. O trabalho é do computador: o celular pode travar, bloquear a
+   tela ou sair do Wi-Fi que o download continua. Por isso a lista vem de lá. */
+.tarefa {
+  margin-top: 9px; padding: 11px 12px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--linha);
+  clip-path: var(--corte-sm); text-align: left;
+}
+.tarefa b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; word-break: break-all; }
+.tarefa .estado { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mudo2); }
+.tarefa.pronto .estado { color: var(--lima); }
+.tarefa.erro .estado { color: var(--ruim); }
+.tarefa .trilha { height: 4px; margin-top: 8px; background: rgba(255,255,255,0.1); }
+.tarefa .trilha i { display: block; height: 100%; background: var(--lima); transition: width 0.3s linear; }
+
 .diag {
   display: block; margin-top: 18px; padding: 12px;
   background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
@@ -290,6 +387,23 @@ li { margin-bottom: 9px; }
   </span>
 </header>
 <div id="tela"><p class="carregando">carregando…</p></div>
+
+<!-- AS ABAS FICAM EMBAIXO: o polegar alcança o pé da tela, não o topo. Copiar
+     o trilho lateral do computador seria copiar a forma e perder a razão. -->
+<nav class="abas" id="abas">
+  <button data-aba="baixar" aria-label="Baixar">
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    <span class="n">01</span>BAIXAR
+  </button>
+  <button data-aba="acervo" class="on" aria-label="Acervo">
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <span class="n">02</span>ACERVO
+  </button>
+  <button data-aba="ajustes" aria-label="Aparelho">
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+    <span class="n">03</span>APARELHO
+  </button>
+</nav>
 
 <script>
 // A SENHA VIAJA EM TODO PEDIDO, e não num cookie.
@@ -432,6 +546,168 @@ function abrirAcervo() {
   });
   aoGuardador({ tipo: 'quais' });
   pintarLevar();
+}
+
+// ██████████ AS ABAS ██████████
+var aba = 'acervo';
+function abrirAba(nome) {
+  aba = nome;
+  document.querySelectorAll('.abas button').forEach(function (b) {
+    b.className = b.dataset.aba === nome ? 'on' : '';
+  });
+  if (nome === 'acervo') abrirAcervo();
+  if (nome === 'baixar') abrirBaixar();
+  if (nome === 'ajustes') abrirAjustes();
+}
+
+// ██████████ A TELA DE BAIXAR ██████████
+// A ampulheta fica parada até haver um link. Com link, ela bate — e batendo
+// ela DIZ que tem coisa pra fazer, não enfeita. Os quatro atos são os mesmos
+// do computador porque são as mesmas quatro coisas que existem pra fazer com
+// um link.
+//
+// QUEM BAIXA É O COMPUTADOR. O celular manda e depois pergunta como está:
+// assim a tela pode bloquear, o Wi-Fi pode cair um minuto, e o download
+// continua. Se o andamento morasse aqui, tela bloqueada perderia a música.
+var linkAtual = '';
+var tarefas = [];
+var relogioTarefas = null;
+
+var ATOS = [
+  { id: 'music', nome: 'Baixar música', txt: 'MP3 na melhor qualidade, com capa',
+    icone: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
+  { id: 'video', nome: 'Baixar vídeo', txt: 'O vídeo inteiro, com imagem',
+    icone: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M17 3v18M3 12h18"/>' },
+  { id: 'fast', nome: 'Rápido', txt: 'MP3 direto, sem reconverter',
+    icone: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>' },
+  { id: 'audio_wav', nome: 'WAV', txt: 'Sem compressão, pra editar depois',
+    icone: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>' }
+];
+
+var EH_LINK = /^https?:\/\//i;
+
+function abrirBaixar() {
+  voltar.hidden = true;
+  onde.textContent = 'baixar';
+  if (sessao) pararTudo();
+  var temLink = EH_LINK.test(linkAtual.trim());
+
+  var html = '<div class="palco-roda">' +
+    '<button class="ampulheta ' + (temLink ? 'pronta' : 'parada') + '" id="ampulheta" aria-label="Colar link">' +
+      '<svg viewBox="0 0 24 24" width="44" height="44"><path fill="currentColor" d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z"/></svg>' +
+    '</button>' +
+    '<p class="roda-dica">' + (temLink
+      ? '<b>Achei um endereço.</b> Escolha o que fazer com ele.'
+      : 'Copie o endereço de uma música no YouTube e toque na ampulheta.') + '</p>' +
+    '<div class="campo-link">' +
+      '<input id="campoLink" type="url" inputmode="url" placeholder="cole aqui o endereço" value="' + esc(linkAtual) + '">' +
+      '<button id="colarLink">colar</button>' +
+    '</div>' +
+    '<div class="atos">';
+
+  for (var i = 0; i < ATOS.length; i++) {
+    var a = ATOS[i];
+    html += '<button class="ato" data-ato="' + a.id + '"' + (temLink ? '' : ' disabled') + '>' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + a.icone + '</svg>' +
+      '<b>' + a.nome + '</b><span>' + a.txt + '</span></button>';
+  }
+  html += '</div>';
+
+  // Sem esta frase a pessoa acha que o celular está baixando e desliga o
+  // computador no meio.
+  html += '<p class="roda-dica" style="margin-top:16px;font-size:11.5px">' +
+    'Quem baixa é o computador. Você pode fechar isto — quando voltar, a música está no acervo.</p>';
+  html += '<div id="listaTarefas"></div></div>';
+  tela.innerHTML = html;
+
+  document.getElementById('campoLink').oninput = function () {
+    linkAtual = this.value;
+    pintarRoda();
+  };
+  document.getElementById('colarLink').onclick = colarDoAparelho;
+  document.getElementById('ampulheta').onclick = colarDoAparelho;
+  tela.querySelectorAll('.ato').forEach(function (b) {
+    b.onclick = function () { pedirDownload(b.dataset.ato); };
+  });
+
+  pintarTarefas();
+  if (!relogioTarefas) relogioTarefas = setInterval(puxarTarefas, 1500);
+  puxarTarefas();
+}
+
+// O navegador só entrega a área de transferência com permissão, e alguns nem
+// com permissão. Quando não dá, o campo recebe o foco — que é o caminho que
+// sempre funciona.
+function colarDoAparelho() {
+  var campo = document.getElementById('campoLink');
+  if (!navigator.clipboard || !navigator.clipboard.readText) { campo.focus(); return; }
+  navigator.clipboard.readText().then(function (t) {
+    if (t && t.trim()) { linkAtual = t.trim(); abrirBaixar(); } else { campo.focus(); }
+  }).catch(function () { campo.focus(); });
+}
+
+// TROCA SÓ O QUE MUDA: redesenhar a tela a cada letra digitada tira o foco do
+// campo e o teclado do celular fecha sozinho.
+function pintarRoda() {
+  var temLink = EH_LINK.test(linkAtual.trim());
+  var amp = document.getElementById('ampulheta');
+  if (amp) amp.className = 'ampulheta ' + (temLink ? 'pronta' : 'parada');
+  tela.querySelectorAll('.ato').forEach(function (b) { b.disabled = !temLink; });
+}
+
+function pedirDownload(preset) {
+  var url = linkAtual.trim();
+  if (!EH_LINK.test(url)) return;
+  fetch(comSenha('/api/baixar'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: url, preset: preset })
+  }).then(function () {
+    linkAtual = '';
+    abrirBaixar();
+  }).catch(function () {});
+}
+
+function puxarTarefas() {
+  if (aba !== 'baixar') {
+    clearInterval(relogioTarefas);
+    relogioTarefas = null;
+    return;
+  }
+  fetch(comSenha('/api/tarefas')).then(function (r) { return r.json(); }).then(function (t) {
+    var mudou = JSON.stringify(t) !== JSON.stringify(tarefas);
+    tarefas = t;
+    if (mudou) pintarTarefas();
+    var terminou = false;
+    for (var i = 0; i < t.length; i++) if (t[i].estado === 'pronto') terminou = true;
+    if (terminou) recarregarAcervo();
+  }).catch(function () {});
+}
+
+function pintarTarefas() {
+  var alvo = document.getElementById('listaTarefas');
+  if (!alvo) return;
+  if (!tarefas.length) { alvo.innerHTML = ''; return; }
+  var h = '';
+  for (var i = 0; i < tarefas.length; i++) {
+    var t = tarefas[i];
+    h += '<div class="tarefa ' + t.estado + '"><b>' + esc(t.titulo || t.url) + '</b>' +
+      '<span class="estado">' + (t.estado === 'erro' ? 'não deu: ' + esc(t.erro || '') : t.estado) +
+      (t.estado === 'baixando' ? ' · ' + t.porcento + '%' : '') + '</span>' +
+      (t.estado === 'baixando' ? '<span class="trilha"><i style="width:' + t.porcento + '%"></i></span>' : '') +
+      '</div>';
+  }
+  alvo.innerHTML = h;
+}
+
+var recarregando = false;
+function recarregarAcervo() {
+  if (recarregando) return;
+  recarregando = true;
+  fetch(comSenha('/api/acervo')).then(function (r) { return r.json(); }).then(function (l) {
+    acervo = l;
+    recarregando = false;
+  }).catch(function () { recarregando = false; });
 }
 
 // ── AS TRÊS QUE EU APAGUEI SEM QUERER ──
@@ -638,6 +914,7 @@ function pararTudo() {
 // ocupa, e se o computador está por perto. Nada de "configuração" — não há o
 // que configurar; há o que CONFERIR antes de sair de casa.
 function abrirAjustes() {
+  voltar.hidden = true; onde.textContent = 'aparelho';
   var levadas = acervo.filter(function (m) { return guardadas[m.chave]; });
   var bytes = 0;
   levadas.forEach(function (m) { m.faixas.forEach(function (f) { bytes += (f.bytes || 0) / 6; }); });
@@ -666,9 +943,12 @@ function abrirAjustes() {
     f.remove();
   };
 }
-document.getElementById('btAjustes').onclick = abrirAjustes;
+document.querySelectorAll('.abas button').forEach(function (b) {
+  b.onclick = function () { abrirAba(b.dataset.aba); };
+});
+document.getElementById('btAjustes').onclick = function () { abrirAba('ajustes'); };
 
-voltar.onclick = abrirAcervo;
+voltar.onclick = function () { abrirAba(aba === 'estudio' ? 'acervo' : aba); };
 
 // A TELA PASSA A CONTAR O QUE ACONTECEU. "Não consegui falar" é a única
 // informação que não ajuda ninguém: ela some com a diferença entre "a rede não

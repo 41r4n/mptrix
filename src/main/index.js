@@ -945,7 +945,53 @@ app.whenReady().then(() => {
     // a porta é METADE do endereço: mudar ela é mudar o endereço, e o que o
     // celular levou pro ensaio fica guardado POR endereço
     portaSalva: lerAjuste('celular.porta', 8788),
-    guardarPorta: (n) => guardarAjuste('celular.porta', n)
+    guardarPorta: (n) => guardarAjuste('celular.porta', n),
+    // BAIXAR PELO CELULAR. Quem trabalha é este computador — o mesmo caminho
+    // que a tela daqui usa, com o mesmo yt-dlp, a mesma pasta de destino e o
+    // mesmo registro no acervo. Um segundo caminho paralelo seria um segundo
+    // lugar pra dar defeito, e a música baixada pelo celular não apareceria
+    // aqui.
+    baixar: ({ url, presetId, onProgress, onStatus }) => {
+      if (!existsSync(YT_DLP_PATH) || !existsSync(FFMPEG_PATH)) {
+        onStatus({ state: 'error', message: 'faltam os programas de download no computador' })
+        return
+      }
+      const dir = resolveDownloadDir()
+      try { mkdirSync(dir, { recursive: true }) } catch {}
+      startDownload({
+        ytDlpPath: YT_DLP_PATH,
+        ffmpegPath: FFMPEG_PATH,
+        url,
+        presetId,
+        outputDir: dir,
+        onProgress,
+        onStatus: (st) => {
+          onStatus(st)
+          // o acervo do computador tem que enxergar o que o celular mandou
+          // baixar, senão a música existe no disco e some do app
+          if (st.state === 'done') {
+            const arquivos = st.files && st.files.length ? st.files : []
+            const principal = st.primaryFile || arquivos[0] || null
+            if (principal && existsSync(principal)) {
+              const nome = basename(principal)
+              addHistoryEntry({
+                url,
+                presetId,
+                presetName: (PRESETS[presetId] && PRESETS[presetId].name) || presetId,
+                outputDir: dir,
+                ext: extname(principal).replace(/^\./, '').toLowerCase(),
+                fileSize: (() => { try { return statSync(principal).size } catch { return 0 } })(),
+                files: arquivos.length ? arquivos : [principal],
+                primaryFile: principal,
+                title: nome,
+                displayName: simplifyName(nome) || nome
+              })
+              send('history:changed')
+            }
+          }
+        }
+      })
+    }
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
   // O QUE O CELULAR PEDIU E O QUE EU RESPONDI. Sem isto, quando não funciona a

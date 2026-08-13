@@ -76,7 +76,11 @@ for (const [marca, oque] of [
   ['comSenha(', 'a senha viajando nos pedidos'],
   ['serviceWorker.register', 'o guardador do modo ensaio'],
   ['levar pro ensaio', 'o botao de levar'],
-  ['class="capa"', 'a capa da musica']
+  ['class="capa"', 'a capa da musica'],
+  ['class="abas"', 'as abas embaixo'],
+  ['class="ampulheta', 'a ampulheta da roda'],
+  ['/api/baixar', 'mandar o computador baixar'],
+  ['/api/tarefas', 'acompanhar o download']
 ]) {
   const tem = html.includes(marca)
   if (!tem) ok = false

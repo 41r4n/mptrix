@@ -31,7 +31,36 @@ let ffmpeg = null
 // tapa a variável e a atribuição vira "guardarPorta = guardarPorta", que não
 // guarda nada e não reclama
 let salvarPorta = null
+let mandarBaixar = null
 const ultimosPedidos = []
+
+// ██████████ AS TAREFAS ██████████
+// O celular manda baixar e vai embora — quem trabalha é o computador, e o
+// trabalho continua mesmo se o telefone travar, bloquear a tela ou perder o
+// Wi-Fi por um minuto. Por isso o andamento mora AQUI, e o celular só pergunta
+// "como está?". Se ele guardasse o próprio andamento, uma tela bloqueada
+// perderia o download.
+const tarefas = new Map()
+
+function novaTarefa(url, preset) {
+  const id = randomBytes(4).toString('hex')
+  tarefas.set(id, { id, url, preset, estado: 'começando', porcento: 0, titulo: null, erro: null, quando: Date.now() })
+  return id
+}
+
+function mexerTarefa(id, mudanca) {
+  const t = tarefas.get(id)
+  if (t) tarefas.set(id, { ...t, ...mudanca })
+}
+
+// as terminadas somem depois de um tempo: a lista é do que está ACONTECENDO,
+// e uma lista que só cresce deixa de ser lida
+function limparTarefasVelhas() {
+  const agora = Date.now()
+  for (const [id, t] of tarefas) {
+    if ((t.estado === 'pronto' || t.estado === 'erro') && agora - (t.terminou || t.quando) > 90000) tarefas.delete(id)
+  }
+}
 
 // ██████████ POR QUE O CELULAR RECEBE OUTRO ARQUIVO ██████████
 //
@@ -386,7 +415,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -396,6 +425,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   if (!senhaSalva && guardarSenha) guardarSenha(senha)
   ffmpeg = ffmpegPath
   salvarPorta = guardarPorta
+  mandarBaixar = baixar
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -449,6 +479,44 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       if (!existsSync(arq)) { res.writeHead(404); res.end(); return }
       res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=604800' })
       createReadStream(arq).pipe(res)
+      return
+    }
+
+    // ── MANDAR BAIXAR ──
+    // O celular não baixa: ele PEDE. O programa que fala com o YouTube é de
+    // computador, e o computador está ligado na mesma casa.
+    if (caminho === '/api/baixar' && req.method === 'POST') {
+      let corpo = ''
+      req.on('data', (c) => { corpo += c; if (corpo.length > 4000) req.destroy() })
+      req.on('end', () => {
+        let d = {}
+        try { d = JSON.parse(corpo || '{}') } catch {}
+        if (!d.url || !mandarBaixar) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ erro: 'faltou o endereço da música' }))
+          return
+        }
+        const id = novaTarefa(d.url, d.preset || 'music')
+        mandarBaixar({
+          url: d.url,
+          presetId: d.preset || 'music',
+          onProgress: (p) => mexerTarefa(id, { estado: 'baixando', porcento: Math.round(p.percent || 0), titulo: p.title || null }),
+          onStatus: (st) => {
+            if (st.state === 'done') mexerTarefa(id, { estado: 'pronto', porcento: 100, terminou: Date.now(), titulo: st.title || null })
+            else if (st.state === 'error') mexerTarefa(id, { estado: 'erro', erro: st.message || 'não deu', terminou: Date.now() })
+            else mexerTarefa(id, { estado: st.state === 'converting' ? 'convertendo' : 'baixando' })
+          }
+        })
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ id }))
+      })
+      return
+    }
+
+    if (caminho === '/api/tarefas') {
+      limparTarefasVelhas()
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify([...tarefas.values()].sort((a, b) => b.quando - a.quando)))
       return
     }
 
