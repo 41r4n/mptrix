@@ -441,10 +441,26 @@ function comSenha(u) {
 // enfeite: é como se acha a guitarra sem ler o nome.
 var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
 var NOMES = ${JSON.stringify(nomes)};
+// ██████████ O MODO ENSAIO SÓ EXISTE COM CADEADO ██████████
+//
+// Service worker — o que faz tocar sem o computador — é proibido em endereço
+// sem https. O nosso é http://192.168.x.x, endereço de casa, que não tem
+// cadeado e não tem como ter. Então em muitos celulares o modo ensaio
+// simplesmente NÃO EXISTE.
+//
+// E ele falhava CALADO: a pessoa apertava "levar pro ensaio", parecia guardar,
+// e não guardava nada. Ela só descobriria na igreja, sem o computador por
+// perto pra consertar. Silêncio nesse ponto é o pior defeito possível.
+//
+// Onde não dá, o caminho é outro e honesto: BAIXAR o arquivo pra pasta do
+// celular. Perde o mixer (o tocador do telefone não sabe misturar faixas), mas
+// a música fica no aparelho de verdade, e toca em qualquer lugar.
+var GUARDA_DA = !!(window.isSecureContext && ('serviceWorker' in navigator));
+
 // O GUARDADOR precisa estar de pé antes de tudo: é ele que responde quando o
 // computador não está por perto.
 var guardadas = {};
-if ('serviceWorker' in navigator) {
+if (GUARDA_DA) {
   navigator.serviceWorker.register(comSenha('/sw.js')).catch(function () {});
   navigator.serviceWorker.addEventListener('message', function (e) {
     var d = e.data || {};
@@ -544,6 +560,7 @@ function abrirAcervo() {
     b.onclick = function () {
       var m = acervo[+b.dataset.i];
       var urls = m.faixas.map(function (f) { return comSenha('/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo)); });
+      if (!GUARDA_DA) { baixarPraPasta(m); return; }
       if (guardadas[m.chave]) { aoGuardador({ tipo: 'largar', chave: m.chave, urls: urls }); return; }
       b.className = 'levar indo';
       b.textContent = 'levando… 0 de ' + urls.length;
@@ -729,6 +746,9 @@ function recarregarAcervo() {
 function pintarLevar() {
   var qualquer = false;
   document.querySelectorAll('.levar').forEach(function (b) {
+    // sem cadeado não há modo ensaio: o botão passa a dizer o que ele faz de
+    // verdade, que é baixar o arquivo pra pasta do celular
+    if (!GUARDA_DA) { b.className = 'levar'; b.textContent = 'baixar pro celular'; return; }
     var tem = !!guardadas[b.dataset.levar];
     if (tem) qualquer = true;
     if (b.className.indexOf('indo') >= 0) return;
@@ -745,6 +765,31 @@ function pintarLevar() {
       : 'Sem o computador por perto e nenhuma música foi levada. Em casa, aperte "levar pro ensaio".';
     tela.insertBefore(d, tela.firstChild);
   }
+}
+
+// BAIXAR PRA PASTA DO CELULAR. Um clique por arquivo, com um respiro entre
+// eles: o Android bloqueia downloads em rajada achando que é abuso.
+// Na música separada isso baixa as faixas soltas — sem mixer, porque o tocador
+// do telefone não sabe misturar. É dito na cara, não escondido.
+function baixarPraPasta(m) {
+  var b = document.querySelector('.levar[data-levar="' + m.chave + '"]');
+  var i = 0;
+  function proxima() {
+    if (i >= m.faixas.length) {
+      if (b) { b.className = 'levar tem'; b.textContent = 'baixado — veja em Downloads'; }
+      return;
+    }
+    var f = m.faixas[i++];
+    var a = document.createElement('a');
+    a.href = comSenha('/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo));
+    a.download = (m.faixas.length > 1 ? m.titulo + ' - ' + (NOMES[f.id] || f.id) : m.titulo) + '.m4a';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (b) { b.className = 'levar indo'; b.textContent = 'baixando… ' + i + ' de ' + m.faixas.length; }
+    setTimeout(proxima, 900);
+  }
+  proxima();
 }
 
 function marcarLevando(chave, feito, total) {
@@ -934,6 +979,12 @@ function abrirAjustes() {
     '<div class="linha-dado"><span class="rot">músicas levadas</span><b class="lima">' + levadas.length + '</b></div>' +
     '<div class="linha-dado"><span class="rot">espaço, mais ou menos</span><b>' + (mb || '<1') + ' MB</b></div>' +
     '<div class="linha-dado"><span class="rot">computador</span><b>' + (navigator.onLine ? 'por perto' : 'longe') + '</b></div>' +
+    '<div class="linha-dado"><span class="rot">tocar sem o computador</span><b class="' + (GUARDA_DA ? 'lima' : '') + '">' +
+      (GUARDA_DA ? 'dá' : 'não dá') + '</b></div>' +
+    (GUARDA_DA ? '' :
+      '<p>Este navegador não guarda música em endereço sem cadeado (o de casa não tem). ' +
+      'Por isso o botão do acervo <b>baixa o arquivo</b> pra pasta do celular: a música fica no aparelho ' +
+      'e toca em qualquer tocador, sem o computador — só sem o mixer.</p>') +
     (levadas.length ? '<button class="folha-btn perigo" id="tirarTudo">tirar todas do celular</button>' : '') +
     '<button class="folha-fechar" id="fecharFolha">fechar</button>' +
     '</div>';
