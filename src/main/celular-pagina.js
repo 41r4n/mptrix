@@ -1,3 +1,5 @@
+import { STEM_META } from '../shared/instrumentos.js'
+
 // ██████████ A PÁGINA QUE O CELULAR ABRE ██████████
 //
 // Uma página só, sem nada de fora: o app é offline por natureza e a rede de
@@ -15,6 +17,13 @@
 // sendo mexido — mas isso só depois de medir no aparelho de verdade, não por
 // suposição.
 export function paginaCelular() {
+  // OS NOMES VÊM DA LISTA ÚNICA. Eu tinha escrito uma segunda lista aqui, e o
+  // mesmo som aparecia como "Sintetizador" no computador e "Teclado" no
+  // celular — quem viu foi o dono. Agora a página é montada com a mesma tabela
+  // que o estúdio usa: se um nome mudar lá, muda aqui junto.
+  const nomes = {}
+  for (const [id, m] of Object.entries(STEM_META)) nomes[id] = m.label
+
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -158,11 +167,7 @@ export function paginaCelular() {
 // A ESCALA VERDE DAS FAIXAS é a mesma do computador. Cor por faixa não é
 // enfeite: é como se acha a guitarra sem ler o nome.
 var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
-var NOMES = {
-  vocals:'Voz', drums:'Bateria', bass:'Baixo', guitar:'Guitarra', piano:'Piano',
-  other:'Outros', synth:'Teclado', organ:'Órgão', accordion:'Sanfona',
-  strings:'Cordas', brass:'Sopros', flute:'Flauta', sax:'Sax'
-};
+var NOMES = ${JSON.stringify(nomes)};
 var tela = document.getElementById('tela');
 var voltar = document.getElementById('voltar');
 var onde = document.getElementById('onde');

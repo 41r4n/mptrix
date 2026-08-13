@@ -1,51 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { STEM_META } from '../../../shared/instrumentos.js'
 
-const STEM_META = {
-  vocals: { label: 'Voz', icon: '🎤' },
-  drums: { label: 'Bateria', icon: '🥁' },
-  bass: { label: 'Baixo', icon: '🎸' },
-  guitar: { label: 'Guitarra', icon: '🎸' },
-  piano: { label: 'Piano/Teclado', icon: '🎹' },
-  other: { label: 'Outros', icon: '🎼' },
-  trumpet: { label: 'Trompete', icon: '🎺' },
-  saxophone: { label: 'Sax', icon: '🎷' },
-  violin: { label: 'Violino', icon: '🎻' },
-  strings: { label: 'Cordas', icon: '🎻' },
-  organ: { label: 'Órgão', icon: '⛪' },
-  accordion: { label: 'Acordeon', icon: '🪗' },
-  flute: { label: 'Flauta', icon: '🪈' },
-  harmonica: { label: 'Gaita', icon: '🎵' },
-  'acoustic-guitar': { label: 'Violão', icon: '🎸' },
-  'electric-guitar': { label: 'Guitarra elétrica', icon: '🎸' },
-  brass: { label: 'Metais (trompete, trombone…)', icon: '🎺' },
-  banjo: { label: 'Banjo', icon: '🪕' },
-  mandolin: { label: 'Bandolim', icon: '🎸' },
-  woodwind: { label: 'Madeiras (grupo)', icon: '🪈' },
-  percussion: { label: 'Percussão', icon: '🥁' },
-  clarinet: { label: 'Clarinete', icon: '🪈' },
-  oboe: { label: 'Oboé', icon: '🪈' },
-  bassoon: { label: 'Fagote', icon: '🪈' },
-  trombone: { label: 'Trombone', icon: '🎺' },
-  'french-horn': { label: 'Trompa', icon: '📯' },
-  tuba: { label: 'Tuba', icon: '📯' },
-  viola: { label: 'Viola de orquestra', icon: '🎻' },
-  cello: { label: 'Violoncelo', icon: '🎻' },
-  'double-bass': { label: 'Contrabaixo acústico', icon: '🎻' },
-  harp: { label: 'Harpa', icon: '🎼' },
-  ukulele: { label: 'Ukulele', icon: '🪕' },
-  dobro: { label: 'Dobro (slide)', icon: '🎸' },
-  sitar: { label: 'Sitar', icon: '🪕' },
-  synth: { label: 'Sintetizador', icon: '🎹' },
-  harpsichord: { label: 'Cravo', icon: '🎹' },
-  marimba: { label: 'Marimba/Xilofone', icon: '🎶' },
-  glockenspiel: { label: 'Glockenspiel (sinos)', icon: '🔔' },
-  timpani: { label: 'Tímpanos', icon: '🥁' },
-  tambourine: { label: 'Pandeirola', icon: '🪘' },
-  triangle: { label: 'Triângulo', icon: '🔺' },
-  congas: { label: 'Congas', icon: '🪘' },
-  instrumental: { label: 'Resto da música', icon: '🎵' },
-  song: { label: 'Música completa', icon: '🎵' }
-}
 
 // Minutos de processamento por minuto de música (medido nesta máquina)
 // Minutos de trabalho por minuto de música. Estes são do PROCESSADOR: um
