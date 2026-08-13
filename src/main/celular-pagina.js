@@ -235,7 +235,8 @@ function abrirAcervo() {
     var m = acervo[i];
     html += '<li><button class="musica" data-i="' + i + '"><b>' + esc(m.titulo) +
       '<span class="selo" data-selo="' + m.chave + '" hidden>no celular</span></b>' +
-      '<span class="dados">' + m.faixas.length + ' faixas · ' + mmss(m.duracao) +
+      '<span class="dados">' + (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
+      (m.duracao ? ' · ' + mmss(m.duracao) : '') +
       (m.tom ? ' · tom <i>' + m.tom + '</i>' : '') +
       (m.bpm ? ' · <i>' + m.bpm + '</i> bpm' : '') + '</span></button>' +
       '<button class="levar" data-levar="' + m.chave + '" data-i="' + i + '">levar pro ensaio</button></li>';
@@ -351,6 +352,15 @@ function montarAudio(m) {
   // O RELÓGIO SAI DE UMA FAIXA SÓ (a primeira). Ler o tempo de todas e tentar
   // conciliar daria números brigando entre si — uma manda, as outras seguem.
   var mestre = sessao.audios[0];
+  // MÚSICA BAIXADA não tem duração no registro (ninguém a analisou). Quem
+  // sabe é o próprio arquivo, e ele só conta depois de abrir.
+  mestre.addEventListener('loadedmetadata', function () {
+    if (!m.duracao && mestre.duration) {
+      seek.max = Math.floor(mestre.duration);
+      var total = document.querySelector('.tempo small');
+      if (total) total.textContent = '/ ' + mmss(mestre.duration);
+    }
+  });
   mestre.addEventListener('timeupdate', function () {
     agora.textContent = mmss(mestre.currentTime);
     if (!arrastando) seek.value = Math.floor(mestre.currentTime);

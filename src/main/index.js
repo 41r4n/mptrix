@@ -937,7 +937,11 @@ app.whenReady().then(() => {
     // a senha fica guardada: o que o celular levou pro ensaio está preso ao
     // endereço, e endereço novo a cada abertura viraria música inalcançável
     senhaSalva: lerAjuste('celular.senha'),
-    guardarSenha: (s) => guardarAjuste('celular.senha', s)
+    guardarSenha: (s) => guardarAjuste('celular.senha', s),
+    // as músicas apenas baixadas também aparecem no celular: nem sempre o dono
+    // quer separar — às vezes ele quer só a música inteira, com o estúdio
+    // rápido, pra tocar junto no ensaio
+    historico: () => getHistory()
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
 

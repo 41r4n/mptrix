@@ -1,6 +1,6 @@
 import { createServer } from 'http'
 import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync } from 'fs'
-import { join } from 'path'
+import { join, isAbsolute, basename } from 'path'
 import { spawn } from 'child_process'
 import { randomBytes } from 'crypto'
 import { networkInterfaces } from 'os'
@@ -120,6 +120,54 @@ function lerAcervo(stemsDir) {
   return itens.sort((a, b) => a.titulo.localeCompare(b.titulo))
 }
 
+function acervoCompleto(stemsDir, historico) {
+  const separadas = lerAcervo(stemsDir)
+  const nomes = new Set(separadas.map((m) => m.titulo))
+  const inteiras = lerBaixadas(historico, nomes)
+  // separadas primeiro: são as que dão mixer, que é o motivo de existir isto
+  return separadas.concat(inteiras.sort((a, b) => a.titulo.localeCompare(b.titulo)))
+}
+
+// ── AS MÚSICAS BAIXADAS, sem separação ──
+// O celular só mostrava música separada, e o dono nem sempre quer separar:
+// muitas vezes ele quer só a música inteira, com o tom e o andamento à mão,
+// pra tocar junto no ensaio. Sem isto, quem baixasse quatro músicas e não
+// separasse abriria o celular numa lista vazia — e concluiria que o app
+// quebrou, quando na verdade ele nunca ia mostrar nada.
+//
+// Uma faixa só, chamada "Música completa". É o estúdio rápido.
+function lerBaixadas(historico, jaSeparadas) {
+  const itens = []
+  const vistos = new Set()
+  for (const h of historico || []) {
+    const arq = h.primaryFile || (h.files && h.files[0])
+    if (!arq) continue
+    if (!/\.(mp3|m4a|wav|flac|opus|ogg|aac)$/i.test(arq)) continue
+    // primaryFile JÁ É o caminho completo. Colar a pasta na frente dele dava
+    // um caminho inexistente, e o resultado era uma lista vazia no celular —
+    // silenciosa, porque "arquivo não existe" é motivo legítimo pra pular.
+    const caminho = isAbsolute(arq) ? arq : join(h.outputDir || '', arq)
+    if (!existsSync(caminho)) continue
+    // a mesma música baixada duas vezes vira uma linha só
+    const titulo = (h.customName || h.displayName || h.title || arq).replace(/\.[^.]+$/, '')
+    if (vistos.has(caminho)) continue
+    vistos.add(caminho)
+    // se ela JÁ está separada, o lugar dela é entre as separadas — com todas
+    // as faixas. Mostrar as duas seria a mesma música duas vezes na lista.
+    if (jaSeparadas.has(titulo)) continue
+    itens.push({
+      chave: 'inteira:' + h.id,
+      titulo,
+      duracao: 0,
+      tom: null,
+      bpm: null,
+      inteira: true,
+      faixas: [{ id: 'song', arquivo: basename(caminho), bytes: statSync(caminho).size }]
+    })
+  }
+  return itens
+}
+
 // ── entregar áudio com RANGE, que é o que faz o celular conseguir arrastar ──
 // Sem isto, o navegador baixa o arquivo inteiro antes de tocar e a barra de
 // tempo não anda. Com 40 MB por faixa, isso é a diferença entre funcionar e
@@ -160,6 +208,15 @@ function servirAudio(req, res, caminho) {
 // acha que é a música — ele simplesmente converte de novo.
 const emAndamento = new Map()
 
+// a mesma conversão, dita uma vez: origem qualquer, destino qualquer
+function prepararLeveDe(cru, pasta) {
+  if (!ffmpeg || !existsSync(ffmpeg)) return Promise.resolve(cru)
+  if (/\.(m4a|mp3)$/i.test(cru)) return Promise.resolve(cru)
+  if (!existsSync(cru)) return Promise.resolve(cru)
+  const nome = cru.split(/[\/]/).pop().replace(/\.[^.]+$/, '.m4a')
+  return converter(cru, join(pasta, nome))
+}
+
 function prepararLeve(stemsDir, chave, arq) {
   const cru = join(stemsDir, chave, 'base', arq)
   if (!ffmpeg || !existsSync(ffmpeg)) return Promise.resolve(cru)
@@ -171,6 +228,13 @@ function prepararLeve(stemsDir, chave, arq) {
   if (!existsSync(cru)) return Promise.resolve(cru)
   if (emAndamento.has(leve)) return emAndamento.get(leve)
 
+  return converter(cru, leve)
+}
+
+function converter(cru, leve) {
+  if (existsSync(leve)) return Promise.resolve(leve)
+  if (emAndamento.has(leve)) return emAndamento.get(leve)
+  const pasta = leve.replace(/[\/][^\/]+$/, '')
   const trabalho = new Promise((resolve) => {
     try { mkdirSync(pasta, { recursive: true }) } catch {}
     // O .m4a FICA NO FIM do nome temporário: o ffmpeg escolhe o formato pela
@@ -292,7 +356,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -338,15 +402,29 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
 
     if (caminho === '/api/acervo') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
-      res.end(JSON.stringify(lerAcervo(stemsDir)))
+      res.end(JSON.stringify(acervoCompleto(stemsDir, historico ? historico() : [])))
       return
     }
 
     const audio = /^\/audio\/([^/]+)\/([^/]+)$/.exec(caminho)
     if (audio) {
       // sem "..": pedir /audio/../../ seria pedir o disco inteiro
-      const chave = audio[1].replace(/[^\w-]/g, '')
+      const chave = audio[1].replace(/[^\w:-]/g, '')
       const arq = audio[2].replace(/[^\w.\-]/g, '')
+      // música inteira: o arquivo mora na pasta de downloads, não no acervo
+      // separado. O caminho vem do PRÓPRIO registro, nunca do que o celular
+      // mandou — senão bastaria pedir um nome de arquivo pra ler o disco.
+      if (chave.startsWith('inteira')) {
+        const id = caminho.split('/')[2].replace('inteira:', '')
+        const h = (historico ? historico() : []).find((x) => String(x.id) === id)
+        const nome = h && (h.primaryFile || (h.files && h.files[0]))
+        if (!h || !nome) { res.writeHead(404); res.end('nao achei'); return }
+        const cheio = isAbsolute(nome) ? nome : join(h.outputDir || '', nome)
+        prepararLeveDe(cheio, join(stemsDir, '_inteiras', String(h.id)))
+          .then((f) => servirAudio(req, res, f))
+          .catch(() => { res.writeHead(500); res.end('nao consegui preparar o audio') })
+        return
+      }
       prepararLeve(stemsDir, chave, arq)
         .then((caminhoFinal) => servirAudio(req, res, caminhoFinal))
         .catch(() => { res.writeHead(500); res.end('nao consegui preparar o audio') })
