@@ -434,6 +434,47 @@ function abrirAcervo() {
   pintarLevar();
 }
 
+// ── AS TRÊS QUE EU APAGUEI SEM QUERER ──
+// Elas moravam logo abaixo do acervo, e quando reescrevi a tela levei o trecho
+// inteiro. O app parou de funcionar no celular com "pintarLevar is not
+// defined" — e a MINHA mensagem de erro dizia "não consegui falar com o
+// computador", mandando o dono conferir a rede, o Wi-Fi e o roteador. A rede
+// nunca teve nada. Erro engolido e reetiquetado como outro erro faz a pessoa
+// procurar no lugar errado por meia hora.
+
+// Sem o computador por perto, só o que foi levado toca. Dizer isso ANTES de a
+// pessoa apertar play evita a conclusão errada ("quebrou") no meio do ensaio.
+function pintarLevar() {
+  var qualquer = false;
+  document.querySelectorAll('.levar').forEach(function (b) {
+    var tem = !!guardadas[b.dataset.levar];
+    if (tem) qualquer = true;
+    if (b.className.indexOf('indo') >= 0) return;
+    b.className = 'levar' + (tem ? ' tem' : '');
+    b.textContent = tem ? 'está no celular · tirar' : 'levar pro ensaio';
+  });
+  document.querySelectorAll('.tag.aqui').forEach(function (s) { s.hidden = !guardadas[s.dataset.selo]; });
+  var aviso = document.querySelector('.semrede');
+  if (!navigator.onLine && !aviso) {
+    var d = document.createElement('div');
+    d.className = 'semrede';
+    d.textContent = qualquer
+      ? 'Sem o computador por perto: só tocam as músicas marcadas "no celular".'
+      : 'Sem o computador por perto e nenhuma música foi levada. Em casa, aperte "levar pro ensaio".';
+    tela.insertBefore(d, tela.firstChild);
+  }
+}
+
+function marcarLevando(chave, feito, total) {
+  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
+  if (b) { b.className = 'levar indo'; b.textContent = 'levando… ' + feito + ' de ' + total; }
+}
+
+function marcarFalhou(chave) {
+  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
+  if (b) { b.className = 'levar'; b.textContent = 'não deu pra levar — tente de novo'; }
+}
+
 function chip(id, rotulo) {
   return '<button class="chip' + (filtro === id ? ' on' : '') + '" data-chip="' + id + '">' + rotulo + '</button>';
 }
