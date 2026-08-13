@@ -1,3 +1,15 @@
+import Ico from './Icones.jsx'
+
+// ██████████ A AJUDA DAS ATUALIZAÇÕES ██████████
+//
+// Ela estava desatualizada em tudo que importa, e o pior é que estava
+// desatualizada com CONFIANÇA — descrevia cores que não existem ("azul
+// piscando", "banner azul-violeta") e um app que só tinha uma coisa pra
+// atualizar. Ajuda errada é pior que ajuda nenhuma: quem lê procura na tela o
+// que ela descreve, não acha, e conclui que quebrou.
+//
+// Agora ela separa as DUAS coisas que se atualizam, porque confundir as duas é
+// o engano natural: o motor é peça de dentro e o MPTRIX é o app inteiro.
 export default function UpdateHelpModal({ open, onClose }) {
   if (!open) return null
 
@@ -7,25 +19,53 @@ export default function UpdateHelpModal({ open, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-help" onClick={(e) => e.stopPropagation()} onKeyDown={handleKey}>
         <header className="edit-header">
-          <div className="edit-header-icon">📘</div>
+          {/* desenhado, nunca emoji: emoji chega com a paleta dele e muda de
+              forma conforme o Windows */}
+          <div className="edit-header-icon"><Ico nome="tempo" tamanho={20} /></div>
           <div className="edit-header-text">
             <h3>Como funcionam as atualizações</h3>
-            <p className="modal-sub">Entenda por que precisa atualizar e o que cada cor significa.</p>
+            <p className="modal-sub">São duas coisas diferentes, e nenhuma delas mexe em nada sem você mandar.</p>
           </div>
           <button className="btn-close" onClick={onClose} aria-label="Fechar">×</button>
         </header>
 
         <div className="modal-body help-body">
           <section className="help-section">
-            <h4>Por que precisa atualizar?</h4>
+            <h4>São duas coisas, não uma</h4>
+            <ul className="help-status-list">
+              <li>
+                <span className="status-dot status-ok">●</span>
+                <div>
+                  <strong>O MPTRIX</strong>
+                  <p>
+                    O app inteiro: as telas, o estúdio, o acervo. Quando sai versão nova, ela
+                    traz melhorias e correções. Fica na <strong>primeira linha</strong> do rodapé.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className="status-dot status-ok">●</span>
+                <div>
+                  <strong>O motor que baixa</strong>
+                  <p>
+                    Chama <code>yt-dlp</code>. É a peça que conversa com o YouTube. Fica na
+                    <strong> segunda linha</strong>, junto do <code>ffmpeg</code>.
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section className="help-section">
+            <h4>Por que o motor precisa atualizar</h4>
             <p>
-              O MPTRIX usa um programa interno chamado <code>yt-dlp</code> pra baixar do YouTube.
-              O YouTube muda coisas nos servidores deles de vez em quando — quando isso acontece,
-              o yt-dlp precisa de uma versão nova pra continuar funcionando.
+              O YouTube muda coisas nos servidores dele de vez em quando. Quando isso acontece,
+              o motor velho <strong>para de baixar</strong> — e o erro que aparece na tela quase
+              nunca diz que o problema é esse.
             </p>
             <p>
-              A boa notícia: o time do yt-dlp é rapidíssimo. Quase sempre tem versão nova
-              em poucos dias. Por isso o MPTRIX checa a versão automaticamente toda vez que abre.
+              Por isso o MPTRIX olha sozinho toda vez que abre. Se seus downloads pararam de
+              funcionar do nada, atualizar o motor é a primeira coisa a tentar.
             </p>
           </section>
 
@@ -35,84 +75,79 @@ export default function UpdateHelpModal({ open, onClose }) {
               <li>
                 <span className="status-dot status-ok">●</span>
                 <div>
-                  <strong>Verde — está em dia</strong>
-                  <p>Tudo certo, não precisa fazer nada. Você tem a versão mais nova disponível.</p>
+                  <strong>Verde parado — está em dia</strong>
+                  <p>Não tem nada pra fazer. A cor é parada de propósito: ela não pede nada de você.</p>
                 </div>
               </li>
               <li>
                 <span className="status-dot status-update">●</span>
                 <div>
-                  <strong>Azul (piscando) — atualização disponível</strong>
+                  <strong>Verde-limão piscando — tem versão nova</strong>
                   <p>
-                    Tem uma versão mais nova publicada no GitHub. Você não é <em>obrigado</em> a atualizar
-                    na hora, mas se algum download parar de funcionar (vídeo que não baixa, erro
-                    estranho), atualizar quase sempre resolve.
+                    É o único estado que se mexe, porque é o único que pede alguma coisa.
+                    Você <em>não</em> é obrigado a atualizar na hora.
                   </p>
                 </div>
               </li>
               <li>
                 <span className="status-dot status-error">●</span>
                 <div>
-                  <strong>Vermelho — não consegui verificar</strong>
+                  <strong>Vermelho — não deu pra verificar</strong>
                   <p>
-                    Algum problema pra falar com o GitHub — pode ser sem internet, ou o GitHub
-                    fora do ar. Cheque sua conexão e clica em <em>"verificar atualizações"</em> de novo.
+                    Quase sempre é internet fora. O MPTRIX continua funcionando offline do mesmo
+                    jeito — só não consegue saber se saiu versão nova.
                   </p>
                 </div>
               </li>
               <li>
                 <span className="status-dot status-unknown">●</span>
                 <div>
-                  <strong>Cinza — ainda checando</strong>
-                  <p>O app está consultando agora mesmo. Espera alguns segundos.</p>
+                  <strong>Cinza — verificando agora</strong>
+                  <p>Está consultando. Leva alguns segundos.</p>
                 </div>
               </li>
             </ul>
           </section>
 
           <section className="help-section">
-            <h4>Como atualizar (passo a passo)</h4>
-            <ol className="help-steps">
-              <li>
-                Quando o app abre, se tiver atualização, aparece um <strong>banner azul-violeta no topo</strong>
-                dizendo "Nova versão do yt-dlp disponível".
-              </li>
-              <li>
-                Clica em <strong>"Atualizar agora"</strong>. Aparece uma janela de progresso.
-              </li>
-              <li>
-                Espera uns segundos (depende da sua internet). Não fecha o app no meio.
-              </li>
-              <li>
-                Quando termina, aparece <strong>"Atualizado!"</strong> e pronto — seu próximo download
-                já usa a versão nova.
-              </li>
+            <h4>Nada acontece sozinho</h4>
+            <p>
+              O app só <strong>olha</strong> sozinho. Baixar e instalar são sempre um clique seu —
+              nenhuma versão se troca no meio de uma separação ou de um ensaio.
+            </p>
+            <ol className="help-passos">
+              <li>Abra o app e desça até o rodapé.</li>
+              <li>Se tiver versão nova, aparece o botão <strong>“baixar agora”</strong>.</li>
+              <li>Espere a barra encher. Não feche o app no meio.</li>
+              <li>Aperte <strong>“instalar e reabrir”</strong>: ele fecha e volta já na versão nova.</li>
             </ol>
-            <p className="muted small">
-              Se você quiser checar manualmente quando der vontade, é só clicar em
-              "<strong>verificar atualizações</strong>" no rodapé do app.
+            <p>
+              Quando quiser conferir na hora, o botão <strong>“verificar de novo”</strong> está
+              sempre ali, para o app e para o motor.
             </p>
           </section>
 
           <section className="help-section">
             <h4>E o ffmpeg?</h4>
             <p>
-              O <code>ffmpeg</code> é outro programa interno (ele junta vídeo + áudio nos downloads de vídeo).
-              Ele muda <em>muito</em> menos que o yt-dlp e raramente precisa de atualização.
-              Por enquanto, atualização dele é manual — quando precisar, é só me avisar.
+              O <code>ffmpeg</code> é o outro programa interno — ele converte e junta o áudio.
+              Ele muda <em>muito</em> menos que o motor de baixar, e a atualização dele ainda é
+              manual. Se um dia for preciso, o instalador novo já traz a versão nova dentro.
             </p>
           </section>
 
           <section className="help-section help-tip">
-            <strong>💡 Resumo rápido:</strong>{' '}
-            Se algo parar de funcionar do nada, primeira coisa a fazer é
-            clicar em "verificar atualizações" e depois "Atualizar agora" se aparecer o banner.
-            90% dos problemas se resolvem assim.
+            <Ico nome="aviso" tamanho={15} />
+            <span>
+              <strong>Resumo:</strong> se alguma coisa parar de funcionar do nada, desça até o
+              rodapé e aperte <strong>“verificar de novo”</strong>. A maioria dos problemas de
+              download é motor desatualizado.
+            </span>
           </section>
         </div>
 
         <div className="period-footer">
-          <span className="muted small">📍 Você pode reabrir essa ajuda a qualquer momento pelo botão "?" no rodapé.</span>
+          <span className="muted small">Você pode reabrir esta ajuda pelo botão “?” no rodapé.</span>
           <button className="btn-primary" onClick={onClose}>Entendi</button>
         </div>
       </div>

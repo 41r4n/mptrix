@@ -11698,3 +11698,12 @@ ul.hlib-grid {
   color: var(--muted);
   max-width: 78ch;
 }
+
+/* passos numerados da ajuda */
+.help-passos { margin: 10px 0 12px; padding-left: 20px; color: var(--text-2); }
+.help-passos li { margin-bottom: 6px; font-size: 13px; line-height: 1.55; }
+.help-passos strong { color: var(--text); }
+/* o resumo deixou de ser um emoji e um parágrafo: sinal desenhado + texto */
+.help-tip { display: flex; align-items: flex-start; gap: 10px; }
+.help-tip svg { flex: none; margin-top: 2px; color: var(--warn); }
+.help-status-list li > div p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
