@@ -951,6 +951,10 @@ app.whenReady().then(() => {
     // mesmo registro no acervo. Um segundo caminho paralelo seria um segundo
     // lugar pra dar defeito, e a música baixada pelo celular não apareceria
     // aqui.
+    // o ícone do app, pro celular usar quando virar atalho na tela inicial
+    icone: app.isPackaged
+      ? join(process.resourcesPath, 'icon.png')
+      : join(__dirname, '..', '..', 'build', 'icon.png'),
     baixar: ({ url, presetId, onProgress, onStatus }) => {
       if (!existsSync(YT_DLP_PATH) || !existsSync(FFMPEG_PATH)) {
         onStatus({ state: 'error', message: 'faltam os programas de download no computador' })

@@ -32,6 +32,7 @@ let ffmpeg = null
 // guarda nada e não reclama
 let salvarPorta = null
 let mandarBaixar = null
+let iconePng = null
 const ultimosPedidos = []
 
 // ██████████ AS TAREFAS ██████████
@@ -424,7 +425,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -435,6 +436,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   ffmpeg = ffmpegPath
   salvarPorta = guardarPorta
   mandarBaixar = baixar
+  iconePng = icone
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -479,6 +481,42 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
         'Cache-Control': 'no-store'
       })
       res.end(paginaHtml())
+      return
+    }
+
+    // ██████████ VIRAR APP NA TELA DO CELULAR ██████████
+    // Sem loja: o Android deixa qualquer página virar ícone na tela inicial,
+    // desde que ela diga como quer ser. É o que este arquivo faz — nome,
+    // ícone, cor e "abre em tela cheia, sem barra de navegador".
+    // Isso não resolve baixar sem o computador (navegador é proibido de falar
+    // com o YouTube), mas resolve o resto: ele deixa de parecer um site aberto
+    // e passa a ser um app com ícone, que abre sozinho e funciona offline no
+    // que foi levado.
+    if (caminho === '/app.webmanifest') {
+      res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' })
+      res.end(JSON.stringify({
+        name: 'MPTRIX',
+        short_name: 'MPTRIX',
+        description: 'Seu estúdio de ensaio',
+        // com a senha dentro do start_url, abrir pelo ícone já entra logado
+        start_url: `/?s=${senha}`,
+        scope: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#0b0c0f',
+        theme_color: '#0b0c0f',
+        icons: [
+          { src: '/icone.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icone.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      }))
+      return
+    }
+
+    if (caminho === '/icone.png') {
+      if (!iconePng || !existsSync(iconePng)) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=604800' })
+      createReadStream(iconePng).pipe(res)
       return
     }
 

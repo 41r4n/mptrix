@@ -31,6 +31,12 @@ export function paginaCelular() {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0c0f">
 <title>MPTRIX</title>
+<!-- vira app na tela inicial, sem loja: o Android só precisa que a página diga
+     como quer ser chamada, com que ícone e que abre em tela cheia -->
+<link rel="manifest" href="/app.webmanifest">
+<link rel="icon" href="/icone.png">
+<link rel="apple-touch-icon" href="/icone.png">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
 :root {
   --bg: #0b0c0f; --painel: #101216; --card: #15171c; --cava: #08090c; --cava2: #050609;
