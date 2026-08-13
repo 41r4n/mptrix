@@ -698,3 +698,18 @@ export function clearHistory() {
   store.set('history', [])
   return []
 }
+
+
+// ── AJUSTES SOLTOS ──
+// A senha do celular precisa sobreviver entre aberturas: o que o aparelho
+// levou pro ensaio está preso ao endereço, e endereço novo a cada vez viraria
+// música inalcançável na hora em que não dá pra consertar.
+export function lerAjuste(chave, padrao = null) {
+  const v = store.get(chave)
+  return v === undefined ? padrao : v
+}
+
+export function guardarAjuste(chave, valor) {
+  store.set(chave, valor)
+  return valor
+}

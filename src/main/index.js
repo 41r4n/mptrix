@@ -127,6 +127,9 @@ import {
   getUpdateCache,
   setUpdateCache,
   setUiZoom
+,
+  lerAjuste,
+  guardarAjuste
 } from './store.js'
 
 const UPDATE_CHECK_TTL_MS = 4 * 60 * 60 * 1000
@@ -930,7 +933,11 @@ app.whenReady().then(() => {
   ipcMain.handle('celular:ligar', () => ligarCelular({
     stemsDir: join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX', 'stems'),
     paginaHtml: paginaCelular,
-    ffmpegPath: FFMPEG_PATH
+    ffmpegPath: FFMPEG_PATH,
+    // a senha fica guardada: o que o celular levou pro ensaio está preso ao
+    // endereço, e endereço novo a cada abertura viraria música inalcançável
+    senhaSalva: lerAjuste('celular.senha'),
+    guardarSenha: (s) => guardarAjuste('celular.senha', s)
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
 

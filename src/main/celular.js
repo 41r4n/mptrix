@@ -197,9 +197,109 @@ function prepararLeve(stemsDir, chave, arq) {
   return trabalho
 }
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath }) {
+// ██████████ O GUARDADOR ██████████
+//
+// Sem ele, o celular só toca com o computador ligado na mesma casa — e o
+// ensaio é justamente onde o computador não está.
+//
+// "ignoreSearch" é o detalhe que faz funcionar: os endereços carregam a senha
+// no fim (?s=...), e comparar o endereço inteiro faria o que foi guardado
+// nunca ser encontrado de novo.
+const GUARDADOR = `
+const CAIXA = 'mptrix-v1';
+
+self.addEventListener('install', function (e) { self.skipWaiting(); });
+self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+
+self.addEventListener('fetch', function (e) {
+  var u = new URL(e.request.url);
+  if (u.origin !== self.location.origin) return;
+
+  // A PÁGINA e a LISTA: tenta a rede, cai no guardado. Assim em casa ela vem
+  // sempre fresca (música nova aparece), e fora de casa ela ainda abre.
+  if (u.pathname === '/' || u.pathname === '/index.html' || u.pathname === '/api/acervo') {
+    e.respondWith(
+      fetch(e.request).then(function (r) {
+        var copia = r.clone();
+        caches.open(CAIXA).then(function (c) { c.put(u.pathname, copia); });
+        return r;
+      }).catch(function () {
+        return caches.match(u.pathname).then(function (r) {
+          return r || new Response('sem conexao', { status: 503 });
+        });
+      })
+    );
+    return;
+  }
+
+  // O SOM: guardado primeiro. Se está no celular, não vai na rede nem quando
+  // o computador está ligado — é mais rápido e não gasta Wi-Fi à toa.
+  if (u.pathname.indexOf('/audio/') === 0) {
+    e.respondWith(
+      caches.match(e.request, { ignoreSearch: true }).then(function (r) {
+        return r || fetch(e.request);
+      })
+    );
+  }
+});
+
+// LEVAR: a página manda a lista de faixas e o guardador baixa uma a uma,
+// avisando o progresso. Uma a uma de propósito: dez pedidos juntos numa rede
+// de casa fazem o roteador engasgar e o progresso mentir.
+self.addEventListener('message', function (e) {
+  var d = e.data || {};
+  if (d.tipo === 'levar') {
+    e.waitUntil(levar(d.chave, d.urls, e.source));
+  }
+  if (d.tipo === 'largar') {
+    e.waitUntil(caches.open(CAIXA).then(function (c) {
+      return Promise.all(d.urls.map(function (u) { return c.delete(u, { ignoreSearch: true }); }));
+    }).then(function () { e.source && e.source.postMessage({ tipo: 'largou', chave: d.chave }); }));
+  }
+  if (d.tipo === 'quais') {
+    caches.open(CAIXA).then(function (c) { return c.keys(); }).then(function (ks) {
+      var chaves = {};
+      ks.forEach(function (k) {
+        var m = /\/audio\/([^/]+)\//.exec(new URL(k.url).pathname);
+        if (m) chaves[m[1]] = true;
+      });
+      e.source && e.source.postMessage({ tipo: 'guardadas', chaves: Object.keys(chaves) });
+    });
+  }
+});
+
+function levar(chave, urls, quem) {
+  return caches.open(CAIXA).then(function (c) {
+    var i = 0;
+    function proxima() {
+      if (i >= urls.length) {
+        quem && quem.postMessage({ tipo: 'levou', chave: chave });
+        return Promise.resolve();
+      }
+      var u = urls[i++];
+      return fetch(u).then(function (r) {
+        if (!r.ok) throw new Error('falhou');
+        return c.put(u, r);
+      }).then(function () {
+        quem && quem.postMessage({ tipo: 'levando', chave: chave, feito: i, total: urls.length });
+        return proxima();
+      }).catch(function () {
+        quem && quem.postMessage({ tipo: 'falhou', chave: chave });
+      });
+    }
+    return proxima();
+  });
+}
+`
+
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha }) {
   if (servidor) return infoCelular()
-  senha = novaSenha()
+  // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
+  // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
+  // abertura transformaria a música guardada em lixo inalcançável na hora do
+  // ensaio, que é exatamente a hora em que não dá pra consertar.
+  senha = senhaSalva || novaSenha()
+  if (!senhaSalva && guardarSenha) guardarSenha(senha)
   ffmpeg = ffmpegPath
 
   servidor = createServer((req, res) => {
@@ -224,6 +324,15 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath }) {
         'Cache-Control': 'no-store'
       })
       res.end(paginaHtml())
+      return
+    }
+
+    // O GUARDADOR (service worker). É ele que faz o celular tocar sem o
+    // computador: intercepta os pedidos e responde do que já guardou. Precisa
+    // ser servido da raiz, senão o navegador não deixa ele mandar na página.
+    if (caminho === '/sw.js') {
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(GUARDADOR)
       return
     }
 

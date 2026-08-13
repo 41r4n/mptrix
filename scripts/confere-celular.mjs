@@ -17,7 +17,7 @@ const { ligarCelular, desligarCelular } = await import(pathToFileURL(copia).href
 
 const stemsDir = join(process.env.LOCALAPPDATA || '', 'MPTRIX', 'stems')
 const ffmpegPath = join(aqui, '..', 'resources', 'bin', 'ffmpeg.exe')
-const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina', ffmpegPath })
+const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina', ffmpegPath, senhaSalva: 'testefixo', guardarSenha: () => {} })
 
 const casos = []
 const caso = (nome, ok, extra) => { casos.push([nome, ok, extra]) }
@@ -96,6 +96,17 @@ if (m) {
   caso('na segunda vez ja esta pronta (nao converte de novo)',
     Date.now() - t0 < 2000, (Date.now() - t0) + ' ms')
 }
+
+// O GUARDADOR — e ele que faz o celular tocar na igreja, sem o computador
+const sw = await fetch(base + '/sw.js?s=' + senha)
+const swTxt = sw.ok ? await sw.text() : ''
+caso('o guardador e servido da raiz', sw.ok && sw.headers.get('content-type').includes('javascript'), 'HTTP ' + sw.status)
+caso('ele guarda o som e responde sem rede',
+  swTxt.includes("caches.match") && swTxt.includes('ignoreSearch'),
+  'ignoreSearch: a senha na URL nao pode atrapalhar o reencontro')
+
+// A SENHA E SEMPRE A MESMA: o que foi levado esta preso ao endereco
+caso('a senha guardada e reusada', senha === 'testefixo', 'senha = ' + senha)
 
 // 6. nao da pra pedir arquivo de fora da pasta
 const fuga = await fetch(base + '/audio/..%2f..%2f..%2f/windows?s=' + senha)

@@ -145,6 +145,29 @@ export function paginaCelular() {
   .ms .m[aria-pressed="true"] { background: var(--amarelo); box-shadow: none; }
   .ms .s[aria-pressed="true"] { background: var(--lima); box-shadow: none; }
 
+  /* LEVAR PRO ENSAIO. Fica na linha da música, não escondido num menu: é a
+     decisão que a pessoa toma ANTES de sair de casa, e ela precisa ver de
+     relance o que já está garantido. */
+  .levar {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    margin-top: 8px; padding: 8px 10px;
+    background: none; border: none; color: var(--mudo);
+    box-shadow: inset 0 0 0 1px var(--linha2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; cursor: pointer; text-align: left;
+  }
+  .levar.tem { color: var(--lima); box-shadow: inset 0 0 0 1px rgba(182,255,59,0.45); background: rgba(182,255,59,0.06); }
+  .levar.indo { color: var(--amarelo); box-shadow: inset 0 0 0 1px rgba(234,179,8,0.5); }
+  .selo {
+    display: inline-block; margin-left: 6px; padding: 2px 6px;
+    font-family: var(--mono); font-size: 8px; letter-spacing: 0.14em;
+    color: #0b0c0f; background: var(--lima);
+  }
+  .semrede {
+    margin: 10px 12px 0; padding: 9px 11px;
+    background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
+    font-size: 12px; line-height: 1.5; color: var(--amarelo);
+  }
   .preparando {
     margin-top: 10px; padding: 7px 10px;
     background: rgba(234,179,8,0.1);
@@ -168,6 +191,26 @@ export function paginaCelular() {
 // enfeite: é como se acha a guitarra sem ler o nome.
 var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
 var NOMES = ${JSON.stringify(nomes)};
+// O GUARDADOR precisa estar de pé antes de tudo: é ele que responde quando o
+// computador não está por perto.
+var guardadas = {};
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function () {});
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.tipo === 'guardadas') { d.chaves.forEach(function (k) { guardadas[k] = true; }); pintarLevar(); }
+    if (d.tipo === 'levando') { marcarLevando(d.chave, d.feito, d.total); }
+    if (d.tipo === 'levou') { guardadas[d.chave] = true; pintarLevar(); }
+    if (d.tipo === 'largou') { delete guardadas[d.chave]; pintarLevar(); }
+    if (d.tipo === 'falhou') { marcarFalhou(d.chave); }
+  });
+}
+function aoGuardador(msg) {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage(msg);
+  }
+}
+
 var tela = document.getElementById('tela');
 var voltar = document.getElementById('voltar');
 var onde = document.getElementById('onde');
@@ -190,15 +233,61 @@ function abrirAcervo() {
   var html = '<ul>';
   for (var i = 0; i < acervo.length; i++) {
     var m = acervo[i];
-    html += '<li><button class="musica" data-i="' + i + '"><b>' + esc(m.titulo) + '</b>' +
+    html += '<li><button class="musica" data-i="' + i + '"><b>' + esc(m.titulo) +
+      '<span class="selo" data-selo="' + m.chave + '" hidden>no celular</span></b>' +
       '<span class="dados">' + m.faixas.length + ' faixas · ' + mmss(m.duracao) +
       (m.tom ? ' · tom <i>' + m.tom + '</i>' : '') +
-      (m.bpm ? ' · <i>' + m.bpm + '</i> bpm' : '') + '</span></button></li>';
+      (m.bpm ? ' · <i>' + m.bpm + '</i> bpm' : '') + '</span></button>' +
+      '<button class="levar" data-levar="' + m.chave + '" data-i="' + i + '">levar pro ensaio</button></li>';
   }
   tela.innerHTML = html + '</ul>';
   tela.querySelectorAll('.musica').forEach(function (b) {
     b.onclick = function () { abrirMusica(acervo[+b.dataset.i]); };
   });
+  tela.querySelectorAll('.levar').forEach(function (b) {
+    b.onclick = function () {
+      var m = acervo[+b.dataset.i];
+      var urls = m.faixas.map(function (f) { return '/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo); });
+      if (guardadas[m.chave]) { aoGuardador({ tipo: 'largar', chave: m.chave, urls: urls }); return; }
+      b.className = 'levar indo';
+      b.textContent = 'levando… 0 de ' + urls.length;
+      aoGuardador({ tipo: 'levar', chave: m.chave, urls: urls });
+    };
+  });
+  aoGuardador({ tipo: 'quais' });
+  pintarLevar();
+}
+
+// Sem o computador por perto, só o que foi levado toca. Dizer isso ANTES da
+// pessoa apertar play evita a conclusão errada ("quebrou") na hora do ensaio.
+function pintarLevar() {
+  var qualquer = false;
+  document.querySelectorAll('.levar').forEach(function (b) {
+    var tem = !!guardadas[b.dataset.levar];
+    if (tem) qualquer = true;
+    if (b.className.indexOf('indo') >= 0) return;
+    b.className = 'levar' + (tem ? ' tem' : '');
+    b.textContent = tem ? 'está no celular · tirar' : 'levar pro ensaio';
+  });
+  document.querySelectorAll('.selo').forEach(function (s) { s.hidden = !guardadas[s.dataset.selo]; });
+  var aviso = document.querySelector('.semrede');
+  if (!navigator.onLine && !aviso) {
+    var d = document.createElement('div');
+    d.className = 'semrede';
+    d.textContent = qualquer
+      ? 'Sem o computador por perto: só tocam as músicas marcadas "no celular".'
+      : 'Sem o computador por perto e nenhuma música foi levada. Em casa, aperte "levar pro ensaio".';
+    tela.insertBefore(d, tela.firstChild);
+  }
+}
+
+function marcarLevando(chave, feito, total) {
+  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
+  if (b) { b.className = 'levar indo'; b.textContent = 'levando… ' + feito + ' de ' + total; }
+}
+function marcarFalhou(chave) {
+  var b = document.querySelector('.levar[data-levar="' + chave + '"]');
+  if (b) { b.className = 'levar'; b.textContent = 'não deu pra levar — tente de novo'; }
 }
 
 function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]; }); }
