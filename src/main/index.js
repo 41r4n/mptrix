@@ -787,6 +787,21 @@ app.whenReady().then(() => {
     return err === ''
   })
 
+  // COPIAR TEXTO pela ponte, e não pelo navigator.clipboard: no app empacotado
+  // a tela não roda em contexto seguro, e lá aquilo simplesmente não existe —
+  // funcionaria em desenvolvimento e falharia calado no computador de quem usa.
+  ipcMain.handle('clipboard:copiarTexto', (_e, texto) => {
+    const t = String(texto || '')
+    if (!t) return false
+    clipboard.writeText(t)
+    // A VIGIA PRECISA SABER. Ela fica olhando a área de transferência pra
+    // acender a ampulheta quando aparece um link de música. Se o próprio app
+    // copia um link e não avisa, a roda começa a pulsar oferecendo "baixar" —
+    // o app se assustando com a própria mão.
+    ultimoLinkVisto = t
+    return true
+  })
+
   ipcMain.handle('shell:openExternal', (_e, url) => {
     shell.openExternal(url)
     return true

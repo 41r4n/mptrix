@@ -54,7 +54,8 @@ const api = {
   // sozinha, pra não precisar de permissão nenhuma no processo de renderização.
   clipboard: {
     onLink: on('clipboard:link'),
-    atual: () => ipcRenderer.invoke('clipboard:atual')
+    atual: () => ipcRenderer.invoke('clipboard:atual'),
+    copiarTexto: (texto) => ipcRenderer.invoke('clipboard:copiarTexto', texto)
   },
 
   shell: {

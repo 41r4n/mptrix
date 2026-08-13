@@ -11657,3 +11657,25 @@ ul.hlib-grid {
    defeito que não existe */
 .appup-fora { opacity: 0.55; }
 .appup-nota { font-size: 11.5px; color: var(--muted-2); }
+
+/* O PRIMEIRO BOTÃO É O CAMINHO CERTO, e a tela diz isso sem escrever mais uma
+   frase: contorno lima e ícone aceso. Os outros continuam ali porque servem a
+   quem está sem internet ou vai passar por pendrive — mas deixaram de ser a
+   primeira escolha no dia em que o app passou a ser publicado. */
+.share-tile.forte {
+  --fio: var(--accent-border);
+  background-color: rgba(182, 255, 59, 0.05);
+}
+.share-tile.forte .share-tile-ico { color: var(--accent); }
+.share-tile.forte .share-tile-titulo { color: var(--accent); }
+.share-tile.forte:hover:not(:disabled) {
+  --fio: var(--accent);
+  background-color: rgba(182, 255, 59, 0.1);
+}
+.share-sub {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 78ch;
+}

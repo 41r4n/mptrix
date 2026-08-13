@@ -10,4 +10,5 @@ Regras:
 - Mantenha toda a lógica de negócio, rotas, APIs e nomes de dados existentes funcionando. Só a camada visual/UX muda. Não renomeie nem remova features.
 - Atualize playhead, tint e timer de forma imperativa por frame (refs + style/textContent), nunca via re-render por frame.
 - Percorra o app inteiro: todas as telas, modais, estados vazios, loading e erro. O que não existe no pacote, derive dos mesmos tokens.
-- Ao terminar, escreva na raiz um CLAUDE.md com essas regras para valer nas próximas alterações, e me entregue só um resumo curto do que mudou.
+- Ao terminar, escreva na raiz um CLAUDE.md com essas regras para
+ valer nas próximas alterações, e me entregue só um resumo curto do que mudou.
