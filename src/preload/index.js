@@ -52,6 +52,11 @@ const api = {
 
   // O vigia empurra o link achado; a tela nunca lê a área de transferência
   // sozinha, pra não precisar de permissão nenhuma no processo de renderização.
+  celular: {
+    estado: () => ipcRenderer.invoke('celular:estado'),
+    ligar: () => ipcRenderer.invoke('celular:ligar'),
+    desligar: () => ipcRenderer.invoke('celular:desligar')
+  },
   clipboard: {
     onLink: on('clipboard:link'),
     atual: () => ipcRenderer.invoke('clipboard:atual'),

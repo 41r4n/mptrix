@@ -8450,7 +8450,8 @@ ul.hlib-grid {
 .conserto-abrir,
 .share-app,
 .share-tile,
-.appup {
+.appup,
+.celular {
   --diag: linear-gradient(to top right,
     transparent calc(50% - 1px), var(--fio) calc(50% - 1px),
     var(--fio) calc(50% + 1px), transparent calc(50% + 1px));
@@ -11707,3 +11708,90 @@ ul.hlib-grid {
 .help-tip { display: flex; align-items: flex-start; gap: 10px; }
 .help-tip svg { flex: none; margin-top: 2px; color: var(--warn); }
 .help-status-list li > div p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+/* ██████████ ENSAIAR PELO CELULAR ██████████
+   Mesma língua do bloco de compartilhar: chassi cavado, quina cortada, rótulo
+   mono. É "o aparelho", não "o trabalho" — por isso mora perto dele. */
+.celular {
+  --chanfro: 16px;
+  --fio: var(--border);
+  margin-top: 22px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  background-color: var(--bg-cava);
+  background-image: var(--diag), var(--diag);
+  background-size: var(--chanfro) var(--chanfro), var(--chanfro) var(--chanfro);
+  background-position: top right, bottom left;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--fio);
+  clip-path: var(--corte);
+}
+.celular-cab { display: flex; flex-direction: column; gap: 5px; }
+.celular-olho {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.celular-cab h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
+.celular-sub { margin: 4px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); max-width: 80ch; }
+.celular-sub strong { color: var(--text-2); font-weight: 600; }
+
+.celular-passos { list-style: none; margin: 0; padding: 0; }
+.celular-passos li { display: flex; align-items: center; gap: 10px; }
+.celular-passos li + li { margin-top: 7px; }
+.celular-passos li > span {
+  flex: none; width: 19px; height: 19px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(182, 255, 59, 0.13);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+}
+.celular-passos li > div { font-size: 12.5px; color: var(--text-2); }
+.celular-passos strong { color: var(--text); }
+
+/* O ENDEREÇO É PRA SER DIGITADO NO CELULAR: mono, grande o bastante pra ler de
+   longe, e selecionável — quem tem o celular na mão está lendo da tela. */
+.celular-endereco {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border-control);
+}
+.celular-rede {
+  flex: none;
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted-2);
+  padding: 3px 7px; box-shadow: inset 0 0 0 1px var(--border);
+}
+.celular-endereco code {
+  flex: 1 1 260px; min-width: 0;
+  font-family: var(--font-mono); font-size: 13px; color: var(--accent);
+  user-select: all; word-break: break-all;
+}
+.celular-copiar {
+  flex: none; height: 28px; padding: 0 11px;
+  background: none; border: none;
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; cursor: pointer;
+}
+.celular-copiar:hover { background: rgba(182, 255, 59, 0.12); }
+
+.celular-acao { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.celular-ir { display: inline-flex; align-items: center; gap: 8px; }
+.celular-nota { font-size: 11.5px; color: var(--muted-2); line-height: 1.5; flex: 1 1 240px; }
+.celular-ok { margin: 0; font-size: 12px; color: var(--accent); }
+.celular-aviso {
+  display: flex; align-items: flex-start; gap: 9px; margin: 0;
+  padding: 10px 12px;
+  background: rgba(234, 179, 8, 0.08);
+  box-shadow: inset 2px 0 0 var(--warn);
+  font-size: 12.5px; line-height: 1.5; color: var(--text-2);
+}
+.celular-aviso svg { flex: none; margin-top: 2px; color: var(--warn); }

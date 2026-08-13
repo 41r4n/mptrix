@@ -6,6 +6,8 @@ import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFil
 import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import { resolverYtDlp } from './binpath.js'
+import { ligarCelular, desligarCelular, infoCelular } from './celular.js'
+import { paginaCelular } from './celular-pagina.js'
 import {
   prepararAtualizacaoDoApp,
   estadoDaAtualizacao,
@@ -921,6 +923,15 @@ app.whenReady().then(() => {
       return { error: err.message, bytesPerSec: 3 * 1024 * 1024 }
     }
   })
+
+  // ▸ O ESTÚDIO NO CELULAR. Sai desligado: é o dono que decide quando abrir
+  // uma porta na rede da casa, mesmo sendo a rede dele.
+  ipcMain.handle('celular:estado', () => infoCelular())
+  ipcMain.handle('celular:ligar', () => ligarCelular({
+    stemsDir: join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX', 'stems'),
+    paginaHtml: paginaCelular
+  }))
+  ipcMain.handle('celular:desligar', () => desligarCelular())
 
   // ▸ o MPTRIX se atualizando (o app inteiro, não o motor de baixar)
   ipcMain.handle('app-update:estado', () => estadoDaAtualizacao())

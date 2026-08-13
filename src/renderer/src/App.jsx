@@ -8,6 +8,7 @@ import HistoryList from './components/HistoryList.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
 import UpdateFooter from './components/UpdateFooter.jsx'
 import ShareApp from './components/ShareApp.jsx'
+import Celular from './components/Celular.jsx'
 import NuvemConfig from './components/NuvemConfig.jsx'
 import Ico from './components/Icones.jsx'
 import { UpdatesProvider } from './contexts/UpdatesContext.jsx'
@@ -386,6 +387,9 @@ export default function App() {
             <p className="palco-olho">04 / NUVEM</p>
             <h1 className="palco-titulo">Separação<br />na nuvem</h1>
             <NuvemConfig />
+            {/* O CELULAR mora aqui por ora, junto do que também é "o aparelho,
+                não o trabalho". Se um dia virar coisa grande, ganha aba. */}
+            <Celular />
             <ShareApp />
           </div>
         )}
