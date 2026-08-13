@@ -286,6 +286,20 @@ li { margin-bottom: 9px; }
 <div id="tela"><p class="carregando">carregando…</p></div>
 
 <script>
+// A SENHA VIAJA EM TODO PEDIDO, e não num cookie.
+// Eu tinha posto a senha só na URL da página e deixado um cookie tomar conta
+// do resto. O celular do dono carregou a página e não conseguiu a lista: o
+// Chrome do Android não guardou o cookie (página sem cadeado, endereço de IP).
+// A página abria bonita e vazia, dizendo "não consegui falar com o
+// computador" — quando o computador estava ali, respondendo.
+// Depender de cookie é depender de uma decisão do navegador que eu não
+// controlo. A senha eu controlo: ela está na barra de endereço, e vai junto.
+var S = (new URLSearchParams(location.search).get('s') || '');
+function comSenha(u) {
+  if (!S) return u;
+  return u + (u.indexOf('?') >= 0 ? '&' : '?') + 's=' + encodeURIComponent(S);
+}
+
 // A ESCALA VERDE DAS FAIXAS é a mesma do computador. Cor por faixa não é
 // enfeite: é como se acha a guitarra sem ler o nome.
 var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
@@ -370,7 +384,7 @@ function abrirAcervo() {
     var m = lista[i], n = acervo.indexOf(m);
     html += '<li><button class="musica" data-i="' + n + '">' +
       (m.capa
-        ? '<img class="capa" src="' + m.capa + '" alt="">'
+        ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
         : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
       '<span class="corpo"><b>' + esc(m.titulo) + '</b><span class="marcas">' +
         (m.inteira
@@ -392,7 +406,7 @@ function abrirAcervo() {
   tela.querySelectorAll('.levar').forEach(function (b) {
     b.onclick = function () {
       var m = acervo[+b.dataset.i];
-      var urls = m.faixas.map(function (f) { return '/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo); });
+      var urls = m.faixas.map(function (f) { return comSenha('/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo)); });
       if (guardadas[m.chave]) { aoGuardador({ tipo: 'largar', chave: m.chave, urls: urls }); return; }
       b.className = 'levar indo';
       b.textContent = 'levando… 0 de ' + urls.length;
@@ -589,7 +603,7 @@ function abrirAjustes() {
   if (t) t.onclick = function () {
     levadas.forEach(function (m) {
       aoGuardador({ tipo: 'largar', chave: m.chave,
-        urls: m.faixas.map(function (x) { return '/audio/' + m.chave + '/' + encodeURIComponent(x.arquivo); }) });
+        urls: m.faixas.map(function (x) { return comSenha('/audio/' + m.chave + '/' + encodeURIComponent(x.arquivo)); }) });
     });
     f.remove();
   };
@@ -598,11 +612,15 @@ document.getElementById('btAjustes').onclick = abrirAjustes;
 
 voltar.onclick = abrirAcervo;
 
-fetch('/api/acervo').then(function (r) { return r.json(); }).then(function (lista) {
+fetch(comSenha('/api/acervo')).then(function (r) { return r.json(); }).then(function (lista) {
   acervo = lista; abrirAcervo();
 }).catch(function () {
-  tela.innerHTML = '<p class="vazio">Não consegui falar com o computador.<br>' +
-    'Ele precisa estar ligado e na mesma rede.</p>';
+  tela.innerHTML = '<p class="vazio"><b>Não consegui falar com o computador</b>' +
+    'Confira se o MPTRIX está aberto nele, se você apertou "Ligar agora",<br>' +
+    'e se o celular está no mesmo Wi-Fi.<br><br>' +
+    '<span style="font-family:var(--mono);font-size:11px;color:var(--mudo2)">' +
+    (S ? 'endereço com senha' : 'ATENÇÃO: o endereço está sem a senha — copie o link inteiro do computador') +
+    '</span></p>';
 });
 </script>
 </body>
