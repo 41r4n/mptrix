@@ -975,6 +975,14 @@ app.whenReady().then(() => {
             if (principal && existsSync(principal)) {
               const nome = basename(principal)
               addHistoryEntry({
+                // ID E DATA como no download feito daqui. Eu esqueci os dois, e
+                // cada um quebra uma coisa diferente: sem id, o acervo não
+                // consegue apagar nem renomear o item — e no celular todas as
+                // músicas sem id viram a MESMA chave, então "levar pro ensaio"
+                // numa levaria a errada. Sem data, ela aparece como 1969 e cai
+                // no fim de qualquer lista ordenada por tempo.
+                id: randomUUID(),
+                timestamp: new Date().toISOString(),
                 url,
                 presetId,
                 presetName: (PRESETS[presetId] && PRESETS[presetId].name) || presetId,

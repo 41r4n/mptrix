@@ -159,8 +159,11 @@ function acervoCompleto(stemsDir, historico) {
   const separadas = lerAcervo(stemsDir)
   const nomes = new Set(separadas.map((m) => m.titulo))
   const inteiras = lerBaixadas(historico, nomes, stemsDir)
-  // separadas primeiro: são as que dão mixer, que é o motivo de existir isto
-  return separadas.concat(inteiras.sort((a, b) => a.titulo.localeCompare(b.titulo)))
+  // A MAIS NOVA PRIMEIRO. Em ordem alfabética, a música que a pessoa acabou de
+  // baixar cai no meio de doze e parece que não chegou — foi exatamente o que
+  // aconteceu com o dono: ele baixou, procurou no topo, e concluiu que falhou.
+  // O que acabou de acontecer é o que ela está procurando.
+  return separadas.concat(inteiras)
 }
 
 // ── A CAPA ──
@@ -193,6 +196,7 @@ function capaDe(arquivo, stemsDir) {
 function lerBaixadas(historico, jaSeparadas, stemsDir) {
   const itens = []
   const vistos = new Set()
+  // o histórico já vem do mais novo pro mais velho
   for (const h of historico || []) {
     const arq = h.primaryFile || (h.files && h.files[0])
     if (!arq) continue
@@ -210,7 +214,12 @@ function lerBaixadas(historico, jaSeparadas, stemsDir) {
     // as faixas. Mostrar as duas seria a mesma música duas vezes na lista.
     if (jaSeparadas.has(titulo)) continue
     itens.push({
-      chave: 'inteira:' + h.id,
+      // A CHAVE NUNCA PODE SER "inteira:undefined". Item velho sem id fazia
+      // todos compartilharem a mesma chave — e o celular guarda o que foi
+      // levado POR chave, então levar uma marcaria as outras. O caminho do
+      // arquivo é único por natureza; ele serve de identidade quando o id
+      // falta.
+      chave: 'inteira:' + (h.id || createHash('sha1').update(caminho).digest('hex').slice(0, 12)),
       titulo,
       duracao: 0,
       tom: null,
@@ -536,7 +545,14 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       // mandou — senão bastaria pedir um nome de arquivo pra ler o disco.
       if (chave.startsWith('inteira')) {
         const id = caminho.split('/')[2].replace('inteira:', '')
-        const h = (historico ? historico() : []).find((x) => String(x.id) === id)
+        const lista = historico ? historico() : []
+        const h = lista.find((x) => String(x.id) === id) ||
+          lista.find((x) => {
+            const f = x.primaryFile || (x.files && x.files[0])
+            if (!f) return false
+            const cheio = isAbsolute(f) ? f : join(x.outputDir || '', f)
+            return createHash('sha1').update(cheio).digest('hex').slice(0, 12) === id
+          })
         const nome = h && (h.primaryFile || (h.files && h.files[0]))
         if (!h || !nome) { res.writeHead(404); res.end('nao achei'); return }
         const cheio = isAbsolute(nome) ? nome : join(h.outputDir || '', nome)
