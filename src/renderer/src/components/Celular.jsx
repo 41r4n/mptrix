@@ -12,8 +12,19 @@ import Ico from './Icones.jsx'
 export default function Celular() {
   const [estado, setEstado] = useState(null)
   const [copiado, setCopiado] = useState(false)
+  // O QUE O CELULAR PEDIU. Enquanto ligado, esta lista se atualiza sozinha:
+  // é a única maneira de saber, do lado do computador, se o pedido do telefone
+  // chegou — e o que foi respondido a ele.
+  const [pedidos, setPedidos] = useState([])
 
   useEffect(() => { window.mptrix.celular?.estado().then(setEstado) }, [])
+  useEffect(() => {
+    if (!estado?.ligado) return
+    const puxar = () => window.mptrix.celular.pedidos().then(setPedidos).catch(() => {})
+    puxar()
+    const t = setInterval(puxar, 1500)
+    return () => clearInterval(t)
+  }, [estado?.ligado])
   if (!estado) return null
 
   const ligar = async () => setEstado(await window.mptrix.celular.ligar())
@@ -73,10 +84,35 @@ export default function Celular() {
 
           {copiado && <p className="celular-ok">Endereço copiado. Mande pra você mesmo e abra no celular.</p>}
 
+          {/* O DIÁRIO DE BORDO. Vazio significa uma coisa muito específica: o
+              pedido do celular não chegou aqui — problema de rede, não de
+              senha nem de programa. Cheio, cada linha diz o que ele pediu e o
+              que respondi. */}
+          <div className="celular-diario">
+            <span className="celular-rede">o que o celular pediu</span>
+            {pedidos.length === 0 ? (
+              <p className="celular-nada">
+                Nada ainda. Se o celular já tentou abrir e isto continua vazio,
+                o pedido não está chegando até aqui — é a rede entre os dois.
+              </p>
+            ) : (
+              <ul>
+                {pedidos.slice(0, 8).map((p, i) => (
+                  <li key={i} className={p.resposta >= 400 ? 'ruim' : ''}>
+                    <b>{p.resposta}</b>
+                    <span>{p.caminho}</span>
+                    <i>{p.de} · {p.quando}</i>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="celular-acao">
             <button className="btn-secondary" onClick={desligar}>Desligar</button>
             <span className="celular-nota">
-              O endereço muda toda vez que você liga — quem tinha o antigo perde o acesso.
+              O endereço é sempre este, mesmo fechando e abrindo o app — por isso o
+              que o celular levou pro ensaio continua valendo.
             </span>
           </div>
         </>

@@ -226,6 +226,12 @@ li { margin-bottom: 9px; }
 .ms button[aria-pressed="true"] { color: #0b0c0f; box-shadow: none; }
 .ms .m[aria-pressed="true"] { background: var(--amarelo); }
 .ms .s[aria-pressed="true"] { background: var(--lima); }
+.diag {
+  display: block; margin-top: 18px; padding: 12px;
+  background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
+  font-family: var(--mono); font-size: 11px; line-height: 1.9;
+  color: var(--mudo2); text-align: left; word-break: break-all;
+}
 .preparando {
   margin-top: 10px; padding: 8px 10px;
   background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
@@ -300,6 +306,17 @@ function comSenha(u) {
   return u + (u.indexOf('?') >= 0 ? '&' : '?') + 's=' + encodeURIComponent(S);
 }
 
+
+// A ESCALA VERDE DAS FAIXAS é a mesma do computador. Cor por faixa não é
+// enfeite: é como se acha a guitarra sem ler o nome.
+var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
+var NOMES = ${JSON.stringify(nomes)};
+var S = (new URLSearchParams(location.search).get('s') || '');
+function comSenha(u) {
+  if (!S) return u;
+  return u + (u.indexOf('?') >= 0 ? '&' : '?') + 's=' + encodeURIComponent(S);
+}
+
 // A ESCALA VERDE DAS FAIXAS é a mesma do computador. Cor por faixa não é
 // enfeite: é como se acha a guitarra sem ler o nome.
 var CORES = ['#dff9a0','#b4e85a','#7ed97a','#4ecb8c','#27a08d','#8fa57a'];
@@ -308,7 +325,7 @@ var NOMES = ${JSON.stringify(nomes)};
 // computador não está por perto.
 var guardadas = {};
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(function () {});
+  navigator.serviceWorker.register(comSenha('/sw.js')).catch(function () {});
   navigator.serviceWorker.addEventListener('message', function (e) {
     var d = e.data || {};
     if (d.tipo === 'guardadas') { d.chaves.forEach(function (k) { guardadas[k] = true; }); pintarLevar(); }
@@ -612,15 +629,31 @@ document.getElementById('btAjustes').onclick = abrirAjustes;
 
 voltar.onclick = abrirAcervo;
 
-fetch(comSenha('/api/acervo')).then(function (r) { return r.json(); }).then(function (lista) {
+// A TELA PASSA A CONTAR O QUE ACONTECEU. "Não consegui falar" é a única
+// informação que não ajuda ninguém: ela some com a diferença entre "a rede não
+// chegou", "o computador recusou" e "veio coisa que eu não sei ler".
+var ultimoErro = '';
+fetch(comSenha('/api/acervo')).then(function (r) {
+  if (!r.ok) { ultimoErro = 'o computador respondeu ' + r.status + (r.status === 403 ? ' (senha recusada)' : ''); throw new Error(ultimoErro); }
+  return r.json();
+}).then(function (lista) {
   acervo = lista; abrirAcervo();
-}).catch(function () {
+}).catch(function (e) {
+  if (!ultimoErro) ultimoErro = String(e && e.message ? e.message : e);
   tela.innerHTML = '<p class="vazio"><b>Não consegui falar com o computador</b>' +
     'Confira se o MPTRIX está aberto nele, se você apertou "Ligar agora",<br>' +
-    'e se o celular está no mesmo Wi-Fi.<br><br>' +
-    '<span style="font-family:var(--mono);font-size:11px;color:var(--mudo2)">' +
-    (S ? 'endereço com senha' : 'ATENÇÃO: o endereço está sem a senha — copie o link inteiro do computador') +
-    '</span></p>';
+    'e se o celular está no mesmo Wi-Fi.' +
+    '<span class="diag">' +
+      'ERRO: ' + esc(ultimoErro) + '<br>' +
+      'ENDERECO: ' + esc(location.host) + '<br>' +
+      'SENHA: ' + (S ? 'presente (' + S.length + ' letras)' : 'AUSENTE') + '<br>' +
+      'GUARDADOR: ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'no comando' : 'fora') + '<br>' +
+      'REDE: ' + (navigator.onLine ? 'o celular se diz online' : 'o celular se diz offline') +
+    '</span>' +
+    '<button class="folha-btn" id="tentarDeNovo" style="max-width:240px;margin:16px auto 0">tentar de novo</button>' +
+    '</p>';
+  var t = document.getElementById('tentarDeNovo');
+  if (t) t.onclick = function () { location.reload(); };
 });
 </script>
 </body>

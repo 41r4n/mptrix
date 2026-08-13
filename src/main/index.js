@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFil
 import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import { resolverYtDlp } from './binpath.js'
-import { ligarCelular, desligarCelular, infoCelular } from './celular.js'
+import { ligarCelular, desligarCelular, infoCelular, pedidosRecentes } from './celular.js'
 import { paginaCelular } from './celular-pagina.js'
 import {
   prepararAtualizacaoDoApp,
@@ -948,6 +948,11 @@ app.whenReady().then(() => {
     guardarPorta: (n) => guardarAjuste('celular.porta', n)
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
+  // O QUE O CELULAR PEDIU E O QUE EU RESPONDI. Sem isto, quando não funciona a
+  // única informação que existe é "não consegui falar com o computador" — que
+  // é justamente a que não diz nada. Aqui o dono vê do lado de cá se o pedido
+  // chegou e o que foi respondido.
+  ipcMain.handle('celular:pedidos', () => pedidosRecentes())
 
   // ▸ o MPTRIX se atualizando (o app inteiro, não o motor de baixar)
   ipcMain.handle('app-update:estado', () => estadoDaAtualizacao())

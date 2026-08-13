@@ -55,7 +55,8 @@ const api = {
   celular: {
     estado: () => ipcRenderer.invoke('celular:estado'),
     ligar: () => ipcRenderer.invoke('celular:ligar'),
-    desligar: () => ipcRenderer.invoke('celular:desligar')
+    desligar: () => ipcRenderer.invoke('celular:desligar'),
+    pedidos: () => ipcRenderer.invoke('celular:pedidos')
   },
   clipboard: {
     onLink: on('clipboard:link'),

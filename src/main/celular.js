@@ -31,6 +31,7 @@ let ffmpeg = null
 // tapa a variável e a atribuição vira "guardarPorta = guardarPorta", que não
 // guarda nada e não reclama
 let salvarPorta = null
+const ultimosPedidos = []
 
 // ██████████ POR QUE O CELULAR RECEBE OUTRO ARQUIVO ██████████
 //
@@ -312,9 +313,13 @@ self.addEventListener('fetch', function (e) {
         var copia = r.clone();
         caches.open(CAIXA).then(function (c) { c.put(u.pathname, copia); });
         return r;
-      }).catch(function () {
+      }).catch(function (e) {
         return caches.match(u.pathname).then(function (r) {
-          return r || new Response('sem conexao', { status: 503 });
+          // sem nada guardado, o erro REAL sobe pra tela. Inventar um 503 aqui
+          // era trocar "recusado pelo computador" por "sem conexão" — e mandar
+          // o dono procurar defeito na rede, que estava boa.
+          if (r) return r;
+          throw e;
         });
       })
     );
@@ -394,12 +399,33 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
+    // O REGISTRO DE QUEM BATEU NA PORTA. Sem isto, "não consegui falar com o
+    // computador" é a única informação que existe — e ela é justamente a que
+    // não diz nada. Com isto, dá pra ver do lado de cá se o pedido chegou.
+    res.on('finish', () => {
+      ultimosPedidos.unshift({
+        quando: new Date().toISOString().slice(11, 19),
+        de: (req.socket.remoteAddress || '').replace('::ffff:', ''),
+        caminho: url.pathname + (url.searchParams.get('s') ? ' (com senha)' : ' (SEM SENHA)'),
+        resposta: res.statusCode
+      })
+      ultimosPedidos.length = Math.min(ultimosPedidos.length, 40)
+    })
     const caminho = decodeURIComponent(url.pathname)
 
     // a senha viaja na própria URL: o celular abre um endereço e pronto,
     // sem tela de login pra alguém digitar no escuro
     const autorizado = url.searchParams.get('s') === senha ||
       (req.headers.cookie || '').includes(`mptrix=${senha}`)
+
+    // O GUARDADOR NÃO EXIGE SENHA: ele é código, não dado — não entrega música
+    // nem lista de ninguém. Exigindo, o navegador falha ao instalar e não conta
+    // pra ninguém que falhou; a página fica sem o modo ensaio e ninguém sabe.
+    if (caminho === '/sw.js') {
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(GUARDADOR)
+      return
+    }
 
     if (!autorizado) {
       res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -414,15 +440,6 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
         'Cache-Control': 'no-store'
       })
       res.end(paginaHtml())
-      return
-    }
-
-    // O GUARDADOR (service worker). É ele que faz o celular tocar sem o
-    // computador: intercepta os pedidos e responde do que já guardou. Precisa
-    // ser servido da raiz, senão o navegador não deixa ele mandar na página.
-    if (caminho === '/sw.js') {
-      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' })
-      res.end(GUARDADOR)
       return
     }
 
@@ -515,6 +532,8 @@ export function desligarCelular() {
   porta = 0
   return infoCelular()
 }
+
+export function pedidosRecentes() { return ultimosPedidos }
 
 export function infoCelular() {
   if (!servidor || !porta) return { ligado: false, enderecos: [] }

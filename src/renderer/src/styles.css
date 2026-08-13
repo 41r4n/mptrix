@@ -11795,3 +11795,28 @@ ul.hlib-grid {
   font-size: 12.5px; line-height: 1.5; color: var(--text-2);
 }
 .celular-aviso svg { flex: none; margin-top: 2px; color: var(--warn); }
+
+/* O DIÁRIO DE BORDO DO CELULAR. Vazio significa uma coisa muito específica: o
+   pedido não chegou até aqui — é a rede entre os dois, não a senha nem o
+   programa. Cheio, cada linha diz o que foi pedido e o que foi respondido.
+   Sem isto, "não consegui falar com o computador" é toda a informação que
+   existe, e ela é justamente a que não diz nada. */
+.celular-diario {
+  padding: 11px 13px;
+  background: var(--bg-cava-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.celular-diario ul { list-style: none; margin: 9px 0 0; padding: 0; }
+.celular-diario li {
+  display: flex; align-items: baseline; gap: 9px;
+  padding: 5px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.celular-diario li b { color: var(--stem-3); font-weight: 500; flex: none; width: 30px; }
+.celular-diario li.ruim b { color: var(--bad); }
+.celular-diario li span { flex: 1 1 auto; min-width: 0; color: var(--text-2); word-break: break-all; }
+.celular-diario li i { font-style: normal; flex: none; color: var(--muted-2); font-size: 10px; }
+.celular-nada { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-2); }
