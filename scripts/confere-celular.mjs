@@ -16,7 +16,8 @@ copyFileSync(join(aqui, '..', 'src', 'main', 'celular.js'), copia)
 const { ligarCelular, desligarCelular } = await import(pathToFileURL(copia).href)
 
 const stemsDir = join(process.env.LOCALAPPDATA || '', 'MPTRIX', 'stems')
-const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina' })
+const ffmpegPath = join(aqui, '..', 'resources', 'bin', 'ffmpeg.exe')
+const info = await ligarCelular({ stemsDir, paginaHtml: () => '<!doctype html><title>ok</title>pagina', ffmpegPath })
 
 const casos = []
 const caso = (nome, ok, extra) => { casos.push([nome, ok, extra]) }
@@ -62,6 +63,25 @@ if (m) {
   caso('o audio responde por pedaco (arrastar a barra)',
     a.status === 206 && buf.byteLength === 100000,
     'HTTP ' + a.status + ' · ' + buf.byteLength + ' bytes · ' + (a.headers.get('content-type') || ''))
+}
+
+// 5b. O CELULAR RECEBE O ARQUIVO LEVE, nao o cru. Medido no aparelho do dono:
+// com FLAC de 40 MB por faixa, o telefone tocava so parte delas e escolhia
+// quais pelo criterio dele — sumia justo a voz.
+if (m) {
+  const f = m.faixas[0]
+  const u = base + '/audio/' + m.chave + '/' + encodeURIComponent(f.arquivo) + '?s=' + senha
+  const cheio = await fetch(u)               // primeira vez: converte (leva alguns segundos)
+  const bytes = (await cheio.arrayBuffer()).byteLength
+  const encolheu = f.bytes / bytes
+  caso('a faixa vai comprimida pro celular',
+    cheio.headers.get('content-type') === 'audio/mp4' && encolheu > 4,
+    Math.round(f.bytes / 1048576) + ' MB -> ' + (bytes / 1048576).toFixed(1) + ' MB (' + Math.round(encolheu) + 'x menor)')
+
+  const t0 = Date.now()
+  await fetch(u)                              // segunda vez: ja guardado
+  caso('na segunda vez ja esta pronta (nao converte de novo)',
+    Date.now() - t0 < 2000, (Date.now() - t0) + ' ms')
 }
 
 // 6. nao da pra pedir arquivo de fora da pasta

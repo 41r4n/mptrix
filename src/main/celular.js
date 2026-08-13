@@ -1,6 +1,7 @@
 import { createServer } from 'http'
-import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'fs'
+import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync } from 'fs'
 import { join } from 'path'
+import { spawn } from 'child_process'
 import { randomBytes } from 'crypto'
 import { networkInterfaces } from 'os'
 
@@ -25,6 +26,27 @@ import { networkInterfaces } from 'os'
 let servidor = null
 let senha = null
 let porta = 0
+let ffmpeg = null
+
+// ██████████ POR QUE O CELULAR RECEBE OUTRO ARQUIVO ██████████
+//
+// MEDIDO no aparelho do dono: com as faixas cruas, o celular tocava só parte
+// delas — e escolhia quais pelo critério dele, então sumia justo a voz. As
+// faixas estavam inteiras; quem não dava conta era o telefone.
+//
+// A conta explica: cada faixa é FLAC de ~40 MB, sem compressão. Nove ao mesmo
+// tempo são uns 12 Mbps voando no Wi-Fi e nove descompactações rodando juntas
+// num aparelho de bolso.
+//
+//   FLAC original   43,8 MB por faixa
+//   AAC 128k         3,6 MB por faixa      12x menor, e muito mais leve de abrir
+//
+// A conversão leva ~4 segundos por faixa e fica GUARDADA: só acontece na
+// primeira vez que aquela música é aberta no celular.
+//
+// 128k e não mais: isto é pra ensaiar, não pra masterizar. E quem quiser o som
+// cru tem o estúdio do computador, com o arquivo original.
+const PASTA_CELULAR = 'celular'
 
 // A SENHA existe porque "rede de casa" inclui a visita, o vizinho que pegou o
 // Wi-Fi e qualquer aparelho conectado. Ela não protege contra ataque de
@@ -119,9 +141,53 @@ function servirAudio(req, res, caminho) {
   createReadStream(caminho, { start: ini, end: fim }).pipe(res)
 }
 
-export function ligarCelular({ stemsDir, paginaHtml }) {
+// Converte uma vez e guarda ao lado. Se já existe, devolve na hora.
+// O arquivo temporário só vira o definitivo no fim (rename): assim, se o
+// computador for desligado no meio, o celular não encontra meio arquivo e
+// acha que é a música — ele simplesmente converte de novo.
+const emAndamento = new Map()
+
+function prepararLeve(stemsDir, chave, arq) {
+  const cru = join(stemsDir, chave, 'base', arq)
+  if (!ffmpeg || !existsSync(ffmpeg)) return Promise.resolve(cru)
+  if (/\.(m4a|mp3)$/i.test(arq)) return Promise.resolve(cru)
+
+  const pasta = join(stemsDir, chave, PASTA_CELULAR)
+  const leve = join(pasta, arq.replace(/\.[^.]+$/, '.m4a'))
+  if (existsSync(leve)) return Promise.resolve(leve)
+  if (!existsSync(cru)) return Promise.resolve(cru)
+  if (emAndamento.has(leve)) return emAndamento.get(leve)
+
+  const trabalho = new Promise((resolve) => {
+    try { mkdirSync(pasta, { recursive: true }) } catch {}
+    // O .m4a FICA NO FIM do nome temporário: o ffmpeg escolhe o formato pela
+    // EXTENSÃO, e com "vocals.m4a.parcial" ele não sabia o que gerar e saía
+    // com erro — o servidor então mandava o arquivo cru e parecia que a
+    // conversão simplesmente não existia.
+    const tmp = leve.replace(/\.m4a$/, '.parcial.m4a')
+    const p = spawn(ffmpeg, [
+      '-y', '-loglevel', 'error', '-i', cru,
+      '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', tmp
+    ], { windowsHide: true })
+    p.on('error', () => { emAndamento.delete(leve); resolve(cru) })
+    p.on('close', (code) => {
+      emAndamento.delete(leve)
+      if (code === 0 && existsSync(tmp)) {
+        try { renameSync(tmp, leve); resolve(leve); return } catch {}
+      }
+      try { if (existsSync(tmp)) unlinkSync(tmp) } catch {}
+      // deu errado? manda o cru. Pesado é melhor que mudo.
+      resolve(cru)
+    })
+  })
+  emAndamento.set(leve, trabalho)
+  return trabalho
+}
+
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath }) {
   if (servidor) return infoCelular()
   senha = novaSenha()
+  ffmpeg = ffmpegPath
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -159,7 +225,9 @@ export function ligarCelular({ stemsDir, paginaHtml }) {
       // sem "..": pedir /audio/../../ seria pedir o disco inteiro
       const chave = audio[1].replace(/[^\w-]/g, '')
       const arq = audio[2].replace(/[^\w.\-]/g, '')
-      servirAudio(req, res, join(stemsDir, chave, 'base', arq))
+      prepararLeve(stemsDir, chave, arq)
+        .then((caminhoFinal) => servirAudio(req, res, caminhoFinal))
+        .catch(() => { res.writeHead(500); res.end('nao consegui preparar o audio') })
       return
     }
 

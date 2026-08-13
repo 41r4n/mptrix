@@ -929,7 +929,8 @@ app.whenReady().then(() => {
   ipcMain.handle('celular:estado', () => infoCelular())
   ipcMain.handle('celular:ligar', () => ligarCelular({
     stemsDir: join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX', 'stems'),
-    paginaHtml: paginaCelular
+    paginaHtml: paginaCelular,
+    ffmpegPath: FFMPEG_PATH
   }))
   ipcMain.handle('celular:desligar', () => desligarCelular())
 

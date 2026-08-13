@@ -136,6 +136,13 @@ export function paginaCelular() {
   .ms .m[aria-pressed="true"] { background: var(--amarelo); box-shadow: none; }
   .ms .s[aria-pressed="true"] { background: var(--lima); box-shadow: none; }
 
+  .preparando {
+    margin-top: 10px; padding: 7px 10px;
+    background: rgba(234,179,8,0.1);
+    box-shadow: inset 2px 0 0 var(--amarelo);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    color: var(--amarelo);
+  }
   .carregando { padding: 30px; text-align: center; color: var(--mudo); font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
 </style>
 </head>
@@ -226,6 +233,23 @@ function montarAudio(m) {
     sessao.audios.push(a);
     sessao.vols[f.id] = 1;
   }
+  // PREPARANDO. Na PRIMEIRA vez que uma música é aberta no celular, o
+  // computador está convertendo as faixas — alguns segundos. Sem dizer isso, a
+  // pessoa aperta o play e não acontece nada, o que parece defeito. Depois da
+  // primeira vez as faixas já estão prontas e este aviso mal aparece.
+  var prontas = 0;
+  var aviso = document.createElement('div');
+  aviso.className = 'preparando';
+  aviso.textContent = 'preparando as faixas… 0 de ' + sessao.audios.length;
+  document.querySelector('.transporte').appendChild(aviso);
+  sessao.audios.forEach(function (a) {
+    a.addEventListener('canplay', function () {
+      prontas++;
+      if (prontas >= sessao.audios.length) { aviso.remove(); }
+      else { aviso.textContent = 'preparando as faixas… ' + prontas + ' de ' + sessao.audios.length; }
+    }, { once: true });
+  });
+
   var play = document.getElementById('play');
   var seek = document.getElementById('seek');
   var agora = document.getElementById('agora');
