@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useUpdates } from '../contexts/UpdatesContext.jsx'
 import UpdateHelpModal from './UpdateHelpModal.jsx'
 import AppUpdate from './AppUpdate.jsx'
+import ZoomChip from './ZoomChip.jsx'
 
 function computeStatus({ versions, checkInfo, errorMsg, checking }) {
   if (!versions.ytDlp) return { key: 'missing', label: 'Faltando', title: 'yt-dlp não encontrado' }
@@ -74,6 +75,10 @@ export default function UpdateFooter() {
           >
             {checking ? 'verificando…' : 'verificar atualizações'}
           </button>
+          {/* A LUPA ENTRA NA FILA, em vez de flutuar por cima. Ela mora ao
+              lado do "verificar atualizações" porque as duas são a mesma
+              natureza de coisa: ajuste do aparelho, não do trabalho. */}
+          <ZoomChip />
           <button
             className="help-btn"
             onClick={() => setHelpOpen(true)}

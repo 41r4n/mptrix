@@ -14,25 +14,6 @@ import { UpdatesProvider } from './contexts/UpdatesContext.jsx'
 
 // Lupinha: controle de tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0 também
 // funcionam) — flutuante, visível em qualquer tela, com memória
-function ZoomChip() {
-  const [z, setZ] = useState(1)
-  useEffect(() => {
-    window.mptrix.ui?.zoomGet?.().then((v) => setZ(v || 1)).catch(() => {})
-    const off = window.mptrix.ui?.onZoom?.((v) => setZ(v || 1))
-    return off
-  }, [])
-  if (!window.mptrix.ui) return null
-  return (
-    <div className="zoom-chip" title="Tamanho da tela — atalhos: Ctrl+= aproxima, Ctrl+- afasta, Ctrl+0 normal">
-      <span className="zoom-lupa" aria-hidden="true"><Ico nome="buscar" tamanho={12} /></span>
-      <button className="zoom-btn" onClick={() => window.mptrix.ui.zoom(-1)} aria-label="Diminuir tela">−</button>
-      <button className="zoom-pct" onClick={() => window.mptrix.ui.zoom(0)} title="Clique pra voltar ao tamanho normal">
-        {Math.round(z * 100)}%
-      </button>
-      <button className="zoom-btn" onClick={() => window.mptrix.ui.zoom(1)} aria-label="Aumentar tela">+</button>
-    </div>
-  )
-}
 
 // (os ícones agora moram em components/Icones.jsx, compartilhados com o acervo)
 
@@ -445,7 +426,6 @@ export default function App() {
 
         <UpdateFooter />
       </div>
-      <ZoomChip />
       {/* O RECADO — no MEIO da tela, por cima de tudo, e só sai no botão.
           A nuvem pode se desligar durante qualquer coisa: no meio de uma
           separação, com o estúdio aberto, ou com a pessoa em outra aba. Ela

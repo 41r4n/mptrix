@@ -3918,19 +3918,23 @@ section h2 {
 /* A LUPA. Ficou pra trás quando o resto virou console: pastilha arredondada,
    botões redondos e um emoji de lupa que muda de desenho conforme o Windows.
    Agora fala a mesma língua — canto reto, mono, poço cavado. */
+/* A LUPA PAROU DE FLUTUAR. Ela vivia grudada no canto de baixo à direita, por
+   cima de tudo — e o rodapé cresceu até esbarrar nela: ficou desenhada em cima
+   do "verificar atualizações". Coisa que flutua não tem vizinho, então nunca
+   se acerta com ninguém; é sempre questão de tempo até cobrir alguma coisa.
+   Agora ela é mais um item da fila do rodapé, e o lugar dela se ajusta junto
+   com o resto. A sombra grande saiu junto: ela existia pra descolar do fundo,
+   e aqui não há nada pra descolar. */
 .zoom-chip {
-  position: fixed;
-  bottom: 14px;
-  right: 14px;
-  z-index: 95;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--bg-cava);
+  flex: none;
+  background: var(--bg-cava-2);
   border: none;
   border-radius: 0;
-  box-shadow: inset 0 0 0 1px var(--border-control), 0 10px 28px rgba(0, 0, 0, 0.6);
-  padding: 3px 8px 3px 9px;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  padding: 2px 7px 2px 8px;
 }
 
 .zoom-lupa {

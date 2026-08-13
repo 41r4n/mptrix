@@ -34,7 +34,14 @@ const html = `<style>${css}</style>
       <button class="appup-link">verificar de novo</button>
     </div>
     <div class="version-info"><span class="version-pill">yt-dlp <code>2026.08.04</code></span></div>
-    <div class="version-actions"><button class="link-btn">verificar atualizacoes</button></div>
+    <div class="version-actions">
+      <span class="last-checked-rel">ultima checagem agora</span>
+      <button class="link-btn">verificar atualizacoes</button>
+      <div class="zoom-chip"><span class="zoom-lupa">o</span>
+        <button class="zoom-btn">-</button><button class="zoom-pct">100%</button>
+        <button class="zoom-btn">+</button></div>
+      <button class="help-btn">?</button>
+    </div>
   </footer>
 </div>`
 
@@ -42,7 +49,7 @@ const MEDE = `(() => {
   const cx = (s) => { const e = document.querySelector(s); if (!e) return null
     const r = e.getBoundingClientRect(); return { esq: Math.round(r.left), dir: Math.round(r.right), topo: Math.round(r.top), base: Math.round(r.bottom) } }
   return { trilho: cx('.trilho'), rodape: cx('.version-footer'), linha: cx('.appup'),
-           pe: cx('.trilho-pe'), largura: innerWidth }
+           lupa: cx('.zoom-chip'), verificar: cx('.link-btn'), largura: innerWidth }
 })()`
 
 app.whenReady().then(async () => {
@@ -60,6 +67,13 @@ app.whenReady().then(async () => {
   }
 
   const testes = []
+  // A LUPA parou de flutuar: agora ela tem vizinho e nao pode cobrir ninguem.
+  // O teste e o mais direto possivel: as duas caixas se cruzam?
+  const cruza = (a, b) => a && b && a.esq < b.dir && b.esq < a.dir && a.topo < b.base && b.topo < a.base
+  testes.push([!cruza(r.lupa, r.verificar),
+    'a lupa nao cobre o "verificar atualizacoes"'])
+  testes.push([!!r.lupa && r.lupa.esq >= r.trilho.dir - 1,
+    'a lupa tambem fica fora da faixa do trilho'])
   // sobrepoe em X? (o rodape comeca dentro da faixa do trilho)
   testes.push([r.rodape.esq >= r.trilho.dir - 1,
     'o rodape comeca depois do trilho (' + r.rodape.esq + ' >= ' + r.trilho.dir + ')'])
