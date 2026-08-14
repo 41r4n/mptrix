@@ -35,6 +35,7 @@ let mandarBaixar = null
 let espiar = null
 let iconePng = null
 let apkDoCelular = null
+let pastaFontes = null
 const ultimosPedidos = []
 
 // ██████████ AS TAREFAS ██████████
@@ -438,7 +439,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -452,6 +453,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   espiar = olhar
   iconePng = icone
   apkDoCelular = apk
+  pastaFontes = fontes
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -550,6 +552,24 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
         tem: !!(apkDoCelular && existsSync(apkDoCelular)),
         mb: apkDoCelular && existsSync(apkDoCelular) ? Math.round(statSync(apkDoCelular).size / 1048576 * 10) / 10 : 0
       }))
+      return
+    }
+
+    // ██████████ AS FONTES DA CASA ██████████
+    // O celular estava com a fonte genérica do sistema, e isso sozinho fazia a
+    // tela parecer outro programa. Space Grotesk e IBM Plex Mono já vivem no
+    // projeto, auto-hospedadas — o app é offline e nunca puxa fonte de fora.
+    // São 248 KB no total, servidos da rede de casa: o custo é nenhum e o
+    // ganho é o app inteiro parecer o mesmo dos dois lados.
+    const fonte = /^\/fonts\/([\w.-]+)$/.exec(caminho)
+    if (fonte) {
+      const arq = join(pastaFontes || '', fonte[1])
+      if (!pastaFontes || !existsSync(arq)) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, {
+        'Content-Type': fonte[1].endsWith('.css') ? 'text/css; charset=utf-8' : 'font/woff2',
+        'Cache-Control': 'max-age=2592000'
+      })
+      createReadStream(arq).pipe(res)
       return
     }
 

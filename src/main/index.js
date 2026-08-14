@@ -955,6 +955,10 @@ app.whenReady().then(() => {
     icone: app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
       : join(__dirname, '..', '..', 'build', 'icon.png'),
+    // as fontes da casa, pro celular parecer o mesmo app
+    fontes: app.isPackaged
+      ? join(process.resourcesPath, 'app.asar.unpacked', 'out', 'renderer', 'fonts')
+      : join(__dirname, '..', '..', 'src', 'renderer', 'public', 'fonts'),
     // OLHAR ANTES DE BAIXAR: mesma espiada que a tela do computador faz.
     // Colar um link e baixar no escuro custa mais que esperar alguns segundos.
     olhar: async (endereco) => {

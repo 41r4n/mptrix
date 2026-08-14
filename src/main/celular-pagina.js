@@ -37,21 +37,35 @@ export function paginaCelular() {
 <link rel="icon" href="/icone.png">
 <link rel="apple-touch-icon" href="/icone.png">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- AS FONTES DA CASA, servidas pelo computador. O app é offline: nunca puxa
+     fonte de fora. São 248 KB, e é o que faz a tela do celular parecer o mesmo
+     programa da tela do computador. -->
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 :root {
   --bg: #0b0c0f; --painel: #101216; --card: #15171c; --cava: #08090c; --cava2: #050609;
   --linha: rgba(255,255,255,0.07); --linha2: rgba(255,255,255,0.14); --linha3: rgba(255,255,255,0.22);
   --txt: #f2f4f7; --txt2: #d1d5db; --mudo: #9ba3af; --mudo2: #8a93a0;
   --lima: #b6ff3b; --lima-b: rgba(182,255,59,0.3); --amarelo: #eab308; --ruim: #f87171;
-  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ui: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  /* OS BRILHOS DA ASSINATURA. Neon só onde carrega informação — nunca
+     decorativo. Aqui ele marca: o que está aceso, o que responde ao toque, e
+     o número que manda na tela. */
+  --brilho: 0 0 18px rgba(182,255,59,0.45);
+  --brilho-forte: 0 0 26px rgba(182,255,59,0.65);
   --corte: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   --corte-sm: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0; background: var(--bg); color: var(--txt);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--ui);
   padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  /* um respiro de cor no alto: a tela deixa de ser um retângulo preto chapado
+     sem clarear o preto que é a base da casa */
+  background-image: radial-gradient(120% 60% at 50% -10%, rgba(182,255,59,0.07), transparent 70%);
+  background-attachment: fixed;
 }
 button, input { font-family: inherit; }
 
@@ -70,7 +84,9 @@ header {
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
 .marca { font-weight: 700; letter-spacing: 0.06em; font-size: 15px; line-height: 1; }
-.marca b { color: var(--lima); text-shadow: 0 0 14px rgba(182,255,59,0.45); }
+.marca { font-family: var(--ui); }
+.marca b { color: var(--lima); text-shadow: 0 0 16px rgba(182,255,59,0.6), 0 0 34px rgba(182,255,59,0.25); }
+.hex { box-shadow: 0 0 20px rgba(182,255,59,0.28); }
 .marca span {
   display: block; margin-top: 3px;
   font-family: var(--mono); font-size: 8px; letter-spacing: 0.2em;
@@ -111,7 +127,10 @@ header {
   letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
   clip-path: var(--corte-sm);
 }
-.chip.on { background: var(--lima); color: #0b0c0f; font-weight: 700; box-shadow: none; }
+.chip.on {
+  background: var(--lima); color: #0b0c0f; font-weight: 700;
+  box-shadow: 0 0 20px rgba(182,255,59,0.45);
+}
 .conta {
   font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--mudo2); padding: 0 1px;
@@ -128,11 +147,19 @@ ul { list-style: none; margin: 0; padding: 10px 12px 0; }
 li { margin-bottom: 8px; }
 .cartao-musica {
   display: flex; align-items: stretch; gap: 0;
-  background: var(--card); box-shadow: inset 0 0 0 1px var(--linha);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.045), transparent 55%),
+    var(--card);
+  box-shadow: inset 0 0 0 1px var(--linha), 0 6px 18px rgba(0,0,0,0.45);
   clip-path: var(--corte);
   transition: box-shadow 0.15s ease, background 0.15s ease;
 }
-.cartao-musica.aqui { box-shadow: inset 0 0 0 1px rgba(182,255,59,0.28); background: rgba(182,255,59,0.03); }
+/* a que está no aparelho ACENDE: contorno lima e um halo de fora, porque essa
+   é a única informação do cartão que muda o que dá pra fazer sem o computador */
+.cartao-musica.aqui {
+  box-shadow: inset 0 0 0 1px rgba(182,255,59,0.4), 0 0 22px rgba(182,255,59,0.12), 0 6px 18px rgba(0,0,0,0.45);
+  background: linear-gradient(160deg, rgba(182,255,59,0.07), transparent 55%), var(--card);
+}
 .cartao-musica:active { background: var(--cava); }
 .abrir {
   flex: 1 1 auto; min-width: 0;
@@ -157,7 +184,11 @@ li { margin-bottom: 8px; }
 /* A FILEIRA DE CORES é a assinatura da casa: uma cor por instrumento. Ela diz
    "esta tem mixer" antes de qualquer palavra ser lida. */
 .tiras { display: flex; gap: 2px; }
-.tiras i { width: 13px; height: 3px; display: block; }
+.tiras i {
+  width: 13px; height: 3px; display: block;
+  box-shadow: 0 0 7px currentColor;
+  filter: saturate(1.15);
+}
 .dados {
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
   color: var(--mudo2); line-height: 1.5;
@@ -173,7 +204,10 @@ li { margin-bottom: 8px; }
   color: var(--mudo2); cursor: pointer; position: relative; overflow: hidden;
 }
 .levar:active { background: rgba(255,255,255,0.05); }
-.levar.tem { color: #0b0c0f; background: var(--lima); border-left-color: transparent; }
+.levar.tem {
+  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
+  box-shadow: inset 0 0 22px rgba(255,255,255,0.25), -6px 0 18px rgba(182,255,59,0.28);
+}
 .levar.erro { color: var(--ruim); }
 /* o progresso enche o botão de baixo pra cima: sem número, sem texto, e
    entendido de longe */
@@ -204,8 +238,9 @@ li { margin-bottom: 8px; }
 .faixa-nome { font-size: 14px; font-weight: 600; margin-bottom: 9px; line-height: 1.3; }
 .tempo {
   display: flex; align-items: baseline; gap: 8px;
-  font-family: var(--mono); font-size: 26px; color: var(--lima);
-  text-shadow: 0 0 20px rgba(182,255,59,0.35); letter-spacing: 0.02em;
+  font-family: var(--mono); font-size: 27px; color: var(--lima);
+  text-shadow: 0 0 22px rgba(182,255,59,0.5), 0 0 44px rgba(182,255,59,0.2);
+  letter-spacing: 0.02em;
 }
 .tempo small { font-size: 12px; color: var(--mudo2); text-shadow: none; }
 .tempo .hud { margin-left: auto; text-align: right; font-size: 10px; color: var(--mudo2); text-shadow: none; letter-spacing: 0.12em; }
@@ -298,7 +333,10 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   0%, 70%, 100% { box-shadow: 0 0 24px rgba(182,255,59,0.25); }
   85% { box-shadow: 0 0 46px rgba(182,255,59,0.7); }
 }
-.ampulheta.parada { color: var(--mudo2); background: rgba(255,255,255,0.04); }
+.ampulheta.parada {
+  color: rgba(182,255,59,0.35); background: rgba(182,255,59,0.04);
+  box-shadow: 0 0 22px rgba(182,255,59,0.06);
+}
 .roda-dica { font-size: 13px; color: var(--mudo); line-height: 1.6; margin: 0 0 14px; }
 .roda-dica b { color: var(--txt2); }
 
@@ -440,7 +478,7 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   width: 6px; height: 6px; background: rgba(255,255,255,0.18);
   transform: rotate(45deg); transition: background 0.25s ease, box-shadow 0.25s ease;
 }
-.bussola i.on { background: var(--lima); box-shadow: 0 0 10px rgba(182,255,59,0.7); }
+.bussola i.on { background: var(--lima); box-shadow: 0 0 14px rgba(182,255,59,0.85); }
 body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
 
 /* O DESLIZAR. A tela que sai e a que entra andam juntas — sem isso o conteúdo
