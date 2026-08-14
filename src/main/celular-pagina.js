@@ -117,52 +117,72 @@ header {
   text-transform: uppercase; color: var(--mudo2); padding: 0 1px;
 }
 
-/* ── OS CARTÕES DO ACERVO ── */
+/* ██████████ OS CARTÕES DO ACERVO ██████████
+   Estava sem hierarquia: tudo com o mesmo peso, e uma faixa larga de "baixar"
+   repetida em cada música — catorze barras iguais empurrando o acervo pra
+   baixo e competindo com o nome, que é o que a pessoa procura.
+   Agora o cartão tem três camadas de leitura, nesta ordem: a CAPA (acha de
+   relance), o NOME (confirma), e os DADOS em letra de máquina (decide). O
+   baixar virou botão de canto: presente, sem gritar. */
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
-li { margin-bottom: 9px; }
-.musica {
-  display: flex; align-items: stretch; gap: 11px; width: 100%;
-  text-align: left; cursor: pointer; padding: 10px;
-  background: var(--card); border: none; color: var(--txt);
-  box-shadow: inset 0 0 0 1px var(--linha);
+li { margin-bottom: 8px; }
+.cartao-musica {
+  display: flex; align-items: stretch; gap: 0;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--linha);
   clip-path: var(--corte);
+  transition: box-shadow 0.15s ease, background 0.15s ease;
 }
-/* A CAPA dá o reconhecimento antes da leitura: numa lista de trinta nomes
-   parecidos, a pessoa acha pela imagem, não pelo texto. */
+.cartao-musica.aqui { box-shadow: inset 0 0 0 1px rgba(182,255,59,0.28); background: rgba(182,255,59,0.03); }
+.cartao-musica:active { background: var(--cava); }
+.abrir {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px; background: none; border: none; color: var(--txt);
+  text-align: left; cursor: pointer; font: inherit;
+}
 .capa {
-  width: 62px; height: 62px; flex: none; object-fit: cover;
+  width: 68px; height: 68px; flex: none; object-fit: cover;
   background: var(--cava2); clip-path: var(--corte-sm);
 }
 .capa-vazia {
-  width: 62px; height: 62px; flex: none;
+  width: 68px; height: 68px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--cava2); color: var(--linha3); clip-path: var(--corte-sm);
+  background: var(--cava2); color: rgba(255,255,255,0.14); clip-path: var(--corte-sm);
 }
-.corpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
-.corpo b { font-size: 14px; font-weight: 600; line-height: 1.3; }
-.marcas { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.tag {
-  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.1em;
-  text-transform: uppercase; padding: 3px 6px; color: var(--mudo2);
-  box-shadow: inset 0 0 0 1px var(--linha);
+.corpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.corpo b {
+  font-size: 14.5px; font-weight: 600; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.tag.faixas { color: var(--lima); box-shadow: inset 0 0 0 1px var(--lima-b); }
-.tag.tom, .tag.bpm { color: var(--txt2); }
-.tag.aqui { background: var(--lima); color: #0b0c0f; font-weight: 700; box-shadow: none; }
+/* A FILEIRA DE CORES é a assinatura da casa: uma cor por instrumento. Ela diz
+   "esta tem mixer" antes de qualquer palavra ser lida. */
+.tiras { display: flex; gap: 2px; }
+.tiras i { width: 13px; height: 3px; display: block; }
+.dados {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  color: var(--mudo2); line-height: 1.5;
+}
+.dados em { font-style: normal; color: var(--lima); }
 
-/* LEVAR: fica colado na música, não num menu — é a decisão que se toma antes
-   de sair de casa, e ela precisa ser vista de relance. */
+/* O BAIXAR: botão de canto, com a lateral inteira como alvo — dedo grande,
+   alvo grande. Cheio de lima quando a música já está no aparelho. */
 .levar {
-  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  margin-top: -3px; padding: 9px 10px;
-  background: none; border: none; color: var(--mudo);
-  box-shadow: inset 0 0 0 1px var(--linha2);
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
-  text-transform: uppercase; cursor: pointer;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  flex: none; width: 52px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-left: 1px solid var(--linha);
+  color: var(--mudo2); cursor: pointer; position: relative; overflow: hidden;
 }
-.levar.tem { color: var(--lima); box-shadow: inset 0 0 0 1px var(--lima-b); background: rgba(182,255,59,0.06); }
-.levar.indo { color: var(--amarelo); box-shadow: inset 0 0 0 1px rgba(234,179,8,0.5); }
+.levar:active { background: rgba(255,255,255,0.05); }
+.levar.tem { color: #0b0c0f; background: var(--lima); border-left-color: transparent; }
+.levar.erro { color: var(--ruim); }
+/* o progresso enche o botão de baixo pra cima: sem número, sem texto, e
+   entendido de longe */
+.levar.indo { color: var(--amarelo); }
+.levar.indo::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+  height: var(--quanto, 0%); background: rgba(234,179,8,0.22);
+  transition: height 0.3s ease;
+}
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
@@ -665,25 +685,48 @@ function abrirAcervo() {
   html += '<ul>';
   for (var i = 0; i < lista.length; i++) {
     var m = lista[i], n = acervo.indexOf(m);
-    html += '<li><button class="musica" data-i="' + n + '">' +
-      (m.capa
-        ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
-        : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
-      '<span class="corpo"><b>' + esc(m.titulo) + '</b><span class="marcas">' +
-        (m.inteira
-          ? '<span class="tag">música completa</span>'
-          : '<span class="tag faixas">' + m.faixas.length + ' faixas</span>') +
-        (m.tom ? '<span class="tag tom">tom ' + m.tom + '</span>' : '') +
-        (m.bpm ? '<span class="tag bpm">' + m.bpm + ' bpm</span>' : '') +
-        (m.duracao ? '<span class="tag">' + mmss(m.duracao) + '</span>' : '') +
-        '<span class="tag aqui" data-selo="' + m.chave + '" hidden>no celular</span>' +
-      '</span></span></button>' +
-      '<button class="levar" data-levar="' + m.chave + '" data-i="' + n + '">levar pro ensaio</button></li>';
+    var aqui = !!guardadas[m.chave];
+
+    // A BARRA DE CORES é a assinatura da casa: cada faixa tem a sua, e a
+    // fileira de cores diz "esta tem mixer" antes de qualquer palavra ser
+    // lida. Numa lista de trinta, é o que separa de relance a música que dá
+    // pra abrir em pedaços da que é só uma faixa.
+    var barras = '';
+    if (!m.inteira) {
+      for (var f = 0; f < m.faixas.length; f++) {
+        barras += '<i style="background:' + CORES[f % CORES.length] + '"></i>';
+      }
+    }
+
+    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '">' +
+      '<button class="abrir" data-i="' + n + '">' +
+        (m.capa
+          ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
+          : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+        '<span class="corpo">' +
+          '<b>' + esc(m.titulo) + '</b>' +
+          (barras ? '<span class="tiras">' + barras + '</span>' : '') +
+          '<span class="dados">' +
+            (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
+            (m.tom ? ' · <em>' + m.tom + '</em>' : '') +
+            (m.bpm ? ' · <em>' + m.bpm + '</em> bpm' : '') +
+            (m.duracao ? ' · ' + mmss(m.duracao) : '') +
+          '</span>' +
+        '</span>' +
+      '</button>' +
+      // O BAIXAR VIROU BOTÃO DE CANTO. Era uma faixa larga repetida em cada
+      // música — catorze barras iguais empurrando o acervo pra baixo e
+      // competindo com o nome da música, que é o que a pessoa procura.
+      '<button class="levar" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Baixar pro celular">' +
+        '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+      '</button>' +
+    '</div></li>';
   }
   tela.innerHTML = html + '</ul>';
 
   ligarPeneira();
-  tela.querySelectorAll('.musica').forEach(function (b) {
+  tela.querySelectorAll('.abrir').forEach(function (b) {
     b.onclick = function () { abrirMusica(acervo[+b.dataset.i]); };
   });
   tela.querySelectorAll('.levar').forEach(function (b) {
@@ -938,16 +981,12 @@ function recarregarAcervo() {
 function pintarLevar() {
   var qualquer = false;
   document.querySelectorAll('.levar').forEach(function (b) {
-    // sem cadeado não há modo ensaio: o botão passa a dizer o que ele faz de
-    // verdade, que é baixar o arquivo pra pasta do celular
-    if (!GUARDA_DA) { b.className = 'levar'; b.textContent = 'baixar pro celular'; return; }
+    if (b.className.indexOf('indo') >= 0) return;
     var tem = !!guardadas[b.dataset.levar];
     if (tem) qualquer = true;
-    if (b.className.indexOf('indo') >= 0) return;
     b.className = 'levar' + (tem ? ' tem' : '');
-    b.textContent = tem ? 'está no celular · tirar' : 'levar pro ensaio';
+    b.title = tem ? 'já está no celular' : 'baixar pro celular';
   });
-  document.querySelectorAll('.tag.aqui').forEach(function (s) { s.hidden = !guardadas[s.dataset.selo]; });
   var aviso = document.querySelector('.semrede');
   if (!navigator.onLine && !aviso) {
     var d = document.createElement('div');
@@ -968,7 +1007,7 @@ function baixarPraPasta(m) {
   var i = 0;
   function proxima() {
     if (i >= m.faixas.length) {
-      if (b) { b.className = 'levar tem'; b.textContent = 'baixado — veja em Downloads'; }
+      if (b) { b.className = 'levar tem'; b.title = 'baixado — veja em Downloads'; }
       return;
     }
     var f = m.faixas[i++];
@@ -978,7 +1017,7 @@ function baixarPraPasta(m) {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    if (b) { b.className = 'levar indo'; b.textContent = 'baixando… ' + i + ' de ' + m.faixas.length; }
+    if (b) { b.className = 'levar indo'; b.style.setProperty('--quanto', Math.round(i / m.faixas.length * 100) + '%'); }
     setTimeout(proxima, 900);
   }
   proxima();
@@ -986,12 +1025,12 @@ function baixarPraPasta(m) {
 
 function marcarLevando(chave, feito, total) {
   var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar indo'; b.textContent = 'levando… ' + feito + ' de ' + total; }
+  if (b) { b.className = 'levar indo'; b.style.setProperty('--quanto', Math.round(feito / total * 100) + '%'); }
 }
 
 function marcarFalhou(chave) {
   var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar'; b.textContent = 'não deu pra levar — tente de novo'; }
+  if (b) { b.className = 'levar erro'; b.title = 'não deu — toque pra tentar de novo'; }
 }
 
 function chip(id, rotulo) {
