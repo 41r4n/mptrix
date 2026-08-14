@@ -166,6 +166,7 @@ function lerAcervo(stemsDir) {
       // música e a tela precisa avisar.
       grade: m.analysis?.grade || null,
       capa: capaDe(m.sourceFile, stemsDir),
+      cor: corGuardada(stemsDir, nomeDaCapa(m.sourceFile)),
       onda: ondaDaMusica(dir),
       faixas
     })
@@ -227,6 +228,87 @@ function ondaDaMusica(dir) {
     }
     return fora
   } catch { return null }
+}
+
+// ── A COR DA MÚSICA ──
+//
+// "Tudo com cor igual" foi a queixa, e ela é justa: todo cartão do mesmo
+// cinza. Mas cor inventada seria enfeite, e enfeite já falhou duas vezes aqui.
+//
+// Então a cor vem da própria capa: o ffmpeg encolhe a imagem para UM pixel, e
+// o que sobra é a média dela. Cada música passa a ter a sua, e a variedade da
+// lista é a variedade das capas — não uma paleta que eu escolhi.
+//
+// Ela é clareada e dessaturada antes de virar tinta: capa escura daria um
+// cartão invisível, e capa berrante brigaria com o lima, que é o destaque
+// único da casa.
+function corDaCapa(caminhoJpg) {
+  return new Promise((resolve) => {
+    if (!ffmpeg || !existsSync(ffmpeg) || !existsSync(caminhoJpg)) { resolve(null); return }
+    const p = spawn(ffmpeg, [
+      '-v', 'quiet', '-i', caminhoJpg,
+      '-vf', 'scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'
+    ], { windowsHide: true })
+    const pedacos = []
+    p.stdout.on('data', (d) => pedacos.push(d))
+    p.on('error', () => resolve(null))
+    p.on('close', () => {
+      const b = Buffer.concat(pedacos)
+      if (b.length < 3) { resolve(null); return }
+      resolve(temperar(b[0], b[1], b[2]))
+    })
+  })
+}
+
+// Capa escura vira tinta invisível; capa berrante briga com o lima. Aqui a cor
+// é puxada para um cinza colorido: guarda o TOM da capa e perde o excesso.
+function temperar(r, g, b) {
+  const cinza = (r + g + b) / 3
+  const mistura = (v) => Math.round(Math.min(255, Math.max(40, cinza * 0.45 + v * 0.55 + 26)))
+  const f = [mistura(r), mistura(g), mistura(b)]
+  return '#' + f.map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+const coresDeCapa = new Map()
+const filaDeCores = []
+let pegandoCor = false
+
+function corGuardada(stemsDir, chaveJpg) {
+  if (!chaveJpg) return null
+  if (coresDeCapa.has(chaveJpg)) return coresDeCapa.get(chaveJpg)
+  const arq = join(stemsDir, '_capas', 'img', chaveJpg.replace('.jpg', '.cor'))
+  if (existsSync(arq)) {
+    try {
+      const c = readFileSync(arq, 'utf8').trim()
+      coresDeCapa.set(chaveJpg, c)
+      return c
+    } catch {}
+  }
+  pedirCor(stemsDir, chaveJpg)
+  return null
+}
+
+// uma de cada vez, em segundo plano: a lista sai na hora e as cores chegam na
+// próxima olhada
+function pedirCor(stemsDir, chaveJpg) {
+  if (filaDeCores.some((x) => x.chaveJpg === chaveJpg)) return
+  filaDeCores.push({ stemsDir, chaveJpg })
+  tocarFilaDeCores()
+}
+
+function tocarFilaDeCores() {
+  if (pegandoCor || !filaDeCores.length) return
+  pegandoCor = true
+  const t = filaDeCores.shift()
+  const jpg = join(t.stemsDir, '_capas', 'img', t.chaveJpg)
+  corDaCapa(jpg).then((c) => {
+    if (c) {
+      coresDeCapa.set(t.chaveJpg, c)
+      try { writeFileSync(jpg.replace('.jpg', '.cor'), c) } catch {}
+    }
+    pegandoCor = false
+    tocarFilaDeCores()
+  })
 }
 
 // ── A ONDA DE QUEM NUNCA FOI SEPARADO ──
@@ -323,6 +405,16 @@ function capaDe(arquivo, stemsDir) {
   } catch { return null }
 }
 
+// o nome do arquivo da capa, pra cor saber de onde tirar
+function nomeDaCapa(arquivo) {
+  try {
+    if (!arquivo || !existsSync(arquivo)) return null
+    const st = statSync(arquivo)
+    return createHash('sha1')
+      .update(`${arquivo}|${st.size}|${st.mtimeMs}|v${CAPA_V}`).digest('hex').slice(0, 16) + '.jpg'
+  } catch { return null }
+}
+
 // ── AS MÚSICAS BAIXADAS, sem separação ──
 // O celular só mostrava música separada, e o dono nem sempre quer separar:
 // muitas vezes ele quer só a música inteira, com o tom e o andamento à mão,
@@ -373,6 +465,7 @@ function lerBaixadas(historico, jaSeparadas, stemsDir) {
       bpm: null,
       inteira: true,
       capa: capaDe(caminho, stemsDir),
+      cor: corGuardada(stemsDir, nomeDaCapa(caminho)),
       faixas: [{ id: 'song', arquivo: basename(caminho), bytes: statSync(caminho).size }]
     })
   }

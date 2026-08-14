@@ -147,6 +147,8 @@ ul { list-style: none; margin: 0; padding: 10px 12px 0; }
 li { margin-bottom: 8px; }
 
 .cartao-musica {
+  --cor: #4a4f57;
+  position: relative; isolation: isolate;
   display: flex; align-items: center;
   /* DESCOLAR DO FUNDO. Card e fundo quase da mesma cor deixam a lista com cara
      de bloco único; a sombra é o que faz cada música virar uma peça. */
@@ -157,6 +159,22 @@ li { margin-bottom: 8px; }
     0 4px 14px rgba(0,0,0,.5);
   clip-path: var(--corte);
   transition: transform .12s ease, box-shadow .12s ease;
+}
+/* A TINTA DA CAPA. Uma camada só, saindo da esquerda e morrendo no meio — é
+   onde a capa está, então a cor parece VAZAR dela em vez de ter sido pintada
+   por cima. Fraca de propósito: ela dá variedade à lista, não protagonismo. */
+.cartao-musica::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(100deg, var(--cor) 0%, transparent 62%);
+  opacity: .16;
+}
+/* O GRÃO. Textura fina, quase invisível de perto, que tira o plástico do preto
+   chapado. Não é padrão nem desenho — é superfície. */
+.cartao-musica::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
 }
 /* o toque responde: sem isso a lista parece imagem, não app */
 .cartao-musica:active { transform: scale(.985); box-shadow: inset 0 0 0 1px var(--linha2); }
@@ -172,7 +190,12 @@ li { margin-bottom: 8px; }
 .capa {
   width: 66px; height: 66px; flex: none; object-fit: cover;
   background: #000; clip-path: var(--corte-sm);
-  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 3px 9px rgba(0,0,0,.55);
+  /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
+     colada em cima de um fundo escuro */
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.1),
+    0 0 18px -4px var(--cor),
+    0 4px 10px rgba(0,0,0,.6);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
@@ -227,6 +250,9 @@ li { margin-bottom: 8px; }
     inset 0 0 0 1px rgba(182,255,59,.32),
     0 4px 14px rgba(0,0,0,.5);
 }
+/* aqui o lima manda e a cor da capa recua: dois destaques ao mesmo tempo não
+   destacam nada */
+.cartao-musica.aqui::before { opacity: .07; }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
@@ -746,7 +772,12 @@ function abrirAcervo() {
     if (m.bpm) info += ' · <em>' + m.bpm + '</em> bpm';
     if (m.duracao) info += ' · ' + mmss(m.duracao);
 
-    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '">' +
+    // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
+    // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
+    // da imagem daquela música: a variedade da lista passa a ser a variedade
+    // das capas, não uma paleta que eu escolhi.
+    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
+      (m.cor ? ' style="--cor:' + m.cor + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
         (m.capa
           ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
