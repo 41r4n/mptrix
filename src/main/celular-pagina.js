@@ -214,31 +214,36 @@ li { margin-bottom: 8px; }
 /* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
    ficar boiando no preto. */
 /* ██████████ A CAPA EM CAMADAS ██████████
-   O dono mandou uma referência: hexágono preto, faixa lima saindo por uma
-   lateral, e uma sombra dura deslocada atrás. Três camadas do mesmo formato,
-   empilhadas fora de registro.
-   É o oposto de sombra difusa: aqui a profundidade vem de REPETIR a forma
-   deslocada, como carimbo fora de encaixe. Dá leitura de máquina, não de
-   fotografia — a língua que ele vem pedindo desde o começo.
-   A ORDEM É O TRUQUE INTEIRO: a escura mais atrás e mais longe, a lima colada
-   na imagem (que cobre quase toda ela, sobrando só a beirada), e a imagem
-   nítida por cima. Lima atrás da escura sumiria. */
+   A referência do dono era hexágono preto + faixa saindo por uma lateral +
+   sombra dura deslocada atrás. Na primeira tentativa eu fiz a faixa do TAMANHO
+   da capa: em vez de beirada, virou um bloco do lado dela, e ele viu na hora.
+   Beirada é sobra de alinhamento, não um segundo retângulo.
+   Agora são: uma sombra dura deslocada (profundidade de carimbo fora de
+   registro, não de foto), e um FIO de luz na aresta direita — a espessura de
+   uma quina pegando luz, que é o que a referência mostrava.
+   A cor do fio é a da própria capa, não o lima: lima em toda música roubaria o
+   destaque de "esta está no celular", que é a única coisa da lista que precisa
+   gritar. */
 .moldura {
   position: relative; flex: none; display: block; line-height: 0;
-  margin: 3px 12px 9px 1px;
+  margin: 2px 6px 6px 0;
 }
+
+/* a sombra dura, deslocada: profundidade por repetição da forma */
 .moldura::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: #0a0b0e;
-  transform: translate(9px, 9px);
+  background: #07080b;
+  transform: translate(7px, 7px);
   clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
 }
+
+/* o fio de luz na aresta direita: 3px, a espessura de uma quina pegando luz */
 .moldura::after {
-  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: var(--lima);
-  transform: translate(5px, 3px);
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
-  box-shadow: 0 0 18px rgba(182,255,59,.3);
+  content: ''; position: absolute; top: 9px; bottom: 0; right: -3px; width: 3px;
+  z-index: 3; pointer-events: none;
+  background: var(--cor);
+  box-shadow: 0 0 10px -2px var(--cor);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), 0 100%);
 }
 
 /* a imagem, nítida, por cima. Sem borda própria: com três camadas, um fio em
