@@ -199,7 +199,8 @@ li { margin-bottom: 8px; }
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image:
     repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
+    repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(48deg, rgba(255,255,255,.012) 0 1px, transparent 1px 7px);
 }
 /* o toque responde: sem isso a lista parece imagem, não app */
 .cartao-musica:active { transform: scale(.985); box-shadow: inset 0 0 0 1px var(--linha2); }
@@ -212,56 +213,41 @@ li { margin-bottom: 8px; }
 }
 /* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
    ficar boiando no preto. */
-/* ██████████ A MOLDURA DA CAPA ██████████
-   Um fio ao redor, com respiro entre ele e a imagem. É o mesmo princípio de
-   quadro pendurado: o vazio entre a moldura e a foto é o que faz a foto
-   parecer emoldurada em vez de recortada. Sem esse respiro, o fio vira contorno
-   e some visualmente contra a borda da imagem. */
+/* ██████████ A CAPA EM CAMADAS ██████████
+   O dono mandou uma referência: hexágono preto, faixa lima saindo por uma
+   lateral, e uma sombra dura deslocada atrás. Três camadas do mesmo formato,
+   empilhadas fora de registro.
+   É o oposto de sombra difusa: aqui a profundidade vem de REPETIR a forma
+   deslocada, como carimbo fora de encaixe. Dá leitura de máquina, não de
+   fotografia — a língua que ele vem pedindo desde o começo.
+   A ORDEM É O TRUQUE INTEIRO: a escura mais atrás e mais longe, a lima colada
+   na imagem (que cobre quase toda ela, sobrando só a beirada), e a imagem
+   nítida por cima. Lima atrás da escura sumiria. */
 .moldura {
   position: relative; flex: none; display: block; line-height: 0;
-  padding: 5px;
+  margin: 3px 12px 9px 1px;
 }
-/* a moldura corta na quina OPOSTA à do cartão: duas formas anguladas em
-   sentidos diferentes se conversam; iguais, viram repetição */
 .moldura::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: #0a0b0e;
+  transform: translate(9px, 9px);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
 }
-/* e um segundo fio, mais fraco, só nos dois cantos vivos — a marca de painel
-   sem virar caixa dentro de caixa */
 .moldura::after {
-  content: ''; position: absolute; left: 0; top: 0; width: 11px; height: 11px;
-  border-top: 1px solid rgba(182,255,59,.5);
-  border-left: 1px solid rgba(182,255,59,.5);
-  pointer-events: none;
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: var(--lima);
+  transform: translate(5px, 3px);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  box-shadow: 0 0 18px rgba(182,255,59,.3);
 }
 
-/* O SINAL DE QUE ABRE. Era lima cheio e brilhando: com a capa borrada atrás,
-   virou o ponto mais berrante do cartão — e ele não é a coisa mais importante
-   dele. Agora é vidro escuro com o triângulo lima dentro: presente, e com
-   charme em vez de grito. */
-/* O SELO fica na quina de baixo da moldura, metade dentro e metade fora: é o
-   que dá a leitura de emblema aplicado sobre a peça, em vez de ícone flutuando
-   solto. A sombra é do SVG, não da caixa — caixa com sombra num formato
-   recortado deixa sombra retangular aparecendo nas diagonais. */
-.tocar {
-  position: absolute; right: -6px; bottom: -6px;
-  line-height: 0; pointer-events: none;
-  filter: drop-shadow(0 3px 7px rgba(0,0,0,.8));
-  transition: transform .12s ease;
-}
-.cartao-musica:active .tocar { transform: scale(.9); }
-
+/* a imagem, nítida, por cima. Sem borda própria: com três camadas, um fio em
+   volta viraria uma quarta beirada competindo com as outras. */
 .capa {
+  position: relative; z-index: 2;
   width: 66px; height: 66px; flex: none; object-fit: cover;
   background: #000;
   clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
-  /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
-     colada em cima de um fundo escuro */
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.14),
-    0 4px 12px rgba(0,0,0,.7);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
