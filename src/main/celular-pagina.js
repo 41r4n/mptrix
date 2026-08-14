@@ -499,6 +499,16 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 // computador" — quando o computador estava ali, respondendo.
 // Depender de cookie é depender de uma decisão do navegador que eu não
 // controlo. A senha eu controlo: ela está na barra de endereço, e vai junto.
+// DENTRO DO APP OU NO NAVEGADOR? A mesma tela roda nos dois, e a diferença
+// muda o que ela pode fazer: no navegador ela pede tudo ao computador; dentro
+// do app ela vai ler o próprio telefone (ainda não sabe — é a Fase 1).
+// Sem essa distinção, o app instalado dizia "não consegui falar com o
+// computador", que é confuso: não é falha de rede, é função que ainda não
+// existe. Erro que mente sobre a própria causa foi o defeito que mais custou
+// tempo neste projeto.
+var DENTRO_DO_APP = !!(window.Capacitor || location.protocol === 'capacitor:' ||
+  (location.protocol === 'https:' && location.hostname === 'localhost'));
+
 var S = (new URLSearchParams(location.search).get('s') || '');
 function comSenha(u) {
   if (!S) return u;
@@ -1279,6 +1289,15 @@ fetch(comSenha('/api/acervo')).then(function (r) {
   acervo = lista; abrirAcervo();
 }).catch(function (e) {
   if (!ultimoErro) ultimoErro = String(e && e.message ? e.message : e);
+  if (DENTRO_DO_APP) {
+    tela.innerHTML = '<p class="vazio"><b>Ainda estou aprendendo</b>' +
+      'Este app ainda não lê a música guardada no seu celular — é a próxima parte a ser feita.<br><br>' +
+      'Por enquanto, use pelo navegador: abra o endereço que aparece no MPTRIX do computador, ' +
+      'na aba NUVEM.<br><br>' +
+      '<span style="font-family:var(--mono);font-size:11px;color:var(--mudo2)">' +
+      'o que você vê aqui é a tela pronta, esperando a música</span></p>';
+    return;
+  }
   tela.innerHTML = '<p class="vazio"><b>Não consegui falar com o computador</b>' +
     'Confira se o MPTRIX está aberto nele, se você apertou "Ligar agora",<br>' +
     'e se o celular está no mesmo Wi-Fi.' +
