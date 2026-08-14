@@ -220,10 +220,13 @@ li { margin-bottom: 9px; }
 /* A ONDA VIROU FUNDO. Como bloco separado ela empurrava tudo pra baixo pra
    dizer pouco. Atrás do texto ela custa ZERO espaço e continua sendo verdade —
    o formato daquela gravação — e o olho lê sem perceber que leu. */
+/* MEDIDO NO APARELHO DO DONO: a 13% e ocupando a altura toda, ela virou uma
+   parede verde atrás do texto. O valor no papel parecia discreto; na tela do
+   celular, com brilho alto, não era. Agora ela é uma faixa baixa no pé. */
 .onda {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 32px;
   display: flex; align-items: flex-end; gap: 1px;
-  opacity: .13; pointer-events: none; z-index: 0;
+  opacity: .07; pointer-events: none; z-index: 0;
 }
 .onda i { flex: 1 1 auto; display: block; background: var(--lima); }
 
@@ -273,7 +276,7 @@ li { margin-bottom: 9px; }
     0 8px 22px rgba(0,0,0,.55);
 }
 .cartao-musica.aqui .canto { opacity: 1; border-color: var(--lima); }
-.cartao-musica.aqui .onda { opacity: .26; }
+.cartao-musica.aqui .onda { opacity: .16; }
 .cartao-musica.aqui .moldura { background: rgba(182,255,59,.05); }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
