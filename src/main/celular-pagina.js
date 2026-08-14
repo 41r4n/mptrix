@@ -181,14 +181,6 @@ li { margin-bottom: 8px; }
   font-size: 14.5px; font-weight: 600; line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-/* A FILEIRA DE CORES é a assinatura da casa: uma cor por instrumento. Ela diz
-   "esta tem mixer" antes de qualquer palavra ser lida. */
-.tiras { display: flex; gap: 2px; }
-.tiras i {
-  width: 13px; height: 3px; display: block;
-  box-shadow: 0 0 7px currentColor;
-  filter: saturate(1.15);
-}
 .dados {
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
   color: var(--mudo2); line-height: 1.5;
@@ -725,16 +717,9 @@ function abrirAcervo() {
     var m = lista[i], n = acervo.indexOf(m);
     var aqui = !!guardadas[m.chave];
 
-    // A BARRA DE CORES é a assinatura da casa: cada faixa tem a sua, e a
-    // fileira de cores diz "esta tem mixer" antes de qualquer palavra ser
-    // lida. Numa lista de trinta, é o que separa de relance a música que dá
-    // pra abrir em pedaços da que é só uma faixa.
-    var barras = '';
-    if (!m.inteira) {
-      for (var f = 0; f < m.faixas.length; f++) {
-        barras += '<i style="background:' + CORES[f % CORES.length] + '"></i>';
-      }
-    }
+    // as tiras coloridas saíram: o dono olhou e não gostou. A cor por
+    // instrumento continua onde ela serve de verdade — dentro do estúdio,
+    // onde se procura uma faixa entre outras.
 
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '">' +
       '<button class="abrir" data-i="' + n + '">' +
@@ -743,7 +728,6 @@ function abrirAcervo() {
           : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '<span class="corpo">' +
           '<b>' + esc(m.titulo) + '</b>' +
-          (barras ? '<span class="tiras">' + barras + '</span>' : '') +
           '<span class="dados">' +
             (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
             (m.tom ? ' · <em>' + m.tom + '</em>' : '') +
