@@ -146,25 +146,10 @@ header {
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
 li { margin-bottom: 8px; }
 
-/* ██████████ A FORMA DO CARTÃO ██████████
-   O dono pediu polígono, forma. A resposta não é acrescentar desenho em cima —
-   é CORTAR a própria peça. Aqui a silhueta é assimétrica de propósito:
-   chanfro grande na quina de cima-direita, pequeno embaixo-esquerda, e um
-   entalhe raso na lateral esquerda, na altura da capa.
-   Assimetria é o que faz uma forma ter frente e verso, como peça de máquina.
-   Chanfro igual nos quatro cantos é caixa com as pontas lixadas. */
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
   display: flex; align-items: center;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 20px) 0,
-    100% 20px,
-    100% 100%,
-    12px 100%,
-    0 calc(100% - 12px)
-  );
   /* DESCOLAR DO FUNDO. Card e fundo quase da mesma cor deixam a lista com cara
      de bloco único; a sombra é o que faz cada música virar uma peça. */
   background: #16181e;
@@ -172,6 +157,7 @@ li { margin-bottom: 8px; }
     inset 0 1px 0 rgba(255,255,255,.05),
     inset 0 0 0 1px var(--linha),
     0 4px 14px rgba(0,0,0,.5);
+  clip-path: var(--corte);
   transition: transform .12s ease, box-shadow .12s ease;
 }
 /* A PRÓPRIA CAPA COMO FUNDO, borrada e fora de foco. É mais rica que uma tinta
@@ -199,8 +185,7 @@ li { margin-bottom: 8px; }
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image:
     repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(48deg, rgba(255,255,255,.012) 0 1px, transparent 1px 7px);
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
 }
 /* o toque responde: sem isso a lista parece imagem, não app */
 .cartao-musica:active { transform: scale(.985); box-shadow: inset 0 0 0 1px var(--linha2); }
@@ -213,46 +198,53 @@ li { margin-bottom: 8px; }
 }
 /* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
    ficar boiando no preto. */
-/* ██████████ A CAPA EM CAMADAS ██████████
-   A referência do dono era hexágono preto + faixa saindo por uma lateral +
-   sombra dura deslocada atrás. Na primeira tentativa eu fiz a faixa do TAMANHO
-   da capa: em vez de beirada, virou um bloco do lado dela, e ele viu na hora.
-   Beirada é sobra de alinhamento, não um segundo retângulo.
-   Agora são: uma sombra dura deslocada (profundidade de carimbo fora de
-   registro, não de foto), e um FIO de luz na aresta direita — a espessura de
-   uma quina pegando luz, que é o que a referência mostrava.
-   A cor do fio é a da própria capa, não o lima: lima em toda música roubaria o
-   destaque de "esta está no celular", que é a única coisa da lista que precisa
-   gritar. */
+/* ██████████ A MOLDURA DA CAPA ██████████
+   Um fio ao redor, com respiro entre ele e a imagem. É o mesmo princípio de
+   quadro pendurado: o vazio entre a moldura e a foto é o que faz a foto
+   parecer emoldurada em vez de recortada. Sem esse respiro, o fio vira contorno
+   e some visualmente contra a borda da imagem. */
 .moldura {
   position: relative; flex: none; display: block; line-height: 0;
-  margin: 2px 6px 6px 0;
+  padding: 5px;
 }
-
-/* a sombra dura, deslocada: profundidade por repetição da forma */
 .moldura::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: #07080b;
-  transform: translate(7px, 7px);
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
+  clip-path: var(--corte-sm);
 }
-
-/* o fio de luz na aresta direita: 3px, a espessura de uma quina pegando luz */
+/* e um segundo fio, mais fraco, só nos dois cantos vivos — a marca de painel
+   sem virar caixa dentro de caixa */
 .moldura::after {
-  content: ''; position: absolute; top: 9px; bottom: 0; right: -3px; width: 3px;
-  z-index: 3; pointer-events: none;
-  background: var(--cor);
-  box-shadow: 0 0 10px -2px var(--cor);
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), 0 100%);
+  content: ''; position: absolute; left: 0; top: 0; width: 11px; height: 11px;
+  border-top: 1px solid rgba(182,255,59,.5);
+  border-left: 1px solid rgba(182,255,59,.5);
+  pointer-events: none;
 }
 
-/* a imagem, nítida, por cima. Sem borda própria: com três camadas, um fio em
-   volta viraria uma quarta beirada competindo com as outras. */
+/* O SINAL DE QUE ABRE. Era lima cheio e brilhando: com a capa borrada atrás,
+   virou o ponto mais berrante do cartão — e ele não é a coisa mais importante
+   dele. Agora é vidro escuro com o triângulo lima dentro: presente, e com
+   charme em vez de grito. */
+/* O SELO fica na quina de baixo da moldura, metade dentro e metade fora: é o
+   que dá a leitura de emblema aplicado sobre a peça, em vez de ícone flutuando
+   solto. A sombra é do SVG, não da caixa — caixa com sombra num formato
+   recortado deixa sombra retangular aparecendo nas diagonais. */
+.tocar {
+  position: absolute; right: -6px; bottom: -6px;
+  line-height: 0; pointer-events: none;
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,.8));
+  transition: transform .12s ease;
+}
+.cartao-musica:active .tocar { transform: scale(.9); }
+
 .capa {
-  position: relative; z-index: 2;
   width: 66px; height: 66px; flex: none; object-fit: cover;
-  background: #000;
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  background: #000; clip-path: var(--corte-sm);
+  /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
+     colada em cima de um fundo escuro */
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.14),
+    0 4px 12px rgba(0,0,0,.7);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
@@ -278,21 +270,16 @@ li { margin-bottom: 8px; }
 
 /* O BAIXAR: coluna própria com fio à esquerda. Alvo grande pro dedo, calado
    quando não tem nada a dizer. */
-/* A COLUNA DO BAIXAR é cortada na diagonal. A divisa entre ela e o corpo deixa
-   de ser um fio reto e vira uma ARESTA — o preto dela contra o cartão desenha a
-   linha sozinho, sem precisar de contorno. É o corte que separa, não a borda. */
 .levar {
-  flex: none; width: 62px; align-self: stretch; position: relative; overflow: hidden;
+  flex: none; width: 52px; align-self: stretch; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  padding-left: 12px;
-  background: rgba(0,0,0,.34); border: none;
-  clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%);
+  background: rgba(0,0,0,.22); border: none; border-left: 1px solid var(--linha);
   color: var(--mudo2); cursor: pointer;
   transition: color .13s ease, background .13s ease;
 }
 .levar:active { background: rgba(255,255,255,.06); color: var(--txt2); }
 .levar.tem {
-  color: #0b0c0f; background: var(--lima);
+  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
   box-shadow: inset 0 0 20px rgba(255,255,255,.22);
 }
 .levar.erro { color: var(--ruim); }
