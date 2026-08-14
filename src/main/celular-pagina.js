@@ -132,69 +132,84 @@ header {
   box-shadow: 0 0 20px rgba(182,255,59,0.45);
 }
 .conta {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--mudo2); padding: 0 1px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--mudo2); padding: 2px 1px 0;
 }
 
 /* ██████████ OS CARTÕES DO ACERVO ██████████
-   Terceira tentativa, e desta vez por subtração. As duas primeiras erraram do
-   mesmo jeito: eu enchi de coisa — onda, colchete, número de série, células de
-   dados — e cada camada nova competia com a anterior. O dono olhou as duas e
-   disse a mesma coisa: pobre na primeira, horrível na segunda.
-   Desenho que precisa de explicação não está pronto. Aqui sobrou o que a
-   pessoa usa pra escolher uma música: a imagem, o nome, e uma linha dizendo o
-   que ela é. */
+   Terceira tentativa, por subtração — e agora polida. As duas primeiras
+   erraram do mesmo jeito: eu enchi de coisa, e cada camada competia com a
+   anterior.
+   O que mudou nesta passada não foi ACRESCENTAR, foi apertar o que já existia:
+   a capa cresceu e ganhou peso, o cartão descolou do fundo, o texto ficou mais
+   legível e o toque passou a responder. Nenhum elemento novo. */
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
 li { margin-bottom: 8px; }
 
 .cartao-musica {
   display: flex; align-items: center;
-  background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--linha);
+  /* DESCOLAR DO FUNDO. Card e fundo quase da mesma cor deixam a lista com cara
+     de bloco único; a sombra é o que faz cada música virar uma peça. */
+  background: #16181e;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 0 0 1px var(--linha),
+    0 4px 14px rgba(0,0,0,.5);
   clip-path: var(--corte);
+  transition: transform .12s ease, box-shadow .12s ease;
 }
-.cartao-musica:active { background: var(--cava); }
+/* o toque responde: sem isso a lista parece imagem, não app */
+.cartao-musica:active { transform: scale(.985); box-shadow: inset 0 0 0 1px var(--linha2); }
 
 .abrir {
   flex: 1 1 auto; min-width: 0;
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px; background: none; border: none; color: var(--txt);
+  display: flex; align-items: center; gap: 13px;
+  padding: 11px 12px; background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
+/* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
+   ficar boiando no preto. */
 .capa {
-  width: 58px; height: 58px; flex: none; object-fit: cover;
+  width: 66px; height: 66px; flex: none; object-fit: cover;
   background: #000; clip-path: var(--corte-sm);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 3px 9px rgba(0,0,0,.55);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
   color: rgba(255,255,255,.15);
 }
 .corpo { flex: 1 1 auto; min-width: 0; }
-/* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão e faz a
-   lista ficar irregular, e lista irregular cansa de rolar. */
+/* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão, e lista
+   irregular cansa de rolar. */
 .corpo b {
-  display: block; font-size: 15px; font-weight: 600; line-height: 1.35;
+  display: block; font-size: 15.5px; font-weight: 600; line-height: 1.35;
+  letter-spacing: -.005em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 .dados {
   display: block;
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
-  color: var(--mudo2);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--mudo);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.dados em { font-style: normal; color: var(--lima); }
+/* tom e BPM em lima porque são os dois números que um músico procura */
+.dados em { font-style: normal; color: var(--lima); font-weight: 500; }
 
 /* O BAIXAR: coluna própria com fio à esquerda. Alvo grande pro dedo, calado
    quando não tem nada a dizer. */
 .levar {
-  flex: none; width: 50px; align-self: stretch; position: relative; overflow: hidden;
+  flex: none; width: 52px; align-self: stretch; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  background: none; border: none; border-left: 1px solid var(--linha);
+  background: rgba(0,0,0,.22); border: none; border-left: 1px solid var(--linha);
   color: var(--mudo2); cursor: pointer;
+  transition: color .13s ease, background .13s ease;
 }
-.levar:active { background: rgba(255,255,255,.05); }
-.levar.tem { color: #0b0c0f; background: var(--lima); border-left-color: transparent; }
+.levar:active { background: rgba(255,255,255,.06); color: var(--txt2); }
+.levar.tem {
+  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
+  box-shadow: inset 0 0 20px rgba(255,255,255,.22);
+}
 .levar.erro { color: var(--ruim); }
 .levar.indo { color: var(--ambar); }
 .levar.indo::after {
@@ -202,8 +217,16 @@ li { margin-bottom: 8px; }
   height: var(--quanto, 0%); background: rgba(234,179,8,.25); transition: height .3s ease;
 }
 
-/* JÁ ESTÁ NO APARELHO: só o contorno muda. É informação, não festa. */
-.cartao-musica.aqui { box-shadow: inset 0 0 0 1px rgba(182,255,59,.35); }
+/* JÁ ESTÁ NO APARELHO: contorno lima e um respiro de cor no fundo. É a única
+   informação do cartão que muda o que dá pra fazer sem o computador — e por
+   isso é a única que ganha cor. */
+.cartao-musica.aqui {
+  background: linear-gradient(180deg, rgba(182,255,59,.06), transparent 60%), #16181e;
+  box-shadow:
+    inset 0 1px 0 rgba(182,255,59,.16),
+    inset 0 0 0 1px rgba(182,255,59,.32),
+    0 4px 14px rgba(0,0,0,.5);
+}
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
