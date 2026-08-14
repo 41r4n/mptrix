@@ -146,10 +146,25 @@ header {
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
 li { margin-bottom: 8px; }
 
+/* ██████████ A FORMA DO CARTÃO ██████████
+   O dono pediu polígono, forma. A resposta não é acrescentar desenho em cima —
+   é CORTAR a própria peça. Aqui a silhueta é assimétrica de propósito:
+   chanfro grande na quina de cima-direita, pequeno embaixo-esquerda, e um
+   entalhe raso na lateral esquerda, na altura da capa.
+   Assimetria é o que faz uma forma ter frente e verso, como peça de máquina.
+   Chanfro igual nos quatro cantos é caixa com as pontas lixadas. */
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
   display: flex; align-items: center;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 20px) 0,
+    100% 20px,
+    100% 100%,
+    12px 100%,
+    0 calc(100% - 12px)
+  );
   /* DESCOLAR DO FUNDO. Card e fundo quase da mesma cor deixam a lista com cara
      de bloco único; a sombra é o que faz cada música virar uma peça. */
   background: #16181e;
@@ -157,7 +172,6 @@ li { margin-bottom: 8px; }
     inset 0 1px 0 rgba(255,255,255,.05),
     inset 0 0 0 1px var(--linha),
     0 4px 14px rgba(0,0,0,.5);
-  clip-path: var(--corte);
   transition: transform .12s ease, box-shadow .12s ease;
 }
 /* A PRÓPRIA CAPA COMO FUNDO, borrada e fora de foco. É mais rica que uma tinta
@@ -207,10 +221,12 @@ li { margin-bottom: 8px; }
   position: relative; flex: none; display: block; line-height: 0;
   padding: 5px;
 }
+/* a moldura corta na quina OPOSTA à do cartão: duas formas anguladas em
+   sentidos diferentes se conversam; iguais, viram repetição */
 .moldura::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
-  clip-path: var(--corte-sm);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }
 /* e um segundo fio, mais fraco, só nos dois cantos vivos — a marca de painel
    sem virar caixa dentro de caixa */
@@ -239,7 +255,8 @@ li { margin-bottom: 8px; }
 
 .capa {
   width: 66px; height: 66px; flex: none; object-fit: cover;
-  background: #000; clip-path: var(--corte-sm);
+  background: #000;
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
   /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
      colada em cima de um fundo escuro */
   box-shadow:
@@ -270,16 +287,21 @@ li { margin-bottom: 8px; }
 
 /* O BAIXAR: coluna própria com fio à esquerda. Alvo grande pro dedo, calado
    quando não tem nada a dizer. */
+/* A COLUNA DO BAIXAR é cortada na diagonal. A divisa entre ela e o corpo deixa
+   de ser um fio reto e vira uma ARESTA — o preto dela contra o cartão desenha a
+   linha sozinho, sem precisar de contorno. É o corte que separa, não a borda. */
 .levar {
-  flex: none; width: 52px; align-self: stretch; position: relative; overflow: hidden;
+  flex: none; width: 62px; align-self: stretch; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.22); border: none; border-left: 1px solid var(--linha);
+  padding-left: 12px;
+  background: rgba(0,0,0,.34); border: none;
+  clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%);
   color: var(--mudo2); cursor: pointer;
   transition: color .13s ease, background .13s ease;
 }
 .levar:active { background: rgba(255,255,255,.06); color: var(--txt2); }
 .levar.tem {
-  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
+  color: #0b0c0f; background: var(--lima);
   box-shadow: inset 0 0 20px rgba(255,255,255,.22);
 }
 .levar.erro { color: var(--ruim); }
