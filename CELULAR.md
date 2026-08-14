@@ -74,6 +74,66 @@ conta do outro, perder música, achar música alheia) não são evitados com
 cuidado — **não têm onde acontecer**, porque não existe lugar comum onde dois
 acervos se encontrem.
 
+## O acervo é um só, visto de dois lugares
+
+A lista viaja sozinha; o arquivo só vai quando a pessoa pede.
+
+- Baixou no computador → **aparece** no celular
+- Baixou no celular → **aparece** no computador
+- O arquivo continua onde foi baixado, até alguém mandar levar
+
+E a marca existe **dos dois lados**, porque é ela que evita a pergunta "será
+que essa eu tenho aqui?":
+
+| no computador | no celular |
+|---|---|
+| Girlfriend — *nos dois* | Girlfriend — *no celular* |
+| Oceano — *só aqui* | Oceano — *só no computador* |
+
+Cada aparelho guarda a lista do outro do último encontro. Sem isso, longe de
+casa o celular mostraria só o que ele tem — e a pessoa perderia justamente a
+informação de que existe mais música esperando por ela.
+
+**A sincronização acontece quando os dois se encontram na mesma rede**, não na
+hora. Quem baixa uma música na igreja só vê ela no computador ao chegar em
+casa. É consequência de não existir servidor no meio, e é o preço de ninguém
+pagar a conta de ninguém.
+
+## Entrar com a própria conta
+
+O dono levantou duas coisas que parecem diferentes e são a mesma:
+
+1. O pai fica sem crédito e quer usar o do filho.
+2. Ter o mesmo MPTRIX no celular, no computador de casa e no do trabalho.
+
+As duas pedem **identidade**, e identidade normalmente pede servidor — que é
+justamente o que este projeto não quer ter.
+
+**A saída: o login é o do Google, e a "conta" é o Drive da própria pessoa.**
+
+- Botão único: *Entrar com Google*. Ninguém cria conta de MPTRIX, ninguém
+  inventa senha, ninguém confirma e-mail.
+- No Drive da pessoa ficam a **lista do acervo** e a **chave do crédito** —
+  poucos KB.
+- Entrou no celular do pai: aparece o acervo e o crédito de quem entrou. Saiu:
+  volta a ser o do pai.
+
+Não existe servidor meu, não existe cadastro, e os acervos de duas pessoas
+nunca se encontram: cada um está na conta de outro dono.
+
+O preço: precisa de internet **para entrar** (depois disso, o que está baixado
+toca offline), e a pessoa precisa de uma conta Google — que no Android todo
+mundo já tem, porque é o que instala aplicativo.
+
+**Emprestar crédito sem login** também é possível (a chave passa por um código
+lido na tela), mas quem recebe gasta sem limite: não existe meia chave. Um teto
+no aparelho de quem pegou é freio de confiança, não tranca. Entre pai e filho
+basta; entre estranhos, não.
+
+**A tela de entrar é construída cedo**, mesmo antes de estar ligada em tudo. O
+dono julga o que vê, não o que lê — e "ficou burocrático?" é uma pergunta que
+só se responde olhando.
+
 ## Só Android
 
 A Apple não deixa instalar por fora da loja dela, e a loja não aceita app que
