@@ -8051,16 +8051,57 @@ section h2::after {
   padding: 0;
   min-width: 0;
 }
+/* A LASCA ANGULADA. Do cartaz que o dono desenhou: um bloco escuro cortado na
+   diagonal, encostado na borda esquerda, atrás do título. Aqui ela é uma
+   chapa levemente mais clara que o fundo, com o corte reto em 100° — o que
+   marca não é a cor, é a ARESTA torta. Vive no fundo do próprio elemento, e
+   não num pseudo, porque os dois pseudos daqui já têm dono. */
 .palco-in {
   position: relative;
   padding: 54px 46px 60px;
   max-width: 1000px;
   animation: palco-entra 0.26s ease;
 }
-@keyframes palco-entra {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+/* A LASCA vive no PALCO, não no painel, pelo mesmo motivo da trama: o painel
+   termina onde o texto acaba, e a chapa cortava reto no meio da tela.
+   Ela e a trama valem SÓ na tela de boas-vindas — `.palco-in` serve as quatro
+   abas, e atrás da lista de 102 itens do acervo isto seria barulho embaixo de
+   texto pequeno. A ampulheta (`.marca`) só existe aqui, então é ela quem diz,
+   sem precisar inventar classe nova no JSX. */
+.palco:has(.palco-in > .marca)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.025) 0 104px, transparent 104px);
 }
+/* A TRAMA. Foi o achado dele: bolinha não é grão nem gradiente — é RETÍCULA DE
+   IMPRESSÃO, o padrão de pontinhos de cartaz e revista. Dá superfície gráfica
+   sem virar desenho e sem inventar cor nova.
+   Duas grades sobrepostas, uma larga e grossa e outra apertada e fina: uma só
+   fica com cara de papel milimetrado. Empilhadas, o ponto grande e o pequeno
+   se alternam e a trama parece ficar mais rala conforme se afasta — que é
+   como retícula de verdade se comporta.
+   Ela mora no PALCO, não no painel: o painel para em 1000px e a trama cortava
+   reto no meio da tela. E é presa ao palco que TEM painel de boas-vindas — nas
+   listas do acervo ela seria barulho atrás de texto pequeno. */
+.palco:has(.palco-in > .marca)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at center, rgba(182, 255, 59, 0.95) 3.4px, transparent 4px),
+    radial-gradient(circle at center, rgba(182, 255, 59, 0.6) 1.7px, transparent 2.2px);
+  background-size: 38px 38px, 19px 19px;
+  /* nasce no canto de cima à direita e morre antes da coluna do texto */
+  -webkit-mask-image: linear-gradient(234deg, #000 0%, rgba(0, 0, 0, 0.4) 26%, transparent 50%);
+  mask-image: linear-gradient(234deg, #000 0%, rgba(0, 0, 0, 0.4) 26%, transparent 50%);
+  opacity: 0.42;
+}
+
 .palco-olho {
   margin: 0 0 14px;
   font-family: var(--font-mono);
