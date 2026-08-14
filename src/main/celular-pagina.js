@@ -329,6 +329,61 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 .tarefa .trilha { height: 4px; margin-top: 8px; background: rgba(255,255,255,0.1); }
 .tarefa .trilha i { display: block; height: 100%; background: var(--lima); transition: width 0.3s linear; }
 
+/* ██████████ AS FERRAMENTAS ██████████
+   Elas ficam numa faixa própria embaixo do transporte, e não escondidas: quem
+   abre uma música num ensaio abre POR CAUSA delas. */
+.ferramentas { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+.ferr {
+  flex: 1 1 0; min-width: 78px; padding: 8px 6px;
+  background: none; border: none; box-shadow: inset 0 0 0 1px var(--linha2);
+  color: var(--mudo); cursor: pointer; clip-path: var(--corte-sm);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.ferr b { font-family: var(--mono); font-size: 12px; color: var(--txt2); font-weight: 500; }
+.ferr span { font-family: var(--mono); font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; }
+.ferr.on { box-shadow: inset 0 0 0 1px var(--lima-b); background: rgba(182,255,59,0.07); }
+.ferr.on b, .ferr.on span { color: var(--lima); }
+.ferr:disabled { opacity: 0.35; }
+
+/* A VELOCIDADE é a ferramenta que o amigo do dono precisava: o solo estava
+   rápido demais pra acompanhar. O tom NÃO muda junto — quem estuda um solo
+   precisa das mesmas notas, mais devagar. */
+.velocidade { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.velocidade input { flex: 1 1 auto; height: 26px; -webkit-appearance: none; appearance: none; background: none; }
+.velocidade input::-webkit-slider-runnable-track { height: 3px; background: rgba(255,255,255,0.12); }
+.velocidade input::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 15px; height: 15px; margin-top: -6px;
+  background: var(--lima); border-radius: 50%;
+}
+.velocidade b { font-family: var(--mono); font-size: 13px; color: var(--lima); flex: none; width: 46px; text-align: right; }
+.velocidade .rot { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mudo2); flex: none; }
+
+/* CIFRA E LETRA rolam juntas com a música: o acorde do momento acende e a
+   linha cantada acende. Ler cifra parada é ler partitura sem saber onde está. */
+.painel-letra { padding: 4px 12px 20px; }
+.linha-letra {
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: color 0.15s ease;
+}
+.linha-letra .acordes {
+  font-family: var(--mono); font-size: 12px; color: var(--lima);
+  letter-spacing: 0.06em; margin-bottom: 3px; min-height: 15px;
+}
+.linha-letra .frase { font-size: 15px; line-height: 1.45; color: var(--mudo); }
+.linha-letra.agora .frase { color: var(--txt); font-weight: 600; }
+.linha-letra.agora { background: rgba(182,255,59,0.05); box-shadow: inset 2px 0 0 var(--lima); padding-left: 10px; }
+.so-cifra { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 22px; }
+.so-cifra span {
+  font-family: var(--mono); font-size: 13px; padding: 6px 9px;
+  color: var(--mudo); box-shadow: inset 0 0 0 1px var(--linha);
+}
+.so-cifra span.agora { color: #0b0c0f; background: var(--lima); box-shadow: none; font-weight: 700; }
+.aviso-tom {
+  margin: 10px 12px; padding: 9px 11px;
+  background: rgba(234,179,8,0.1); box-shadow: inset 2px 0 0 var(--amarelo);
+  font-size: 12px; line-height: 1.5; color: var(--amarelo);
+}
+
 .diag {
   display: block; margin-top: 18px; padding: 12px;
   background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
@@ -841,7 +896,21 @@ function abrirMusica(m) {
     '<div class="botoes">' +
       '<button class="play" id="play" aria-label="Tocar">&#9654;</button>' +
       '<button class="zerar" id="zerar">voltar ao início</button>' +
-    '</div></div><div class="faixas">';
+    '</div>' +
+    // AS FERRAMENTAS. Metrônomo, repetir trecho e velocidade — o que faz
+    // alguém abrir uma música num ensaio.
+    '<div class="ferramentas">' +
+      '<button class="ferr" id="btMetro"><b>' + (m.bpm || '--') + '</b><span>metrônomo</span></button>' +
+      '<button class="ferr" id="btLoop"><b>A-B</b><span>repetir</span></button>' +
+      '<button class="ferr" id="btLetra"' + ((m.letra || m.cifra) ? '' : ' disabled') + '><b>' +
+        (m.letra ? 'LETRA' : (m.cifra ? 'CIFRA' : '--')) + '</b><span>' + (m.letra && m.cifra ? 'e cifra' : 'ver') + '</span></button>' +
+    '</div>' +
+    '<div class="velocidade">' +
+      '<span class="rot">velocidade</span>' +
+      '<input id="vel" type="range" min="50" max="100" step="5" value="100">' +
+      '<b id="velTxt">100%</b>' +
+    '</div>' +
+    '</div><div class="faixas">';
   for (var i = 0; i < m.faixas.length; i++) {
     var f = m.faixas[i], cor = CORES[i % CORES.length];
     var nome = NOMES[f.id] || (f.id.charAt(0).toUpperCase() + f.id.slice(1));
@@ -936,7 +1005,153 @@ function montarAudio(m) {
       sessao.solos[b.dataset.id] = !on; aplicar();
     };
   });
+  ligarFerramentas(m, mestre, irPara);
   aplicar();
+}
+
+// ██████████ VELOCIDADE, METRÔNOMO, REPETIR E CIFRA ██████████
+var loopA = null, loopB = null, metro = false, verLetra = false;
+var audioCtx = null, ultimaBatida = -1;
+
+function ligarFerramentas(m, mestre, irPara) {
+  loopA = null; loopB = null; metro = false; verLetra = false; ultimaBatida = -1;
+
+  // VELOCIDADE SEM MEXER NO TOM. Quem estuda um solo precisa das MESMAS notas,
+  // mais devagar — se o tom cair junto, a pessoa aprende errado.
+  var vel = document.getElementById('vel');
+  var velTxt = document.getElementById('velTxt');
+  vel.oninput = function () {
+    var r = vel.value / 100;
+    velTxt.textContent = vel.value + '%';
+    sessao.audios.forEach(function (a) {
+      a.preservesPitch = true;
+      a.mozPreservesPitch = true;
+      a.webkitPreservesPitch = true;
+      a.playbackRate = r;
+    });
+  };
+
+  // REPETIR TRECHO: primeiro toque marca onde começa, segundo onde termina,
+  // terceiro solta. Marcar no relógio é o jeito que funciona sem desenho de
+  // onda — e num celular a onda seria pequena demais pra acertar o dedo.
+  var btLoop = document.getElementById('btLoop');
+  btLoop.onclick = function () {
+    if (loopA === null) { loopA = mestre.currentTime; pintarLoop(btLoop); return; }
+    if (loopB === null) {
+      loopB = mestre.currentTime;
+      if (loopB <= loopA) { loopB = null; loopA = mestre.currentTime; }
+      pintarLoop(btLoop); return;
+    }
+    loopA = null; loopB = null; pintarLoop(btLoop);
+  };
+
+  // METRÔNOMO. "Seguindo" usa as batidas que o analisador achou na gravação —
+  // é o único jeito de ficar junto de banda humana, que acelera no refrão.
+  var btMetro = document.getElementById('btMetro');
+  btMetro.onclick = function () {
+    metro = !metro;
+    btMetro.className = 'ferr' + (metro ? ' on' : '');
+    if (metro && !audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+    }
+    if (metro && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  };
+
+  var btLetra = document.getElementById('btLetra');
+  if (btLetra && !btLetra.disabled) {
+    btLetra.onclick = function () {
+      verLetra = !verLetra;
+      btLetra.className = 'ferr' + (verLetra ? ' on' : '');
+      pintarLetra(m, mestre.currentTime);
+    };
+  }
+
+  // um relógio só, e ele cuida de tudo que anda com o tempo
+  mestre.addEventListener('timeupdate', function () {
+    var t = mestre.currentTime;
+    if (loopA !== null && loopB !== null && t >= loopB) irPara(loopA);
+    if (metro) baterMetro(m, t);
+    if (verLetra) acenderLetra(t);
+  });
+}
+
+function pintarLoop(b) {
+  if (loopA === null) { b.className = 'ferr'; b.querySelector('b').textContent = 'A-B'; return; }
+  b.className = 'ferr on';
+  b.querySelector('b').textContent = loopB === null ? mmss(loopA) + '→?' : mmss(loopA) + '→' + mmss(loopB);
+}
+
+// O CLIQUE é um estalo curto, não um bipe: bipe longo se confunde com a
+// música, e no ensaio o metrônomo tem que ser ouvido POR CIMA dela.
+function baterMetro(m, t) {
+  if (!audioCtx || !m.batidas) return;
+  for (var i = ultimaBatida + 1; i < m.batidas.length; i++) {
+    if (m.batidas[i] <= t && m.batidas[i] > t - 0.15) {
+      ultimaBatida = i;
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = (i % 4 === 0) ? 1600 : 1100;
+      g.gain.setValueAtTime(0.28, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.05);
+      return;
+    }
+    if (m.batidas[i] > t) { ultimaBatida = i - 1; return; }
+  }
+}
+
+// A CIFRA EM CIMA DO VERSO, como no computador: o acorde só serve se você sabe
+// em que palavra ele entra.
+function pintarLetra(m, t) {
+  var velho = document.querySelector('.painel-letra, .so-cifra, .aviso-tom');
+  if (velho) velho.remove();
+  if (!verLetra) return;
+  var alvo = document.querySelector('.faixas');
+  var caixa = document.createElement('div');
+
+  if (m.letra && m.letra.length) {
+    caixa.className = 'painel-letra';
+    var h = '';
+    for (var i = 0; i < m.letra.length; i++) {
+      var seg = m.letra[i];
+      var acordes = '';
+      if (m.cifra) {
+        for (var c = 0; c < m.cifra.length; c++) {
+          var ac = m.cifra[c];
+          if (ac.t >= seg.t0 && ac.t < (seg.t1 || seg.t0 + 4)) acordes += (acordes ? '  ' : '') + ac.label;
+        }
+      }
+      h += '<div class="linha-letra" data-t0="' + seg.t0 + '" data-t1="' + (seg.t1 || seg.t0 + 4) + '">' +
+        '<div class="acordes">' + acordes + '</div>' +
+        '<div class="frase">' + esc(seg.text || '') + '</div></div>';
+    }
+    caixa.innerHTML = h;
+  } else if (m.cifra && m.cifra.length) {
+    caixa.className = 'so-cifra';
+    var g = '';
+    for (var k = 0; k < m.cifra.length; k++) {
+      g += '<span data-t0="' + m.cifra[k].t + '" data-t1="' + (m.cifra[k].end || m.cifra[k].t + 2) + '">' + esc(m.cifra[k].label) + '</span>';
+    }
+    caixa.innerHTML = g;
+  }
+  alvo.parentNode.insertBefore(caixa, alvo);
+  acenderLetra(t);
+}
+
+// acender o trecho do momento é o que transforma texto em acompanhamento
+function acenderLetra(t) {
+  var linhas = document.querySelectorAll('.linha-letra, .so-cifra span');
+  var achou = null;
+  linhas.forEach(function (l) {
+    var dentro = t >= +l.dataset.t0 && t < +l.dataset.t1;
+    if (dentro && !achou) achou = l;
+    if (l.className.indexOf('agora') >= 0 !== dentro) {
+      l.className = l.className.replace(' agora', '') + (dentro ? ' agora' : '');
+    }
+  });
+  if (achou && achou.getBoundingClientRect().top > window.innerHeight - 140) {
+    achou.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
 }
 
 // SOLO MANDA NO MUDO: se alguma faixa está em solo, todas as outras calam,

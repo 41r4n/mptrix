@@ -149,6 +149,17 @@ function lerAcervo(stemsDir) {
       duracao: m.duration || 0,
       tom: m.analysis?.key ? `${m.analysis.key}${m.analysis.scale === 'minor' ? 'm' : ''}` : null,
       bpm: m.analysis?.bpm ? Math.round(m.analysis.bpm) : null,
+      // A LETRA, A CIFRA E AS BATIDAS JÁ ESTAVAM AQUI. O computador descobriu
+      // tudo isso quando separou a música, e eu simplesmente não mandava pro
+      // celular — o telefone tinha o som e nada do que rodeia o som, que é
+      // metade do motivo de alguém abrir isto num ensaio.
+      cifra: m.chords?.list || null,
+      letra: m.lyrics?.segments || null,
+      batidas: m.analysis?.ticks || null,
+      // grade = o pulso constante que descreve a gravação. Só existe quando um
+      // pulso constante REALMENTE serve; sem ela, metrônomo firme se separa da
+      // música e a tela precisa avisar.
+      grade: m.analysis?.grade || null,
       capa: capaDe(m.sourceFile, stemsDir),
       faixas
     })
