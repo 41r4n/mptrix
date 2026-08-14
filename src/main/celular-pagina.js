@@ -181,6 +181,27 @@ li { margin-bottom: 8px; }
   font-size: 14.5px; font-weight: 600; line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* ██████████ A ONDA ██████████
+   Barras finas, altura de verdade, cor apagada — ela é o CHÃO do cartão, não
+   o assunto. Quem manda é o nome da música; a onda é o que você lê sem
+   perceber que leu.
+   Sem espaço entre as barras nas pontas: a onda encosta nas bordas como fita
+   de gravação, e é isso que dá a leitura de "material", não de gráfico. */
+.onda {
+  display: flex; align-items: flex-end; gap: 1px;
+  height: 18px; margin: 1px 0 2px;
+  opacity: 0.62;
+}
+.onda i {
+  flex: 1 1 auto; min-width: 0; display: block;
+  background: linear-gradient(180deg, var(--lima), rgba(182,255,59,0.35));
+  border-radius: 0.5px;
+}
+/* na que está no aparelho a onda acende junto: o cartão inteiro muda de
+   estado, e a onda faz parte dele */
+.cartao-musica.aqui .onda { opacity: 0.95; }
+.cartao-musica.aqui .onda i { box-shadow: 0 0 5px rgba(182,255,59,0.5); }
+
 .dados {
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
   color: var(--mudo2); line-height: 1.5;
@@ -717,9 +738,16 @@ function abrirAcervo() {
     var m = lista[i], n = acervo.indexOf(m);
     var aqui = !!guardadas[m.chave];
 
-    // as tiras coloridas saíram: o dono olhou e não gostou. A cor por
-    // instrumento continua onde ela serve de verdade — dentro do estúdio,
-    // onde se procura uma faixa entre outras.
+    // A ONDA DA MÚSICA, e ela NÃO é textura: é o formato daquela gravação.
+    // Dá pra ver de relance onde entra a banda toda, onde tem refrão, se
+    // começa devagar. Enfeite que imita informação é o que esta casa não faz —
+    // isto é informação de verdade, e por acaso é bonita.
+    var onda = '';
+    if (m.onda && m.onda.length) {
+      for (var w = 0; w < m.onda.length; w++) {
+        onda += '<i style="height:' + Math.max(8, Math.round(m.onda[w] * 100)) + '%"></i>';
+      }
+    }
 
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '">' +
       '<button class="abrir" data-i="' + n + '">' +
@@ -728,6 +756,7 @@ function abrirAcervo() {
           : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '<span class="corpo">' +
           '<b>' + esc(m.titulo) + '</b>' +
+          (onda ? '<span class="onda">' + onda + '</span>' : '') +
           '<span class="dados">' +
             (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
             (m.tom ? ' · <em>' + m.tom + '</em>' : '') +

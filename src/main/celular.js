@@ -165,6 +165,7 @@ function lerAcervo(stemsDir) {
       // música e a tela precisa avisar.
       grade: m.analysis?.grade || null,
       capa: capaDe(m.sourceFile, stemsDir),
+      onda: ondaDaMusica(dir),
       faixas
     })
   }
@@ -180,6 +181,51 @@ function acervoCompleto(stemsDir, historico) {
   // aconteceu com o dono: ele baixou, procurou no topo, e concluiu que falhou.
   // O que acabou de acontecer é o que ela está procurando.
   return separadas.concat(inteiras)
+}
+
+// ── A ONDA DA MÚSICA ──
+// O computador já desenhou a onda de cada faixa quando separou — 800 pontos
+// por faixa, 2000 pra música inteira. Ela estava parada no disco.
+//
+// No cartão ela NÃO É TEXTURA: é o formato daquela música. Dá pra ver de
+// relance onde tem refrão, onde entra a banda toda, se começa devagar. Enfeite
+// que imita informação é o que a casa não faz — mas isto é informação de
+// verdade, e por acaso é bonita.
+//
+// Vai reduzida a 56 pontos: no tamanho de um cartão de celular, mais que isso
+// vira borrão. Menos é mais legível, não mais pobre.
+function ondaDaMusica(dir) {
+  try {
+    const song = join(dir, 'peaks3_song.json')
+    let bruta = null
+    if (existsSync(song)) {
+      bruta = JSON.parse(readFileSync(song, 'utf8'))
+    } else {
+      // sem a onda da música inteira, o maior de cada faixa em cada ponto
+      // desenha a mesma silhueta: onde qualquer instrumento toca alto, a
+      // música está alta.
+      const arquivos = readdirSync(dir).filter((f) => /^peaks2_.*\.json$/.test(f))
+      for (const f of arquivos) {
+        const p = JSON.parse(readFileSync(join(dir, f), 'utf8'))
+        if (!Array.isArray(p)) continue
+        if (!bruta) bruta = p.slice()
+        else for (let i = 0; i < bruta.length && i < p.length; i++) bruta[i] = Math.max(bruta[i], p[i])
+      }
+    }
+    if (!Array.isArray(bruta) || !bruta.length) return null
+
+    const N = 56
+    const passo = bruta.length / N
+    const fora = []
+    for (let i = 0; i < N; i++) {
+      let m = 0
+      for (let k = Math.floor(i * passo); k < Math.floor((i + 1) * passo); k++) {
+        if (bruta[k] > m) m = bruta[k]
+      }
+      fora.push(Math.round(m * 100) / 100)
+    }
+    return fora
+  } catch { return null }
 }
 
 // ── A CAPA ──
