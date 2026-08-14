@@ -1,7 +1,8 @@
 import { createServer } from 'http'
-import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync } from 'fs'
+import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'fs'
 import { join, isAbsolute, basename } from 'path'
 import { spawn } from 'child_process'
+import { Buffer } from 'buffer'
 import { createHash, randomBytes } from 'crypto'
 import { networkInterfaces } from 'os'
 
@@ -228,6 +229,81 @@ function ondaDaMusica(dir) {
   } catch { return null }
 }
 
+// ── A ONDA DE QUEM NUNCA FOI SEPARADO ──
+//
+// A onda só existia para música separada: o computador desenha ela durante a
+// separação. Resultado — das catorze músicas do dono, duas tinham onda e doze
+// não, e a mudança quase não apareceu na tela.
+//
+// Aqui ela é desenhada do próprio arquivo, com o ffmpeg: o áudio vira PCM cru,
+// mono e baixinho (4 kHz basta — a silhueta de uma música não fica melhor com
+// mais resolução), e daí saem os 56 pontos.
+const PONTOS_DA_ONDA = 56
+
+function ondaDeArquivo(arquivo, guardarEm) {
+  return new Promise((resolve) => {
+    if (!ffmpeg || !existsSync(ffmpeg) || !existsSync(arquivo)) { resolve(null); return }
+    const p = spawn(ffmpeg, [
+      '-v', 'quiet', '-i', arquivo,
+      '-ac', '1', '-ar', '4000', '-f', 's16le', '-'
+    ], { windowsHide: true })
+
+    const pedacos = []
+    p.stdout.on('data', (d) => pedacos.push(d))
+    p.on('error', () => resolve(null))
+    p.on('close', () => {
+      try {
+        const b = Buffer.concat(pedacos)
+        const amostras = Math.floor(b.length / 2)
+        if (amostras < PONTOS_DA_ONDA) { resolve(null); return }
+        const passo = Math.floor(amostras / PONTOS_DA_ONDA)
+        const onda = []
+        for (let i = 0; i < PONTOS_DA_ONDA; i++) {
+          let maior = 0
+          for (let k = i * passo; k < (i + 1) * passo; k++) {
+            const v = Math.abs(b.readInt16LE(k * 2))
+            if (v > maior) maior = v
+          }
+          onda.push(Math.round(maior / 32768 * 100) / 100)
+        }
+        try {
+          mkdirSync(guardarEm.replace(/[\\/][^\\/]+$/, ''), { recursive: true })
+          writeFileSync(guardarEm, JSON.stringify(onda))
+        } catch {}
+        resolve(onda)
+      } catch { resolve(null) }
+    })
+  })
+}
+
+// UMA DE CADA VEZ, EM SEGUNDO PLANO. Na primeira olhada as ondas ainda não
+// existem: o dono vê a lista na hora e as ondas aparecem na próxima. Melhor
+// lista rápida sem onda do que tela parada esperando doze conversões — e doze
+// ffmpeg ao mesmo tempo travariam a máquina de quem está usando o app.
+const filaDeOndas = []
+let desenhandoOnda = false
+
+function pedirOnda(arquivo, guardarEm) {
+  if (existsSync(guardarEm)) return
+  if (filaDeOndas.some((x) => x.guardarEm === guardarEm)) return
+  filaDeOndas.push({ arquivo, guardarEm })
+  tocarFilaDeOndas()
+}
+
+function tocarFilaDeOndas() {
+  if (desenhandoOnda || !filaDeOndas.length) return
+  desenhandoOnda = true
+  const t = filaDeOndas.shift()
+  ondaDeArquivo(t.arquivo, t.guardarEm).then(() => {
+    desenhandoOnda = false
+    tocarFilaDeOndas()
+  })
+}
+
+function ondaGuardada(caminho) {
+  try { return existsSync(caminho) ? JSON.parse(readFileSync(caminho, 'utf8')) : null } catch { return null }
+}
+
 // ── A CAPA ──
 // O computador já baixou e guardou as capas de todas as músicas. A chave é
 // calculada do arquivo (caminho, tamanho, data) — a MESMA conta do app, senão
@@ -272,6 +348,10 @@ function lerBaixadas(historico, jaSeparadas, stemsDir) {
     const titulo = (h.customName || h.displayName || h.title || arq).replace(/\.[^.]+$/, '')
     if (vistos.has(caminho)) continue
     vistos.add(caminho)
+    const chaveInteira = h.id || createHash('sha1').update(caminho).digest('hex').slice(0, 12)
+    const ondaEm = join(stemsDir, '_inteiras', String(chaveInteira), 'onda.json')
+    if (!existsSync(ondaEm)) pedirOnda(caminho, ondaEm)
+
     // se ela JÁ está separada, o lugar dela é entre as separadas — com todas
     // as faixas. Mostrar as duas seria a mesma música duas vezes na lista.
     if (jaSeparadas.has(titulo)) continue
@@ -281,7 +361,12 @@ function lerBaixadas(historico, jaSeparadas, stemsDir) {
       // levado POR chave, então levar uma marcaria as outras. O caminho do
       // arquivo é único por natureza; ele serve de identidade quando o id
       // falta.
-      chave: 'inteira:' + (h.id || createHash('sha1').update(caminho).digest('hex').slice(0, 12)),
+      chave: 'inteira:' + chaveInteira,
+      // A ONDA TAMBÉM PRA QUEM NUNCA FOI SEPARADO. Das catorze músicas do
+      // dono, só duas tinham onda — as separadas — e a mudança quase não
+      // apareceu na tela. Agora o computador desenha a das outras a partir do
+      // próprio arquivo, em segundo plano.
+      onda: ondaGuardada(ondaEm),
       titulo,
       duracao: 0,
       tom: null,
