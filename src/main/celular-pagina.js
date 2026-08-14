@@ -210,13 +210,14 @@ li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
 .cartao-musica.comfundo::before {
   background-image: var(--fundo);
   background-size: 130% auto; background-position: left center;
-  filter: blur(22px) saturate(1.6) brightness(.5);
-  /* SÓ NO CANTO DA CAPA. Espalhada pelo cartão inteiro ela virava uma névoa
-     colorida por cima de tudo, e o desenho do dono é chapa quase preta com o
-     texto branco saltando. Agora ela morre antes do nome. */
-  opacity: .32;
-  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.24) 28%, transparent 50%);
-  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.24) 28%, transparent 50%);
+  filter: blur(24px) saturate(1.5) brightness(.42);
+  /* PRESA NA LÂMINA. No desenho do dono a área do texto é chapa escura, e a
+     cor da capa espalhada por metade do cartão era a maior diferença que
+     sobrava. Ela agora fica onde a capa está e morre logo depois — dá a
+     variedade da lista sem tomar a peça. */
+  opacity: .2;
+  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.18) 22%, transparent 40%);
+  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.18) 22%, transparent 40%);
   transform: scale(1.12);
 }
 /* A TRAMA no terço da direita, igual ao desenho — e é a mesma retícula de
@@ -227,17 +228,32 @@ li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 5.2 L14.3 7.6 L14.3 12.4 L10 14.8 L5.7 12.4 L5.7 7.6 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.4 L15 7.2 L15 12.8 L10 15.6 L5 12.8 L5 7.2 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.2'/%3E%3C/svg%3E");
   background-size: 13px 13px, 13px 13px;
   background-position: 0 0, 6.5px 6.5px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 56%, rgba(0,0,0,.4) 80%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 56%, rgba(0,0,0,.4) 80%, #000 100%);
-  /* MUITO apagada: hexágono de 9px carrega bem mais tinta que bolinha, e na
-     primeira foto o canto direito virou um muro de colmeia — de novo. */
-  opacity: .13;
+  /* NO DESENHO DELE A TRAMA SE VÊ. Ela é um BLOCO no terço da direita, com
+     começo definido — não um rastro que atravessa o cartão inteiro. Eu tinha
+     apagado demais justamente por medo do muro de colmeia; a saída não era
+     sumir com ela, era encurtar o território dela. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 58%, rgba(0,0,0,.75) 70%, #000 78%);
+  mask-image: linear-gradient(90deg, transparent 58%, rgba(0,0,0,.75) 70%, #000 78%);
+  opacity: .22;
 }
 
 .abrir {
   position: relative; flex: 1 1 auto; min-width: 0;
   padding: 0; background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
+}
+
+/* A CHAPA COM PONTA À DIREITA. É a peça mais marcante do desenho do dono e era
+   a única que faltava inteira: a placa onde o texto mora termina numa SETA,
+   não num corte reto.
+   Ela também resolve uma coisa que eu tinha errado — no desenho dele existem
+   três tons (fundo do cartão, lâmina da capa, chapa do texto), e eu só tinha
+   dois. É o degrau de tom que faz as peças parecerem empilhadas. */
+.chapa {
+  position: absolute; left: 58px; top: 0; bottom: 0; right: 30%;
+  z-index: 0; pointer-events: none;
+  background: rgba(255,255,255,.045);
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 50%, calc(100% - 26px) 100%, 0 100%);
 }
 
 /* A LÂMINA DA CAPA: cortada em ponta na esquerda (acompanhando o cartão) e em
@@ -258,15 +274,21 @@ li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
    texto (entra na lâmina) e para cedo; o de baixo começa depois e passa mais
    longe. É esse desencontro que dá o ar de painel — dois fios alinhados
    viravam moldura, e moldura em volta de texto mente pro dedo. */
-.painel { display: block; margin-left: 100px; padding: 13px 10px 33px 0; min-width: 0; }
-.fio { display: block; height: 1px; pointer-events: none; }
+.painel {
+  position: relative; z-index: 1;
+  display: block; margin-left: 100px; padding: 13px 10px 33px 0; min-width: 0;
+}
+.fio { display: block; height: 1.5px; pointer-events: none; }
+/* BRANCO CHAPADO, sem degradê. Eu tinha feito os dois desbotando nas pontas
+   pra "não pesar" — e desbotado eles viravam sujeira em vez de fio. No desenho
+   dele são dois traços brancos, francos, e é isso que dá o corte de painel. */
 .fio-cima {
-  margin-left: -42px; width: calc(100% - 22px); margin-bottom: 9px;
-  background: linear-gradient(90deg, rgba(255,255,255,.1), rgba(255,255,255,.6) 24%, rgba(255,255,255,.6));
+  margin-left: -42px; width: calc(100% - 20px); margin-bottom: 9px;
+  background: rgba(255,255,255,.8);
 }
 .fio-baixo {
-  margin-left: 24px; width: calc(100% + 6px); margin-top: 9px;
-  background: linear-gradient(90deg, rgba(255,255,255,.42), rgba(255,255,255,.42) 74%, transparent);
+  margin-left: 24px; width: calc(100% + 8px); margin-top: 9px;
+  background: rgba(255,255,255,.55);
 }
 
 /* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão, e lista
@@ -293,7 +315,7 @@ li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
 .tocar {
   position: absolute; left: 70px; bottom: 11px; z-index: 2;
   line-height: 0; pointer-events: none;
-  filter: drop-shadow(0 3px 8px rgba(0,0,0,.85));
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.9)) drop-shadow(0 0 12px rgba(182,255,59,.35));
   transition: transform .12s ease;
 }
 .cartao-musica:active .tocar { transform: scale(.92); }
@@ -326,7 +348,10 @@ li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
    ela já está aqui. */
 .levar {
   position: relative; flex: none; width: 48px; align-self: stretch;
-  display: flex; align-items: center; justify-content: center;
+  /* encostado NO ALTO, como no desenho — mas o botão continua ocupando a
+     altura toda, senão o alvo do dedo encolhia junto com o desenho */
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 11px;
   background: none; border: none; cursor: pointer;
   color: rgba(182,255,59,.42);
   transition: color .15s ease;
@@ -887,9 +912,13 @@ function abrirAcervo() {
           // e contorno inset desenha RETÂNGULO: o recorte comia as diagonais e
           // sobrava fio só nos lados retos. Ficava quebrado, e o dono viu.
           '<span class="tocar" aria-hidden="true">' +
+            // LIMA CHEIO com o play PRETO, como no desenho dele. Era vidro
+            // escuro com o triângulo lima; sobre a chapa e a trama o vidro
+            // sumia. Texto e símbolo sobre lima são sempre escuros — regra da
+            // casa, e é o que dá o contraste que o vidro não dava.
             '<svg viewBox="0 0 26 30" width="27" height="31">' +
-              '<path d="M13 1.2 24.5 7.9v14.2L13 28.8 1.5 22.1V7.9z" fill="rgba(9,10,13,.92)" stroke="rgba(182,255,59,.6)" stroke-width="1.4"/>' +
-              '<path d="M10.4 9.6v10.8L19.4 15z" fill="#b6ff3b"/>' +
+              '<path d="M13 .8 24.8 7.6v14.8L13 29.2 1.2 22.4V7.6z" fill="#b6ff3b"/>' +
+              '<path d="M10.2 9.4v11.2L19.6 15z" fill="#0b0c0f"/>' +
             '</svg>' +
           '</span>' +
         '<span class="painel"><span class="corpo">' +
@@ -903,8 +932,12 @@ function abrirAcervo() {
       // AS LÂMINAS VERDES do desenho dele. Dois triângulos apontando pra
       // baixo — direção é o que faz "baixar" ser lido sem legenda.
       '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
-        '<svg viewBox="0 0 24 26" width="21" height="23" fill="currentColor" aria-hidden="true">' +
-        '<path d="M3 2h18l-9 10z"/><path d="M6 15h12l-6 8z" opacity=".78"/></svg>' +
+        // Duas lâminas empilhadas e fora de registro, no canto de CIMA, como
+        // no desenho dele. A de baixo é triângulo apontando pra baixo: sem
+        // essa direção a peça viraria enfeite e ninguém adivinharia que ali
+        // se leva a música pro celular.
+        '<svg viewBox="0 0 28 40" width="25" height="36" fill="currentColor" aria-hidden="true">' +
+        '<path d="M8 1h19v14H14z"/><path d="M3 19h20L13 34z" opacity=".6"/></svg>' +
       '</button>' +
     '</div></li>';
   }
