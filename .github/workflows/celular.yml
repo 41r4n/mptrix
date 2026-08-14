@@ -1,0 +1,71 @@
+# ██████████ O APP ANDROID É MONTADO AQUI, NÃO NA MÁQUINA DO DONO ██████████
+#
+# Montar app Android exige um kit de 4 a 6 GB (Java + SDK do Android). O dono
+# tem 46 GB livres e uma internet de casa; gastar isso pra gerar um arquivo que
+# ele vai instalar no telefone é troca ruim.
+#
+# Aqui o GitHub monta de graça (repositório público) e devolve o arquivo pronto
+# — no mesmo lugar de onde ele já baixa o MPTRIX do computador.
+#
+# O preço: cada versão leva alguns minutos. Quase não incomoda, porque a TELA
+# continua sendo ajustada no navegador, rápido; só o que é de dentro do
+# aparelho (baixar, guardar, afinar) precisa passar por aqui.
+name: App do celular
+
+on:
+  # botão na página de Actions, pra gerar quando quiser
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'celular/**'
+      - 'src/main/celular-pagina.js'
+      - 'src/shared/**'
+      - '.github/workflows/celular.yml'
+
+jobs:
+  montar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Java 17: o que as ferramentas do Android usam hoje
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Kit do Android
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar o que o app precisa
+        working-directory: celular
+        run: npm install --no-audit --no-fund
+
+      # A TELA VEM DA MESMA FONTE que o computador serve. Se ela fosse copiada
+      # à mão, um conserto feito de um lado sumiria do outro.
+      - name: Gerar a tela a partir da fonte única
+        run: node scripts/gera-tela-celular.mjs
+
+      - name: Passar a tela pro app
+        working-directory: celular
+        run: npx cap sync android
+
+      - name: Montar o instalável
+        working-directory: celular/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Guardar o arquivo
+        uses: actions/upload-artifact@v4
+        with:
+          name: MPTRIX-celular
+          path: celular/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

@@ -19,7 +19,8 @@
     "confere:atualizacao": "electron scripts/confere-atualizacao.cjs 0.3.9 tem-nova && electron scripts/confere-atualizacao.cjs 0.4.0 em-dia",
     "confere:rodape": "electron scripts/confere-rodape.cjs",
     "confere:celular": "node scripts/confere-celular.mjs",
-    "confere:pagina": "node scripts/confere-pagina.mjs"
+    "confere:pagina": "node scripts/confere-pagina.mjs",
+    "tela:celular": "node scripts/gera-tela-celular.mjs"
   },
   "dependencies": {
     "electron-store": "^8.2.0",

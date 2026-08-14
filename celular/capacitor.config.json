@@ -1,0 +1,11 @@
+{
+  "appId": "com.mptrix.celular",
+  "appName": "MPTRIX",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

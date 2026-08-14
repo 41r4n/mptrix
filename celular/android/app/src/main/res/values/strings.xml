@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MPTRIX</string>
+    <string name="title_activity_main">MPTRIX</string>
+    <string name="package_name">com.mptrix.celular</string>
+    <string name="custom_url_scheme">com.mptrix.celular</string>
+</resources>
