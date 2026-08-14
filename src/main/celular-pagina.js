@@ -137,99 +137,144 @@ header {
 }
 
 /* ██████████ OS CARTÕES DO ACERVO ██████████
-   Estava sem hierarquia: tudo com o mesmo peso, e uma faixa larga de "baixar"
-   repetida em cada música — catorze barras iguais empurrando o acervo pra
-   baixo e competindo com o nome, que é o que a pessoa procura.
-   Agora o cartão tem três camadas de leitura, nesta ordem: a CAPA (acha de
-   relance), o NOME (confirma), e os DADOS em letra de máquina (decide). O
-   baixar virou botão de canto: presente, sem gritar. */
+   Estava pobre: tudo da mesma cor, sem fio, sem sombra, sem camada. Um
+   retângulo com texto dentro não é desenho — é ausência de desenho.
+   O que dá material a uma caixa, na ordem em que o olho percebe:
+     1. CAMADAS       superfícies diferentes pra funções diferentes
+     2. FIOS          separando o que é separado
+     3. PROFUNDIDADE  luz na aresta de cima, sombra embaixo
+     4. MARCAS        colchete de canto e número de série — a língua FUI
+     5. COR           uma só, e só onde carrega informação */
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
-li { margin-bottom: 8px; }
+li { margin-bottom: 9px; }
+
 .cartao-musica {
-  display: flex; align-items: stretch; gap: 0;
+  position: relative;
+  display: flex; align-items: stretch;
   background:
-    linear-gradient(160deg, rgba(255,255,255,0.045), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent 42%),
     var(--card);
-  box-shadow: inset 0 0 0 1px var(--linha), 0 6px 18px rgba(0,0,0,0.45);
+  /* luz na aresta de cima + fio em volta + sombra embaixo: é isso que faz uma
+     caixa parecer uma PEÇA e não um retângulo pintado */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 0 0 1px var(--linha),
+    0 8px 22px rgba(0,0,0,.55);
   clip-path: var(--corte);
-  transition: box-shadow 0.15s ease, background 0.15s ease;
+  transition: box-shadow .16s ease, background .16s ease;
 }
-/* a que está no aparelho ACENDE: contorno lima e um halo de fora, porque essa
-   é a única informação do cartão que muda o que dá pra fazer sem o computador */
-.cartao-musica.aqui {
-  box-shadow: inset 0 0 0 1px rgba(182,255,59,0.4), 0 0 22px rgba(182,255,59,0.12), 0 6px 18px rgba(0,0,0,0.45);
-  background: linear-gradient(160deg, rgba(182,255,59,0.07), transparent 55%), var(--card);
+.cartao-musica:active { background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 42%), var(--cava); }
+
+/* COLCHETES DE CANTO. Duas marcas em L, uma em cima e outra embaixo: é a
+   assinatura de painel de equipamento, e custa dois elementos vazios. */
+.canto {
+  position: absolute; width: 9px; height: 9px; pointer-events: none;
+  border: 1px solid rgba(182,255,59,.5); opacity: .55; z-index: 2;
 }
-.cartao-musica:active { background: var(--cava); }
+.canto.tl { top: 4px; left: 4px; border-right: none; border-bottom: none; }
+.canto.br { bottom: 4px; right: 4px; border-left: none; border-top: none; }
+
+/* NÚMERO DE SÉRIE. Ele não serve pra contar nada — serve pra dizer que isto é
+   um item de um conjunto, que é o que caixa de jogo faz. */
+.serie {
+  position: absolute; top: 6px; right: 60px; z-index: 2;
+  font-family: var(--mono); font-size: 8px; letter-spacing: .18em;
+  color: rgba(255,255,255,.22);
+}
+
 .abrir {
   flex: 1 1 auto; min-width: 0;
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px; background: none; border: none; color: var(--txt);
+  display: flex; align-items: stretch; gap: 0;
+  padding: 0; background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
-.capa {
-  width: 68px; height: 68px; flex: none; object-fit: cover;
-  background: var(--cava2); clip-path: var(--corte-sm);
+
+/* A MOLDURA DA CAPA é uma camada mais funda que o corpo, com fio à direita —
+   duas superfícies, uma divisa. É o que separa "a imagem" de "os dados". */
+.moldura {
+  flex: none; padding: 10px; background: var(--cava2);
+  border-right: 1px solid var(--linha);
+  display: flex; align-items: center;
+}
+.capa, .capa-vazia {
+  width: 62px; height: 62px; flex: none; object-fit: cover;
+  background: #000; clip-path: var(--corte-sm);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 3px 10px rgba(0,0,0,.6);
 }
 .capa-vazia {
-  width: 68px; height: 68px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--cava2); color: rgba(255,255,255,0.14); clip-path: var(--corte-sm);
+  color: rgba(255,255,255,.13);
 }
-.corpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.corpo {
+  position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden;
+  padding: 11px 12px 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+}
 .corpo b {
+  position: relative; z-index: 1;
   font-size: 14.5px; font-weight: 600; line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-/* ██████████ A ONDA ██████████
-   Barras finas, altura de verdade, cor apagada — ela é o CHÃO do cartão, não
-   o assunto. Quem manda é o nome da música; a onda é o que você lê sem
-   perceber que leu.
-   Sem espaço entre as barras nas pontas: a onda encosta nas bordas como fita
-   de gravação, e é isso que dá a leitura de "material", não de gráfico. */
+
+/* A ONDA VIROU FUNDO. Como bloco separado ela empurrava tudo pra baixo pra
+   dizer pouco. Atrás do texto ela custa ZERO espaço e continua sendo verdade —
+   o formato daquela gravação — e o olho lê sem perceber que leu. */
 .onda {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
   display: flex; align-items: flex-end; gap: 1px;
-  height: 18px; margin: 1px 0 2px;
-  opacity: 0.62;
+  opacity: .13; pointer-events: none; z-index: 0;
 }
-.onda i {
-  flex: 1 1 auto; min-width: 0; display: block;
-  background: linear-gradient(180deg, var(--lima), rgba(182,255,59,0.35));
-  border-radius: 0.5px;
-}
-/* na que está no aparelho a onda acende junto: o cartão inteiro muda de
-   estado, e a onda faz parte dele */
-.cartao-musica.aqui .onda { opacity: 0.95; }
-.cartao-musica.aqui .onda i { box-shadow: 0 0 5px rgba(182,255,59,0.5); }
+.onda i { flex: 1 1 auto; display: block; background: var(--lima); }
 
-.dados {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
-  color: var(--mudo2); line-height: 1.5;
+/* AS CÉLULAS. Em linha corrida, "8 faixas · Cm · 94 bpm" é uma frase que se lê
+   inteira; em células com fio no meio, o olho pega só o que procura. É a
+   leitura de painel do computador, no tamanho do celular. */
+.celulas {
+  position: relative; z-index: 1;
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  margin: 0 -12px; border-top: 1px solid var(--linha);
 }
-.dados em { font-style: normal; color: var(--lima); }
+.celulas span {
+  padding: 6px 9px; border-right: 1px solid var(--linha);
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+  color: var(--mudo2); white-space: nowrap;
+}
+.celulas span.forte { color: var(--lima); }
+.celulas span:last-child { border-right: none; }
 
-/* O BAIXAR: botão de canto, com a lateral inteira como alvo — dedo grande,
-   alvo grande. Cheio de lima quando a música já está no aparelho. */
+/* O BAIXAR: coluna própria, fio à esquerda, alvo grande pro dedo. */
 .levar {
-  flex: none; width: 52px;
+  flex: none; width: 52px; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  background: none; border: none; border-left: 1px solid var(--linha);
-  color: var(--mudo2); cursor: pointer; position: relative; overflow: hidden;
+  background: var(--cava2); border: none; border-left: 1px solid var(--linha);
+  color: var(--mudo2); cursor: pointer;
 }
-.levar:active { background: rgba(255,255,255,0.05); }
+.levar:active { background: rgba(255,255,255,.06); }
 .levar.tem {
   color: #0b0c0f; background: var(--lima); border-left-color: transparent;
-  box-shadow: inset 0 0 22px rgba(255,255,255,0.25), -6px 0 18px rgba(182,255,59,0.28);
+  box-shadow: inset 0 0 24px rgba(255,255,255,.28), -8px 0 20px rgba(182,255,59,.25);
 }
 .levar.erro { color: var(--ruim); }
-/* o progresso enche o botão de baixo pra cima: sem número, sem texto, e
-   entendido de longe */
-.levar.indo { color: var(--amarelo); }
+.levar.indo { color: var(--ambar); }
 .levar.indo::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0;
-  height: var(--quanto, 0%); background: rgba(234,179,8,0.22);
-  transition: height 0.3s ease;
+  height: var(--quanto, 0%); background: rgba(234,179,8,.25); transition: height .3s ease;
 }
+
+/* JÁ ESTÁ NO APARELHO: o cartão inteiro acende. É a única informação dele que
+   muda o que dá pra fazer sem o computador — por isso é a única que ganha luz. */
+.cartao-musica.aqui {
+  background: linear-gradient(180deg, rgba(182,255,59,.09), transparent 45%), var(--card);
+  box-shadow:
+    inset 0 1px 0 rgba(182,255,59,.2),
+    inset 0 0 0 1px rgba(182,255,59,.34),
+    0 0 24px rgba(182,255,59,.1),
+    0 8px 22px rgba(0,0,0,.55);
+}
+.cartao-musica.aqui .canto { opacity: 1; border-color: var(--lima); }
+.cartao-musica.aqui .onda { opacity: .26; }
+.cartao-musica.aqui .moldura { background: rgba(182,255,59,.05); }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
