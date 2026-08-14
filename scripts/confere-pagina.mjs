@@ -76,7 +76,10 @@ for (const [marca, oque] of [
   ['comSenha(', 'a senha viajando nos pedidos'],
   ['serviceWorker.register', 'o guardador do modo ensaio'],
   ['levar pro ensaio', 'o botao de levar'],
-  ['class="capa"', 'a capa da musica'],
+  // a capa do cartao virou 'lamina' quando o dono desenhou a estrutura nova:
+  // e uma chapa cortada nas duas pontas, nao mais um quadrado emoldurado
+  ['class="lamina"', 'a capa da musica'],
+  ['class="estado"', 'a barra de onde a musica esta'],
   ['class="ampulheta', 'a ampulheta da roda'],
   ['/api/baixar', 'mandar o computador baixar'],
   ['/api/tarefas', 'acompanhar o download'],

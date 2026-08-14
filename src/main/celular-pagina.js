@@ -168,34 +168,40 @@ header::after {
   text-transform: uppercase; color: var(--mudo2); padding: 2px 1px 0;
 }
 
-/* ██████████ OS CARTÕES DO ACERVO ██████████
-   Terceira tentativa, por subtração — e agora polida. As duas primeiras
-   erraram do mesmo jeito: eu enchi de coisa, e cada camada competia com a
-   anterior.
-   O que mudou nesta passada não foi ACRESCENTAR, foi apertar o que já existia:
-   a capa cresceu e ganhou peso, o cartão descolou do fundo, o texto ficou mais
-   legível e o toque passou a responder. Nenhum elemento novo. */
+/* ██████████ OS CARTÕES — A ESTRUTURA QUE O DONO DESENHOU ██████████
+   Depois de quatro tentativas minhas recusadas, ele montou a estrutura e
+   mandou. Está tudo aqui, e cada peça do desenho virou uma peça de
+   informação — nenhuma ficou de enfeite:
+
+     ponta à esquerda      → o formato do cartão
+     lâmina escura         → a capa, cortada nas duas pontas
+     dois fios brancos     → desencontrados de propósito, como no desenho dele
+     hexágono com play     → o sinal de que o cartão abre
+     barra de estado       → vazia / enchendo / cheia: onde a música está
+     trama de hexágonos    → a mesma da tela do computador, à direita
+     lâminas verdes        → o botão de levar pro celular
+
+   Sem contorno em volta: o desenho dele é chapa cheia sobre fundo, e chapa
+   cheia não precisa de fio. A sombra vai no <li> com drop-shadow porque
+   sombra de caixa é RETANGULAR — num formato recortado ela some nas
+   diagonais ou vaza pra fora delas. */
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
-li { margin-bottom: 8px; }
+li { margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
 
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
-  display: flex; align-items: center;
-  /* DESCOLAR DO FUNDO. Card e fundo quase da mesma cor deixam a lista com cara
-     de bloco único; a sombra é o que faz cada música virar uma peça. */
-  background: #16181e;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.05),
-    inset 0 0 0 1px var(--linha),
-    0 4px 14px rgba(0,0,0,.5);
-  clip-path: var(--corte);
-  transition: transform .12s ease, box-shadow .12s ease;
+  display: flex; align-items: stretch; min-height: 104px;
+  background: #14161b;
+  clip-path: polygon(0 50%, 22px 0, 100% 0, 100% 100%, 22px 100%);
+  transition: transform .12s ease;
 }
-/* A PRÓPRIA CAPA COMO FUNDO, borrada e fora de foco. É mais rica que uma tinta
-   chapada e não inventa nada — é a mesma imagem daquela música, desfocada.
-   Ela morre da esquerda pro meio: onde a capa está, a cor é forte; onde o nome
-   está, ela some. Texto sobre imagem só é legível assim. */
+.cartao-musica:active { transform: scale(.99); }
+
+/* A PRÓPRIA CAPA COMO FUNDO, borrada e fora de foco — mais rica que tinta
+   chapada e sem inventar nada. Morre da esquerda pro meio: onde a capa está a
+   cor é forte, onde o nome está ela some. Texto sobre imagem só é legível
+   assim. A cor média da capa serve de reserva pra quem não tem imagem. */
 .cartao-musica::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(100deg, var(--cor) 0%, transparent 62%);
@@ -203,137 +209,139 @@ li { margin-bottom: 8px; }
 }
 .cartao-musica.comfundo::before {
   background-image: var(--fundo);
-  background-size: 130% auto;
-  background-position: left center;
-  filter: blur(22px) saturate(1.5) brightness(.75);
-  opacity: .42;
-  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.35) 38%, transparent 66%);
-  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.35) 38%, transparent 66%);
+  background-size: 130% auto; background-position: left center;
+  filter: blur(22px) saturate(1.6) brightness(.5);
+  /* SÓ NO CANTO DA CAPA. Espalhada pelo cartão inteiro ela virava uma névoa
+     colorida por cima de tudo, e o desenho do dono é chapa quase preta com o
+     texto branco saltando. Agora ela morre antes do nome. */
+  opacity: .32;
+  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.24) 28%, transparent 50%);
+  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.24) 28%, transparent 50%);
   transform: scale(1.12);
 }
-/* O GRÃO. Textura fina, quase invisível de perto, que tira o plástico do preto
-   chapado. Não é padrão nem desenho — é superfície. */
+/* A TRAMA no terço da direita, igual ao desenho — e é a mesma retícula de
+   hexágonos da tela do computador, então celular e PC passam a falar a mesma
+   língua. Cheio e vazado alternando, meia célula de deslocamento. */
 .cartao-musica::after {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background-image:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 4px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 5.2 L14.3 7.6 L14.3 12.4 L10 14.8 L5.7 12.4 L5.7 7.6 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.4 L15 7.2 L15 12.8 L10 15.6 L5 12.8 L5 7.2 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-size: 13px 13px, 13px 13px;
+  background-position: 0 0, 6.5px 6.5px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 56%, rgba(0,0,0,.4) 80%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 56%, rgba(0,0,0,.4) 80%, #000 100%);
+  /* MUITO apagada: hexágono de 9px carrega bem mais tinta que bolinha, e na
+     primeira foto o canto direito virou um muro de colmeia — de novo. */
+  opacity: .13;
 }
-/* o toque responde: sem isso a lista parece imagem, não app */
-.cartao-musica:active { transform: scale(.985); box-shadow: inset 0 0 0 1px var(--linha2); }
 
 .abrir {
-  flex: 1 1 auto; min-width: 0;
-  display: flex; align-items: center; gap: 13px;
-  padding: 11px 12px; background: none; border: none; color: var(--txt);
+  position: relative; flex: 1 1 auto; min-width: 0;
+  padding: 0; background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
-/* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
-   ficar boiando no preto. */
-/* ██████████ A MOLDURA DA CAPA ██████████
-   Um fio ao redor, com respiro entre ele e a imagem. É o mesmo princípio de
-   quadro pendurado: o vazio entre a moldura e a foto é o que faz a foto
-   parecer emoldurada em vez de recortada. Sem esse respiro, o fio vira contorno
-   e some visualmente contra a borda da imagem. */
-.moldura {
-  position: relative; flex: none; display: block; line-height: 0;
-  padding: 5px;
-}
-.moldura::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
-  clip-path: var(--corte-sm);
-}
-/* e um segundo fio, mais fraco, só nos dois cantos vivos — a marca de painel
-   sem virar caixa dentro de caixa */
-.moldura::after {
-  content: ''; position: absolute; left: 0; top: 0; width: 11px; height: 11px;
-  border-top: 1px solid rgba(182,255,59,.5);
-  border-left: 1px solid rgba(182,255,59,.5);
-  pointer-events: none;
-}
 
-/* O SINAL DE QUE ABRE. Era lima cheio e brilhando: com a capa borrada atrás,
-   virou o ponto mais berrante do cartão — e ele não é a coisa mais importante
-   dele. Agora é vidro escuro com o triângulo lima dentro: presente, e com
-   charme em vez de grito. */
-/* O SELO fica na quina de baixo da moldura, metade dentro e metade fora: é o
-   que dá a leitura de emblema aplicado sobre a peça, em vez de ícone flutuando
-   solto. A sombra é do SVG, não da caixa — caixa com sombra num formato
-   recortado deixa sombra retangular aparecendo nas diagonais. */
-.tocar {
-  position: absolute; right: -6px; bottom: -6px;
-  line-height: 0; pointer-events: none;
-  filter: drop-shadow(0 3px 7px rgba(0,0,0,.8));
-  transition: transform .12s ease;
+/* A LÂMINA DA CAPA: cortada em ponta na esquerda (acompanhando o cartão) e em
+   diagonal na direita. É a peça mais à esquerda do desenho dele. */
+.lamina {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 92px;
+  clip-path: polygon(0 50%, 20px 0, 100% 0, calc(100% - 22px) 100%, 20px 100%);
+  background: #0d0f13; overflow: hidden; line-height: 0;
 }
-.cartao-musica:active .tocar { transform: scale(.9); }
-
-.capa {
-  width: 66px; height: 66px; flex: none; object-fit: cover;
-  background: #000; clip-path: var(--corte-sm);
-  /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
-     colada em cima de um fundo escuro */
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.14),
-    0 4px 12px rgba(0,0,0,.7);
-}
+.lamina img { width: 100%; height: 100%; object-fit: cover; }
 .capa-vazia {
-  display: inline-flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.15);
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.14);
 }
-.corpo { flex: 1 1 auto; min-width: 0; }
+
+/* OS DOIS FIOS, DESENCONTRADOS. No desenho dele o de cima começa antes do
+   texto (entra na lâmina) e para cedo; o de baixo começa depois e passa mais
+   longe. É esse desencontro que dá o ar de painel — dois fios alinhados
+   viravam moldura, e moldura em volta de texto mente pro dedo. */
+.painel { display: block; margin-left: 100px; padding: 13px 10px 33px 0; min-width: 0; }
+.fio { display: block; height: 1px; pointer-events: none; }
+.fio-cima {
+  margin-left: -42px; width: calc(100% - 22px); margin-bottom: 9px;
+  background: linear-gradient(90deg, rgba(255,255,255,.1), rgba(255,255,255,.6) 24%, rgba(255,255,255,.6));
+}
+.fio-baixo {
+  margin-left: 24px; width: calc(100% + 6px); margin-top: 9px;
+  background: linear-gradient(90deg, rgba(255,255,255,.42), rgba(255,255,255,.42) 74%, transparent);
+}
+
 /* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão, e lista
    irregular cansa de rolar. */
+.corpo { display: block; min-width: 0; }
 .corpo b {
-  display: block; font-size: 15.5px; font-weight: 600; line-height: 1.35;
-  letter-spacing: -.005em;
+  display: block; font-size: 15px; font-weight: 700; line-height: 1.3;
+  letter-spacing: .005em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 .dados {
   display: block;
-  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .07em;
   color: var(--mudo);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* tom e BPM em lima porque são os dois números que um músico procura */
 .dados em { font-style: normal; color: var(--lima); font-weight: 500; }
 
-/* O BAIXAR: coluna própria com fio à esquerda. Alvo grande pro dedo, calado
-   quando não tem nada a dizer. */
-.levar {
-  flex: none; width: 52px; align-self: stretch; position: relative; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.22); border: none; border-left: 1px solid var(--linha);
-  color: var(--mudo2); cursor: pointer;
-  transition: color .13s ease, background .13s ease;
+/* O HEXÁGONO COM O PLAY, sentado na junta entre a lâmina e o painel — é onde
+   ele está no desenho. Diz que o cartão abre; não é botão separado, então
+   não recebe toque próprio. */
+.tocar {
+  position: absolute; left: 70px; bottom: 11px; z-index: 2;
+  line-height: 0; pointer-events: none;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.85));
+  transition: transform .12s ease;
 }
-.levar:active { background: rgba(255,255,255,.06); color: var(--txt2); }
-.levar.tem {
-  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
-  box-shadow: inset 0 0 20px rgba(255,255,255,.22);
-}
-.levar.erro { color: var(--ruim); }
-.levar.indo { color: var(--ambar); }
-.levar.indo::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0;
-  height: var(--quanto, 0%); background: rgba(234,179,8,.25); transition: height .3s ease;
-}
+.cartao-musica:active .tocar { transform: scale(.92); }
 
-/* JÁ ESTÁ NO APARELHO: contorno lima e um respiro de cor no fundo. É a única
-   informação do cartão que muda o que dá pra fazer sem o computador — e por
-   isso é a única que ganha cor. */
-.cartao-musica.aqui {
-  background: linear-gradient(180deg, rgba(182,255,59,.06), transparent 60%), #16181e;
-  box-shadow:
-    inset 0 1px 0 rgba(182,255,59,.16),
-    inset 0 0 0 1px rgba(182,255,59,.32),
-    0 4px 14px rgba(0,0,0,.5);
+/* A BARRA DE ESTADO — a peça do desenho dele que eu não tinha. Ela responde
+   "onde esta música está": vazia = só no computador, enchendo = vindo,
+   cheia = toca sem o computador por perto.
+   O progresso morava dentro do botão de baixar, como uma altura subindo de
+   baixo pra cima. Barra que enche pro lado é a forma que todo mundo já sabe
+   ler sem aprender. */
+.estado {
+  position: absolute; left: 104px; bottom: 15px; width: 40%; height: 8px; z-index: 1;
+  background: rgba(182,255,59,.1);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
 }
-/* aqui o lima manda e a cor da capa recua: dois destaques ao mesmo tempo não
-   destacam nada */
-.cartao-musica.aqui::before { opacity: .07; }
+.estado i {
+  display: block; height: 100%; width: 0; background: var(--lima);
+  box-shadow: 0 0 14px rgba(182,255,59,.55);
+  transition: width .35s ease;
+}
+.cartao-musica.aqui .estado i { width: 100%; }
+.cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); box-shadow: none; }
+.cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); box-shadow: none; }
+
+/* AS LÂMINAS VERDES = LEVAR PRO CELULAR. No desenho elas são o único verde
+   aceso da peça, no canto direito — e levar é justamente a única coisa do
+   cartão que muda o que dá pra fazer longe do computador.
+   São dois triângulos apontando pra baixo: direção é o que faz "baixar" ser
+   lido sem legenda. Apagados quando a música ainda não veio, acesos quando
+   ela já está aqui. */
+.levar {
+  position: relative; flex: none; width: 48px; align-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  color: rgba(182,255,59,.42);
+  transition: color .15s ease;
+}
+.levar:active { color: rgba(182,255,59,.85); }
+.levar.tem { color: var(--lima); filter: drop-shadow(0 0 9px rgba(182,255,59,.5)); }
+.levar.erro { color: var(--ruim); }
+.levar.indo { color: var(--amarelo); }
+/* a lasquinha do canto de baixo, do desenho dele */
+.levar::after {
+  content: ''; position: absolute; right: 0; bottom: 0;
+  width: 17px; height: 17px; pointer-events: none;
+  background: currentColor; opacity: .5;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
@@ -867,31 +875,36 @@ function abrirAcervo() {
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + (m.capa ? ' comfundo' : '') + '"' +
       (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        '<span class="moldura">' +
+        '<span class="lamina">' +
           (m.capa
-            ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
-            : '<span class="capa capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
-          // O SINAL DE QUE ABRE. A capa é o alvo do toque e nada dizia isso —
-          // o triângulo no canto conta em um símbolo o que uma frase não
-          // conseguiria dizer sem ocupar linha.
+            ? '<img src="' + comSenha(m.capa) + '" alt="">'
+            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+        '</span>' +
+          // O SINAL DE QUE ABRE, no lugar onde o dono desenhou: na junta
+          // entre a lâmina e o painel.
           // O SELO É UM SVG INTEIRO, com o hexágono desenhado de verdade.
           // Antes era um quadrado recortado em hexágono com contorno "inset" —
           // e contorno inset desenha RETÂNGULO: o recorte comia as diagonais e
           // sobrava fio só nos lados retos. Ficava quebrado, e o dono viu.
-          // Desenhado, o traço acompanha a forma inteira.
           '<span class="tocar" aria-hidden="true">' +
-            '<svg viewBox="0 0 26 30" width="24" height="27">' +
-              '<path d="M13 1.2 24.5 7.9v14.2L13 28.8 1.5 22.1V7.9z" fill="rgba(9,10,13,.9)" stroke="rgba(182,255,59,.55)" stroke-width="1.3"/>' +
+            '<svg viewBox="0 0 26 30" width="27" height="31">' +
+              '<path d="M13 1.2 24.5 7.9v14.2L13 28.8 1.5 22.1V7.9z" fill="rgba(9,10,13,.92)" stroke="rgba(182,255,59,.6)" stroke-width="1.4"/>' +
               '<path d="M10.4 9.6v10.8L19.4 15z" fill="#b6ff3b"/>' +
             '</svg>' +
           '</span>' +
-        '</span>' +
-        '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
-        '<span class="dados">' + info + '</span></span>' +
+        '<span class="painel"><span class="corpo">' +
+          '<span class="fio fio-cima"></span>' +
+          '<b>' + esc(m.titulo) + '</b>' +
+          '<span class="dados">' + info + '</span>' +
+          '<span class="fio fio-baixo"></span>' +
+        '</span></span>' +
+        '<span class="estado" aria-hidden="true"><i></i></span>' +
       '</button>' +
-      '<button class="levar" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Baixar pro celular">' +
-        '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+      // AS LÂMINAS VERDES do desenho dele. Dois triângulos apontando pra
+      // baixo — direção é o que faz "baixar" ser lido sem legenda.
+      '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
+        '<svg viewBox="0 0 24 26" width="21" height="23" fill="currentColor" aria-hidden="true">' +
+        '<path d="M3 2h18l-9 10z"/><path d="M6 15h12l-6 8z" opacity=".78"/></svg>' +
       '</button>' +
     '</div></li>';
   }
@@ -1157,7 +1170,11 @@ function pintarLevar() {
     var tem = !!guardadas[b.dataset.levar];
     if (tem) qualquer = true;
     b.className = 'levar' + (tem ? ' tem' : '');
-    b.title = tem ? 'já está no celular' : 'baixar pro celular';
+    b.title = tem ? 'já está no celular' : 'levar pro celular';
+    // a barra de estado vive no CARTÃO, então quem sabe do download precisa
+    // avisar os dois: o botão e a peça que desenha o quanto
+    var c = b.closest('.cartao-musica');
+    if (c) { c.classList.toggle('aqui', tem); c.classList.remove('indo', 'ruim'); }
   });
   var aviso = document.querySelector('.semrede');
   if (!navigator.onLine && !aviso) {
@@ -1179,7 +1196,11 @@ function baixarPraPasta(m) {
   var i = 0;
   function proxima() {
     if (i >= m.faixas.length) {
-      if (b) { b.className = 'levar tem'; b.title = 'baixado — veja em Downloads'; }
+      if (b) {
+        b.className = 'levar tem'; b.title = 'baixado — veja em Downloads';
+        var c = b.closest('.cartao-musica');
+        if (c) { c.classList.remove('indo', 'ruim'); c.classList.add('aqui'); }
+      }
       return;
     }
     var f = m.faixas[i++];
@@ -1189,7 +1210,7 @@ function baixarPraPasta(m) {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    if (b) { b.className = 'levar indo'; b.style.setProperty('--quanto', Math.round(i / m.faixas.length * 100) + '%'); }
+    marcarLevando(m.chave, i, m.faixas.length);
     setTimeout(proxima, 900);
   }
   proxima();
@@ -1197,12 +1218,22 @@ function baixarPraPasta(m) {
 
 function marcarLevando(chave, feito, total) {
   var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar indo'; b.style.setProperty('--quanto', Math.round(feito / total * 100) + '%'); }
+  if (!b) return;
+  b.className = 'levar indo';
+  var c = b.closest('.cartao-musica');
+  if (c) {
+    c.classList.add('indo'); c.classList.remove('aqui', 'ruim');
+    c.style.setProperty('--quanto', Math.round(feito / total * 100) + '%');
+  }
 }
 
 function marcarFalhou(chave) {
   var b = document.querySelector('.levar[data-levar="' + chave + '"]');
-  if (b) { b.className = 'levar erro'; b.title = 'não deu — toque pra tentar de novo'; }
+  if (!b) return;
+  b.className = 'levar erro';
+  b.title = 'não deu — toque pra tentar de novo';
+  var c = b.closest('.cartao-musica');
+  if (c) { c.classList.add('ruim'); c.classList.remove('indo'); }
 }
 
 function chip(id, rotulo) {
