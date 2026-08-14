@@ -32,6 +32,7 @@ let ffmpeg = null
 // guarda nada e não reclama
 let salvarPorta = null
 let mandarBaixar = null
+let espiar = null
 let iconePng = null
 let apkDoCelular = null
 const ultimosPedidos = []
@@ -437,7 +438,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -448,6 +449,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   ffmpeg = ffmpegPath
   salvarPorta = guardarPorta
   mandarBaixar = baixar
+  espiar = olhar
   iconePng = icone
   apkDoCelular = apk
 
@@ -564,6 +566,30 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       if (!existsSync(arq)) { res.writeHead(404); res.end(); return }
       res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=604800' })
       createReadStream(arq).pipe(res)
+      return
+    }
+
+    // ── OLHAR ANTES DE BAIXAR ──
+    // Colar um link e apertar "baixar" é um salto no escuro: a pessoa não sabe
+    // se é a música certa, se é o clipe, se é a versão ao vivo. Ver a capa, o
+    // nome e a duração antes custa alguns segundos e evita baixar errado — e
+    // baixar errado custa muito mais que esperar.
+    if (caminho === '/api/olhar') {
+      const alvo = url.searchParams.get('url')
+      if (!alvo || !espiar) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ erro: 'faltou o endereço' }))
+        return
+      }
+      espiar(alvo)
+        .then((info) => {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(info))
+        })
+        .catch((e) => {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify({ erro: String(e && e.message ? e.message : e).slice(0, 160) }))
+        })
       return
     }
 

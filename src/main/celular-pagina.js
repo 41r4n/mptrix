@@ -408,6 +408,55 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 }
 .convite small { display: block; margin-top: 10px; font-size: 11.5px; color: var(--mudo2); line-height: 1.5; }
 
+/* ██████████ A BÚSSOLA ██████████
+   Três pontinhos dizendo em qual das três telas você está. NÃO clica: borda em
+   volta de texto é clicável nesta casa, e ponto que não faz nada não pode
+   parecer botão. Ele informa; quem navega é o dedo. */
+.bussola {
+  position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 8; display: flex; justify-content: center; gap: 7px; pointer-events: none;
+}
+.bussola i {
+  width: 6px; height: 6px; background: rgba(255,255,255,0.18);
+  transform: rotate(45deg); transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.bussola i.on { background: var(--lima); box-shadow: 0 0 10px rgba(182,255,59,0.7); }
+body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
+
+/* O DESLIZAR. A tela que sai e a que entra andam juntas — sem isso o conteúdo
+   pisca e a pessoa perde a noção de para que lado foi. */
+#tela { animation: entra-tela 0.22s ease; }
+@keyframes entra-tela { from { opacity: 0; transform: translateX(var(--de, 18px)); } to { opacity: 1; transform: none; } }
+
+/* ██████████ O CARTÃO DA MÚSICA ██████████
+   Colar um link e apertar "baixar" é um salto no escuro: a pessoa não sabe se
+   é a música certa, se é o clipe ou a versão ao vivo. Ver a capa e o nome
+   antes custa segundos; baixar errado custa muito mais. */
+.cartao {
+  margin: 4px 0 14px; overflow: hidden;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--linha);
+  clip-path: var(--corte);
+  animation: sobe 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes sobe { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.cartao img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; background: var(--cava2); }
+.cartao .txt { padding: 12px 13px 14px; text-align: left; }
+.cartao b { display: block; font-size: 14.5px; line-height: 1.35; margin-bottom: 6px; }
+.cartao .quem {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--mudo2);
+}
+.cartao .quem em { font-style: normal; color: var(--lima); }
+.olhando {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 22px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--mudo2);
+}
+.olhando i {
+  width: 9px; height: 9px; background: var(--lima); display: inline-block;
+  transform: rotate(45deg); animation: bate 1.1s ease-in-out infinite;
+}
+
 .diag {
   display: block; margin-top: 18px; padding: 12px;
   background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
@@ -475,20 +524,12 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 
 <!-- AS ABAS FICAM EMBAIXO: o polegar alcança o pé da tela, não o topo. Copiar
      o trilho lateral do computador seria copiar a forma e perder a razão. -->
-<nav class="abas" id="abas">
-  <button data-aba="baixar" aria-label="Baixar">
-    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-    <span class="n">01</span>BAIXAR
-  </button>
-  <button data-aba="acervo" class="on" aria-label="Acervo">
-    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-    <span class="n">02</span>ACERVO
-  </button>
-  <button data-aba="ajustes" aria-label="Aparelho">
-    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
-    <span class="n">03</span>APARELHO
-  </button>
-</nav>
+<!-- AS ABAS SAIRAM. São três telas; arrastar de lado é mais rápido que mirar
+     num botão pequeno, e devolve o rodapé inteiro pro conteúdo. O que fica é
+     um indicador que não clica: ele diz onde você está, não pede toque. -->
+<div class="bussola" id="bussola" aria-hidden="true">
+  <i></i><i class="on"></i><i></i>
+</div>
 
 <script>
 // A SENHA VIAJA EM TODO PEDIDO, e não num cookie.
@@ -661,12 +702,13 @@ function abrirAcervo() {
 }
 
 // ██████████ AS ABAS ██████████
-var aba = 'acervo';
+var aba = 'baixar';
 function abrirAba(nome) {
   aba = nome;
-  document.querySelectorAll('.abas button').forEach(function (b) {
-    b.className = b.dataset.aba === nome ? 'on' : '';
-  });
+  pintarBussola();
+  // reinicia a animação de entrada: sem isto a segunda troca não anima
+  var t = document.getElementById('tela');
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   if (nome === 'acervo') abrirAcervo();
   if (nome === 'baixar') abrirBaixar();
   if (nome === 'ajustes') abrirAjustes();
@@ -715,6 +757,7 @@ function abrirBaixar() {
       '<input id="campoLink" type="url" inputmode="url" placeholder="cole aqui o endereço" value="' + esc(linkAtual) + '">' +
       '<button id="colarLink">colar</button>' +
     '</div>' +
+    cartaoDaMusica() +
     '<div class="atos">';
 
   for (var i = 0; i < ATOS.length; i++) {
@@ -732,9 +775,14 @@ function abrirBaixar() {
   html += '<div id="listaTarefas"></div></div>';
   tela.innerHTML = html;
 
+  var espera = null;
   document.getElementById('campoLink').oninput = function () {
     linkAtual = this.value;
     pintarRoda();
+    // meio segundo depois da última tecla: quem cola termina de colar, e quem
+    // digita não faz o computador falar com o YouTube a cada letra
+    clearTimeout(espera);
+    espera = setTimeout(olharLink, 500);
   };
   document.getElementById('colarLink').onclick = colarDoAparelho;
   document.getElementById('ampulheta').onclick = colarDoAparelho;
@@ -747,6 +795,59 @@ function abrirBaixar() {
   puxarTarefas();
 }
 
+// ██████████ VER A MÚSICA ANTES DE BAIXAR ██████████
+// Colar um link e apertar "baixar" é um salto no escuro: a pessoa não sabe se
+// é a música certa, se é o clipe, se é a versão ao vivo. Ver a capa, o nome e
+// a duração custa segundos; baixar errado custa muito mais — e no celular,
+// dados móveis.
+var espiada = null;   // { url, titulo, capa, duracao, quem } ou { erro }
+var espiando = false;
+
+function cartaoDaMusica() {
+  if (espiando) {
+    return '<div class="cartao"><div class="olhando"><i></i> olhando a música…</div></div>';
+  }
+  if (!espiada) return '';
+  if (espiada.erro) {
+    return '<div class="cartao"><div class="txt"><b>Não consegui ver essa</b>' +
+      '<span class="quem">' + esc(espiada.erro) + '</span></div></div>';
+  }
+  return '<div class="cartao">' +
+    (espiada.capa ? '<img src="' + esc(espiada.capa) + '" alt="">' : '') +
+    '<div class="txt"><b>' + esc(espiada.titulo) + '</b>' +
+    '<span class="quem">' +
+      (espiada.quem ? esc(espiada.quem) : '') +
+      (espiada.duracao ? (espiada.quem ? ' · ' : '') + '<em>' + mmss(espiada.duracao) + '</em>' : '') +
+    '</span></div></div>';
+}
+
+// Só olha quando o link MUDA: olhar a cada letra digitada seria mandar o
+// computador conversar com o YouTube dez vezes por segundo.
+var ultimoOlhado = '';
+function olharLink() {
+  var u = linkAtual.trim();
+  if (!EH_LINK.test(u)) { espiada = null; ultimoOlhado = ''; return; }
+  if (u === ultimoOlhado) return;
+  ultimoOlhado = u;
+  espiada = null;
+  espiando = true;
+  abrirBaixar();
+  fetch(comSenha('/api/olhar') + '&url=' + encodeURIComponent(u)).then(function (r) { return r.json(); })
+    .then(function (info) {
+      espiando = false;
+      if (u !== linkAtual.trim()) return;   // a pessoa já trocou o link
+      espiada = info.erro
+        ? { erro: info.erro }
+        : { titulo: info.title, capa: info.thumbnail, duracao: info.duration, quem: info.uploader };
+      if (aba === 'baixar') abrirBaixar();
+    })
+    .catch(function () {
+      espiando = false;
+      espiada = { erro: 'não consegui falar com o computador' };
+      if (aba === 'baixar') abrirBaixar();
+    });
+}
+
 // O navegador só entrega a área de transferência com permissão, e alguns nem
 // com permissão. Quando não dá, o campo recebe o foco — que é o caminho que
 // sempre funciona.
@@ -754,7 +855,7 @@ function colarDoAparelho() {
   var campo = document.getElementById('campoLink');
   if (!navigator.clipboard || !navigator.clipboard.readText) { campo.focus(); return; }
   navigator.clipboard.readText().then(function (t) {
-    if (t && t.trim()) { linkAtual = t.trim(); abrirBaixar(); } else { campo.focus(); }
+    if (t && t.trim()) { linkAtual = t.trim(); olharLink(); abrirBaixar(); } else { campo.focus(); }
   }).catch(function () { campo.focus(); });
 }
 
@@ -776,6 +877,8 @@ function pedirDownload(preset) {
     body: JSON.stringify({ url: url, preset: preset })
   }).then(function () {
     linkAtual = '';
+    espiada = null;
+    ultimoOlhado = '';
     abrirBaixar();
   }).catch(function () {});
 }
@@ -1271,9 +1374,44 @@ function abrirAjustes() {
     f.remove();
   };
 }
-document.querySelectorAll('.abas button').forEach(function (b) {
-  b.onclick = function () { abrirAba(b.dataset.aba); };
-});
+// A PRIMEIRA COISA QUE ALGUÉM FAZ AO ABRIR O MPTRIX É QUERER UMA MÚSICA.
+// Por isso o app abre em BAIXAR, e não no acervo: o acervo é para onde se vai
+// depois, e está a um deslize de distância.
+var TELAS = ['baixar', 'acervo', 'ajustes'];
+
+function pintarBussola() {
+  var n = TELAS.indexOf(aba);
+  document.querySelectorAll('.bussola i').forEach(function (p, k) {
+    p.className = k === n ? 'on' : '';
+  });
+}
+
+// DESLIZAR DE LADO. Com três telas, arrastar é mais rápido que mirar num botão
+// pequeno — e devolve o rodapé inteiro para o conteúdo.
+// O gesto só conta se for mais horizontal que vertical: senão, rolar a lista
+// trocaria de tela sem querer, que é o pior tipo de defeito — o que acontece
+// enquanto a pessoa faz outra coisa.
+var x0 = null, y0 = null;
+document.addEventListener('touchstart', function (e) {
+  if (e.touches.length !== 1) { x0 = null; return; }
+  // dentro de um controle deslizante (volume, tempo) o arrasto é DELE
+  var alvo = e.target;
+  if (alvo && (alvo.tagName === 'INPUT' || alvo.closest('.vol, .barra, .velocidade'))) { x0 = null; return; }
+  x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', function (e) {
+  if (x0 === null) return;
+  var dx = e.changedTouches[0].clientX - x0;
+  var dy = e.changedTouches[0].clientY - y0;
+  x0 = null;
+  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+  var n = TELAS.indexOf(aba) + (dx < 0 ? 1 : -1);
+  if (n < 0 || n >= TELAS.length) return;
+  document.getElementById('tela').style.setProperty('--de', (dx < 0 ? 18 : -18) + 'px');
+  abrirAba(TELAS[n]);
+}, { passive: true });
+
 document.getElementById('btAjustes').onclick = function () { abrirAba('ajustes'); };
 
 voltar.onclick = function () { abrirAba(aba === 'estudio' ? 'acervo' : aba); };

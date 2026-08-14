@@ -955,6 +955,12 @@ app.whenReady().then(() => {
     icone: app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
       : join(__dirname, '..', '..', 'build', 'icon.png'),
+    // OLHAR ANTES DE BAIXAR: mesma espiada que a tela do computador faz.
+    // Colar um link e baixar no escuro custa mais que esperar alguns segundos.
+    olhar: async (endereco) => {
+      if (!existsSync(YT_DLP_PATH)) throw new Error('falta o programa de download no computador')
+      return await probeVideo({ ytDlpPath: YT_DLP_PATH, url: endereco })
+    },
     // o app do celular, pra ele mesmo instalar sem cabo nem WhatsApp
     apk: app.isPackaged
       ? join(process.resourcesPath, 'MPTRIX-celular.apk')

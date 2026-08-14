@@ -77,10 +77,12 @@ for (const [marca, oque] of [
   ['serviceWorker.register', 'o guardador do modo ensaio'],
   ['levar pro ensaio', 'o botao de levar'],
   ['class="capa"', 'a capa da musica'],
-  ['class="abas"', 'as abas embaixo'],
   ['class="ampulheta', 'a ampulheta da roda'],
   ['/api/baixar', 'mandar o computador baixar'],
-  ['/api/tarefas', 'acompanhar o download']
+  ['/api/tarefas', 'acompanhar o download'],
+  ['/api/olhar', 'ver a musica antes de baixar'],
+  ['class="bussola"', 'a bussola das tres telas'],
+  ['touchend', 'deslizar de lado pra trocar de tela']
 ]) {
   const tem = html.includes(marca)
   if (!tem) ok = false
