@@ -225,16 +225,17 @@ li { margin-bottom: 8px; }
    virou o ponto mais berrante do cartão — e ele não é a coisa mais importante
    dele. Agora é vidro escuro com o triângulo lima dentro: presente, e com
    charme em vez de grito. */
+/* O SELO fica na quina de baixo da moldura, metade dentro e metade fora: é o
+   que dá a leitura de emblema aplicado sobre a peça, em vez de ícone flutuando
+   solto. A sombra é do SVG, não da caixa — caixa com sombra num formato
+   recortado deixa sombra retangular aparecendo nas diagonais. */
 .tocar {
-  position: absolute; right: -3px; bottom: -3px;
-  width: 23px; height: 23px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(9, 10, 13, .88); color: var(--lima);
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  box-shadow: inset 0 0 0 1px rgba(182,255,59,.45), 0 3px 10px rgba(0,0,0,.7);
-  transition: transform .12s ease, color .12s ease;
+  position: absolute; right: -6px; bottom: -6px;
+  line-height: 0; pointer-events: none;
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,.8));
+  transition: transform .12s ease;
 }
-.cartao-musica:active .tocar { transform: scale(.88); color: #dfff9e; }
+.cartao-musica:active .tocar { transform: scale(.9); }
 
 .capa {
   width: 66px; height: 66px; flex: none; object-fit: cover;
@@ -841,7 +842,17 @@ function abrirAcervo() {
           // O SINAL DE QUE ABRE. A capa é o alvo do toque e nada dizia isso —
           // o triângulo no canto conta em um símbolo o que uma frase não
           // conseguiria dizer sem ocupar linha.
-          '<span class="tocar" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11"><path fill="currentColor" d="M7 4v16l13-8z"/></svg></span>' +
+          // O SELO É UM SVG INTEIRO, com o hexágono desenhado de verdade.
+          // Antes era um quadrado recortado em hexágono com contorno "inset" —
+          // e contorno inset desenha RETÂNGULO: o recorte comia as diagonais e
+          // sobrava fio só nos lados retos. Ficava quebrado, e o dono viu.
+          // Desenhado, o traço acompanha a forma inteira.
+          '<span class="tocar" aria-hidden="true">' +
+            '<svg viewBox="0 0 26 30" width="24" height="27">' +
+              '<path d="M13 1.2 24.5 7.9v14.2L13 28.8 1.5 22.1V7.9z" fill="rgba(9,10,13,.9)" stroke="rgba(182,255,59,.55)" stroke-width="1.3"/>' +
+              '<path d="M10.4 9.6v10.8L19.4 15z" fill="#b6ff3b"/>' +
+            '</svg>' +
+          '</span>' +
         '</span>' +
         '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
         '<span class="dados">' + info + '</span></span>' +
