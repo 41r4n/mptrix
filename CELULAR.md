@@ -1,116 +1,120 @@
 # MPTRIX no celular — plano
 
-*Escrito em 12/08/2026, depois da conversa que definiu o escopo.*
+*Reescrito em 12/08/2026, depois de um dia inteiro de tentativa e erro. A
+primeira versão deste arquivo desenhava o celular como um espelho do
+computador; este desenha ele como um MPTRIX inteiro.*
 
-## O que é
+## A decisão que muda tudo
 
-Um MPTRIX de Android que faz **tudo menos o trabalho pesado**: acervo, estúdio
-completo, letra, cifra, tom, mudança de tom e de tempo, e baixar música. A
-separação continua sendo feita pelo computador — o celular só pede e recebe.
+> **Dois aplicativos completos e independentes, que trocam música quando se
+> encontram na mesma rede.**
 
-**Não é um porte do app de PC.** A tela atravessa; as duas pontas (baixar e
-tocar) são refeitas. É um produto novo que compartilha o rosto.
+Nem o celular depende do computador, nem o contrário. Depois de uma troca, a
+música está **no telefone de verdade** — o computador pode ser desligado,
+vendido ou ficar em outra cidade que nada muda.
 
-**Só Android**, e isso está fechado. A Apple não deixa instalar por fora da loja
-dela, e a loja não aceita app que baixa do YouTube. Não é limitação técnica.
+## O que se tentou primeiro, e por que não serve
 
-## A ideia em uma frase
+Ontem eu servi uma **página** do computador para o celular. Funcionou em horas
+em vez de semanas, e por isso foi uma escolha legítima para aquele dia. Mas ela
+não é o destino, e o dono descobriu isso do pior jeito: indo para a igreja com
+músicas que não tinham sido guardadas.
 
-> O celular é um MPTRIX completo de **tocar**, casado com um computador que faz
-> o trabalho **pesado**.
+As limitações eram todas da mesma causa — é página, não app:
 
-## Por que não tem servidor
-
-O dono levantou três medos: um usuário pagando a conta do outro, gente perdendo
-música, e gente encontrando música que nunca baixou.
-
-Os três somem **por construção** se o celular e o computador falarem direto, na
-rede de casa:
-
-| medo | por que não acontece |
+| limitação | causa |
 |---|---|
-| pagar a conta do outro | a chave do Replicate fica **só no PC**; o celular nunca segura chave |
-| perder música | a música mora no PC, como já mora hoje; o celular é cópia |
-| achar música alheia | não existe lugar comum onde os acervos de duas pessoas se encontrem |
+| só funciona perto do computador | a página mora nele |
+| não baixa do YouTube sozinho | navegador é proibido de falar com o YouTube |
+| não instala como app | instalação exige `https`; endereço de casa não tem |
+| não toca offline | *service worker* exige `https` também |
+| rede pública derruba | Wi-Fi de igreja separa os aparelhos |
 
-Não é que a gente evite esses problemas com cuidado — é que **não há onde eles
-acontecerem**. Isso vale mais que qualquer proteção escrita.
+**As cinco somem com um app instalado.** Não são paredes do celular; são
+paredes do navegador.
 
-## As peças, e o que já existe
+## O que o app faz sem depender de nada
 
-| peça | situação |
+| função | precisa de quê |
 |---|---|
-| **a tela do estúdio** | aproveitável: já é web. Mas veja o aviso abaixo. |
-| **tocar as faixas em sincronia** | o navegador do Android faz (Web Audio) |
-| **mudar tom e tempo** | **refazer**: o motor de hoje é de PC |
-| **baixar do YouTube** | **refazer**: precisa de peça nativa de Android |
-| **saber tom e BPM** | não precisa refazer — o PC já analisou, vem junto |
-| **letra e cifra** | já são texto; viajam com a música |
-| **acervo** | novo: banco local no celular + sincronização |
-| **separar** | **não muda nada** — o PC continua fazendo |
+| baixar música | internet (qualquer app precisa) — **não** precisa de computador |
+| tocar, mixer, mudo, solo | nada |
+| velocidade (sem mexer no tom) | nada |
+| metrônomo, repetir trecho | nada |
+| letra e cifra | nada |
+| **mudar o tom** | nada — no app existe motor de afinação, que o navegador não tem |
+| acervo | o próprio armazenamento do telefone |
+| **separar** | internet + crédito da pessoa (nuvem) |
 
-**O aviso sobre a tela:** ela atravessa, mas hoje ela conversa o tempo todo com
-o Electron (pedir arquivo, ler acervo, tocar áudio). Cada um desses pedidos
-precisa de um tradutor do lado do Android. O desenho se aproveita; a conversa,
-não.
+**Separar é a única coisa com pedra**, e o dono já disse que é a menos
+importante para ele. Some com isso a barreira que excluiria quem não tem
+cartão: o app inteiro funciona sem separar nada.
+
+## Onde a música fica
+
+Numa pasta **visível** do telefone (`Música/MPTRIX`), não escondida dentro do
+app. Assim qualquer tocador enxerga, e as músicas continuam sendo da pessoa
+mesmo se ela desinstalar o MPTRIX. A música é dela, não do programa.
+
+Espaço, para dar noção: uma música em MP3 tem 5 a 9 MB; cem músicas não chegam
+a 1 GB. Uma música separada ocupa uns 25 MB com todas as faixas.
 
 ## A ligação entre os dois
 
-1. O computador se anuncia na rede de casa.
-2. O celular acha e **pareia uma vez**, com um código curto na tela — como
-   parear um fone.
-3. A partir daí eles se reconhecem sozinhos, sempre na mesma rede.
-4. O PC manda a lista do acervo; o celular baixa o que ainda não tem.
-5. Quando o celular pede pra separar, **quem chama a nuvem é o PC**, com a
-   chave dele.
+Quando estão na mesma rede, um enxerga o outro:
+
+- **mandar pro celular** — do computador, escolhendo o que vai
+- **puxar do computador** — do celular, escolhendo o que vem
+
+E resolve o separador de graça: separa em casa, manda as faixas para o
+telefone, e ensaia com o mixer em qualquer lugar, sem nuvem e sem crédito.
+
+Nada de servidor no meio, nada de conta: os três medos do dono (um pagando a
+conta do outro, perder música, achar música alheia) não são evitados com
+cuidado — **não têm onde acontecer**, porque não existe lugar comum onde dois
+acervos se encontrem.
+
+## Só Android
+
+A Apple não deixa instalar por fora da loja dela, e a loja não aceita app que
+baixa do YouTube. Não é limitação técnica, é regra deles. No Android o arquivo
+se instala direto, como o `.exe` no computador.
 
 ## Ordem de trabalho
 
-A regra: cada fase tem que entregar algo que já dá pra usar. Nada de esperar
-semanas no escuro.
+Cada fase entrega algo usável, e as arriscadas vêm cedo — se for para
+frustrar, que frustre na segunda semana e não na oitava.
 
-**Fase 1 — o celular toca o que o PC já separou.**
-Pareia, sincroniza, e o estúdio funciona: mixer, mudo, solo, loop, letra,
-cifra, tom escrito. Sem baixar, sem mudar tom. *Já resolve ensaiar sem o
-computador ligado.*
+**Fase 1 — o app toca.** Acervo local, estúdio completo (mixer, velocidade,
+metrônomo, repetir, letra e cifra), lendo música que já está no telefone.
+*Já serve para ensaiar.*
 
-**Fase 2 — mudar tom e velocidade.**
-Aqui entra o motor novo. É a fase mais arriscada (veja abaixo) e é o que o
-amigo do dono precisava: diminuir a velocidade do solo.
+**Fase 2 — baixar.** Cola o link, escolhe o ato, a música cai no acervo do
+telefone. Aqui o app fica independente de verdade.
 
-**Fase 3 — baixar música pelo celular.**
-Sem depender do PC pra achar a música.
+**Fase 3 — mudar o tom.** A ferramenta que o navegador não permitia. É a mais
+arriscada em qualidade e bateria; por isso vem antes das facilidades.
 
-**Fase 4 — mandar separar pelo celular.**
-Pede, o PC faz, volta pronta.
+**Fase 4 — trocar com o computador.** Mandar e puxar, na mesma rede.
 
-**Fase 5 — fora de casa (opcional).**
-Alcançar o PC de longe, ou dar chave própria ao celular. Traz de volta parte do
-risco que a Fase 1 elimina — decidir só quando chegar lá.
+**Fase 5 — separar pela nuvem.** Opcional, para quem tem crédito.
 
 ## Onde eu acho que vai doer
 
-- **O motor de tom e tempo.** No PC ele é um programa nativo bom. No celular as
-  opções são piores: ou perde qualidade, ou come bateria. Essa é a maior
-  incógnita do projeto, e é por isso que ela é a Fase 2 e não a 4 — se for pra
-  frustrar, que frustre cedo.
-- **Tocar seis faixas juntas** num celular modesto pode falhar ou atrasar.
-  Talvez precise juntar as faixas mudas antes de mandar.
-- **Espaço.** Uma música separada tem umas seis faixas; algo em torno de 60 MB.
-  Cinquenta músicas já são uns 3 GB no celular.
-- **Roteador chato.** Alguns isolam os aparelhos entre si e o celular não
-  enxerga o PC. Tem contorno, mas dá trabalho de suporte.
-- **Duas telas parecidas** viram dois códigos diferentes com o tempo, e aí um
-  conserto tem que ser feito duas vezes. Precisa de disciplina desde o começo.
+- **Mudar o tom** no celular: ou perde qualidade, ou come bateria. Maior
+  incógnita do projeto.
+- **Tocar seis faixas juntas** num aparelho modesto. Ainda não medido.
+- **Baixar do YouTube** depende de biblioteca que quebra quando o YouTube muda
+  — o mesmo problema do `yt-dlp` no computador, e a mesma solução: atualizar.
+- **Duas telas parecidas** viram dois códigos com o tempo, e aí um conserto
+  precisa ser feito duas vezes.
 
 ## O que ainda falta decidir
 
-- Qual Android? (versão e memória do aparelho do dono e do pai dele)
-- Quantas músicas ele quer carregar no celular?
-- A Fase 5 (fora de casa) entra ou o app é de rede doméstica?
+- Qual Android (versão e memória) do dono e do pai dele?
+- A tela do celular é reescrita ou reaproveitada dentro de uma casca?
 
-## Antes disso, o que está aberto no app de PC
+## Aberto no app de computador
 
-- Publicar o `0.4.1` — o instalador que está no ar tem defeito visual.
 - A dissecação nunca rodou inteira em música de verdade.
 - A conta do Replicate está suspensa por US$ 0,25.
