@@ -8170,16 +8170,27 @@ section h2::after {
     0 0 60px rgba(214, 255, 160, 0.2),
     0 0 120px rgba(182, 255, 59, 0.14);
 }
-/* o ar em volta do letreiro: degradê que morre longe, então não tem borda
-   pra aparecer */
+/* O AR EM VOLTA DO LETREIRO.
+   Ele TINHA borda reta, e com a trama por baixo dava pra ver o retângulo
+   inteiro: a elipse do degradê era maior que a caixa (raio de 70% de 380px a
+   partir de 42% da altura chega a 426px), então ela era CORTADA pelas beiras
+   em vez de morrer sozinha. Degradê cortado vira aresta.
+   `closest-side` conserta pela raiz: manda a elipse encostar no lado mais
+   perto, ou seja, ela nunca passa da caixa e chega em transparente antes de
+   qualquer beira. Não tem mais o que cortar. */
 .palco-in::before {
   content: '';
   position: absolute;
-  left: -6%;
-  top: 0;
-  width: 78%;
-  height: 380px;
-  background: radial-gradient(60% 70% at 34% 42%, rgba(182, 255, 59, 0.07), transparent 70%);
+  left: 0;
+  top: -70px;
+  width: min(860px, 92%);
+  height: 660px;
+  background: radial-gradient(
+    closest-side,
+    rgba(182, 255, 59, 0.085),
+    rgba(182, 255, 59, 0.03) 58%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -8803,7 +8814,7 @@ ul.hlib-grid {
   left: calc(var(--trilho-w) + (100vw - var(--trilho-w)) * 0.68);
   top: 50%;
   transform: translate(-50%, -50%);
-  width: clamp(200px, 30vw, 520px);
+  width: clamp(210px, calc((100vw - var(--trilho-w)) * 0.46), 680px);
   padding: 0;
   border: none;
   background: none;
@@ -8827,6 +8838,8 @@ ul.hlib-grid {
   overflow: visible;
   transition: filter 0.3s ease;
 }
+/* o fundo opaco da chapa: é o que impede a trama de aparecer por dentro dela */
+.marca-fundo { fill: var(--bg); }
 /* a chapa apagada: o mesmo fantasma discreto que a marca d'água sempre foi */
 .marca-fantasma { fill: var(--accent); opacity: 0.07; }
 /* a chapa acesa, que só aparece dentro do retângulo da carga */

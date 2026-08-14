@@ -279,6 +279,15 @@ export default function Omnitrix({ ligado = true, onEscolher }) {
             </clipPath>
           </defs>
 
+          {/* O FUNDO DA CHAPA. A trama de hexágonos passava POR DENTRO da
+              ampulheta: a chapa apagada tem 7% de opacidade, então tudo que
+              está atrás dela aparece. Por isso a bagunça sumia no hover — lá
+              a chapa enche e fica opaca.
+              Este hexágono é a cor do fundo da tela, e é o que faz a marca
+              ser um OBJETO em cima da trama em vez de um vidro. De quebra, a
+              ampulheta (que é um furo na chapa) passa a ser escura e cheia,
+              como no cartaz que o dono desenhou. */}
+          <path d={HEX} className="marca-fundo" />
           <g mask="url(#marca-chapa)">
             <rect className="marca-fantasma" x="0" y="0" width="100" height="110" />
             <rect className="marca-cheia" x="0" y="0" width="100" height="110" clipPath="url(#marca-carga)" />
