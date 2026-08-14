@@ -8,6 +8,7 @@ import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight,
 import { resolverYtDlp } from './binpath.js'
 import { ligarCelular, desligarCelular, infoCelular, pedidosRecentes } from './celular.js'
 import { paginaCelular } from './celular-pagina.js'
+import { paginaProvas } from './celular-provas.js'
 import {
   prepararAtualizacaoDoApp,
   estadoDaAtualizacao,
@@ -955,6 +956,8 @@ app.whenReady().then(() => {
     icone: app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
       : join(__dirname, '..', '..', 'build', 'icon.png'),
+    // as provas de desenho: o dono escolhe olhando, na tela dele
+    provas: paginaProvas,
     // as fontes da casa, pro celular parecer o mesmo app
     fontes: app.isPackaged
       ? join(process.resourcesPath, 'app.asar.unpacked', 'out', 'renderer', 'fonts')

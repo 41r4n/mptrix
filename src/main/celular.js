@@ -36,6 +36,7 @@ let espiar = null
 let iconePng = null
 let apkDoCelular = null
 let pastaFontes = null
+let paginaProvas = null
 const ultimosPedidos = []
 
 // ██████████ AS TAREFAS ██████████
@@ -439,7 +440,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes, provas }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -454,6 +455,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   iconePng = icone
   apkDoCelular = apk
   pastaFontes = fontes
+  paginaProvas = provas
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -648,6 +650,17 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       limparTarefasVelhas()
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
       res.end(JSON.stringify([...tarefas.values()].sort((a, b) => b.quando - a.quando)))
+      return
+    }
+
+    // ██████████ AS PROVAS ██████████
+    // Em vez de o dono garimpar referência em site de design, ele olha as
+    // opções na tela do próprio celular, com as músicas dele, e aponta. Foi
+    // assim que tudo funcionou hoje: ele não precisa saber explicar por que
+    // gostou — precisa ver.
+    if (caminho === '/provas') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(paginaProvas ? paginaProvas(acervoCompleto(stemsDir, historico ? historico() : [])) : '<p>sem provas</p>')
       return
     }
 
