@@ -198,17 +198,43 @@ li { margin-bottom: 8px; }
 }
 /* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
    ficar boiando no preto. */
-/* a moldura existe pra segurar o sinal de tocar no canto da capa */
-.moldura { position: relative; flex: none; display: block; line-height: 0; }
-.tocar {
-  position: absolute; right: -4px; bottom: -4px;
-  width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--lima); color: #0b0c0f;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  box-shadow: 0 0 12px rgba(182,255,59,.5);
+/* ██████████ A MOLDURA DA CAPA ██████████
+   Um fio ao redor, com respiro entre ele e a imagem. É o mesmo princípio de
+   quadro pendurado: o vazio entre a moldura e a foto é o que faz a foto
+   parecer emoldurada em vez de recortada. Sem esse respiro, o fio vira contorno
+   e some visualmente contra a borda da imagem. */
+.moldura {
+  position: relative; flex: none; display: block; line-height: 0;
+  padding: 5px;
 }
-.cartao-musica:active .tocar { transform: scale(.9); }
+.moldura::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
+  clip-path: var(--corte-sm);
+}
+/* e um segundo fio, mais fraco, só nos dois cantos vivos — a marca de painel
+   sem virar caixa dentro de caixa */
+.moldura::after {
+  content: ''; position: absolute; left: 0; top: 0; width: 11px; height: 11px;
+  border-top: 1px solid rgba(182,255,59,.5);
+  border-left: 1px solid rgba(182,255,59,.5);
+  pointer-events: none;
+}
+
+/* O SINAL DE QUE ABRE. Era lima cheio e brilhando: com a capa borrada atrás,
+   virou o ponto mais berrante do cartão — e ele não é a coisa mais importante
+   dele. Agora é vidro escuro com o triângulo lima dentro: presente, e com
+   charme em vez de grito. */
+.tocar {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 23px; height: 23px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(9, 10, 13, .88); color: var(--lima);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: inset 0 0 0 1px rgba(182,255,59,.45), 0 3px 10px rgba(0,0,0,.7);
+  transition: transform .12s ease, color .12s ease;
+}
+.cartao-musica:active .tocar { transform: scale(.88); color: #dfff9e; }
 
 .capa {
   width: 66px; height: 66px; flex: none; object-fit: cover;
