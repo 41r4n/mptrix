@@ -47,8 +47,15 @@ export default function ShareApp() {
   // O CÓDIGO ANDOU DEPOIS DESTE INSTALADOR? Só dá pra saber rodando do fonte;
   // no app empacotado a pasta src não existe e a tela fica calada, porque
   // palpite sobre atualidade é pior do que silêncio.
-  const velho = temArquivo && installer.codigoEm && installer.feitoEm && installer.codigoEm > installer.feitoEm
-  const diasAtras = velho ? Math.round((installer.codigoEm - installer.feitoEm) / 86400000) : 0
+  // "0 DIAS ATRÁS" É AVISO DE NADA. O código anda a cada arquivo salvo, então
+  // um instalador feito agora já nasce "atrás" por segundos — e o aviso
+  // aparecia dizendo zero dias, que é o mesmo que dizer "está em dia" com cara
+  // de alarme. Só vale avisar quando existe dia inteiro de diferença.
+  const horasAtras = temArquivo && installer.codigoEm && installer.feitoEm
+    ? (installer.codigoEm - installer.feitoEm) / 3600000
+    : 0
+  const diasAtras = Math.floor(horasAtras / 24)
+  const velho = diasAtras >= 1
 
   // MANDAR O LINK é o jeito certo desde que o app passou a ser publicado. Os
   // outros botões continuam porque servem a quem está sem internet ou vai

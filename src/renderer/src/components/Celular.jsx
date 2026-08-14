@@ -82,6 +82,23 @@ export default function Celular() {
             </div>
           ))}
 
+          {/* O APP DO CELULAR, PRA COPIAR DAQUI. Ele também se oferece dentro
+              da tela do telefone, mas quem está no computador está AQUI — e
+              mandar a pessoa procurar noutro aparelho o que ela quer agora é
+              devolver o trabalho pra ela. */}
+          <div className="celular-endereco">
+            <span className="celular-rede">o app</span>
+            <code>{estado.enderecos[0] ? estado.enderecos[0].url.split('/?')[0] + '/app.apk?s=' + estado.enderecos[0].url.split('s=')[1] : ''}</code>
+            <button
+              className="celular-copiar"
+              onClick={() => copiar(estado.enderecos[0].url.split('/?')[0] + '/app.apk?s=' + estado.enderecos[0].url.split('s=')[1])}
+            >copiar</button>
+          </div>
+          <p className="celular-nota">
+            Esse segundo endereço instala o MPTRIX <strong>no celular</strong>, como app de
+            verdade. Abra ele no telefone e o Android começa a instalação.
+          </p>
+
           {copiado && <p className="celular-ok">Endereço copiado. Mande pra você mesmo e abra no celular.</p>}
 
           {/* O DIÁRIO DE BORDO. Vazio significa uma coisa muito específica: o
