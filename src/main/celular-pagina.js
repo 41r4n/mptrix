@@ -137,127 +137,64 @@ header {
 }
 
 /* ██████████ OS CARTÕES DO ACERVO ██████████
-   Estava pobre: tudo da mesma cor, sem fio, sem sombra, sem camada. Um
-   retângulo com texto dentro não é desenho — é ausência de desenho.
-   O que dá material a uma caixa, na ordem em que o olho percebe:
-     1. CAMADAS       superfícies diferentes pra funções diferentes
-     2. FIOS          separando o que é separado
-     3. PROFUNDIDADE  luz na aresta de cima, sombra embaixo
-     4. MARCAS        colchete de canto e número de série — a língua FUI
-     5. COR           uma só, e só onde carrega informação */
+   Terceira tentativa, e desta vez por subtração. As duas primeiras erraram do
+   mesmo jeito: eu enchi de coisa — onda, colchete, número de série, células de
+   dados — e cada camada nova competia com a anterior. O dono olhou as duas e
+   disse a mesma coisa: pobre na primeira, horrível na segunda.
+   Desenho que precisa de explicação não está pronto. Aqui sobrou o que a
+   pessoa usa pra escolher uma música: a imagem, o nome, e uma linha dizendo o
+   que ela é. */
 ul { list-style: none; margin: 0; padding: 10px 12px 0; }
-li { margin-bottom: 9px; }
+li { margin-bottom: 8px; }
 
 .cartao-musica {
-  position: relative;
-  display: flex; align-items: stretch;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.05), transparent 42%),
-    var(--card);
-  /* luz na aresta de cima + fio em volta + sombra embaixo: é isso que faz uma
-     caixa parecer uma PEÇA e não um retângulo pintado */
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.07),
-    inset 0 0 0 1px var(--linha),
-    0 8px 22px rgba(0,0,0,.55);
+  display: flex; align-items: center;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--linha);
   clip-path: var(--corte);
-  transition: box-shadow .16s ease, background .16s ease;
 }
-.cartao-musica:active { background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 42%), var(--cava); }
-
-/* COLCHETES DE CANTO. Duas marcas em L, uma em cima e outra embaixo: é a
-   assinatura de painel de equipamento, e custa dois elementos vazios. */
-.canto {
-  position: absolute; width: 9px; height: 9px; pointer-events: none;
-  border: 1px solid rgba(182,255,59,.5); opacity: .55; z-index: 2;
-}
-.canto.tl { top: 4px; left: 4px; border-right: none; border-bottom: none; }
-.canto.br { bottom: 4px; right: 4px; border-left: none; border-top: none; }
-
-/* NÚMERO DE SÉRIE. Ele não serve pra contar nada — serve pra dizer que isto é
-   um item de um conjunto, que é o que caixa de jogo faz. */
-.serie {
-  position: absolute; top: 6px; right: 60px; z-index: 2;
-  font-family: var(--mono); font-size: 8px; letter-spacing: .18em;
-  color: rgba(255,255,255,.22);
-}
+.cartao-musica:active { background: var(--cava); }
 
 .abrir {
   flex: 1 1 auto; min-width: 0;
-  display: flex; align-items: stretch; gap: 0;
-  padding: 0; background: none; border: none; color: var(--txt);
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px; background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
-
-/* A MOLDURA DA CAPA é uma camada mais funda que o corpo, com fio à direita —
-   duas superfícies, uma divisa. É o que separa "a imagem" de "os dados". */
-.moldura {
-  flex: none; padding: 10px; background: var(--cava2);
-  border-right: 1px solid var(--linha);
-  display: flex; align-items: center;
-}
-.capa, .capa-vazia {
-  width: 62px; height: 62px; flex: none; object-fit: cover;
+.capa {
+  width: 58px; height: 58px; flex: none; object-fit: cover;
   background: #000; clip-path: var(--corte-sm);
-  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 3px 10px rgba(0,0,0,.6);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.13);
+  color: rgba(255,255,255,.15);
 }
-
-.corpo {
-  position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden;
-  padding: 11px 12px 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 8px;
-}
+.corpo { flex: 1 1 auto; min-width: 0; }
+/* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão e faz a
+   lista ficar irregular, e lista irregular cansa de rolar. */
 .corpo b {
-  position: relative; z-index: 1;
-  font-size: 14.5px; font-weight: 600; line-height: 1.3;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  display: block; font-size: 15px; font-weight: 600; line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 5px;
 }
+.dados {
+  display: block;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  color: var(--mudo2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dados em { font-style: normal; color: var(--lima); }
 
-/* A ONDA VIROU FUNDO. Como bloco separado ela empurrava tudo pra baixo pra
-   dizer pouco. Atrás do texto ela custa ZERO espaço e continua sendo verdade —
-   o formato daquela gravação — e o olho lê sem perceber que leu. */
-/* MEDIDO NO APARELHO DO DONO: a 13% e ocupando a altura toda, ela virou uma
-   parede verde atrás do texto. O valor no papel parecia discreto; na tela do
-   celular, com brilho alto, não era. Agora ela é uma faixa baixa no pé. */
-.onda {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 32px;
-  display: flex; align-items: flex-end; gap: 1px;
-  opacity: .07; pointer-events: none; z-index: 0;
-}
-.onda i { flex: 1 1 auto; display: block; background: var(--lima); }
-
-/* AS CÉLULAS. Em linha corrida, "8 faixas · Cm · 94 bpm" é uma frase que se lê
-   inteira; em células com fio no meio, o olho pega só o que procura. É a
-   leitura de painel do computador, no tamanho do celular. */
-.celulas {
-  position: relative; z-index: 1;
-  display: flex; align-items: stretch; flex-wrap: wrap;
-  margin: 0 -12px; border-top: 1px solid var(--linha);
-}
-.celulas span {
-  padding: 6px 9px; border-right: 1px solid var(--linha);
-  font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
-  color: var(--mudo2); white-space: nowrap;
-}
-.celulas span.forte { color: var(--lima); }
-.celulas span:last-child { border-right: none; }
-
-/* O BAIXAR: coluna própria, fio à esquerda, alvo grande pro dedo. */
+/* O BAIXAR: coluna própria com fio à esquerda. Alvo grande pro dedo, calado
+   quando não tem nada a dizer. */
 .levar {
-  flex: none; width: 52px; position: relative; overflow: hidden;
+  flex: none; width: 50px; align-self: stretch; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  background: var(--cava2); border: none; border-left: 1px solid var(--linha);
+  background: none; border: none; border-left: 1px solid var(--linha);
   color: var(--mudo2); cursor: pointer;
 }
-.levar:active { background: rgba(255,255,255,.06); }
-.levar.tem {
-  color: #0b0c0f; background: var(--lima); border-left-color: transparent;
-  box-shadow: inset 0 0 24px rgba(255,255,255,.28), -8px 0 20px rgba(182,255,59,.25);
-}
+.levar:active { background: rgba(255,255,255,.05); }
+.levar.tem { color: #0b0c0f; background: var(--lima); border-left-color: transparent; }
 .levar.erro { color: var(--ruim); }
 .levar.indo { color: var(--ambar); }
 .levar.indo::after {
@@ -265,19 +202,8 @@ li { margin-bottom: 9px; }
   height: var(--quanto, 0%); background: rgba(234,179,8,.25); transition: height .3s ease;
 }
 
-/* JÁ ESTÁ NO APARELHO: o cartão inteiro acende. É a única informação dele que
-   muda o que dá pra fazer sem o computador — por isso é a única que ganha luz. */
-.cartao-musica.aqui {
-  background: linear-gradient(180deg, rgba(182,255,59,.09), transparent 45%), var(--card);
-  box-shadow:
-    inset 0 1px 0 rgba(182,255,59,.2),
-    inset 0 0 0 1px rgba(182,255,59,.34),
-    0 0 24px rgba(182,255,59,.1),
-    0 8px 22px rgba(0,0,0,.55);
-}
-.cartao-musica.aqui .canto { opacity: 1; border-color: var(--lima); }
-.cartao-musica.aqui .onda { opacity: .16; }
-.cartao-musica.aqui .moldura { background: rgba(182,255,59,.05); }
+/* JÁ ESTÁ NO APARELHO: só o contorno muda. É informação, não festa. */
+.cartao-musica.aqui { box-shadow: inset 0 0 0 1px rgba(182,255,59,.35); }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
 .vazio b { display: block; color: var(--txt2); font-size: 15px; margin-bottom: 8px; }
@@ -786,36 +712,25 @@ function abrirAcervo() {
     var m = lista[i], n = acervo.indexOf(m);
     var aqui = !!guardadas[m.chave];
 
-    // A ONDA DA MÚSICA, e ela NÃO é textura: é o formato daquela gravação.
-    // Dá pra ver de relance onde entra a banda toda, onde tem refrão, se
-    // começa devagar. Enfeite que imita informação é o que esta casa não faz —
-    // isto é informação de verdade, e por acaso é bonita.
-    var onda = '';
-    if (m.onda && m.onda.length) {
-      for (var w = 0; w < m.onda.length; w++) {
-        onda += '<i style="height:' + Math.max(8, Math.round(m.onda[w] * 100)) + '%"></i>';
-      }
-    }
+    // SEM ENFEITE NENHUM. A onda saiu (o dono pediu duas vezes), saíram os
+    // colchetes, o número de série e as células. O que sobrou é o que a pessoa
+    // realmente usa pra escolher uma música: a imagem, o nome, e uma linha
+    // dizendo o que ela é.
+    //
+    // Desenho que precisa de explicação não está pronto. Este não precisa.
+    var info = m.inteira ? 'música completa' : m.faixas.length + ' faixas';
+    if (m.tom) info += ' · <em>' + m.tom + '</em>';
+    if (m.bpm) info += ' · <em>' + m.bpm + '</em> bpm';
+    if (m.duracao) info += ' · ' + mmss(m.duracao);
 
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '">' +
       '<button class="abrir" data-i="' + n + '">' +
         (m.capa
           ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
-          : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
-        '<span class="corpo">' +
-          '<b>' + esc(m.titulo) + '</b>' +
-          (onda ? '<span class="onda">' + onda + '</span>' : '') +
-          '<span class="dados">' +
-            (m.inteira ? 'música completa' : m.faixas.length + ' faixas') +
-            (m.tom ? ' · <em>' + m.tom + '</em>' : '') +
-            (m.bpm ? ' · <em>' + m.bpm + '</em> bpm' : '') +
-            (m.duracao ? ' · ' + mmss(m.duracao) : '') +
-          '</span>' +
-        '</span>' +
+          : '<span class="capa capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+        '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
+        '<span class="dados">' + info + '</span></span>' +
       '</button>' +
-      // O BAIXAR VIROU BOTÃO DE CANTO. Era uma faixa larga repetida em cada
-      // música — catorze barras iguais empurrando o acervo pra baixo e
-      // competindo com o nome da música, que é o que a pessoa procura.
       '<button class="levar" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Baixar pro celular">' +
         '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
