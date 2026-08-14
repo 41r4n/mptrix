@@ -955,6 +955,10 @@ app.whenReady().then(() => {
     icone: app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
       : join(__dirname, '..', '..', 'build', 'icon.png'),
+    // o app do celular, pra ele mesmo instalar sem cabo nem WhatsApp
+    apk: app.isPackaged
+      ? join(process.resourcesPath, 'MPTRIX-celular.apk')
+      : join(__dirname, '..', '..', 'release', 'MPTRIX-celular.apk'),
     baixar: ({ url, presetId, onProgress, onStatus }) => {
       if (!existsSync(YT_DLP_PATH) || !existsSync(FFMPEG_PATH)) {
         onStatus({ state: 'error', message: 'faltam os programas de download no computador' })

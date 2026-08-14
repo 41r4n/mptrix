@@ -384,6 +384,30 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   font-size: 12px; line-height: 1.5; color: var(--amarelo);
 }
 
+/* ██████████ INSTALAR O APP ██████████
+   O celular já está falando com o computador — é ele quem entrega o app. Ter
+   que passar arquivo por WhatsApp ou cabo pra instalar o programa que já está
+   aberto na sua frente é pedir trabalho onde não precisa.
+   Fica no alto do APARELHO porque é a única coisa dessa tela que MUDA o que a
+   pessoa tem; o resto é consulta. */
+.convite {
+  --chanfro: 12px;
+  padding: 15px 14px; margin-bottom: 14px;
+  background: rgba(182,255,59,0.06);
+  box-shadow: inset 0 0 0 1px var(--lima-b);
+  clip-path: var(--corte);
+}
+.convite b { display: block; font-size: 14.5px; margin-bottom: 5px; }
+.convite p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--mudo); }
+.convite a {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  height: 46px; background: var(--lima); color: #0b0c0f;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: 700; text-decoration: none;
+  clip-path: var(--corte-sm);
+}
+.convite small { display: block; margin-top: 10px; font-size: 11.5px; color: var(--mudo2); line-height: 1.5; }
+
 .diag {
   display: block; margin-top: 18px; padding: 12px;
   background: var(--cava2); box-shadow: inset 0 0 0 1px var(--linha);
@@ -1179,8 +1203,19 @@ function pararTudo() {
 // O que ela mostra é o estado do APARELHO: o que está guardado aqui, quanto
 // ocupa, e se o computador está por perto. Nada de "configuração" — não há o
 // que configurar; há o que CONFERIR antes de sair de casa.
+var temApp = { tem: false, mb: 0 };
+
 function abrirAjustes() {
   voltar.hidden = true; onde.textContent = 'aparelho';
+  // pergunta uma vez se existe app pra instalar; se existir, redesenha com o
+  // convite. Perguntar sempre faria a tela piscar a cada visita.
+  if (!temApp.perguntei) {
+    temApp.perguntei = true;
+    fetch(comSenha('/api/tem-app')).then(function (r) { return r.json(); }).then(function (t) {
+      temApp.tem = t.tem; temApp.mb = t.mb;
+      if (t.tem && aba === 'ajustes') abrirAjustes();
+    }).catch(function () {});
+  }
   var levadas = acervo.filter(function (m) { return guardadas[m.chave]; });
   var bytes = 0;
   levadas.forEach(function (m) { m.faixas.forEach(function (f) { bytes += (f.bytes || 0) / 6; }); });
@@ -1189,6 +1224,17 @@ function abrirAjustes() {
   var f = document.createElement('div');
   f.className = 'folha-fundo';
   f.innerHTML = '<div class="folha" onclick="event.stopPropagation()">' +
+    (temApp.tem
+      ? '<div class="convite"><b>Instalar o MPTRIX no celular</b>' +
+        '<p>Vira um app de verdade: ícone na tela, abre sozinho, e depois funciona ' +
+        'longe do computador.</p>' +
+        '<a href="' + comSenha('/app.apk') + '" download="MPTRIX.apk">' +
+          '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+          'baixar o app · ' + temApp.mb + ' MB</a>' +
+        '<small>O Android vai avisar que não conhece o app e pedir permissão pra instalar ' +
+        'fora da loja. É normal — libere e toque em instalar.</small></div>'
+      : '') +
     '<span class="olho">este aparelho</span><h3>O que está no celular</h3>' +
     '<p>Só o que você levou toca sem o computador. O resto vem dele, pela rede de casa.</p>' +
     '<div class="linha-dado"><span class="rot">músicas levadas</span><b class="lima">' + levadas.length + '</b></div>' +

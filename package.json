@@ -74,6 +74,10 @@
       {
         "from": "build/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "release/MPTRIX-celular.apk",
+        "to": "MPTRIX-celular.apk"
       }
     ],
     "win": {

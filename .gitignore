@@ -21,3 +21,6 @@ dist/
 resources/bin/ffmpeg.exe
 
 release-teste/
+
+# o app do celular e gerado, nao versionado
+release/MPTRIX-celular.apk

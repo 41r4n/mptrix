@@ -33,6 +33,7 @@ let ffmpeg = null
 let salvarPorta = null
 let mandarBaixar = null
 let iconePng = null
+let apkDoCelular = null
 const ultimosPedidos = []
 
 // ██████████ AS TAREFAS ██████████
@@ -436,7 +437,7 @@ function levar(chave, urls, quem) {
 }
 `
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone }) {
+export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -448,6 +449,7 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
   salvarPorta = guardarPorta
   mandarBaixar = baixar
   iconePng = icone
+  apkDoCelular = apk
 
   servidor = createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -520,6 +522,31 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
           { src: '/icone.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icone.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
+      }))
+      return
+    }
+
+    // ██████████ O PRÓPRIO APP, PRA INSTALAR ██████████
+    // O celular já está falando com o computador — é ele quem deve entregar o
+    // app, não o dono ter que passar arquivo por WhatsApp ou cabo. Um toque na
+    // tela do celular e o Android começa a instalação.
+    if (caminho === '/app.apk') {
+      if (!apkDoCelular || !existsSync(apkDoCelular)) { res.writeHead(404); res.end('ainda nao existe app pra instalar'); return }
+      const tam = statSync(apkDoCelular).size
+      res.writeHead(200, {
+        'Content-Type': 'application/vnd.android.package-archive',
+        'Content-Length': tam,
+        'Content-Disposition': 'attachment; filename="MPTRIX.apk"'
+      })
+      createReadStream(apkDoCelular).pipe(res)
+      return
+    }
+
+    if (caminho === '/api/tem-app') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({
+        tem: !!(apkDoCelular && existsSync(apkDoCelular)),
+        mb: apkDoCelular && existsSync(apkDoCelular) ? Math.round(statSync(apkDoCelular).size / 1048576 * 10) / 10 : 0
       }))
       return
     }
