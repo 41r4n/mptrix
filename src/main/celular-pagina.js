@@ -71,32 +71,64 @@ button, input { font-family: inherit; }
 
 /* ── A MARCA. O hexágono com a ampulheta é a assinatura da casa: quem abre no
       celular precisa reconhecer o mesmo app, não achar que é outro site. ── */
+/* ██████████ O CABEÇALHO ██████████
+   O dono desenhou um cartaz e mandou: hexágono lima grande com a ampulheta,
+   marca em letra pesada, trama de bolinhas se dissolvendo, lascas escuras
+   anguladas. Isto aqui é a mesma abordagem no tamanho de um cabeçalho.
+   A TRAMA é o achado dele: bolinha não é grão nem gradiente — é retícula de
+   impressão. Ela dá superfície gráfica sem virar desenho, e some sozinha antes
+   de encostar no conteúdo. */
 header {
-  display: flex; align-items: center; gap: 11px;
-  padding: calc(12px + env(safe-area-inset-top)) 15px 12px;
+  position: sticky; top: 0; z-index: 6; overflow: hidden;
+  display: flex; align-items: center; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top)) 15px 14px;
   border-bottom: 1px solid var(--linha);
-  position: sticky; top: 0; background: var(--bg); z-index: 6;
+  background: var(--bg);
 }
+/* a retícula, entrando pela direita e morrendo antes do texto */
+header::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at center, rgba(182,255,59,.55) 1.1px, transparent 1.5px);
+  background-size: 13px 13px;
+  -webkit-mask-image: linear-gradient(255deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 62%);
+  mask-image: linear-gradient(255deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 62%);
+  opacity: .5;
+}
+/* a lasca escura angulada, atrás da marca — a mesma do cartaz dele */
+header::after {
+  content: ''; position: absolute; left: -30px; top: -20px; bottom: -20px; width: 118px;
+  pointer-events: none; background: rgba(0,0,0,.55);
+  clip-path: polygon(0 0, 100% 0, 74% 100%, 0 100%);
+}
+/* O HEXÁGONO CHEIO, como no cartaz: lima sólido com a ampulheta preta vazada
+   dentro. Antes era contorno apagado com a ampulheta lima — marca tímida.
+   A marca da casa não pede licença. */
 .hex {
-  width: 30px; height: 30px; flex: none;
+  position: relative; z-index: 1;
+  width: 38px; height: 42px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(182,255,59,0.12); color: var(--lima);
+  background: var(--lima); color: #0b0c0f;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 26px rgba(182,255,59,.35);
 }
-.marca { font-weight: 700; letter-spacing: 0.06em; font-size: 15px; line-height: 1; }
+/* a marca em letra pesada e larga, como no cartaz */
+.marca {
+  position: relative; z-index: 1;
+  font-weight: 700; letter-spacing: .01em; font-size: 21px; line-height: 1;
+}
 .marca { font-family: var(--ui); }
 .marca b { color: var(--lima); text-shadow: 0 0 16px rgba(182,255,59,0.6), 0 0 34px rgba(182,255,59,0.25); }
 .hex { box-shadow: 0 0 20px rgba(182,255,59,0.28); }
 .marca span {
-  display: block; margin-top: 3px;
-  font-family: var(--mono); font-size: 8px; letter-spacing: 0.2em;
+  display: block; margin-top: 5px;
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .24em;
   text-transform: uppercase; color: var(--mudo2); font-weight: 400;
 }
 .voltar {
   background: none; border: none; color: var(--mudo); font-size: 21px;
   padding: 4px 8px 4px 0; cursor: pointer; line-height: 1; flex: none;
 }
-.cabeca-fim { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.cabeca-fim { position: relative; z-index: 1; margin-left: auto; display: flex; align-items: center; gap: 7px; }
 .icone-btn {
   width: 34px; height: 34px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
@@ -652,7 +684,7 @@ body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
   <!-- o hexágono com a ampulheta: a assinatura da casa. Quem abre no celular
        tem que reconhecer o mesmo app, não achar que caiu noutro site. -->
   <span class="hex" aria-hidden="true">
-    <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z"/></svg>
+    <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z"/></svg>
   </span>
   <span class="marca">MP<b>TRIX</b><span id="onde">acervo</span></span>
   <span class="cabeca-fim">
