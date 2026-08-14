@@ -7935,15 +7935,43 @@ section h2::after {
 }
 
 /* ---------- TRILHO ---------- */
+/* A BARRA CORTADA NA DIAGONAL. No cartaz do dono a chapa escura da esquerda
+   termina torta, e ele mandou: a diagonal é a barra, não um feixe pintado
+   atrás. Então o corte é dela.
+   A `border-right` teve que sair: clip-path recorta a borda junto, e a aresta
+   inclinada ficaria SEM FIO — é o mesmo bug que já apareceu meia dúzia de
+   vezes neste projeto. O fio é redesenhado logo abaixo, no ângulo certo. */
 .trilho {
   display: flex;
   flex-direction: column;
   background: var(--bg-tracks);
-  border-right: 1px solid var(--border);
   padding: 22px 0 18px;
   position: sticky;
   top: 0;
   height: 100vh;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 38px) 100%, 0 100%);
+}
+/* O FIO DA ARESTA TORTA.
+   Truque de geometria: numa faixa de 38px de largura, `to top left` faz a
+   linha de 50% do degradê passar exatamente pelos cantos de cima-direita e
+   baixo-esquerda — que é a diagonal que eu quero. Um corte duro de 1px em
+   cima dela desenha o fio, e ele acompanha qualquer altura de janela sem
+   número na mão. */
+.trilho::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 38px;
+  pointer-events: none;
+  background: linear-gradient(
+    to top left,
+    transparent calc(50% - 0.5px),
+    var(--border) calc(50% - 0.5px),
+    var(--border) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
 }
 .trilho-marca {
   display: flex;
@@ -8062,20 +8090,11 @@ section h2::after {
   max-width: 1000px;
   animation: palco-entra 0.26s ease;
 }
-/* A LASCA vive no PALCO, não no painel, pelo mesmo motivo da trama: o painel
-   termina onde o texto acaba, e a chapa cortava reto no meio da tela.
-   Ela e a trama valem SÓ na tela de boas-vindas — `.palco-in` serve as quatro
-   abas, e atrás da lista de 102 itens do acervo isto seria barulho embaixo de
-   texto pequeno. A ampulheta (`.marca`) só existe aqui, então é ela quem diz,
-   sem precisar inventar classe nova no JSX. */
-.palco:has(.palco-in > .marca)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.025) 0 104px, transparent 104px);
-}
+/* A lasca angulada saiu daqui. Ela era um FEIXE DE LUZ falso: uma chapa clara
+   desenhada no fundo, fingindo que alguma coisa ali tinha volume. O dono
+   recusou e apontou o certo — a diagonal virou o corte da PRÓPRIA BARRA, que é
+   um objeto de verdade. Aresta de objeto não precisa fingir nada.
+   Veja `.trilho` mais abaixo. */
 /* A TRAMA. Foi o achado dele: bolinha não é grão nem gradiente — é RETÍCULA DE
    IMPRESSÃO, o padrão de pontinhos de cartaz e revista. Dá superfície gráfica
    sem virar desenho e sem inventar cor nova.
@@ -8092,14 +8111,26 @@ section h2::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* HEXÁGONO, não bolinha. Bolinha é retícula de qualquer gráfica; o hexágono
+     é a forma da casa, a mesma da ampulheta e das marcas. Duas camadas em
+     xadrez — cheio e vazado, deslocadas meia célula — porque uma grade só de
+     iguais fica com cara de papel de parede. Vazado e cheio alternando lê como
+     trama, não como estampa.
+     Não dá radial-gradient em hexágono: é SVG embutido, sem arquivo nem rede
+     (o app é 100% offline). */
   background-image:
-    radial-gradient(circle at center, rgba(182, 255, 59, 0.95) 3.4px, transparent 4px),
-    radial-gradient(circle at center, rgba(182, 255, 59, 0.6) 1.7px, transparent 2.2px);
-  background-size: 38px 38px, 19px 19px;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 5.2 L14.3 7.6 L14.3 12.4 L10 14.8 L5.7 12.4 L5.7 7.6 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.4 L15 7.2 L15 12.8 L10 15.6 L5 12.8 L5 7.2 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.1'/%3E%3C/svg%3E");
+  background-size: 30px 30px, 30px 30px;
+  background-position: 0 0, 15px 15px;
   /* nasce no canto de cima à direita e morre antes da coluna do texto */
-  -webkit-mask-image: linear-gradient(234deg, #000 0%, rgba(0, 0, 0, 0.4) 26%, transparent 50%);
-  mask-image: linear-gradient(234deg, #000 0%, rgba(0, 0, 0, 0.4) 26%, transparent 50%);
-  opacity: 0.42;
+  -webkit-mask-image: linear-gradient(238deg, #000 0%, rgba(0, 0, 0, 0.35) 22%, transparent 44%);
+  mask-image: linear-gradient(238deg, #000 0%, rgba(0, 0, 0, 0.35) 22%, transparent 44%);
+  /* AR EM VOLTA. Hexágono de 14px carrega muito mais tinta que bolinha de
+     4px: com a mesma força de antes, a trama virava um muro de colmeia. Ela
+     precisa ser textura, não estampa — então fica bem apagada e o olho só a
+     percebe quando procura. */
+  opacity: 0.24;
 }
 
 .palco-olho {
@@ -8221,7 +8252,7 @@ section h2::after {
 .palco-linha,
 .palco-etiquetas,
 .palco-nota {
-  max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 165px - 78px));
+  max-width: min(54ch, calc((100vw - var(--trilho-w)) * 0.35));
 }
 .palco-linha {
   margin: 0 0 20px;
@@ -8763,13 +8794,16 @@ ul.hlib-grid {
      Fixa resolve: ela não tem altura de conteúdo pra herdar, e como a marca
      só existe nesta aba, não sobra nada dela em lugar nenhum. */
   position: fixed;
-  /* No meio da área de trabalho — a metade da janela DESCONTANDO o trilho.
-     Centrar em 50% da janela jogaria ela pra esquerda do centro visível,
-     porque os 232px do trilho não fazem parte do palco. */
-  left: calc(var(--trilho-w) + (100vw - var(--trilho-w)) / 2);
+  /* JOGADA PRO LADO, e grande. No cartaz que o dono desenhou ela não está
+     plantada no meio: é o objeto maior da página e vive encostada num lado.
+     Aqui o centro dela fica a 68% da área de trabalho — a janela DESCONTANDO
+     o trilho, porque os 232px da barra não fazem parte do palco.
+     O tamanho anda com a janela em vez de ser número fixo: em tela pequena
+     ela encolhe sozinha antes de encostar no texto. */
+  left: calc(var(--trilho-w) + (100vw - var(--trilho-w)) * 0.68);
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 330px;
+  width: clamp(200px, 30vw, 520px);
   padding: 0;
   border: none;
   background: none;
@@ -8787,8 +8821,9 @@ ul.hlib-grid {
 }
 
 .marca-svg {
-  width: 270px;
-  height: 297px;
+  width: 100%;
+  aspect-ratio: 100 / 110;
+  height: auto;
   overflow: visible;
   transition: filter 0.3s ease;
 }
@@ -8839,21 +8874,14 @@ ul.hlib-grid {
 .marca:focus-visible .marca-aro { opacity: 1; stroke-width: 2; }
 .marca:active .marca-svg { transform: scale(0.97); }
 
-/* janela estreita: a marca encolhe e chega mais pra borda, pra nunca disputar
-   espaço com o texto do palco */
-@media (max-width: 1280px) {
-  .marca { width: 240px; }
-  .palco-linha, .palco-etiquetas, .palco-nota {
-    max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 120px - 70px));
-  }
-  .marca-svg { width: 200px; height: 220px; }
-}
+/* AS MEDIDAS FIXAS SAÍRAM. Eram três degraus de largura (330/240/180) presos a
+   dois pontos de quebra, e todos os três calculavam o texto pela conta de uma
+   marca CENTRADA: "metade da área de trabalho menos metade da marca". Ela não
+   fica mais no meio, então essa conta passou a mentir — e foi ela que segurou
+   a ampulheta em 240px depois de eu ter mandado crescer.
+   Agora a largura é uma só e escorre com a janela; o texto ganha uma fração da
+   área de trabalho e para no limite de leitura (54 caracteres), o que sobrar. */
 @media (max-width: 1040px) {
-  .marca { width: 180px; }
-  .palco-linha, .palco-etiquetas, .palco-nota {
-    max-width: min(54ch, calc((100vw - var(--trilho-w)) / 2 - 90px - 60px));
-  }
-  .marca-svg { width: 150px; height: 165px; }
   .marca-fala { display: none; }
 }
 
