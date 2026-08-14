@@ -160,13 +160,24 @@ li { margin-bottom: 8px; }
   clip-path: var(--corte);
   transition: transform .12s ease, box-shadow .12s ease;
 }
-/* A TINTA DA CAPA. Uma camada só, saindo da esquerda e morrendo no meio — é
-   onde a capa está, então a cor parece VAZAR dela em vez de ter sido pintada
-   por cima. Fraca de propósito: ela dá variedade à lista, não protagonismo. */
+/* A PRÓPRIA CAPA COMO FUNDO, borrada e fora de foco. É mais rica que uma tinta
+   chapada e não inventa nada — é a mesma imagem daquela música, desfocada.
+   Ela morre da esquerda pro meio: onde a capa está, a cor é forte; onde o nome
+   está, ela some. Texto sobre imagem só é legível assim. */
 .cartao-musica::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(100deg, var(--cor) 0%, transparent 62%);
   opacity: .16;
+}
+.cartao-musica.comfundo::before {
+  background-image: var(--fundo);
+  background-size: 130% auto;
+  background-position: left center;
+  filter: blur(22px) saturate(1.5) brightness(.75);
+  opacity: .42;
+  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.35) 38%, transparent 66%);
+  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.35) 38%, transparent 66%);
+  transform: scale(1.12);
 }
 /* O GRÃO. Textura fina, quase invisível de perto, que tira o plástico do preto
    chapado. Não é padrão nem desenho — é superfície. */
@@ -187,15 +198,26 @@ li { margin-bottom: 8px; }
 }
 /* A CAPA É O QUE SE ACHA DE RELANCE — cresceu, e ganhou fio e sombra pra não
    ficar boiando no preto. */
+/* a moldura existe pra segurar o sinal de tocar no canto da capa */
+.moldura { position: relative; flex: none; display: block; line-height: 0; }
+.tocar {
+  position: absolute; right: -4px; bottom: -4px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--lima); color: #0b0c0f;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 12px rgba(182,255,59,.5);
+}
+.cartao-musica:active .tocar { transform: scale(.9); }
+
 .capa {
   width: 66px; height: 66px; flex: none; object-fit: cover;
   background: #000; clip-path: var(--corte-sm);
   /* o halo é da cor DELA: a capa parece acesa por dentro, não recortada e
      colada em cima de um fundo escuro */
   box-shadow:
-    0 0 0 1px rgba(255,255,255,.1),
-    0 0 18px -4px var(--cor),
-    0 4px 10px rgba(0,0,0,.6);
+    0 0 0 1px rgba(255,255,255,.14),
+    0 4px 12px rgba(0,0,0,.7);
 }
 .capa-vazia {
   display: inline-flex; align-items: center; justify-content: center;
@@ -776,12 +798,25 @@ function abrirAcervo() {
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
     // da imagem daquela música: a variedade da lista passa a ser a variedade
     // das capas, não uma paleta que eu escolhi.
-    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
-      (m.cor ? ' style="--cor:' + m.cor + '"' : '') + '>' +
+    // A CAPA VIRA O FUNDO DO PRÓPRIO CARTÃO, borrada e escura. É mais rica que
+    // uma tinta chapada e não inventa nada: é a mesma imagem, fora de foco.
+    // A cor média continua servindo de reserva pra quem não tem capa.
+    var estilo = [];
+    if (m.cor) estilo.push('--cor:' + m.cor);
+    if (m.capa) estilo.push("--fundo:url('" + comSenha(m.capa) + "')");
+
+    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + (m.capa ? ' comfundo' : '') + '"' +
+      (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        (m.capa
-          ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
-          : '<span class="capa capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+        '<span class="moldura">' +
+          (m.capa
+            ? '<img class="capa" src="' + comSenha(m.capa) + '" alt="">'
+            : '<span class="capa capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+          // O SINAL DE QUE ABRE. A capa é o alvo do toque e nada dizia isso —
+          // o triângulo no canto conta em um símbolo o que uma frase não
+          // conseguiria dizer sem ocupar linha.
+          '<span class="tocar" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11"><path fill="currentColor" d="M7 4v16l13-8z"/></svg></span>' +
+        '</span>' +
         '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
         '<span class="dados">' + info + '</span></span>' +
       '</button>' +
