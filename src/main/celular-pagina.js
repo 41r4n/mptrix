@@ -191,7 +191,7 @@ header::after {
    sumir — feature não morre por causa de visual. Ficou no canto de cima à
    direita, que é exatamente onde ele mesmo desenhou na primeira arte. */
 ul { list-style: none; margin: 0; padding: 10px 10px 0; }
-li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
+li { margin-bottom: 7px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 
 .cartao-musica {
   --cor: #4a4f57;
@@ -211,17 +211,17 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    camadas: a chapa preta senta em cima dela fora de registro, e o que se vê da
    cinza é só a fresta de cima e da direita. */
 .banner {
-  position: absolute; left: 27%; right: 12%; top: 0; bottom: 37%;
+  position: absolute; left: 22%; right: 12%; top: 0; bottom: 37%;
   z-index: 0; pointer-events: none;
   background: #44474d;
   /* faixa fina em cima + coluna estreita na ponta: o degrau da arte dele.
      Antes isto era um bloco de 82% da altura, e o cinza acabava sendo a peça
      mais pesada do cartão — bem o contrário do desenho. */
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 83% 100%, 83% 15%, 0 15%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 85% 100%, 85% 11%, 0 11%);
 }
 /* A CHAPA PRETA onde o texto mora, com o canto de cima à direita cortado. */
 .chapa {
-  position: absolute; left: 28%; right: 14%; top: 6%; bottom: 2%;
+  position: absolute; left: 19%; right: 14%; top: 6%; bottom: 2%;
   z-index: 0; pointer-events: none;
   background: #0c0d10;
   clip-path: polygon(0 0, 88% 0, 100% 32%, 100% 100%, 0 100%);
@@ -262,7 +262,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    Ninguém conseguia ler o começo de nada. Eu só não vi porque estava olhando o
    cartão numa maquete solta em vez da tela inteira. */
 .titulo {
-  position: absolute; left: 31%; right: 20%; top: 13%; z-index: 3;
+  position: absolute; left: 30%; right: 19%; top: 13%; z-index: 3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 9.5px; font-weight: 700; font-style: italic; line-height: 1.32;
@@ -271,7 +271,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 /* TOM E BPM, brancos e fortes. São o que um músico procura primeiro, e na arte
    dele eles são a segunda linha inteira — não um rodapé apagado. */
 .dados {
-  position: absolute; left: 34%; right: 46%; top: 52%; z-index: 3;
+  position: absolute; left: 33%; right: 40%; top: 52%; z-index: 3;
   font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
   color: var(--txt);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -284,7 +284,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    apagado = só no computador, enchendo = vindo, cheio = toca sozinha no
    ensaio. Mesma forma, e passa a dizer alguma coisa. */
 .estado {
-  position: absolute; left: 55%; right: 26%; top: 58%; height: 1.5px; z-index: 3;
+  position: absolute; left: 61%; right: 24%; top: 58%; height: 1.5px; z-index: 3;
   background: rgba(255,255,255,.34);
 }
 .estado i {
@@ -890,7 +890,9 @@ function abrirAcervo() {
     var info = '';
     if (m.tom) info += '<em>' + m.tom + '</em>';
     if (m.bpm) info += (info ? '&nbsp;&nbsp;&nbsp;' : '') + '<em>' + m.bpm + ' BPM</em>';
-    if (!info) info = '<i>' + (m.inteira ? 'MÚSICA COMPLETA' : m.faixas.length + ' FAIXAS') + '</i>';
+    // curto de proposito: e o mesmo lugar onde cabe "F# 143 BPM", e ali
+    // "MÚSICA COMPLETA" saia cortada
+    if (!info) info = '<i>' + (m.inteira ? 'COMPLETA' : m.faixas.length + ' FAIXAS') + '</i>';
 
     // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
