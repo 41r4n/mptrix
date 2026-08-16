@@ -188,7 +188,7 @@ header::after {
        meio ele parecia risco perdido; encostado na borda ele lê como medidor,
        que é o que ele é. */
 ul { list-style: none; margin: 0; padding: 10px 11px 0; overflow: hidden; }
-li { margin-bottom: 8px; }
+li { margin-bottom: 7px; }
 
 .cartao-musica {
   --cor: #4a4f57;
@@ -198,7 +198,7 @@ li { margin-bottom: 8px; }
      bloco único; a chapa clareia um fio no alto e escurece no pé, e é isso que
      faz cada música virar uma PEÇA. */
   background: linear-gradient(178deg, #191c23, #131519 62%);
-  clip-path: polygon(0 0, 100% 0, 100% 70%, 96.5% 100%, 3.5% 100%, 0 30%);
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 94% 100%, 6% 100%, 0 38%);
   transition: transform .12s ease, filter .12s ease;
 }
 /* A COR DA PRÓPRIA CAPA, vazando de trás dela. Foi a primeira coisa que o dono
@@ -223,7 +223,7 @@ li { margin-bottom: 8px; }
 .abrir {
   flex: 1 1 auto; min-width: 0;
   display: flex; align-items: center; gap: 12px;
-  padding: 13px 2px 14px 11px;
+  padding: 11px 2px 12px 11px;
   background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
@@ -232,7 +232,7 @@ li { margin-bottom: 8px; }
    pintada de claro com a imagem por cima, encolhida: contorno de verdade não
    sobrevive a clip-path (o recorte come a borda e as diagonais ficam sem fio). */
 .lamina {
-  flex: none; position: relative; width: 58px; height: 64px; line-height: 0;
+  flex: none; position: relative; width: 56px; height: 62px; line-height: 0;
   background: rgba(255,255,255,.26);
   clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
   transition: background .2s ease;;
@@ -289,7 +289,7 @@ li { margin-bottom: 8px; }
   /* mais apagado e menor que o play: tocar e o que se faz aqui toda hora;
      levar e o que se faz uma vez por musica. Dois verdes do mesmo tamanho
      brigavam, e o olho nao sabia qual era o principal. */
-  color: rgba(182,255,59,.3);
+  color: rgba(182,255,59,.55);
   transition: color .15s ease;
 }
 .levar svg { width: 17px; height: auto; }
@@ -885,7 +885,7 @@ function abrirAcervo() {
     if (m.tom) info += '<em>' + m.tom + '</em>';
     if (m.bpm) info += (info ? ' &nbsp; ' : '') + '<em>' + m.bpm + ' BPM</em>';
     info += (info ? ' &nbsp;·&nbsp; ' : '') +
-      (m.inteira ? 'MUSICA COMPLETA' : m.faixas.length + ' FAIXAS');
+      (m.inteira ? 'MÚSICA COMPLETA' : m.faixas.length + ' FAIXAS');
 
     // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
