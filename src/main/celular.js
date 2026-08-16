@@ -672,7 +672,12 @@ function versaoDaTela(html) {
   return createHash('sha1').update(html).digest('hex').slice(0, 12)
 }
 
+// a função que desenha a página, guardada no módulo pra que o endereço saiba
+// carimbar a versão dela
+let pagina = null
+
 export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes, provas }) {
+  pagina = paginaHtml
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -1012,14 +1017,28 @@ export function desligarCelular() {
 
 export function pedidosRecentes() { return ultimosPedidos }
 
+// O ENDEREÇO CARREGA A VERSÃO DA TELA.
+//
+// A tela nova sabe se recarregar sozinha quando envelhece — mas esse código só
+// passa a valer DEPOIS que o telefone carregar a página nova uma vez. A página
+// velha que está aberta lá não sabe que envelheceu; ela é justamente a que não
+// tem como saber.
+//
+// O endereço quebra esse ovo-e-galinha: ele muda junto com o desenho. Endereço
+// diferente é página nova por definição — nenhum navegador guarda resposta de
+// um endereço que ele nunca pediu. Um toque no link novo e o telefone entra no
+// trilho; dali pra frente ele se atualiza sozinho e o link não precisa mais ser
+// copiado.
 export function infoCelular() {
   if (!servidor || !porta) return { ligado: false, enderecos: [] }
+  const v = pagina ? versaoDaTela(pagina()) : ''
   return {
     ligado: true,
     porta,
+    versao: v,
     enderecos: enderecosDaCasa().map(({ nome, ip }) => ({
       nome,
-      url: `http://${ip}:${porta}/?s=${senha}`
+      url: `http://${ip}:${porta}/?s=${senha}${v ? `&v=${v}` : ''}`
     }))
   }
 }

@@ -27,7 +27,9 @@ if (!info.ligado || !info.enderecos.length) {
   process.exit(1)
 }
 const base = info.enderecos[0].url.replace(/\/\?s=.*/, '')
-const senha = info.enderecos[0].url.split('s=')[1]
+// lida como o navegador le, e nao "tudo depois do s=": o endereco carrega
+// tambem a versao da tela (&v=...), e cortar na mao pegaria as duas juntas
+const senha = new URL(info.enderecos[0].url).searchParams.get('s')
 
 console.log('SERVIDOR DO CELULAR\n')
 console.log('  endereco(s) que o celular usaria:')
