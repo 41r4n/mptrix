@@ -47,6 +47,24 @@ export function paginaCelular() {
   --linha: rgba(255,255,255,0.07); --linha2: rgba(255,255,255,0.14); --linha3: rgba(255,255,255,0.22);
   --txt: #f2f4f7; --txt2: #d1d5db; --mudo: #9ba3af; --mudo2: #8a93a0;
   --lima: #b6ff3b; --lima-b: rgba(182,255,59,0.3); --amarelo: #eab308; --ruim: #f87171;
+
+  /* ██████████ AS MEDIDAS DO CARTÃO ██████████
+     Cada número daqui é um botão da mesa de ajuste (aba do aparelho → "ajustar
+     o cartão"). O dono arrasta, a lista muda embaixo na hora, e quando ele
+     guarda o computador passa a servir a página já com estes valores.
+     Existe pra encerrar uma coisa: o desenho parava de ser dele e virava a
+     minha leitura do desenho dele. Aqui não há leitura no meio. */
+  --k-capa: 56px;      /* largura da capa */
+  --k-capa-alt: 62px;  /* altura da capa (é ela que dá a altura do cartão) */
+  --k-nome: 12.5px;    /* letra do nome da música */
+  --k-dados: 9.5px;    /* letra do tom, bpm e faixas */
+  --k-corte: 6%;       /* quanto as pontas do cartão são cortadas */
+  --k-vao: 7px;        /* espaço entre um cartão e o outro */
+  --k-respiro: 11px;   /* folga de dentro do cartão */
+  --k-play: 30px;      /* tamanho do triângulo de tocar */
+  --k-verde: #5cb82b;  /* cor do triângulo */
+  --k-chapa: #191c23;  /* cor do cartão */
+  --k-trama: 0.2;      /* força da trama de hexágonos do fundo */
   --ui: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
   /* OS BRILHOS DA ASSINATURA. Neon só onde carrega informação — nunca
@@ -188,7 +206,7 @@ header::after {
        meio ele parecia risco perdido; encostado na borda ele lê como medidor,
        que é o que ele é. */
 ul { list-style: none; margin: 0; padding: 10px 11px 0; overflow: hidden; }
-li { margin-bottom: 7px; }
+li { margin-bottom: var(--k-vao); }
 
 .cartao-musica {
   --cor: #4a4f57;
@@ -197,8 +215,8 @@ li { margin-bottom: 7px; }
   /* NÃO É CHAPADO. Preto liso de ponta a ponta deixa a lista com cara de
      bloco único; a chapa clareia um fio no alto e escurece no pé, e é isso que
      faz cada música virar uma PEÇA. */
-  background: linear-gradient(178deg, #191c23, #131519 62%);
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 94% 100%, 6% 100%, 0 38%);
+  background: linear-gradient(178deg, var(--k-chapa), #131519 62%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--k-corte)), calc(100% - var(--k-corte)) 100%, var(--k-corte) 100%, 0 var(--k-corte));
   transition: transform .12s ease, filter .12s ease;
 }
 /* A COR DA PRÓPRIA CAPA, vazando de trás dela. Foi a primeira coisa que o dono
@@ -223,7 +241,7 @@ li { margin-bottom: 7px; }
 .abrir {
   flex: 1 1 auto; min-width: 0;
   display: flex; align-items: center; gap: 12px;
-  padding: 11px 2px 12px 11px;
+  padding: var(--k-respiro) 2px calc(var(--k-respiro) + 1px) var(--k-respiro);
   background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
@@ -232,7 +250,7 @@ li { margin-bottom: 7px; }
    pintada de claro com a imagem por cima, encolhida: contorno de verdade não
    sobrevive a clip-path (o recorte come a borda e as diagonais ficam sem fio). */
 .lamina {
-  flex: none; position: relative; width: 56px; height: 62px; line-height: 0;
+  flex: none; position: relative; width: var(--k-capa); height: var(--k-capa-alt); line-height: 0;
   background: rgba(255,255,255,.26);
   clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
   transition: background .2s ease;;
@@ -256,7 +274,7 @@ li { margin-bottom: 7px; }
 .corpo b {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.3;
+  font-size: var(--k-nome); font-weight: 700; font-style: italic; line-height: 1.3;
   letter-spacing: .008em; text-transform: uppercase; color: #fff;
   margin-bottom: 7px;
 }
@@ -264,7 +282,7 @@ li { margin-bottom: 7px; }
    ensaiar — vêm em branco cheio; o resto da linha recua */
 .dados {
   display: block;
-  font-size: 9.5px; font-weight: 500; letter-spacing: .13em;
+  font-size: var(--k-dados); font-weight: 500; letter-spacing: .13em;
   color: rgba(255,255,255,.55);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -274,7 +292,8 @@ li { margin-bottom: 7px; }
 /* O PLAY: triângulo CHEIO. O contorno aberto da arte dele funciona grande, num
    cartaz; a 30px ele lê como desenho quebrado. Forma cheia lê pequena. */
 .tocar {
-  flex: none; width: 30px; line-height: 0; pointer-events: none;
+  flex: none; width: var(--k-play); line-height: 0; pointer-events: none;
+  color: var(--k-verde);
   transition: transform .12s ease;
 }
 .tocar svg { width: 100%; height: auto; display: block; }
@@ -332,7 +351,7 @@ li { margin-bottom: 7px; }
   background-position: 0 0, 14px 14px;
   -webkit-mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
   mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
-  opacity: .2;
+  opacity: var(--k-trama);
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
@@ -676,6 +695,51 @@ body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
 }
 .folha-btn.perigo { color: var(--ruim); box-shadow: inset 0 0 0 1px rgba(248,113,113,0.4); }
 .folha-fechar { width: 100%; margin-top: 8px; height: 44px; background: var(--lima); color: #0b0c0f; border: none; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
+/* ██████████ A MESA DE AJUSTE ██████████
+   O dono cansou de desenhar e me mandar, e tinha razão: o desenho parava de
+   ser dele e virava a MINHA leitura do desenho dele. Aqui não existe leitura no
+   meio — ele arrasta, a lista muda embaixo na hora, e o que ele vê é o que
+   fica. */
+.mesa { padding: 4px 2px 10px; }
+.mesa-linha { margin-bottom: 13px; }
+.mesa-linha > label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 11.5px; color: var(--txt2); margin-bottom: 5px;
+}
+.mesa-linha > label b {
+  font-family: var(--mono); font-size: 11px; color: var(--lima); font-weight: 500;
+}
+.mesa-linha input[type=range] {
+  width: 100%; height: 26px; margin: 0; background: none;
+  -webkit-appearance: none; appearance: none;
+}
+.mesa-linha input[type=range]::-webkit-slider-runnable-track {
+  height: 3px; background: rgba(255,255,255,.14);
+}
+.mesa-linha input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -10px;
+  background: var(--lima); border: none;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.mesa-cores { display: flex; gap: 10px; margin-bottom: 14px; }
+.mesa-cor { flex: 1; }
+.mesa-cor label { display: block; font-size: 11.5px; color: var(--txt2); margin-bottom: 5px; }
+.mesa-cor input[type=color] {
+  width: 100%; height: 34px; padding: 0; border: 1px solid var(--linha);
+  background: none; cursor: pointer;
+}
+/* A PROVA fica logo abaixo dos controles, com as músicas de verdade: desenhar
+   olhando exemplo inventado foi metade do meu erro nesta tela. */
+.mesa-prova { margin: 4px -14px 14px; }
+.mesa-prova ul { padding-left: 12px; padding-right: 12px; }
+.mesa-acoes { display: flex; gap: 9px; }
+.mesa-acoes button { flex: 1; }
+.mesa-aviso {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  color: var(--mudo2); text-align: center; margin: 9px 0 0; text-transform: uppercase;
+}
+/*DESENHO-GUARDADO*/
 </style>
 </head>
 <body>
@@ -823,6 +887,44 @@ function mmss(s) {
 var busca = '';
 var filtro = 'todas';
 
+// ── O DESENHO DE UM CARTÃO ──
+// Ele morava solto dentro do laço da lista. Virou função com nome pra que a
+// MESA DE AJUSTE mostre exatamente o mesmo cartão da lista — prova desenhada de
+// outro jeito não prova nada, e foi assim que eu passei o dia entregando coisa
+// que só parecia certa na minha maquete.
+function desenhoDoCartao(m, n, aqui) {
+  // TOM e BPM em branco cheio (sao o que um musico procura antes de escolher
+  // o que ensaiar); quantas faixas recua, porque e contexto e nao decisao.
+  var info = '';
+  if (m.tom) info += '<em>' + m.tom + '</em>';
+  if (m.bpm) info += (info ? ' &nbsp; ' : '') + '<em>' + m.bpm + ' BPM</em>';
+  info += (info ? ' &nbsp;·&nbsp; ' : '') +
+    (m.inteira ? 'MÚSICA COMPLETA' : m.faixas.length + ' FAIXAS');
+  var estilo = [];
+  if (m.cor) estilo.push('--cor:' + m.cor);
+
+  return '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
+    (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
+    '<button class="abrir" data-i="' + n + '">' +
+      '<span class="lamina">' +
+        (m.capa
+          ? '<img src="' + comSenha(m.capa) + '" alt="">'
+          : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+      '</span>' +
+      '<span class="corpo"><b>' + esc(nomeLimpo(m.titulo)) + '</b>' +
+      '<span class="dados">' + info + '</span></span>' +
+      '<span class="tocar" aria-hidden="true">' +
+        '<svg viewBox="0 0 30 34"><path d="M3 1.5 L28 17 L3 32.5 Z" fill="currentColor"/></svg>' +
+      '</span>' +
+    '</button>' +
+    '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
+      '<svg viewBox="0 0 28 34" fill="currentColor" aria-hidden="true">' +
+      '<path d="M9 2h10v11H9z"/><path d="M3 17h22L14 31z"/></svg>' +
+    '</button>' +
+    '<span class="estado" aria-hidden="true"><i></i></span>' +
+  '</div></li>';
+}
+
 function abrirAcervo() {
   sessao && pararTudo();
   voltar.hidden = true; onde.textContent = 'acervo';
@@ -879,13 +981,6 @@ function abrirAcervo() {
     // rodapé apagado com tudo espremido. Quantas faixas e a duração continuam
     // na tela da música; aqui ficam os dois números que um músico procura
     // antes de escolher o que ensaiar.
-    // TOM e BPM em branco cheio (sao o que um musico procura antes de escolher
-    // o que ensaiar); quantas faixas recua, porque e contexto e nao decisao.
-    var info = '';
-    if (m.tom) info += '<em>' + m.tom + '</em>';
-    if (m.bpm) info += (info ? ' &nbsp; ' : '') + '<em>' + m.bpm + ' BPM</em>';
-    info += (info ? ' &nbsp;·&nbsp; ' : '') +
-      (m.inteira ? 'MÚSICA COMPLETA' : m.faixas.length + ' FAIXAS');
 
     // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
@@ -897,29 +992,7 @@ function abrirAcervo() {
     // A cor média da capa continua servindo, mas SÓ pra quem não tem imagem:
     // na arte dele o cartão é chapa preta, e a névoa colorida que eu tinha
     // posto por cima dele não existe lá.
-    var estilo = [];
-    if (m.cor) estilo.push('--cor:' + m.cor);
-
-    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
-      (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
-      '<button class="abrir" data-i="' + n + '">' +
-        '<span class="lamina">' +
-          (m.capa
-            ? '<img src="' + comSenha(m.capa) + '" alt="">'
-            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
-        '</span>' +
-        '<span class="corpo"><b>' + esc(nomeLimpo(m.titulo)) + '</b>' +
-        '<span class="dados">' + info + '</span></span>' +
-        '<span class="tocar" aria-hidden="true">' +
-          '<svg viewBox="0 0 30 34"><path d="M3 1.5 L28 17 L3 32.5 Z" fill="#5cb82b"/></svg>' +
-        '</span>' +
-      '</button>' +
-      '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
-        '<svg viewBox="0 0 28 34" fill="currentColor" aria-hidden="true">' +
-        '<path d="M9 2h10v11H9z"/><path d="M3 17h22L14 31z"/></svg>' +
-      '</button>' +
-      '<span class="estado" aria-hidden="true"><i></i></span>' +
-    '</div></li>';
+    html += desenhoDoCartao(m, n, aqui);
   }
   tela.innerHTML = html + '</ul>';
 
@@ -1635,6 +1708,117 @@ function pararTudo() {
 // que configurar; há o que CONFERIR antes de sair de casa.
 var temApp = { tem: false, mb: 0 };
 
+// ── OS BOTÕES DA MESA ──
+// nome na tela, variável que ele gira, mínimo, máximo e unidade. A ordem é a
+// que o dono vai querer mexer: primeiro o que muda o tamanho, depois o texto,
+// depois o acabamento.
+var MESA = [
+  { v: '--k-capa-alt', nome: 'Altura do cartão', de: 42, ate: 96, un: 'px' },
+  { v: '--k-capa', nome: 'Largura da capa', de: 34, ate: 90, un: 'px' },
+  { v: '--k-nome', nome: 'Letra do nome', de: 9, ate: 18, un: 'px', passo: 0.5 },
+  { v: '--k-dados', nome: 'Letra do tom e BPM', de: 7, ate: 14, un: 'px', passo: 0.5 },
+  { v: '--k-play', nome: 'Tamanho do play', de: 18, ate: 52, un: 'px' },
+  { v: '--k-corte', nome: 'Corte das pontas', de: 0, ate: 18, un: '%' },
+  { v: '--k-respiro', nome: 'Folga de dentro', de: 4, ate: 24, un: 'px' },
+  { v: '--k-vao', nome: 'Espaço entre cartões', de: 0, ate: 20, un: 'px' },
+  { v: '--k-trama', nome: 'Trama do fundo', de: 0, ate: 70, un: '%', escala: 100 }
+];
+var MESA_CORES = [
+  { v: '--k-verde', nome: 'Verde do play' },
+  { v: '--k-chapa', nome: 'Fundo do cartão' }
+];
+
+function valorDaMesa(b) {
+  var bruto = getComputedStyle(document.documentElement).getPropertyValue(b.v).trim();
+  var n = parseFloat(bruto);
+  if (isNaN(n)) n = b.de;
+  return b.escala ? Math.round(n * b.escala) : n;
+}
+
+function porDesenho(b, n) {
+  var valor = b.escala ? (n / b.escala) : (n + (b.un || ''));
+  document.documentElement.style.setProperty(b.v, String(valor));
+}
+
+// junta o que está valendo agora, pra mandar pro computador guardar
+function desenhoDeAgora() {
+  var d = {};
+  var e = document.documentElement.style;
+  MESA.concat(MESA_CORES).forEach(function (b) {
+    var v = e.getPropertyValue(b.v).trim();
+    if (v) d[b.v] = v;
+  });
+  return d;
+}
+
+function abrirMesa() {
+  var f = document.createElement('div');
+  f.className = 'folha-fundo';
+  var html = '<div class="folha" onclick="event.stopPropagation()">' +
+    '<span class="olho">o desenho é seu</span><h3>Ajustar o cartão</h3>' +
+    '<p>Arraste e veja mudando aqui embaixo, com as suas músicas. ' +
+    'Quando gostar, guarde: o computador passa a servir a tela já assim, ' +
+    'em qualquer celular.</p><div class="mesa">';
+  MESA.forEach(function (b, i) {
+    var n = valorDaMesa(b);
+    html += '<div class="mesa-linha"><label for="mesa' + i + '">' + b.nome +
+      '<b id="mv' + i + '">' + n + (b.un || '') + '</b></label>' +
+      '<input type="range" id="mesa' + i + '" min="' + b.de + '" max="' + b.ate +
+      '" step="' + (b.passo || 1) + '" value="' + n + '"></div>';
+  });
+  html += '<div class="mesa-cores">';
+  MESA_CORES.forEach(function (b, i) {
+    var atual = getComputedStyle(document.documentElement).getPropertyValue(b.v).trim() || '#000000';
+    html += '<div class="mesa-cor"><label for="cor' + i + '">' + b.nome + '</label>' +
+      '<input type="color" id="cor' + i + '" value="' + atual + '"></div>';
+  });
+  html += '</div></div><div class="mesa-prova" id="mesaProva"></div>' +
+    '<div class="mesa-acoes">' +
+    '<button class="folha-btn" id="mesaGuardar">guardar</button>' +
+    '<button class="folha-fechar" id="mesaVoltar">voltar ao meu</button>' +
+    '</div><p class="mesa-aviso" id="mesaAviso"></p></div>';
+  f.innerHTML = html;
+  f.onclick = function () { f.remove(); };
+  document.body.appendChild(f);
+
+  // A PROVA: três músicas de verdade, pelo MESMO desenho da lista. Prova
+  // desenhada de outro jeito não prova nada.
+  var prova = document.getElementById('mesaProva');
+  var linhas = '';
+  acervo.slice(0, 3).forEach(function (m, n) {
+    linhas += desenhoDoCartao(m, n, !!guardadas[m.chave]);
+  });
+  prova.innerHTML = '<ul>' + (linhas || '<li class="vazio">sem música no acervo ainda</li>') + '</ul>';
+
+  MESA.forEach(function (b, i) {
+    var r = document.getElementById('mesa' + i);
+    var m = document.getElementById('mv' + i);
+    r.oninput = function () {
+      porDesenho(b, parseFloat(r.value));
+      m.textContent = r.value + (b.un || '');
+    };
+  });
+  MESA_CORES.forEach(function (b, i) {
+    var c = document.getElementById('cor' + i);
+    c.oninput = function () { document.documentElement.style.setProperty(b.v, c.value); };
+  });
+
+  var aviso = document.getElementById('mesaAviso');
+  document.getElementById('mesaGuardar').onclick = function () {
+    aviso.textContent = 'guardando...';
+    fetch(comSenha('/api/desenho'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(desenhoDeAgora())
+    }).then(function (r) {
+      // a versao da tela muda junto com o desenho, entao os outros celulares
+      // percebem sozinhos que envelheceram
+      aviso.textContent = r.ok ? 'guardado — vale em qualquer celular' : 'nao consegui guardar';
+    }).catch(function () { aviso.textContent = 'o computador nao respondeu'; });
+  };
+  document.getElementById('mesaVoltar').onclick = function () { f.remove(); };
+}
+
 function abrirAjustes() {
   voltar.hidden = true; onde.textContent = 'aparelho';
   // pergunta uma vez se existe app pra instalar; se existir, redesenha com o
@@ -1676,12 +1860,14 @@ function abrirAjustes() {
       '<p>Este navegador não guarda música em endereço sem cadeado (o de casa não tem). ' +
       'Por isso o botão do acervo <b>baixa o arquivo</b> pra pasta do celular: a música fica no aparelho ' +
       'e toca em qualquer tocador, sem o computador — só sem o mixer.</p>') +
+    '<button class="folha-btn" id="irMesa">ajustar o cartão do acervo</button>' +
     (levadas.length ? '<button class="folha-btn perigo" id="tirarTudo">tirar todas do celular</button>' : '') +
     '<button class="folha-fechar" id="fecharFolha">fechar</button>' +
     '</div>';
   f.onclick = function () { f.remove(); };
   document.body.appendChild(f);
   document.getElementById('fecharFolha').onclick = function () { f.remove(); };
+  document.getElementById('irMesa').onclick = function () { f.remove(); abrirMesa(); };
   var t = document.getElementById('tirarTudo');
   if (t) t.onclick = function () {
     levadas.forEach(function (m) {

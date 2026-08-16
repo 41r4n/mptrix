@@ -948,6 +948,9 @@ app.whenReady().then(() => {
   const ligarOCelular = () => ligarCelular({
     stemsDir: join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX', 'stems'),
     paginaHtml: paginaCelular,
+    // o desenho do cartao que o dono escolheu na mesa de ajuste do celular
+    desenhoSalvo: lerAjuste('celular.desenho', {}),
+    guardarDesenho: (d) => guardarAjuste('celular.desenho', d),
     ffmpegPath: FFMPEG_PATH,
     // a senha fica guardada: o que o celular levou pro ensaio está preso ao
     // endereço, e endereço novo a cada abertura viraria música inalcançável

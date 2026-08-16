@@ -99,7 +99,8 @@ const DO_NAVEGADOR = new Set([
   'fetch', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Audio',
   'URL', 'URLSearchParams', 'Math', 'JSON', 'String', 'Number', 'Object', 'Array',
   'Date', 'Response', 'parseInt', 'parseFloat', 'encodeURIComponent',
-  'decodeURIComponent', 'isNaN', 'Promise', 'Error', 'Set', 'Map', 'requestAnimationFrame'
+  'decodeURIComponent', 'isNaN', 'Promise', 'Error', 'Set', 'Map', 'requestAnimationFrame',
+  'getComputedStyle', 'FormData', 'Blob'
 ])
 const PALAVRAS = /^(if|for|while|switch|catch|return|typeof|function|new|else|do|var|const|let|try|throw|delete|in|of|instanceof)$/
 

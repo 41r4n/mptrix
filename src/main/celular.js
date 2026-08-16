@@ -669,15 +669,55 @@ function levar(chave, urls, quem) {
 // conta de si mesmo e as duas pontas nunca bateriam — a tela se recarregaria
 // pra sempre.
 function versaoDaTela(html) {
-  return createHash('sha1').update(html).digest('hex').slice(0, 12)
+  return createHash('sha1').update(html + estiloDoDesenho()).digest('hex').slice(0, 12)
 }
 
 // a função que desenha a página, guardada no módulo pra que o endereço saiba
 // carimbar a versão dela
 let pagina = null
 
-export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes, provas }) {
+// ██████████ O DESENHO DO CARTÃO ██████████
+//
+// O dono passou um dia inteiro desenhando e me mandando, e o desenho parava de
+// ser dele: virava a MINHA leitura do desenho dele. No fim ele perguntou se não
+// dava pra fazer ele mesmo. Dá — e é isto.
+//
+// A mesa de ajuste do celular manda as medidas pra cá, elas ficam guardadas no
+// computador, e toda página servida sai com elas por último na folha de estilo.
+// Último vence: o que ele escolheu sobrepõe o que eu escrevi, sem eu no meio.
+let desenho = {}
+let salvarDesenho = null
+
+// Só entra o que é MEDIDA CONHECIDA: nome de variável da lista branca, valor
+// curto e sem ponto-e-vírgula nem chave. Sem isso, quem alcançasse a rota
+// escreveria CSS arbitrária na página de todo mundo da casa.
+const MEDIDAS = new Set([
+  '--k-capa', '--k-capa-alt', '--k-nome', '--k-dados', '--k-corte',
+  '--k-vao', '--k-respiro', '--k-play', '--k-verde', '--k-chapa', '--k-trama'
+])
+
+function peneirarDesenho(cru) {
+  const limpo = {}
+  if (!cru || typeof cru !== 'object') return limpo
+  for (const chave of Object.keys(cru)) {
+    if (!MEDIDAS.has(chave)) continue
+    const valor = String(cru[chave]).trim()
+    if (!valor || valor.length > 24) continue
+    if (/[;{}<>()\\]/.test(valor)) continue
+    limpo[chave] = valor
+  }
+  return limpo
+}
+
+function estiloDoDesenho() {
+  const pares = Object.keys(desenho).map((k) => k + ':' + desenho[k])
+  return pares.length ? ':root{' + pares.join(';') + '}' : ''
+}
+
+export function ligarCelular({ stemsDir, paginaHtml, desenhoSalvo, guardarDesenho, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes, provas }) {
   pagina = paginaHtml
+  desenho = desenhoSalvo && typeof desenhoSalvo === 'object' ? desenhoSalvo : {}
+  salvarDesenho = guardarDesenho
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
   // guardou pra tocar offline fica preso ao endereço — mudar a senha a cada
@@ -752,7 +792,35 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       // replaceAll, nao replace: `replace` com texto simples troca so a PRIMEIRA
       // aparicao, e a primeira mora num comentario logo acima da variavel — o
       // comentario ficava carimbado e a variavel ficava com o buraco.
-      res.end(html.replaceAll('__VERSAO_DA_TELA__', versaoDaTela(html)))
+      // o desenho entra no buraco do fim da folha de estilo, e a versão da
+      // tela leva ele junto — assim, quando o dono guarda um ajuste, os outros
+      // celulares percebem sozinhos que envelheceram
+      res.end(html
+        .replace('/*DESENHO-GUARDADO*/', estiloDoDesenho())
+        .replaceAll('__VERSAO_DA_TELA__', versaoDaTela(html)))
+      return
+    }
+
+    // ── O DESENHO DO CARTÃO, escolhido pelo dono na mesa de ajuste ──
+    if (caminho === '/api/desenho') {
+      if (req.method === 'POST') {
+        let corpo = ''
+        req.on('data', (d) => { corpo += d; if (corpo.length > 4096) req.destroy() })
+        req.on('end', () => {
+          try {
+            desenho = peneirarDesenho(JSON.parse(corpo))
+            if (salvarDesenho) salvarDesenho(desenho)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, medidas: Object.keys(desenho).length }))
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: false }))
+          }
+        })
+        return
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify(desenho))
       return
     }
 
