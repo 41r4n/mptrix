@@ -168,79 +168,44 @@ header::after {
   text-transform: uppercase; color: var(--mudo2); padding: 2px 1px 0;
 }
 
-/* ██████████ O CARTÃO, MEDIDO EM CIMA DO DESENHO DO DONO ██████████
-   Ele perguntou se eu não conseguia fazer IGUAL. Consigo — e é isto.
+/* ██████████ O CARTÃO, COPIADO DA SEGUNDA ARTE DO DONO ██████████
+   Ele mandou a arte pronta e disse "faça exatamente assim". Esta é ela,
+   medida em porcentagem do cartão pra cair igual em qualquer celular.
 
-   Peguei o desenho dele (973x258) e medi peça por peça, em porcentagem do
-   cartão, pra bater em qualquer largura de tela:
+   Mudou MUITO em relação à primeira estrutura dele, e as diferenças são o
+   ponto:
+     · o play virou um TRIÂNGULO VERDE GRANDE na direita, no lugar do
+       hexagonzinho no meio
+     · a capa virou HEXÁGONO com fio claro em volta
+     · o título é itálico maiúsculo em DUAS linhas (era uma linha só)
+     · o cartão é chapa PRETA: saiu a cor da capa borrada e saiu a trama de
+       cima dele. A trama foi pro fundo da página, que é onde ela está na arte
+     · a chapa preta tem uma placa CINZA atrás, deslocada — aparece uma fresta
+       dela em cima e na direita, e é isso que dá a leitura de peça montada
 
-     cartão         873 x 210            proporção 4.16
-     lâmina         x -5.6% .. 28%       hexágono, ponta pra fora à esquerda
-     chapa          x 21.5% .. 70%       ponta à direita
-     fio de cima    x 16% .. 61%         y 7.6%
-     fio de baixo   x 30% .. 70%         y 65%
-     texto          x 29%
-     hexágono play  x 22%, 7.3% largo    centro y 80%
-     barra          x 29% .. 58%         altura 10.5%, centro y 80%
-     trama          começa em 62%
-     lâminas verdes canto de cima, 13% largo
-     lasca          canto de baixo
+     cartão         270 x 88            proporção 3.07
+     capa           x 0% .. 28%         hexágono, fio claro
+     placa cinza    x 20% .. 90%        ponta cortada em cima à direita
+     chapa preta    x 22% .. 86%        deslocada pra baixo e pra esquerda
+     titulo         x 26%, y 16%        duas linhas
+     tom e bpm      x 26%, y 62%
+     fio/estado     x 52% .. 83%, y 74%
+     triangulo      x 85% .. 100%       centro vertical
+     laminas        x 72% .. 85%, canto de cima
 
-   Três coisas NÃO dá pra copiar, porque no desenho dele elas são de mentira e
-   aqui são de verdade:
-     · a lâmina tem a capa da música dentro (a dele está vazia)
-     · o texto é o nome e os dados reais (o dele é rabisco)
-     · a barra enche conforme a música chega (a dele é fixa)
-   Fora isso, é o desenho dele.
-
-   A proporção é travada com aspect-ratio, então TODA peça posicionada em
-   porcentagem cai no mesmo lugar em qualquer celular. Por isso tudo aqui é
-   posicionado: em fluxo normal, a altura mudaria com o tamanho da letra e as
-   medidas dele deixariam de valer. */
-ul { list-style: none; margin: 0; padding: 10px 12px 0; }
-li { margin-bottom: 11px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
+   O que a arte NÃO mostra é onde se leva a música pro celular. Isso não pode
+   sumir — feature não morre por causa de visual. Ficou no canto de cima à
+   direita, que é exatamente onde ele mesmo desenhou na primeira arte. */
+ul { list-style: none; margin: 0; padding: 10px 10px 0; }
+li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
-  /* a lâmina ESCAPA pelo lado esquerdo, como no desenho — por isso o cartão
-     não recorta nada e o <li> respeita a sobra */
-  margin-left: 5.6%;
-  aspect-ratio: 873 / 210; min-height: 84px;
-  background: #131519;
+  aspect-ratio: 270 / 88; min-height: 80px;
   transition: transform .12s ease;
 }
 .cartao-musica:active { transform: scale(.99); }
-
-/* A cor da própria capa, borrada, presa na área da lâmina. No desenho dele
-   essa área é chapa escura; a cor fica só onde a capa está, dá variedade à
-   lista e não toma a peça. */
-.cartao-musica::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(100deg, var(--cor) 0%, transparent 55%);
-  opacity: .14;
-}
-.cartao-musica.comfundo::before {
-  background-image: var(--fundo);
-  background-size: 130% auto; background-position: left center;
-  filter: blur(24px) saturate(1.5) brightness(.42);
-  opacity: .2;
-  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.18) 22%, transparent 40%);
-  mask-image: linear-gradient(100deg, #000 0%, rgba(0,0,0,.18) 22%, transparent 40%);
-  transform: scale(1.12);
-}
-/* A TRAMA começa em 62%, como no desenho — bloco com começo definido, não
-   rastro atravessando o cartão. É a mesma retícula de hexágonos da tela do
-   computador: celular e PC falam a mesma língua. */
-.cartao-musica::after {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 5.2 L14.3 7.6 L14.3 12.4 L10 14.8 L5.7 12.4 L5.7 7.6 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.4 L15 7.2 L15 12.8 L10 15.6 L5 12.8 L5 7.2 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.2'/%3E%3C/svg%3E");
-  background-size: 13px 13px, 13px 13px;
-  background-position: 0 0, 6.5px 6.5px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 60%, rgba(0,0,0,.8) 68%, #000 74%);
-  mask-image: linear-gradient(90deg, transparent 60%, rgba(0,0,0,.8) 68%, #000 74%);
-  opacity: .22;
-}
 
 .abrir {
   position: absolute; inset: 0; z-index: 1;
@@ -248,111 +213,131 @@ li { margin-bottom: 11px; filter: drop-shadow(0 5px 15px rgba(0,0,0,.6)); }
   text-align: left; cursor: pointer; font: inherit;
 }
 
-/* A LÂMINA: hexágono, ponta pra fora à esquerda. No desenho dela sai do
-   cartão — é a peça que rompe o retângulo, e é o que dá o ar de emblema. */
-.lamina {
-  position: absolute; left: -6.4%; top: 2.4%; bottom: 2.4%; width: 34%;
-  clip-path: polygon(0 50%, 16.8% 0, 83.2% 0, 100% 50%, 83.2% 100%, 16.8% 100%);
-  background: #0d0f13; overflow: hidden; line-height: 0;
-}
-/* a capa entra um pouco abaixada: no desenho dele essa lâmina é escura, e capa
-   crua em tamanho grande roubava o cartão do nome da música */
-.lamina img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.8) saturate(.92); }
-.capa-vazia {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.14);
-}
-
-/* A CHAPA DO TEXTO, com ponta à direita. Ela é o terceiro tom do desenho —
-   fundo do cartão, lâmina, chapa — e é o degrau de tom que faz as peças
-   parecerem empilhadas em vez de pintadas. */
-.chapa {
-  position: absolute; left: 21.5%; right: 30%; top: 6%; bottom: 6%;
+/* A PLACA CINZA, atrás e deslocada. Ela é o motivo da peça parecer montada em
+   camadas: a chapa preta senta em cima dela fora de registro, e o que se vê da
+   cinza é só a fresta de cima e da direita. */
+.banner {
+  position: absolute; left: 20%; right: 10%; top: 2%; bottom: 16%;
   z-index: 0; pointer-events: none;
-  background: rgba(255,255,255,.05);
-  clip-path: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%);
+  background: #45484e;
+  clip-path: polygon(0 0, 88% 0, 100% 46%, 100% 100%, 0 100%);
+}
+/* A CHAPA PRETA onde o texto mora, com o canto de cima à direita cortado. */
+.chapa {
+  position: absolute; left: 22%; right: 14%; top: 9%; bottom: 4%;
+  z-index: 0; pointer-events: none;
+  background: #0d0e11;
+  clip-path: polygon(0 0, 86% 0, 100% 38%, 100% 100%, 0 100%);
 }
 
-/* OS DOIS FIOS, desencontrados: o de cima começa dentro da lâmina e para
-   cedo; o de baixo começa depois e vai até a ponta da chapa. Branco chapado,
-   sem degradê — desbotado eles viram sujeira em vez de fio. */
-.fio { position: absolute; height: 1.5px; z-index: 2; pointer-events: none; }
-.fio-cima { left: 16%; width: 45%; top: 7.6%; background: rgba(255,255,255,.8); }
-.fio-baixo { left: 30%; width: 40%; top: 65%; background: rgba(255,255,255,.5); }
+/* A CAPA EM HEXÁGONO, com fio claro em volta. O fio é a peça DE BAIXO pintada
+   de claro e a imagem por cima, encolhida — contorno de verdade não sobrevive
+   a clip-path: o recorte come a borda e as diagonais ficam sem fio. É o mesmo
+   bug que já apareceu meia dúzia de vezes neste projeto. */
+.lamina {
+  position: absolute; left: 0; top: 5%; bottom: 5%; width: 28%;
+  z-index: 2; line-height: 0;
+  background: rgba(255,255,255,.62);
+  clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
+}
+.lamina img,
+.lamina .capa-vazia {
+  position: absolute; left: 2px; top: 2px;
+  /* medida na mão de propósito: width:auto num <img> posicionado vale a
+     largura NATURAL da foto, não a da caixa — a imagem saía inteira pra fora
+     e só sobrava o fio claro na tela */
+  width: calc(100% - 4px); height: calc(100% - 4px);
+  clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
+  object-fit: cover;
+  background: #0d0f13;
+}
+.capa-vazia {
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.16);
+  background: linear-gradient(150deg, var(--cor), #0d0f13 70%);
+}
 
-/* UMA LINHA SÓ pro nome: título que quebra em duas empurra o cartão, e lista
-   irregular cansa de rolar. */
+/* O TÍTULO EM DUAS LINHAS, itálico e maiúsculo, como na arte. Duas linhas
+   cabem porque a altura do cartão é travada pela proporção — não é o texto que
+   manda no tamanho da peça, é a peça que manda no texto. */
 .titulo {
-  position: absolute; left: 29%; right: 15%; top: 15%; z-index: 2;
-  display: block; font-size: 15px; font-weight: 700; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: absolute; left: 26%; right: 18%; top: 15%; z-index: 3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11.5px; font-weight: 700; font-style: italic; line-height: 1.28;
+  letter-spacing: .01em; text-transform: uppercase;
 }
+/* TOM E BPM, brancos e fortes. São o que um músico procura primeiro, e na arte
+   dele eles são a segunda linha inteira — não um rodapé apagado. */
 .dados {
-  position: absolute; left: 29%; right: 15%; top: 42%; z-index: 2;
-  display: block;
-  font-family: var(--mono); font-size: 9px; letter-spacing: .07em;
-  color: var(--mudo);
+  position: absolute; left: 26%; right: 50%; top: 62%; z-index: 3;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  color: var(--txt);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* tom e BPM em lima porque são os dois números que um músico procura */
-.dados em { font-style: normal; color: var(--lima); font-weight: 500; }
+.dados em { font-style: normal; }
+.dados i { font-style: normal; font-family: var(--mono); font-size: 9px; color: var(--mudo); }
 
-/* O HEXÁGONO COM O PLAY, sentado na junta entre a lâmina e a chapa. Lima cheio
-   com o play PRETO: símbolo sobre lima é sempre escuro — regra da casa, e é o
-   contraste que o vidro escuro não dava. */
-.tocar {
-  position: absolute; left: 22%; width: 7.3%; top: 80%; z-index: 3;
-  transform: translateY(-50%); line-height: 0; pointer-events: none;
-  filter: drop-shadow(0 3px 8px rgba(0,0,0,.9)) drop-shadow(0 0 12px rgba(182,255,59,.35));
-  transition: transform .12s ease;
-}
-.tocar svg { width: 100%; height: auto; display: block; }
-.cartao-musica:active .tocar { transform: translateY(-50%) scale(.92); }
-
-/* A BARRA responde "onde esta música está": vazia = só no computador,
-   enchendo = vindo, cheia = toca sem o computador por perto. O progresso
-   morava dentro do botão como uma altura subindo; barra que enche pro lado é
-   a forma que todo mundo já sabe ler sem aprender. */
+/* O FIO que sai do BPM e vai até a ponta da chapa. Na arte ele é branco e
+   parado; aqui ele é o único lugar que responde ONDE a música está —
+   apagado = só no computador, enchendo = vindo, cheio = toca sozinha no
+   ensaio. Mesma forma, e passa a dizer alguma coisa. */
 .estado {
-  position: absolute; left: 29%; width: 29%; top: 80%; height: 10.5%; z-index: 2;
-  transform: translateY(-50%);
-  background: rgba(182,255,59,.1);
-  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  position: absolute; left: 52%; right: 30%; top: 74%; height: 2px; z-index: 3;
+  background: rgba(255,255,255,.34);
 }
 .estado i {
   display: block; height: 100%; width: 0; background: var(--lima);
-  box-shadow: 0 0 14px rgba(182,255,59,.55);
+  box-shadow: 0 0 10px rgba(182,255,59,.7);
   transition: width .35s ease;
 }
 .cartao-musica.aqui .estado i { width: 100%; }
 .cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); box-shadow: none; }
 .cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); box-shadow: none; }
 
-/* AS LÂMINAS VERDES = LEVAR PRO CELULAR. No desenho são o único verde aceso da
-   peça, empilhadas fora de registro no canto de cima — e levar é justamente a
-   única coisa do cartão que muda o que dá pra fazer longe do computador.
-   O botão ocupa a altura toda mesmo com o desenho lá em cima: alvo de dedo não
-   encolhe junto com a arte. */
+/* O TRIÂNGULO VERDE GRANDE. Na arte ele é a peça mais forte do cartão, e está
+   certo: tocar é a coisa que se faz aqui. */
+.tocar {
+  position: absolute; right: 1%; height: 46%; top: 50%; z-index: 3;
+  transform: translateY(-50%); line-height: 0; pointer-events: none;
+  filter: drop-shadow(0 0 14px rgba(182,255,59,.4));
+  transition: transform .12s ease;
+}
+.tocar svg { height: 100%; width: auto; display: block; }
+.cartao-musica:active .tocar { transform: translateY(-50%) scale(.93); }
+
+/* LEVAR PRO CELULAR. A arte nova não mostra onde isso fica, e sumir não é
+   opção — feature não morre por causa de visual. Voltou pro canto de cima à
+   direita, que é onde ele mesmo desenhou na primeira arte.
+   O botão é bem maior que o desenho que carrega: alvo de dedo não encolhe
+   junto com a arte. */
 .levar {
-  position: absolute; right: 0; top: 0; bottom: 0; width: 14%; z-index: 4;
-  display: flex; align-items: flex-start; justify-content: center;
-  padding-top: 6%;
+  position: absolute; right: 15%; top: 46%; width: 14%; height: 54%; z-index: 4;
+  display: flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer;
-  color: rgba(182,255,59,.45);
+  color: rgba(182,255,59,.5);
   transition: color .15s ease;
 }
-.levar svg { width: 68%; height: auto; }
-.levar:active { color: rgba(182,255,59,.85); }
-.levar.tem { color: var(--lima); filter: drop-shadow(0 0 9px rgba(182,255,59,.5)); }
+.levar svg { width: 58%; height: auto; }
+.levar:active { color: rgba(182,255,59,.9); }
+.levar.tem { color: var(--lima); filter: drop-shadow(0 0 8px rgba(182,255,59,.55)); }
 .levar.erro { color: var(--ruim); }
 .levar.indo { color: var(--amarelo); }
-/* a lasca do canto de baixo, do desenho dele */
-.levar::after {
-  content: ''; position: absolute; right: 0; bottom: 0;
-  width: 46%; height: 19%; pointer-events: none;
-  background: currentColor; opacity: .45;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+
+/* A TRAMA saiu de cima do cartão e foi pro FUNDO DA PÁGINA, que é onde ela
+   está na arte dele: um campo de hexágonos no alto, morrendo conforme desce.
+   Em cima do cartão ela brigava com o texto; atrás de tudo ela é o ar da tela.
+   É a mesma retícula da tela do computador — celular e PC falam a mesma
+   língua. */
+#tela::before {
+  content: ''; position: fixed; left: 0; right: 0; top: 0; height: 62vh;
+  z-index: -1; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.3'/%3E%3C/svg%3E");
+  background-size: 26px 26px, 26px 26px;
+  background-position: 0 0, 13px 13px;
+  -webkit-mask-image: linear-gradient(200deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 68%);
+  mask-image: linear-gradient(200deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 68%);
+  opacity: .3;
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
@@ -868,10 +853,14 @@ function abrirAcervo() {
     // dizendo o que ela é.
     //
     // Desenho que precisa de explicação não está pronto. Este não precisa.
-    var info = m.inteira ? 'música completa' : m.faixas.length + ' faixas';
-    if (m.tom) info += ' · <em>' + m.tom + '</em>';
-    if (m.bpm) info += ' · <em>' + m.bpm + '</em> bpm';
-    if (m.duracao) info += ' · ' + mmss(m.duracao);
+    // NA ARTE DELE a segunda linha é só TOM e BPM, grandes e brancos — não um
+    // rodapé apagado com tudo espremido. Quantas faixas e a duração continuam
+    // na tela da música; aqui ficam os dois números que um músico procura
+    // antes de escolher o que ensaiar.
+    var info = '';
+    if (m.tom) info += '<em>' + m.tom + '</em>';
+    if (m.bpm) info += (info ? '&nbsp;&nbsp;&nbsp;' : '') + '<em>' + m.bpm + ' BPM</em>';
+    if (!info) info = '<i>' + (m.inteira ? 'MÚSICA COMPLETA' : m.faixas.length + ' FAIXAS') + '</i>';
 
     // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
@@ -880,43 +869,37 @@ function abrirAcervo() {
     // A CAPA VIRA O FUNDO DO PRÓPRIO CARTÃO, borrada e escura. É mais rica que
     // uma tinta chapada e não inventa nada: é a mesma imagem, fora de foco.
     // A cor média continua servindo de reserva pra quem não tem capa.
+    // A cor média da capa continua servindo, mas SÓ pra quem não tem imagem:
+    // na arte dele o cartão é chapa preta, e a névoa colorida que eu tinha
+    // posto por cima dele não existe lá.
     var estilo = [];
     if (m.cor) estilo.push('--cor:' + m.cor);
-    if (m.capa) estilo.push("--fundo:url('" + comSenha(m.capa) + "')");
 
-    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + (m.capa ? ' comfundo' : '') + '"' +
+    html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
       (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        // 1. a lâmina, com a capa dentro
+        // 1. a placa cinza atrás e 2. a chapa preta em cima, fora de registro
+        '<span class="banner" aria-hidden="true"></span>' +
+        '<span class="chapa" aria-hidden="true"></span>' +
+        // 3. a capa em hexágono, com fio claro
         '<span class="lamina">' +
           (m.capa
             ? '<img src="' + comSenha(m.capa) + '" alt="">'
-            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '</span>' +
-        // 2. a chapa com ponta à direita
-        '<span class="chapa" aria-hidden="true"></span>' +
-        // 3. os dois fios desencontrados
-        '<span class="fio fio-cima" aria-hidden="true"></span>' +
-        '<span class="fio fio-baixo" aria-hidden="true"></span>' +
-        // 4. o nome e os dados
+        // 4. o nome, em duas linhas
         '<b class="titulo">' + esc(m.titulo) + '</b>' +
+        // 5. tom e bpm, fortes
         '<span class="dados">' + info + '</span>' +
-        // 5. o hexágono com o play. É SVG inteiro, com o hexágono desenhado de
-        //    verdade: antes era um quadrado recortado com contorno "inset", e
-        //    contorno inset desenha RETÂNGULO — o recorte comia as diagonais e
-        //    sobrava fio só nos lados retos. O dono viu quebrado.
-        '<span class="tocar" aria-hidden="true">' +
-          '<svg viewBox="0 0 26 30">' +
-            '<path d="M13 .8 24.8 7.6v14.8L13 29.2 1.2 22.4V7.6z" fill="#b6ff3b"/>' +
-            '<path d="M10.2 9.4v11.2L19.6 15z" fill="#0b0c0f"/>' +
-          '</svg>' +
-        '</span>' +
-        // 6. a barra de onde a música está
+        // 6. o fio que sai do bpm — e que diz onde a música está
         '<span class="estado" aria-hidden="true"><i></i></span>' +
+        // 7. o triângulo verde grande
+        '<span class="tocar" aria-hidden="true">' +
+          '<svg viewBox="0 0 34 40"><path d="M2 1.5 32.5 20 2 38.5z" fill="#b6ff3b"/></svg>' +
+        '</span>' +
       '</button>' +
-      // 7. as lâminas verdes: levar pro celular. A de baixo é triângulo
-      //    apontando pra baixo — sem essa direção a peça virava enfeite e
-      //    ninguém adivinhava que ali se leva a música.
+      // levar pro celular: a arte nova nao mostra onde fica, e sumir nao e
+      // opcao. Voltou pro canto de cima, que e onde ele desenhou na primeira.
       '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
         '<svg viewBox="0 0 28 40" fill="currentColor" aria-hidden="true">' +
         '<path d="M8 1h19v14H14z"/><path d="M3 19h20L13 34z" opacity=".6"/></svg>' +

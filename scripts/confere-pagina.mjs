@@ -23,6 +23,27 @@ copyFileSync(join(aqui, '..', 'src', 'main', 'celular-pagina.js'), join(raiz, 'm
 copyFileSync(join(aqui, '..', 'src', 'shared', 'instrumentos.js'), join(raiz, 'shared', 'instrumentos.js'))
 const { paginaCelular } = await import(pathToFileURL(join(raiz, 'main', 'celular-pagina.js')).href)
 
+// ── A TRAVA DO BACKTICK ──
+// A CSS da pagina mora dentro de uma template string do JavaScript. Um
+// backtick solto num comentario de CSS FECHA a string, e o arquivo inteiro
+// vira lixo de sintaxe — o app do celular simplesmente nao carrega.
+// Ja me pegou duas vezes na mesma sessao: escrevendo comentario sobre
+// drop-shadow e sobre width:auto. Comentario e a hora em que a gente relaxa,
+// e e exatamente por isso que ele precisa de trava.
+{
+  const fonte = readFileSync(new URL('../src/main/celular-pagina.js', import.meta.url), 'utf8')
+  const estilo = fonte.match(/<style>([\s\S]*?)<\/style>/)
+  const ondeAbre = fonte.indexOf('<style>')
+  if (estilo && estilo[1].includes('`')) {
+    const ate = fonte.slice(0, ondeAbre + estilo[1].indexOf('`'))
+    const linha = ate.split(String.fromCharCode(10)).length
+    console.log('ERRO backtick dentro da CSS, perto da linha ' + linha + ' — ele fecha a template string')
+    process.exitCode = 1
+  } else {
+    console.log('ok   nenhum backtick solto na CSS')
+  }
+}
+
 const html = paginaCelular()
 const bruto = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'))
 
