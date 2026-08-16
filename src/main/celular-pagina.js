@@ -603,18 +603,29 @@ body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 .convite small { display: block; margin-top: 10px; font-size: 11.5px; color: var(--mudo2); line-height: 1.5; }
 
 /* ██████████ A BÚSSOLA ██████████
-   Três pontinhos dizendo em qual das três telas você está. NÃO clica: borda em
-   volta de texto é clicável nesta casa, e ponto que não faz nada não pode
-   parecer botão. Ele informa; quem navega é o dedo. */
+   Três pontinhos dizendo em qual das três telas você está.
+   ELES CLICAM. Nasceram só informando — o argumento era que ponto que não faz
+   nada não pode parecer botão, e estava certo. Só que quem levava de uma tela
+   pra outra era o DESLIZE, e deslize é invisível pra quem não sabe que existe:
+   o dono procurou a tela do aparelho e não achou. Ponto que não leva a lugar
+   nenhum é honesto; caminho que ninguém encontra não é.
+   O ponto continua de 6px, mas o botão em volta dele tem 34px — o dedo mira no
+   botão, o olho vê o ponto. */
 .bussola {
-  position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom));
-  z-index: 8; display: flex; justify-content: center; gap: 7px; pointer-events: none;
+  position: fixed; left: 0; right: 0; bottom: calc(4px + env(safe-area-inset-bottom));
+  z-index: 8; display: flex; justify-content: center; gap: 2px;
 }
-.bussola i {
-  width: 6px; height: 6px; background: rgba(255,255,255,0.18);
+.bussola button {
+  -webkit-appearance: none; appearance: none;
+  width: 34px; height: 34px; padding: 0; border: none; background: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.bussola button::before {
+  content: ''; width: 6px; height: 6px; background: rgba(255,255,255,0.18);
   transform: rotate(45deg); transition: background 0.25s ease, box-shadow 0.25s ease;
 }
-.bussola i.on { background: var(--lima); box-shadow: 0 0 14px rgba(182,255,59,0.85); }
+.bussola button.on::before { background: var(--lima); box-shadow: 0 0 14px rgba(182,255,59,0.85); }
+.bussola button:active::before { background: var(--txt2); }
 body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
 
 /* O DESLIZAR. A tela que sai e a que entra andam juntas — sem isso o conteúdo
@@ -687,6 +698,12 @@ body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
 .linha-dado .rot { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mudo2); }
 .linha-dado b { margin-left: auto; font-family: var(--mono); font-size: 14px; color: var(--txt2); }
 .linha-dado b.lima { color: var(--lima); }
+/* o botao que leva pra mesa de ajuste: aceso, porque e o unico da folha que
+   abre uma tela nova em vez de mexer no que ja esta la */
+.folha-btn.destaque {
+  background: var(--lima); color: #0b0c0f; border-color: transparent;
+  font-weight: 700;
+}
 .folha-btn {
   width: 100%; margin-top: 12px; height: 42px;
   background: none; border: none; box-shadow: inset 0 0 0 1px var(--linha2);
@@ -694,7 +711,18 @@ body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
   letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; clip-path: var(--corte-sm);
 }
 .folha-btn.perigo { color: var(--ruim); box-shadow: inset 0 0 0 1px rgba(248,113,113,0.4); }
-.folha-fechar { width: 100%; margin-top: 8px; height: 44px; background: var(--lima); color: #0b0c0f; border: none; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
+/* FECHAR NUNCA E A ACAO PRINCIPAL. Ele era lima cheio, a coisa mais acesa da
+   folha — e o lima da casa quer dizer "o sistema esta agindo", nao "va embora".
+   Com um botao de verdade em cima (ajustar o cartao), os dois brigavam e o olho
+   nao sabia qual era o assunto. */
+.folha-fechar {
+  width: 100%; margin-top: 8px; height: 44px;
+  background: none; color: var(--txt2);
+  border: 1px solid var(--linha);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: 700;
+}
+.folha-fechar:active { background: rgba(255,255,255,.06); }
 /* ██████████ A MESA DE AJUSTE ██████████
    O dono cansou de desenhar e me mandar, e tinha razão: o desenho parava de
    ser dele e virava a MINHA leitura do desenho dele. Aqui não existe leitura no
@@ -766,8 +794,10 @@ body { padding-bottom: calc(34px + env(safe-area-inset-bottom)); }
 <!-- AS ABAS SAIRAM. São três telas; arrastar de lado é mais rápido que mirar
      num botão pequeno, e devolve o rodapé inteiro pro conteúdo. O que fica é
      um indicador que não clica: ele diz onde você está, não pede toque. -->
-<div class="bussola" id="bussola" aria-hidden="true">
-  <i></i><i class="on"></i><i></i>
+<div class="bussola" id="bussola">
+  <button type="button" aria-label="baixar"></button>
+  <button type="button" class="on" aria-label="acervo"></button>
+  <button type="button" aria-label="aparelho"></button>
 </div>
 
 <script>
@@ -1850,6 +1880,9 @@ function abrirAjustes() {
         'fora da loja. É normal — libere e toque em instalar.</small></div>'
       : '') +
     '<span class="olho">este aparelho</span><h3>O que está no celular</h3>' +
+    // NO TOPO. Estava no pé de uma folha comprida e o dono procurou sem achar —
+    // botão que precisa de rolagem pra ser visto é botão que não existe.
+    '<button class="folha-btn destaque" id="irMesa">ajustar o desenho do cartão</button>' +
     '<p>Só o que você levou toca sem o computador. O resto vem dele, pela rede de casa.</p>' +
     '<div class="linha-dado"><span class="rot">músicas levadas</span><b class="lima">' + levadas.length + '</b></div>' +
     '<div class="linha-dado"><span class="rot">espaço, mais ou menos</span><b>' + (mb || '<1') + ' MB</b></div>' +
@@ -1860,7 +1893,6 @@ function abrirAjustes() {
       '<p>Este navegador não guarda música em endereço sem cadeado (o de casa não tem). ' +
       'Por isso o botão do acervo <b>baixa o arquivo</b> pra pasta do celular: a música fica no aparelho ' +
       'e toca em qualquer tocador, sem o computador — só sem o mixer.</p>') +
-    '<button class="folha-btn" id="irMesa">ajustar o cartão do acervo</button>' +
     (levadas.length ? '<button class="folha-btn perigo" id="tirarTudo">tirar todas do celular</button>' : '') +
     '<button class="folha-fechar" id="fecharFolha">fechar</button>' +
     '</div>';
@@ -1882,9 +1914,16 @@ function abrirAjustes() {
 // depois, e está a um deslize de distância.
 var TELAS = ['baixar', 'acervo', 'ajustes'];
 
+// AS BOLINHAS LEVAM. Antes elas só diziam onde você está, e quem levava era o
+// deslize — que é invisível pra quem não sabe que existe. O dono procurou a
+// tela do aparelho e não achou.
+document.querySelectorAll('.bussola button').forEach(function (p, k) {
+  p.onclick = function () { abrirAba(TELAS[k]); };
+});
+
 function pintarBussola() {
   var n = TELAS.indexOf(aba);
-  document.querySelectorAll('.bussola i').forEach(function (p, k) {
+  document.querySelectorAll('.bussola button').forEach(function (p, k) {
     p.className = k === n ? 'on' : '';
   });
 }
