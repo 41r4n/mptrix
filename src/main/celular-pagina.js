@@ -196,7 +196,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
-  aspect-ratio: 270 / 88; min-height: 80px;
+  aspect-ratio: 290 / 85; min-height: 78px;
   transition: transform .12s ease;
 }
 .cartao-musica:active { transform: scale(.99); }
@@ -211,17 +211,20 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    camadas: a chapa preta senta em cima dela fora de registro, e o que se vê da
    cinza é só a fresta de cima e da direita. */
 .banner {
-  position: absolute; left: 20%; right: 10%; top: 2%; bottom: 16%;
+  position: absolute; left: 27%; right: 12%; top: 0; bottom: 37%;
   z-index: 0; pointer-events: none;
-  background: #45484e;
-  clip-path: polygon(0 0, 88% 0, 100% 46%, 100% 100%, 0 100%);
+  background: #44474d;
+  /* faixa fina em cima + coluna estreita na ponta: o degrau da arte dele.
+     Antes isto era um bloco de 82% da altura, e o cinza acabava sendo a peça
+     mais pesada do cartão — bem o contrário do desenho. */
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 83% 100%, 83% 15%, 0 15%);
 }
 /* A CHAPA PRETA onde o texto mora, com o canto de cima à direita cortado. */
 .chapa {
-  position: absolute; left: 22%; right: 14%; top: 9%; bottom: 4%;
+  position: absolute; left: 28%; right: 14%; top: 6%; bottom: 2%;
   z-index: 0; pointer-events: none;
-  background: #0d0e11;
-  clip-path: polygon(0 0, 86% 0, 100% 38%, 100% 100%, 0 100%);
+  background: #0c0d10;
+  clip-path: polygon(0 0, 88% 0, 100% 32%, 100% 100%, 0 100%);
 }
 
 /* A CAPA EM HEXÁGONO, com fio claro em volta. O fio é a peça DE BAIXO pintada
@@ -229,7 +232,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    a clip-path: o recorte come a borda e as diagonais ficam sem fio. É o mesmo
    bug que já apareceu meia dúzia de vezes neste projeto. */
 .lamina {
-  position: absolute; left: 0; top: 8%; bottom: 8%; width: 27%;
+  position: absolute; left: 1%; top: 3%; bottom: 3%; width: 25%;
   z-index: 2; line-height: 0;
   background: rgba(255,255,255,.62);
   clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
@@ -259,17 +262,17 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    Ninguém conseguia ler o começo de nada. Eu só não vi porque estava olhando o
    cartão numa maquete solta em vez da tela inteira. */
 .titulo {
-  position: absolute; left: 32%; right: 17%; top: 20%; z-index: 3;
+  position: absolute; left: 31%; right: 20%; top: 13%; z-index: 3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 11.5px; font-weight: 700; font-style: italic; line-height: 1.28;
-  letter-spacing: .01em; text-transform: uppercase;
+  font-size: 9.5px; font-weight: 700; font-style: italic; line-height: 1.32;
+  letter-spacing: .015em; text-transform: uppercase;
 }
 /* TOM E BPM, brancos e fortes. São o que um músico procura primeiro, e na arte
    dele eles são a segunda linha inteira — não um rodapé apagado. */
 .dados {
-  position: absolute; left: 32%; right: 48%; top: 62%; z-index: 3;
-  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  position: absolute; left: 34%; right: 46%; top: 52%; z-index: 3;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
   color: var(--txt);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -281,7 +284,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    apagado = só no computador, enchendo = vindo, cheio = toca sozinha no
    ensaio. Mesma forma, e passa a dizer alguma coisa. */
 .estado {
-  position: absolute; left: 54%; right: 31%; top: 72%; height: 2px; z-index: 3;
+  position: absolute; left: 55%; right: 26%; top: 58%; height: 1.5px; z-index: 3;
   background: rgba(255,255,255,.34);
 }
 .estado i {
@@ -296,9 +299,8 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 /* O TRIÂNGULO VERDE GRANDE. Na arte ele é a peça mais forte do cartão, e está
    certo: tocar é a coisa que se faz aqui. */
 .tocar {
-  position: absolute; right: 1%; height: 46%; top: 50%; z-index: 3;
+  position: absolute; right: 1%; height: 40%; top: 50%; z-index: 3;
   transform: translateY(-50%); line-height: 0; pointer-events: none;
-  filter: drop-shadow(0 0 14px rgba(182,255,59,.4));
   transition: transform .12s ease;
 }
 .tocar svg { height: 100%; width: auto; display: block; }
@@ -310,13 +312,13 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    O botão é bem maior que o desenho que carrega: alvo de dedo não encolhe
    junto com a arte. */
 .levar {
-  position: absolute; right: 16%; bottom: 0; width: 13%; height: 46%; z-index: 4;
+  position: absolute; right: 15%; bottom: 0; width: 11%; height: 38%; z-index: 4;
   display: flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer;
   color: rgba(182,255,59,.5);
   transition: color .15s ease;
 }
-.levar svg { width: 46%; height: auto; }
+.levar svg { width: 40%; height: auto; }
 .levar:active { color: rgba(182,255,59,.9); }
 .levar.tem { color: var(--lima); filter: drop-shadow(0 0 8px rgba(182,255,59,.55)); }
 .levar.erro { color: var(--ruim); }
