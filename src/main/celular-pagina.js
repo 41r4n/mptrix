@@ -766,6 +766,33 @@ var NOMES = ${JSON.stringify(nomes)};
 // Onde não dá, o caminho é outro e honesto: BAIXAR o arquivo pra pasta do
 // celular. Perde o mixer (o tocador do telefone não sabe misturar faixas), mas
 // a música fica no aparelho de verdade, e toca em qualquer lugar.
+// ── A TELA CONFERE SE ENVELHECEU ──
+// O computador troca o buraco __VERSAO_DA_TELA__ pelo resumo do HTML ao
+// servir. Quando o desenho muda, o resumo muda; a tela percebe e se recarrega. Assim o dono nunca mais precisa ouvir "recarrega aí".
+var MINHA_VERSAO = '__VERSAO_DA_TELA__';
+var jaRecarreguei = false;
+var abriuEm = Date.now();
+
+function conferirVersao() {
+  // sem carimbo (tela vinda do app instalado, que não passa pelo computador)
+  // não há o que comparar
+  if (jaRecarreguei || MINHA_VERSAO.indexOf('__') === 0) return;
+  // trava contra laço: nunca mais de uma recarga por abertura, e nunca nos
+  // primeiros segundos. Se algum dia os dois resumos não baterem por engano, o
+  // pior que acontece é uma recarga a mais — não um piscar sem fim.
+  if (Date.now() - abriuEm < 4000) return;
+  fetch(comSenha('/api/versao')).then(function (r) { return r.json(); }).then(function (v) {
+    if (v && v.versao && v.versao !== MINHA_VERSAO) {
+      jaRecarreguei = true;
+      location.reload();
+    }
+  }).catch(function () {});
+}
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) conferirVersao();
+});
+window.addEventListener('focus', conferirVersao);
+
 var GUARDA_DA = !!(window.isSecureContext && ('serviceWorker' in navigator));
 
 // O GUARDADOR precisa estar de pé antes de tudo: é ele que responde quando o
@@ -1685,6 +1712,7 @@ fetch(comSenha('/api/acervo')).then(function (r) {
       'ENDERECO: ' + esc(location.host) + '<br>' +
       'SENHA: ' + (S ? 'presente (' + S.length + ' letras)' : 'AUSENTE') + '<br>' +
       'GUARDADOR: ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'no comando' : 'fora') + '<br>' +
+      'TELA: ' + esc(MINHA_VERSAO) + '<br>' +
       'REDE: ' + (navigator.onLine ? 'o celular se diz online' : 'o celular se diz offline') +
     '</span>' +
     '<button class="folha-btn" id="tentarDeNovo" style="max-width:240px;margin:16px auto 0">tentar de novo</button>' +

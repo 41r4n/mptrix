@@ -664,6 +664,14 @@ function levar(chave, urls, quem) {
 }
 `
 
+// O RESUMO DA TELA. É calculado SEM o carimbo dentro (o texto ainda tem o
+// buraco `__VERSAO_DA_TELA__` na hora do cálculo), senão o resumo entraria na
+// conta de si mesmo e as duas pontas nunca bateriam — a tela se recarregaria
+// pra sempre.
+function versaoDaTela(html) {
+  return createHash('sha1').update(html).digest('hex').slice(0, 12)
+}
+
 export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, guardarSenha, historico, portaSalva, guardarPorta, baixar, icone, apk, olhar, fontes, provas }) {
   if (servidor) return infoCelular()
   // A SENHA PRECISA SER A MESMA SEMPRE. Ela viaja na URL, e o que o celular
@@ -717,13 +725,39 @@ export function ligarCelular({ stemsDir, paginaHtml, ffmpegPath, senhaSalva, gua
       return
     }
 
+    // ██████████ A TELA SE ATUALIZA SOZINHA ██████████
+    //
+    // O dono mexeu no desenho comigo a manhã inteira e volta e meia a tela do
+    // celular continuava a antiga — e a culpa NUNCA era do computador: aqui a
+    // página é gerada na hora e vai com "no-store". Quem segurava era o
+    // navegador do telefone, que guarda a página desenhada quando você troca de
+    // app e volta.
+    //
+    // "Recarrega" não é resposta: é passar pro dono um trabalho que a máquina
+    // faz melhor. Agora a página carrega sabendo a própria versão (um resumo do
+    // HTML dela), pergunta ao computador toda vez que volta pra frente, e se as
+    // duas não baterem ela se recarrega sozinha.
     if (caminho === '/' || caminho === '/index.html') {
+      const html = paginaHtml()
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Set-Cookie': `mptrix=${senha}; Path=/; SameSite=Lax`,
         'Cache-Control': 'no-store'
       })
-      res.end(paginaHtml())
+      // replaceAll, nao replace: `replace` com texto simples troca so a PRIMEIRA
+      // aparicao, e a primeira mora num comentario logo acima da variavel — o
+      // comentario ficava carimbado e a variavel ficava com o buraco.
+      res.end(html.replaceAll('__VERSAO_DA_TELA__', versaoDaTela(html)))
+      return
+    }
+
+    // o mesmo resumo, pra tela conferir se envelheceu
+    if (caminho === '/api/versao') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store'
+      })
+      res.end(JSON.stringify({ versao: versaoDaTela(paginaHtml()) }))
       return
     }
 

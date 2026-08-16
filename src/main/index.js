@@ -931,7 +931,21 @@ app.whenReady().then(() => {
   // ▸ O ESTÚDIO NO CELULAR. Sai desligado: é o dono que decide quando abrir
   // uma porta na rede da casa, mesmo sendo a rede dele.
   ipcMain.handle('celular:estado', () => infoCelular())
-  ipcMain.handle('celular:ligar', () => ligarCelular({
+  // ██████████ O CELULAR VOLTA SOZINHO ██████████
+  //
+  // Ele saía desligado a CADA abertura do app, e o dono tinha que ir na aba
+  // Nuvem apertar "Ligar agora" de novo. Numa manhã de ajustes eu reiniciei o
+  // MPTRIX uma dúzia de vezes; a cada uma a ponte com o celular caía calada, e
+  // o telefone dele ficava congelado na tela que já tinha carregado. Ele via o
+  // desenho antigo, dizia "não mudou nada", e estava certo: o computador não
+  // estava respondendo mais nada.
+  //
+  // Reiniciar o programa não é o dono desligar o celular. Se ele ligou, ligado
+  // fica — e quem desliga é só o botão Desligar.
+  //
+  // A porta na rede continua sendo decisão dele: a primeira vez ainda exige o
+  // "Ligar agora". O que muda é que a decisão passa a ser LEMBRADA.
+  const ligarOCelular = () => ligarCelular({
     stemsDir: join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX', 'stems'),
     paginaHtml: paginaCelular,
     ffmpegPath: FFMPEG_PATH,
@@ -1021,8 +1035,22 @@ app.whenReady().then(() => {
         }
       })
     }
-  }))
-  ipcMain.handle('celular:desligar', () => desligarCelular())
+    })
+
+  ipcMain.handle('celular:ligar', async () => {
+    const info = await ligarOCelular()
+    guardarAjuste('celular.ligado', true)
+    return info
+  })
+  ipcMain.handle('celular:desligar', () => {
+    guardarAjuste('celular.ligado', false)
+    return desligarCelular()
+  })
+
+  // e na abertura, se ele já estava ligado antes, volta sozinho
+  if (lerAjuste('celular.ligado', false)) {
+    ligarOCelular().catch(() => {})
+  }
   // O QUE O CELULAR PEDIU E O QUE EU RESPONDI. Sem isto, quando não funciona a
   // única informação que existe é "não consegui falar com o computador" — que
   // é justamente a que não diz nada. Aqui o dono vê do lado de cá se o pedido

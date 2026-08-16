@@ -31,16 +31,21 @@ const { paginaCelular } = await import(pathToFileURL(join(raiz, 'main', 'celular
 // drop-shadow e sobre width:auto. Comentario e a hora em que a gente relaxa,
 // e e exatamente por isso que ele precisa de trava.
 {
+  // A pagina INTEIRA mora na template string — CSS e script juntos. A primeira
+  // versao desta trava so olhava o <style>, e na mesma tarde um backtick num
+  // comentario do SCRIPT passou por baixo dela. Guarda que cobre meio caminho
+  // da a sensacao de estar guardado, que e pior que nao ter guarda.
   const fonte = readFileSync(new URL('../src/main/celular-pagina.js', import.meta.url), 'utf8')
-  const estilo = fonte.match(/<style>([\s\S]*?)<\/style>/)
-  const ondeAbre = fonte.indexOf('<style>')
-  if (estilo && estilo[1].includes('`')) {
-    const ate = fonte.slice(0, ondeAbre + estilo[1].indexOf('`'))
-    const linha = ate.split(String.fromCharCode(10)).length
-    console.log('ERRO backtick dentro da CSS, perto da linha ' + linha + ' — ele fecha a template string')
+  const abre = fonte.indexOf('<!doctype')
+  const fecha = fonte.lastIndexOf('</html>')
+  const corpo = abre >= 0 && fecha > abre ? fonte.slice(abre, fecha) : ''
+  const cravo = corpo.indexOf(String.fromCharCode(96))
+  if (cravo >= 0) {
+    const linha = fonte.slice(0, abre + cravo).split(String.fromCharCode(10)).length
+    console.log('ERRO backtick dentro da pagina, na linha ' + linha + ' — ele fecha a template string')
     process.exitCode = 1
   } else {
-    console.log('ok   nenhum backtick solto na CSS')
+    console.log('ok   nenhum backtick solto na pagina')
   }
 }
 
