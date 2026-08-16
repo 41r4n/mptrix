@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="360" viewBox="0 0 1080 360">
+  <!--
+    O CARTAO DO ACERVO DO CELULAR, DESMONTADO EM PECAS.
+
+    Arraste este arquivo pra dentro de um arquivo do Figma. Ele entra ja
+    separado: capa, nome, tom e bpm, play, baixar, fio. Mexa a vontade —
+    mova, aumente, troque cor, apague o que nao quiser.
+
+    Esta no tamanho de 3x pra ser confortavel de mexer. O cartao de verdade
+    tem 345 x 84 no celular; tudo aqui e proporcao, entao nao precisa se
+    preocupar com o tamanho final.
+  -->
+  <defs>
+    <linearGradient id="chapa-do-cartao" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#191c23"/>
+      <stop offset="0.62" stop-color="#131519"/>
+    </linearGradient>
+    <linearGradient id="brilho-da-aresta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="lugar-da-capa" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b4250"/>
+      <stop offset="1" stop-color="#1b1f27"/>
+    </linearGradient>
+  </defs>
+
+  <rect id="fundo-da-tela" x="0" y="0" width="1080" height="360" fill="#050505"/>
+
+  <g id="CARTAO" transform="translate(22,54)">
+
+    <polygon id="chapa-preta"
+      points="0,0 1035,0 1035,237 973,252 62,252 0,15"
+      fill="url(#chapa-do-cartao)"/>
+
+    <rect id="aresta-clara" x="197" y="0" width="766" height="4" fill="url(#brilho-da-aresta)"/>
+
+    <g id="CAPA" transform="translate(33,33)">
+      <polygon id="fio-da-capa"
+        points="26.9,0 141.1,0 168,93 141.1,186 26.9,186 0,93"
+        fill="#ffffff" fill-opacity="0.26"/>
+      <polygon id="imagem-da-capa"
+        points="28.4,4.5 139.6,4.5 163.5,93 139.6,181.5 28.4,181.5 4.5,93"
+        fill="url(#lugar-da-capa)"/>
+      <text x="84" y="99" font-family="Space Grotesk, Arial" font-size="17"
+        fill="#ffffff" fill-opacity="0.45" text-anchor="middle"
+        letter-spacing="2">CAPA</text>
+    </g>
+
+    <text id="nome-da-musica" x="237" y="87"
+      font-family="Space Grotesk, Arial" font-size="37.5" font-weight="700"
+      font-style="italic" letter-spacing="0.3" fill="#ffffff">DJAVAN - AZUL<tspan x="237" dy="48">(AO VIVO)</tspan></text>
+
+    <text id="tom-e-bpm" x="237" y="192"
+      font-family="Space Grotesk, Arial" font-size="28.5" font-weight="500"
+      letter-spacing="3.7" fill="#ffffff" fill-opacity="0.55"><tspan
+      fill="#ffffff" fill-opacity="1">F</tspan>   <tspan
+      fill="#ffffff" fill-opacity="1">120 BPM</tspan>   ·   5 FAIXAS</text>
+
+    <g id="play" transform="translate(819,75)">
+      <polygon points="9,4.5 84,51 9,97.5" fill="#5cb82b"/>
+    </g>
+
+    <g id="baixar" transform="translate(946,95)">
+      <path d="M16.4,3.6 h18.2 v20 h-18.2 z" fill="#b6ff3b" fill-opacity="0.55"/>
+      <path d="M5.5,31 h40 L25.5,56.5 z" fill="#b6ff3b" fill-opacity="0.55"/>
+    </g>
+
+    <g id="fio-de-estado" transform="translate(36,246)">
+      <rect id="fio-vazio" x="0" y="0" width="963" height="6" fill="#ffffff" fill-opacity="0.09"/>
+      <rect id="fio-cheio-quando-esta-no-celular" x="0" y="0" width="0" height="6" fill="#b6ff3b"/>
+    </g>
+
+  </g>
+</svg>
