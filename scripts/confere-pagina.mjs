@@ -49,6 +49,41 @@ const { paginaCelular } = await import(pathToFileURL(join(raiz, 'main', 'celular
   }
 }
 
+// ── A TRAVA DA BARRA INVERTIDA ──
+// A pagina inteira mora numa template string, e template string COME a barra:
+// \s chega como s, \] como ], \. como ponto-qualquer. Uma funcao de limpeza
+// de nome escrita com \s e \] chegou no celular como outra expressao e
+// quebrou a tela inteira com "Cannot read properties of undefined".
+// Escrever a barra dobrada resolveria, mas fica ilegivel; a saida da casa e
+// nao precisar dela: [ ] no lugar de \s, [|] no lugar de \|, [.] no lugar
+// de \., e ] sozinho fora de classe, que ja e literal.
+{
+  const fonte = readFileSync(new URL('../src/main/celular-pagina.js', import.meta.url), 'utf8')
+  const abre = fonte.indexOf('<!doctype')
+  const fecha = fonte.lastIndexOf('</html>')
+  const corpo = abre >= 0 && fecha > abre ? fonte.slice(abre, fecha) : ''
+  // varredura letra a letra, sem expressao regular: montar uma expressao que
+  // procura barra invertida com barra invertida foi o caminho de errar de novo
+  const B = String.fromCharCode(92)
+  const PERIGO = 'sdwbSDWB.|()[]+*?^$/-'
+  const achados = []
+  for (let k = 0; k < corpo.length - 1; k++) {
+    if (corpo[k] !== B) continue
+    if (k > 0 && corpo[k - 1] === B) { k++; continue }   // dobrada: sobrevive
+    if (PERIGO.includes(corpo[k + 1])) achados.push({ index: k, trecho: B + corpo[k + 1] })
+  }
+  if (achados.length) {
+    const onde = achados.slice(0, 4).map((m) => {
+      const linha = fonte.slice(0, abre + m.index).split(String.fromCharCode(10)).length
+      return 'linha ' + linha + ' (' + m.trecho + ')'
+    })
+    console.log('ERRO barra invertida solta na pagina — a template string come ela: ' + onde.join(', '))
+    process.exitCode = 1
+  } else {
+    console.log('ok   nenhuma barra invertida solta na pagina')
+  }
+}
+
 const html = paginaCelular()
 const bruto = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'))
 

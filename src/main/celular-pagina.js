@@ -908,7 +908,7 @@ function abrirAcervo() {
             ? '<img src="' + comSenha(m.capa) + '" alt="">'
             : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '</span>' +
-        '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
+        '<span class="corpo"><b>' + esc(nomeLimpo(m.titulo)) + '</b>' +
         '<span class="dados">' + info + '</span></span>' +
         '<span class="tocar" aria-hidden="true">' +
           '<svg viewBox="0 0 30 34"><path d="M3 1.5 L28 17 L3 32.5 Z" fill="#5cb82b"/></svg>' +
@@ -979,7 +979,11 @@ var ATOS = [
     icone: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>' }
 ];
 
-var EH_LINK = /^https?:\/\//i;
+// SEM BARRA INVERTIDA, e aqui isso ja custou: escrito com barra, a template
+// string comia as duas e a expressao chegava na pagina como /^https?:/ seguida
+// de COMENTARIO — ou seja, ela testava so "http:" e o resto virava texto morto.
+// Funcionava por acidente. Classe de um caractere faz o mesmo sem barra.
+var EH_LINK = /^https?:[/][/]/i;
 
 function abrirBaixar() {
   voltar.hidden = true;
@@ -1271,6 +1275,64 @@ function ligarPeneira() {
   tela.querySelectorAll('.chip').forEach(function (c) {
     c.onclick = function () { filtro = c.dataset.chip; abrirAcervo(); };
   });
+}
+
+// ── O NOME QUE APARECE NA LISTA ──
+//
+// Titulo de YouTube vem com etiqueta de producao colada no fim: "(Official HD
+// Video)", "(Audio Oficial)", "(Clipe Oficial)". Num cartao de celular essas
+// palavras empurram O NOME DA MUSICA pra fora da linha — e nenhuma delas ajuda
+// a escolher o que ensaiar, porque TODA musica tem uma.
+//
+// Fica de fora de proposito tudo que MUDA a musica: ao vivo, acustico, cover,
+// remix, participacao, versao. Isso um musico precisa ver, e some junto se a
+// limpeza for burra.
+//
+// So sai o grupo INTEIRO entre parenteses ou colchetes cujo conteudo e, sozinho,
+// etiqueta de producao. Assim "Azul (Ao Vivo) (Audio Oficial)" perde so a
+// segunda, e nada de meio de frase e cortado por engano.
+//
+// NENHUMA EXPRESSAO AQUI USA BARRA INVERTIDA, e isso nao e estilo: esta pagina
+// inteira mora dentro de uma template string do JavaScript, e template string
+// COME a barra: barra-s chega como s, barra-colchete como colchete. A
+// primeira versao desta funcao usava as duas e chegou no celular como outra
+// expressao, quebrando a tela com "Cannot read properties of undefined".
+// Onde daria vontade de escrever barra-s eu escrevo [ ]; onde daria barra-cano
+// eu escrevo [|]; e ] sozinho fora de classe ja e
+// literal e nao precisa de nada.
+var ETIQUETAS = [
+  'official hd video', 'official music video', 'official video', 'official audio',
+  'official lyric video', 'official visualizer', 'lyric video', 'lyrics video',
+  'visualizer', 'videoclipe', 'video clipe', 'video oficial', 'audio oficial',
+  'clipe oficial', 'clipe official', 'official', 'oficial', 'hd', 'full hd', '4k'
+];
+
+function semAcento(t) {
+  return t && t.normalize ? t.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : String(t || '');
+}
+
+function ehEtiqueta(dentro) {
+  var chave = semAcento(dentro).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/[ ]+/g, ' ').trim();
+  return ETIQUETAS.indexOf(chave) >= 0;
+}
+
+function nomeLimpo(t) {
+  var nome = String(t || '');
+  nome = nome.replace(/[(]([^()]*)[)]/g, function (todo, dentro) {
+    return ehEtiqueta(dentro) ? ' ' : todo;
+  });
+  nome = nome.replace(/[[]([^[]*?)]/g, function (todo, dentro) {
+    return ehEtiqueta(dentro) ? ' ' : todo;
+  });
+  // o mesmo depois de uma barra vertical: "Musica | Official Video"
+  nome = nome.replace(/[ ]*[|][ ]*([^|]+)$/, function (todo, dentro) {
+    return ehEtiqueta(dentro) ? '' : todo;
+  });
+  // sobra de separador no fim: "ft", "feat.", tracinho, barra
+  nome = nome.replace(/[ ]*(ft|feat|featuring)[.]?[ ]*$/i, '');
+  nome = nome.replace(/[ ,/|–—-]+$/, '');
+  nome = nome.replace(/[ ]{2,}/g, ' ').trim();
+  return nome || String(t || '');
 }
 
 function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]; }); }
