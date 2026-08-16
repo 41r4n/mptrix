@@ -162,47 +162,37 @@ header::after {
   text-transform: uppercase; color: var(--mudo2); padding: 2px 1px 0;
 }
 
-/* ██████████ O CARTÃO, MEDIDO PIXEL A PIXEL NA ARTE DO DONO ██████████
-   Ele exportou a arte do Canva em 1080x1920 e mandou o arquivo. Eu decodifiquei
-   o PNG na unha e MEDI: bordas, inclinacoes e cores exatas. Nada aqui foi
-   escolhido por mim.
+/* ██████████ O CARTÃO ██████████
+   O dono desenhou uma arte no Canva e pediu copia identica. Eu tentei quatro
+   vezes, medi o PNG pixel a pixel, e o resultado continuou ruim — ele desistiu
+   e mandou: "faz algo decente".
 
-   ESTRUTURA (era o que eu vinha errando — nao era tamanho, era ARQUITETURA):
+   Por que a copia falhava, e vale ficar escrito: a arte dele e um CARTAZ. Um
+   cartao repetido cinco vezes, mesmo nome, mesma capa, mesmo tom, muito ar em
+   volta de cada peca. Aqui sao 14 musicas de nomes desiguais numa lista que se
+   rola com o polegar. Reproduzir as proporcoes de um cartaz numa lista deu
+   exatamente o que a foto mostrou: capa gigante engolindo o texto, chapa cinza
+   com cara de coisa inacabada, e um vazio embaixo de tudo.
 
-     · o cartao inteiro e um BANNER INCLINADO, nao um retangulo
-     · a barra do titulo e uma peca SEPARADA, tambem inclinada, flutuando
-       sobre o corpo
-     · atras da barra ha DUAS copias dela, deslocadas: uma cinza-claro perto e
-       uma cinza-media longe. E o que da a leitura de peca impressa fora de
-       registro
-     · o play nao e um triangulo solto: e um CONTORNO verde aberto (diagonal +
-       topo + lateral) com o triangulo dentro, e o triangulo VAZA pra fora do
-       contorno embaixo
-     · a capa e hexagono de ponta esquerda e direita, com moldura cinza grossa
+   Entao o que ficou dele NAO foi a medida — foi a LINGUAGEM:
+     · corte angular no corpo
+     · capa em hexagono com fio claro
+     · titulo italico maiusculo
+     · play verde dentro de um contorno aberto
+     · uma aresta clara marcando o alto da tarja
 
-   MEDIDAS (do arquivo dele, em % do cartao de 944x286):
-     capa           x 0..32.2%     hexagono, moldura #585858
-     barra preta    x 26.1..83%    y 5.9..42.7%, aresta direita inclinada 6.9%
-     copia clara    deslocada +1.1% x, +2.8% y     #9e9e9e
-     copia media    deslocada +7.0% x, +12.9% y    #676767
-     titulo         x 28%, y 15%
-     tom e bpm      x 35%, y 65%
-     fio            x 30..63%, y 86%
-     play           x 80..100%, y 46..97%
-
-   CORES (medidas, nao escolhidas):
-     corpo #111111 · barra #000000 · cinzas #9e9e9e / #676767 / #585858
-     contorno do play #5cb82b · triangulo #2b7304 · fundo da tela #050505 */
-ul { list-style: none; margin: 0; padding: 10px 10px 0; overflow: hidden; }
-li { margin-bottom: 10px; }
+   E o que manda agora e a lista: o nome da musica e a maior coisa do cartao,
+   cabem sete na tela, e nada disputa com o texto. */
+ul { list-style: none; margin: 0; padding: 10px 11px 0; overflow: hidden; }
+li { margin-bottom: 8px; }
 
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
-  aspect-ratio: 944 / 286; min-height: 96px;
+  aspect-ratio: 345 / 84; min-height: 76px;
   transition: transform .12s ease;
 }
-.cartao-musica:active { transform: scale(.99); }
+.cartao-musica:active { transform: scale(.988); }
 
 .abrir {
   position: absolute; inset: 0; z-index: 1;
@@ -210,61 +200,67 @@ li { margin-bottom: 10px; }
   text-align: left; cursor: pointer; font: inherit;
 }
 
-/* O CORPO: banner inclinado. As duas arestas caem pra esquerda conforme
-   descem — e a inclinacao e a assinatura da peca dele. */
+/* O CORPO: chapa escura com as duas pontas cortadas em diagonal. O corte e o
+   que sobra da linguagem dele — discreto, porque num cartao de 84px de altura
+   uma diagonal grande vira buraco. */
 .corpo {
-  position: absolute; top: 2%; bottom: 2%; left: 9%; right: 0;
-  z-index: 0; pointer-events: none;
-  background: #111111;
-  clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%);
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: #131519;
+  clip-path: polygon(0 0, 100% 0, 100% 74%, 97.4% 100%, 2.6% 100%, 0 26%);
+}
+/* a aresta clara no alto, da arte dele: o unico brilho da peca */
+.corpo::after {
+  content: ''; position: absolute; left: 21%; right: 8%; top: 0; height: 1.5px;
+  background: linear-gradient(90deg, rgba(255,255,255,.34), rgba(255,255,255,.06));
 }
 
-/* A BARRA DO TITULO e as DUAS COPIAS deslocadas atras dela. Tres chapas do
-   mesmo formato, fora de registro: e o que faz a peca parecer impressa e nao
-   desenhada. A mais longe e a mais escura, senao ela salta na frente. */
-/* TARJA, nao "barra": o nome .barra ja era o controle de VOLUME, definido mais
-   abaixo neste mesmo arquivo. Vindo depois, ele apagava o preto daqui com
-   background:none, e a barra do titulo saia CINZA. Nome repetido em folha de
-   estilo nao da erro — da o desenho errado, calado. */
-.tarja, .tarja-c1, .tarja-c2 {
-  position: absolute; left: 26.1%; width: 51.4%; top: 5.9%; height: 36.8%;
-  z-index: 0; pointer-events: none;
-  clip-path: polygon(0 0, 100% 0, 93.1% 100%, 0 100%);
+/* A CAPA em hexagono com fio claro — dele. Menor do que na arte porque aqui o
+   nome da musica e que precisa do espaco: e ele que a pessoa procura. */
+.lamina {
+  position: absolute; left: 2.5%; top: 9%; bottom: 9%; width: 19.5%;
+  z-index: 2; line-height: 0;
+  background: rgba(255,255,255,.42);
+  clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
 }
-/* medida na arte: esquerda quase junto da tarja (+8px de 944), direita bem
-   alem (+63px). Nao e a tarja deslocada — e uma chapa maior. */
-.tarja-c2 {
-  background: #676767; left: 26.9%; width: 60%; top: 8.7%; height: 42%;
+.lamina img,
+.lamina .capa-vazia {
+  position: absolute; left: 1.5px; top: 1.5px;
+  width: calc(100% - 3px); height: calc(100% - 3px);
+  clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
+  object-fit: cover; background: #0d0f13;
 }
-.tarja-c1 { background: #9e9e9e; transform: translate(2.7%, 8%); }
-.tarja { background: #000000; }
+.capa-vazia {
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.18);
+  background: linear-gradient(150deg, var(--cor), #0d0f13 70%);
+}
 
-/* O TITULO: italico, maiusculo, branco, duas linhas. Ele mora DENTRO da barra
-   preta, e a barra e que manda no tamanho dele. */
+/* O NOME e a maior coisa do cartao. Duas linhas no maximo: nome que quebra em
+   tres empurra o cartao e a lista fica irregular de rolar. */
 .titulo {
-  position: absolute; left: 28%; right: 25%; top: 12%; z-index: 3;
+  position: absolute; left: 25.5%; right: 26%; top: 15%; z-index: 3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 9.5px; font-weight: 700; font-style: italic; line-height: 1.3;
-  letter-spacing: .01em; text-transform: uppercase; color: #fff;
+  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.24;
+  letter-spacing: .005em; text-transform: uppercase; color: #fff;
 }
-/* TOM E BPM: brancos, leves, bem espacados — na arte eles nao sao rodape, sao
-   a segunda informacao da peca. */
+/* TOM e BPM: os dois numeros que um musico procura antes de escolher o que
+   ensaiar. Brancos e espacados, como na arte dele. */
 .dados {
-  position: absolute; left: 35%; right: 38%; top: 60%; z-index: 3;
-  font-size: 10px; font-weight: 400; letter-spacing: .14em;
-  color: #fff;
+  position: absolute; left: 25.5%; right: 46%; top: 66%; z-index: 3;
+  font-size: 10px; font-weight: 500; letter-spacing: .13em;
+  color: rgba(255,255,255,.86);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dados em { font-style: normal; }
-.dados i { font-style: normal; font-size: 9px; letter-spacing: .1em; }
+.dados i { font-style: normal; font-size: 9px; color: var(--mudo); }
 
-/* O FIO que sai do BPM. Na arte dele e branco e parado; aqui e o unico lugar
-   que responde ONDE a musica esta: apagado = so no computador, enchendo =
-   vindo, cheio = toca sozinha no ensaio. Mesma forma, e passa a dizer algo. */
+/* O FIO que sai do BPM, da arte dele — e que aqui responde ONDE a musica esta:
+   apagado = so no computador, enchendo = vindo, cheio = toca sozinha no
+   ensaio. Mesma forma, e passa a dizer alguma coisa. */
 .estado {
-  position: absolute; left: 30%; right: 34%; top: 86%; height: 1.5px; z-index: 3;
-  background: rgba(255,255,255,.42);
+  position: absolute; left: 54%; right: 27%; top: 72%; height: 1.5px; z-index: 3;
+  background: rgba(255,255,255,.2);
 }
 .estado i {
   display: block; height: 100%; width: 0; background: var(--lima);
@@ -274,67 +270,45 @@ li { margin-bottom: 10px; }
 .cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); }
 .cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); }
 
-/* A CAPA: hexagono de ponta esquerda e direita, moldura cinza grossa. Ela sai
-   pra fora do corpo pela esquerda — e a peca que rompe o banner. */
-.lamina {
-  position: absolute; left: 0; top: 0; bottom: 0; width: 32.2%;
-  z-index: 2; line-height: 0;
-  background: #585858;
-  clip-path: polygon(17.8% 0, 80.6% 0, 100% 50%, 80.6% 100%, 17.8% 100%, 0 50%);
-}
-.lamina img,
-.lamina .capa-vazia {
-  position: absolute; left: 3px; top: 3px;
-  width: calc(100% - 6px); height: calc(100% - 6px);
-  clip-path: polygon(17.8% 0, 80.6% 0, 100% 50%, 80.6% 100%, 17.8% 100%, 0 50%);
-  object-fit: cover; background: #0d0f13;
-}
-.capa-vazia {
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.16);
-  background: linear-gradient(150deg, var(--cor), #0d0f13 70%);
-}
-
-/* O PLAY: contorno verde ABERTO (diagonal, topo, lateral) com o triangulo
-   dentro — e o triangulo vaza pra fora do contorno embaixo. Nao e um
-   triangulo solto, e foi isso que eu vinha errando. */
+/* O PLAY: triangulo verde dentro de um contorno aberto, dele. */
 .tocar {
-  position: absolute; right: 0; width: 20%; top: 46%; z-index: 3;
-  line-height: 0; pointer-events: none;
+  position: absolute; right: 10.5%; width: 12.5%; top: 50%; z-index: 3;
+  transform: translateY(-50%); line-height: 0; pointer-events: none;
   transition: transform .12s ease;
 }
 .tocar svg { width: 100%; height: auto; display: block; }
-.cartao-musica:active .tocar { transform: scale(.94); }
+.cartao-musica:active .tocar { transform: translateY(-50%) scale(.93); }
 
-/* LEVAR PRO CELULAR. A arte dele nao mostra onde isso fica, e sumir nao e
-   opcao — feature nao morre por causa de visual. Fica no canto de baixo, no
-   pedaco mais quieto da peca. */
+/* LEVAR PRO CELULAR: a arte dele nao mostra onde fica, e sumir nao e opcao.
+   Vai pro canto de cima, o pedaco mais quieto da peca, e o botao e bem maior
+   que o desenho que carrega — alvo de dedo nao encolhe junto com a arte. */
 .levar {
-  position: absolute; left: 66%; bottom: 1%; width: 11%; height: 30%; z-index: 4;
+  position: absolute; right: 0; top: 0; bottom: 0; width: 9%; z-index: 4;
   display: flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer;
-  color: rgba(182,255,59,.5);
+  color: rgba(182,255,59,.45);
   transition: color .15s ease;
 }
-.levar svg { width: 42%; height: auto; }
+.levar svg { width: 52%; height: auto; }
 .levar:active { color: rgba(182,255,59,.9); }
 .levar.tem { color: var(--lima); }
 .levar.erro { color: var(--ruim); }
 .levar.indo { color: var(--amarelo); }
 
-/* A TRAMA de hexagonos do fundo, como na arte: campo no alto que se dissolve
-   descendo. Ela e o ar da tela, nunca a tela. */
+/* A TRAMA de hexagonos no fundo, dele. Bem apagada: ela e o ar da tela, nunca
+   a tela — atras da busca e dos filtros, com forca de estampa, ela os deixava
+   ilegiveis. */
 #tela::before {
-  content: ''; position: fixed; left: 0; right: 0; top: 0; height: 46vh;
+  content: ''; position: fixed; left: 0; right: 0; top: 0; height: 44vh;
   z-index: -1; pointer-events: none;
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%233d7a1e'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%233d7a1e' stroke-width='1.3'/%3E%3C/svg%3E");
-  background-size: 30px 30px, 30px 30px;
-  background-position: 0 0, 15px 15px;
-  -webkit-mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
-  mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
-  opacity: .5;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%234f9a24'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%234f9a24' stroke-width='1.3'/%3E%3C/svg%3E");
+  background-size: 28px 28px, 28px 28px;
+  background-position: 0 0, 14px 14px;
+  -webkit-mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
+  mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
+  opacity: .22;
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
@@ -904,25 +878,19 @@ function abrirAcervo() {
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
       (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        // as tres chapas do corpo e da barra, de tras pra frente
         '<span class="corpo" aria-hidden="true"></span>' +
-        '<span class="tarja-c2" aria-hidden="true"></span>' +
-        '<span class="tarja-c1" aria-hidden="true"></span>' +
-        '<span class="tarja" aria-hidden="true"></span>' +
-        '<b class="titulo">' + esc(m.titulo) + '</b>' +
-        '<span class="dados">' + info + '</span>' +
-        '<span class="estado" aria-hidden="true"><i></i></span>' +
-        // a capa, por cima de tudo, saindo pela esquerda
         '<span class="lamina">' +
           (m.capa
             ? '<img src="' + comSenha(m.capa) + '" alt="">'
-            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '</span>' +
-        // o play: contorno aberto + triangulo vazando por baixo dele
+        '<b class="titulo">' + esc(m.titulo) + '</b>' +
+        '<span class="dados">' + info + '</span>' +
+        '<span class="estado" aria-hidden="true"><i></i></span>' +
         '<span class="tocar" aria-hidden="true">' +
-          '<svg viewBox="0 0 190 150">' +
-            '<path d="M4 92 L84 8 L186 8 L186 106" fill="none" stroke="#5cb82b" stroke-width="9"/>' +
-            '<path d="M56 52 L136 100 L56 143 Z" fill="#2b7304"/>' +
+          '<svg viewBox="0 0 150 128">' +
+            '<path d="M6 76 L70 8 L144 8 L144 88" fill="none" stroke="#5cb82b" stroke-width="8"/>' +
+            '<path d="M50 40 L112 76 L50 110 Z" fill="#4aa81f"/>' +
           '</svg>' +
         '</span>' +
       '</button>' +
