@@ -43,7 +43,7 @@ export function paginaCelular() {
 <link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 :root {
-  --bg: #0b0c0f; --painel: #101216; --card: #15171c; --cava: #08090c; --cava2: #050609;
+  --bg: #050505; --painel: #101216; --card: #15171c; --cava: #08090c; --cava2: #050609;
   --linha: rgba(255,255,255,0.07); --linha2: rgba(255,255,255,0.14); --linha3: rgba(255,255,255,0.22);
   --txt: #f2f4f7; --txt2: #d1d5db; --mudo: #9ba3af; --mudo2: #8a93a0;
   --lima: #b6ff3b; --lima-b: rgba(182,255,59,0.3); --amarelo: #eab308; --ruim: #f87171;
@@ -162,41 +162,44 @@ header::after {
   text-transform: uppercase; color: var(--mudo2); padding: 2px 1px 0;
 }
 
-/* ██████████ O CARTÃO, COPIADO DA SEGUNDA ARTE DO DONO ██████████
-   Ele mandou a arte pronta e disse "faça exatamente assim". Esta é ela,
-   medida em porcentagem do cartão pra cair igual em qualquer celular.
+/* ██████████ O CARTÃO, MEDIDO PIXEL A PIXEL NA ARTE DO DONO ██████████
+   Ele exportou a arte do Canva em 1080x1920 e mandou o arquivo. Eu decodifiquei
+   o PNG na unha e MEDI: bordas, inclinacoes e cores exatas. Nada aqui foi
+   escolhido por mim.
 
-   Mudou MUITO em relação à primeira estrutura dele, e as diferenças são o
-   ponto:
-     · o play virou um TRIÂNGULO VERDE GRANDE na direita, no lugar do
-       hexagonzinho no meio
-     · a capa virou HEXÁGONO com fio claro em volta
-     · o título é itálico maiúsculo em DUAS linhas (era uma linha só)
-     · o cartão é chapa PRETA: saiu a cor da capa borrada e saiu a trama de
-       cima dele. A trama foi pro fundo da página, que é onde ela está na arte
-     · a chapa preta tem uma placa CINZA atrás, deslocada — aparece uma fresta
-       dela em cima e na direita, e é isso que dá a leitura de peça montada
+   ESTRUTURA (era o que eu vinha errando — nao era tamanho, era ARQUITETURA):
 
-     cartão         270 x 88            proporção 3.07
-     capa           x 0% .. 28%         hexágono, fio claro
-     placa cinza    x 20% .. 90%        ponta cortada em cima à direita
-     chapa preta    x 22% .. 86%        deslocada pra baixo e pra esquerda
-     titulo         x 26%, y 16%        duas linhas
-     tom e bpm      x 26%, y 62%
-     fio/estado     x 52% .. 83%, y 74%
-     triangulo      x 85% .. 100%       centro vertical
-     laminas        x 72% .. 85%, canto de cima
+     · o cartao inteiro e um BANNER INCLINADO, nao um retangulo
+     · a barra do titulo e uma peca SEPARADA, tambem inclinada, flutuando
+       sobre o corpo
+     · atras da barra ha DUAS copias dela, deslocadas: uma cinza-claro perto e
+       uma cinza-media longe. E o que da a leitura de peca impressa fora de
+       registro
+     · o play nao e um triangulo solto: e um CONTORNO verde aberto (diagonal +
+       topo + lateral) com o triangulo dentro, e o triangulo VAZA pra fora do
+       contorno embaixo
+     · a capa e hexagono de ponta esquerda e direita, com moldura cinza grossa
 
-   O que a arte NÃO mostra é onde se leva a música pro celular. Isso não pode
-   sumir — feature não morre por causa de visual. Ficou no canto de cima à
-   direita, que é exatamente onde ele mesmo desenhou na primeira arte. */
-ul { list-style: none; margin: 0; padding: 10px 10px 0; }
-li { margin-bottom: 7px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
+   MEDIDAS (do arquivo dele, em % do cartao de 944x286):
+     capa           x 0..32.2%     hexagono, moldura #585858
+     barra preta    x 26.1..83%    y 5.9..42.7%, aresta direita inclinada 6.9%
+     copia clara    deslocada +1.1% x, +2.8% y     #9e9e9e
+     copia media    deslocada +7.0% x, +12.9% y    #676767
+     titulo         x 28%, y 15%
+     tom e bpm      x 35%, y 65%
+     fio            x 30..63%, y 86%
+     play           x 80..100%, y 46..97%
+
+   CORES (medidas, nao escolhidas):
+     corpo #111111 · barra #000000 · cinzas #9e9e9e / #676767 / #585858
+     contorno do play #5cb82b · triangulo #2b7304 · fundo da tela #050505 */
+ul { list-style: none; margin: 0; padding: 10px 10px 0; overflow: hidden; }
+li { margin-bottom: 10px; }
 
 .cartao-musica {
   --cor: #4a4f57;
   position: relative; isolation: isolate;
-  aspect-ratio: 290 / 85; min-height: 78px;
+  aspect-ratio: 944 / 286; min-height: 96px;
   transition: transform .12s ease;
 }
 .cartao-musica:active { transform: scale(.99); }
@@ -207,46 +210,84 @@ li { margin-bottom: 7px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
   text-align: left; cursor: pointer; font: inherit;
 }
 
-/* A PLACA CINZA, atrás e deslocada. Ela é o motivo da peça parecer montada em
-   camadas: a chapa preta senta em cima dela fora de registro, e o que se vê da
-   cinza é só a fresta de cima e da direita. */
-.banner {
-  position: absolute; left: 22%; right: 12%; top: 0; bottom: 37%;
+/* O CORPO: banner inclinado. As duas arestas caem pra esquerda conforme
+   descem — e a inclinacao e a assinatura da peca dele. */
+.corpo {
+  position: absolute; top: 2%; bottom: 2%; left: 9%; right: 0;
   z-index: 0; pointer-events: none;
-  background: #44474d;
-  /* faixa fina em cima + coluna estreita na ponta: o degrau da arte dele.
-     Antes isto era um bloco de 82% da altura, e o cinza acabava sendo a peça
-     mais pesada do cartão — bem o contrário do desenho. */
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 85% 100%, 85% 11%, 0 11%);
-}
-/* A CHAPA PRETA onde o texto mora, com o canto de cima à direita cortado. */
-.chapa {
-  position: absolute; left: 19%; right: 14%; top: 6%; bottom: 2%;
-  z-index: 0; pointer-events: none;
-  background: #0c0d10;
-  clip-path: polygon(0 0, 88% 0, 100% 32%, 100% 100%, 0 100%);
+  background: #111111;
+  clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%);
 }
 
-/* A CAPA EM HEXÁGONO, com fio claro em volta. O fio é a peça DE BAIXO pintada
-   de claro e a imagem por cima, encolhida — contorno de verdade não sobrevive
-   a clip-path: o recorte come a borda e as diagonais ficam sem fio. É o mesmo
-   bug que já apareceu meia dúzia de vezes neste projeto. */
+/* A BARRA DO TITULO e as DUAS COPIAS deslocadas atras dela. Tres chapas do
+   mesmo formato, fora de registro: e o que faz a peca parecer impressa e nao
+   desenhada. A mais longe e a mais escura, senao ela salta na frente. */
+/* TARJA, nao "barra": o nome .barra ja era o controle de VOLUME, definido mais
+   abaixo neste mesmo arquivo. Vindo depois, ele apagava o preto daqui com
+   background:none, e a barra do titulo saia CINZA. Nome repetido em folha de
+   estilo nao da erro — da o desenho errado, calado. */
+.tarja, .tarja-c1, .tarja-c2 {
+  position: absolute; left: 26.1%; width: 51.4%; top: 5.9%; height: 36.8%;
+  z-index: 0; pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 93.1% 100%, 0 100%);
+}
+/* medida na arte: esquerda quase junto da tarja (+8px de 944), direita bem
+   alem (+63px). Nao e a tarja deslocada — e uma chapa maior. */
+.tarja-c2 {
+  background: #676767; left: 26.9%; width: 60%; top: 8.7%; height: 42%;
+}
+.tarja-c1 { background: #9e9e9e; transform: translate(2.7%, 8%); }
+.tarja { background: #000000; }
+
+/* O TITULO: italico, maiusculo, branco, duas linhas. Ele mora DENTRO da barra
+   preta, e a barra e que manda no tamanho dele. */
+.titulo {
+  position: absolute; left: 28%; right: 25%; top: 12%; z-index: 3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 9.5px; font-weight: 700; font-style: italic; line-height: 1.3;
+  letter-spacing: .01em; text-transform: uppercase; color: #fff;
+}
+/* TOM E BPM: brancos, leves, bem espacados — na arte eles nao sao rodape, sao
+   a segunda informacao da peca. */
+.dados {
+  position: absolute; left: 35%; right: 38%; top: 60%; z-index: 3;
+  font-size: 10px; font-weight: 400; letter-spacing: .14em;
+  color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dados em { font-style: normal; }
+.dados i { font-style: normal; font-size: 9px; letter-spacing: .1em; }
+
+/* O FIO que sai do BPM. Na arte dele e branco e parado; aqui e o unico lugar
+   que responde ONDE a musica esta: apagado = so no computador, enchendo =
+   vindo, cheio = toca sozinha no ensaio. Mesma forma, e passa a dizer algo. */
+.estado {
+  position: absolute; left: 30%; right: 34%; top: 86%; height: 1.5px; z-index: 3;
+  background: rgba(255,255,255,.42);
+}
+.estado i {
+  display: block; height: 100%; width: 0; background: var(--lima);
+  transition: width .35s ease;
+}
+.cartao-musica.aqui .estado i { width: 100%; }
+.cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); }
+.cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); }
+
+/* A CAPA: hexagono de ponta esquerda e direita, moldura cinza grossa. Ela sai
+   pra fora do corpo pela esquerda — e a peca que rompe o banner. */
 .lamina {
-  position: absolute; left: 1%; top: 3%; bottom: 3%; width: 25%;
+  position: absolute; left: 0; top: 0; bottom: 0; width: 32.2%;
   z-index: 2; line-height: 0;
-  background: rgba(255,255,255,.62);
-  clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
+  background: #585858;
+  clip-path: polygon(17.8% 0, 80.6% 0, 100% 50%, 80.6% 100%, 17.8% 100%, 0 50%);
 }
 .lamina img,
 .lamina .capa-vazia {
-  position: absolute; left: 2px; top: 2px;
-  /* medida na mão de propósito: width:auto num <img> posicionado vale a
-     largura NATURAL da foto, não a da caixa — a imagem saía inteira pra fora
-     e só sobrava o fio claro na tela */
-  width: calc(100% - 4px); height: calc(100% - 4px);
-  clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
-  object-fit: cover;
-  background: #0d0f13;
+  position: absolute; left: 3px; top: 3px;
+  width: calc(100% - 6px); height: calc(100% - 6px);
+  clip-path: polygon(17.8% 0, 80.6% 0, 100% 50%, 80.6% 100%, 17.8% 100%, 0 50%);
+  object-fit: cover; background: #0d0f13;
 }
 .capa-vazia {
   display: flex; align-items: center; justify-content: center;
@@ -254,93 +295,46 @@ li { margin-bottom: 7px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
   background: linear-gradient(150deg, var(--cor), #0d0f13 70%);
 }
 
-/* O TÍTULO EM DUAS LINHAS, itálico e maiúsculo, como na arte. Duas linhas
-   cabem porque a altura do cartão é travada pela proporção — não é o texto que
-   manda no tamanho da peça, é a peça que manda no texto.
-   ELE COMEÇA DEPOIS DA CAPA (32%), e isso não é detalhe: eu tinha posto em 26%
-   com a capa indo até 28%, e o nome da música ficava POR BAIXO do hexágono.
-   Ninguém conseguia ler o começo de nada. Eu só não vi porque estava olhando o
-   cartão numa maquete solta em vez da tela inteira. */
-.titulo {
-  position: absolute; left: 30%; right: 19%; top: 13%; z-index: 3;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: 9.5px; font-weight: 700; font-style: italic; line-height: 1.32;
-  letter-spacing: .015em; text-transform: uppercase;
-}
-/* TOM E BPM, brancos e fortes. São o que um músico procura primeiro, e na arte
-   dele eles são a segunda linha inteira — não um rodapé apagado. */
-.dados {
-  position: absolute; left: 33%; right: 40%; top: 52%; z-index: 3;
-  font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
-  color: var(--txt);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.dados em { font-style: normal; }
-.dados i { font-style: normal; font-family: var(--mono); font-size: 9px; color: var(--mudo); }
-
-/* O FIO que sai do BPM e vai até a ponta da chapa. Na arte ele é branco e
-   parado; aqui ele é o único lugar que responde ONDE a música está —
-   apagado = só no computador, enchendo = vindo, cheio = toca sozinha no
-   ensaio. Mesma forma, e passa a dizer alguma coisa. */
-.estado {
-  position: absolute; left: 61%; right: 24%; top: 58%; height: 1.5px; z-index: 3;
-  background: rgba(255,255,255,.34);
-}
-.estado i {
-  display: block; height: 100%; width: 0; background: var(--lima);
-  box-shadow: 0 0 10px rgba(182,255,59,.7);
-  transition: width .35s ease;
-}
-.cartao-musica.aqui .estado i { width: 100%; }
-.cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); box-shadow: none; }
-.cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); box-shadow: none; }
-
-/* O TRIÂNGULO VERDE GRANDE. Na arte ele é a peça mais forte do cartão, e está
-   certo: tocar é a coisa que se faz aqui. */
+/* O PLAY: contorno verde ABERTO (diagonal, topo, lateral) com o triangulo
+   dentro — e o triangulo vaza pra fora do contorno embaixo. Nao e um
+   triangulo solto, e foi isso que eu vinha errando. */
 .tocar {
-  position: absolute; right: 1%; height: 40%; top: 50%; z-index: 3;
-  transform: translateY(-50%); line-height: 0; pointer-events: none;
+  position: absolute; right: 0; width: 20%; top: 46%; z-index: 3;
+  line-height: 0; pointer-events: none;
   transition: transform .12s ease;
 }
-.tocar svg { height: 100%; width: auto; display: block; }
-.cartao-musica:active .tocar { transform: translateY(-50%) scale(.93); }
+.tocar svg { width: 100%; height: auto; display: block; }
+.cartao-musica:active .tocar { transform: scale(.94); }
 
-/* LEVAR PRO CELULAR. A arte nova não mostra onde isso fica, e sumir não é
-   opção — feature não morre por causa de visual. Voltou pro canto de cima à
-   direita, que é onde ele mesmo desenhou na primeira arte.
-   O botão é bem maior que o desenho que carrega: alvo de dedo não encolhe
-   junto com a arte. */
+/* LEVAR PRO CELULAR. A arte dele nao mostra onde isso fica, e sumir nao e
+   opcao — feature nao morre por causa de visual. Fica no canto de baixo, no
+   pedaco mais quieto da peca. */
 .levar {
-  position: absolute; right: 15%; bottom: 0; width: 11%; height: 38%; z-index: 4;
+  position: absolute; left: 66%; bottom: 1%; width: 11%; height: 30%; z-index: 4;
   display: flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer;
   color: rgba(182,255,59,.5);
   transition: color .15s ease;
 }
-.levar svg { width: 40%; height: auto; }
+.levar svg { width: 42%; height: auto; }
 .levar:active { color: rgba(182,255,59,.9); }
-.levar.tem { color: var(--lima); filter: drop-shadow(0 0 8px rgba(182,255,59,.55)); }
+.levar.tem { color: var(--lima); }
 .levar.erro { color: var(--ruim); }
 .levar.indo { color: var(--amarelo); }
 
-/* A TRAMA saiu de cima do cartão e foi pro FUNDO DA PÁGINA, que é onde ela
-   está na arte dele: um campo de hexágonos no alto, morrendo conforme desce.
-   Em cima do cartão ela brigava com o texto; atrás de tudo ela é o ar da tela.
-   É a mesma retícula da tela do computador — celular e PC falam a mesma
-   língua. */
+/* A TRAMA de hexagonos do fundo, como na arte: campo no alto que se dissolve
+   descendo. Ela e o ar da tela, nunca a tela. */
 #tela::before {
   content: ''; position: fixed; left: 0; right: 0; top: 0; height: 46vh;
   z-index: -1; pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.3'/%3E%3C/svg%3E");
-  background-size: 26px 26px, 26px 26px;
-  background-position: 0 0, 13px 13px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%233d7a1e'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%233d7a1e' stroke-width='1.3'/%3E%3C/svg%3E");
+  background-size: 30px 30px, 30px 30px;
+  background-position: 0 0, 15px 15px;
   -webkit-mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
   mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
-  /* ELA PRECISA SER O AR DA TELA, NÃO A TELA. Na primeira foto de verdade a
-     trama passava atrás da busca e dos filtros com força de estampa, e os dois
-     ficaram ilegíveis. Textura que disputa com texto não é textura. */
-  opacity: .11;
+  opacity: .5;
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
@@ -910,28 +904,28 @@ function abrirAcervo() {
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
       (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        // 1. a placa cinza atrás e 2. a chapa preta em cima, fora de registro
-        '<span class="banner" aria-hidden="true"></span>' +
-        '<span class="chapa" aria-hidden="true"></span>' +
-        // 3. a capa em hexágono, com fio claro
+        // as tres chapas do corpo e da barra, de tras pra frente
+        '<span class="corpo" aria-hidden="true"></span>' +
+        '<span class="tarja-c2" aria-hidden="true"></span>' +
+        '<span class="tarja-c1" aria-hidden="true"></span>' +
+        '<span class="tarja" aria-hidden="true"></span>' +
+        '<b class="titulo">' + esc(m.titulo) + '</b>' +
+        '<span class="dados">' + info + '</span>' +
+        '<span class="estado" aria-hidden="true"><i></i></span>' +
+        // a capa, por cima de tudo, saindo pela esquerda
         '<span class="lamina">' +
           (m.capa
             ? '<img src="' + comSenha(m.capa) + '" alt="">'
-            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
+            : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '</span>' +
-        // 4. o nome, em duas linhas
-        '<b class="titulo">' + esc(m.titulo) + '</b>' +
-        // 5. tom e bpm, fortes
-        '<span class="dados">' + info + '</span>' +
-        // 6. o fio que sai do bpm — e que diz onde a música está
-        '<span class="estado" aria-hidden="true"><i></i></span>' +
-        // 7. o triângulo verde grande
+        // o play: contorno aberto + triangulo vazando por baixo dele
         '<span class="tocar" aria-hidden="true">' +
-          '<svg viewBox="0 0 34 40"><path d="M2 1.5 32.5 20 2 38.5z" fill="#b6ff3b"/></svg>' +
+          '<svg viewBox="0 0 190 150">' +
+            '<path d="M4 92 L84 8 L186 8 L186 106" fill="none" stroke="#5cb82b" stroke-width="9"/>' +
+            '<path d="M56 52 L136 100 L56 143 Z" fill="#2b7304"/>' +
+          '</svg>' +
         '</span>' +
       '</button>' +
-      // levar pro celular: a arte nova nao mostra onde fica, e sumir nao e
-      // opcao. Voltou pro canto de cima, que e onde ele desenhou na primeira.
       '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
         '<svg viewBox="0 0 28 40" fill="currentColor" aria-hidden="true">' +
         '<path d="M8 1h19v14H14z"/><path d="M3 19h20L13 34z" opacity=".6"/></svg>' +
