@@ -103,7 +103,9 @@ header::after {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--lima); color: #0b0c0f;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  box-shadow: 0 0 26px rgba(182,255,59,.35);
+  /* halo curto. Aberto demais ele virava uma mancha verde atrás da palavra
+     MPTRIX, e marca com mancha em volta lê como imagem mal recortada. */
+  box-shadow: 0 0 12px rgba(182,255,59,.28);
 }
 /* a marca em letra pesada e larga, como no cartaz */
 .marca {
@@ -190,13 +192,27 @@ li { margin-bottom: 8px; }
 
 .cartao-musica {
   --cor: #4a4f57;
-  position: relative;
+  position: relative; isolation: isolate;
   display: flex; align-items: stretch;
-  background: #15171d;
+  /* NÃO É CHAPADO. Preto liso de ponta a ponta deixa a lista com cara de
+     bloco único; a chapa clareia um fio no alto e escurece no pé, e é isso que
+     faz cada música virar uma PEÇA. */
+  background: linear-gradient(178deg, #191c23, #131519 62%);
   clip-path: polygon(0 0, 100% 0, 100% 70%, 96.5% 100%, 3.5% 100%, 0 30%);
-  transition: transform .12s ease, background .12s ease;
+  transition: transform .12s ease, filter .12s ease;
 }
-.cartao-musica:active { transform: scale(.988); background: #1a1d24; }
+/* A COR DA PRÓPRIA CAPA, vazando de trás dela. Foi a primeira coisa que o dono
+   reclamou nesta tela — "tudo com cor igual" — e eu tinha resolvido tirando a
+   média da imagem de cada música. Perdi de novo quando fui copiar a arte dele,
+   que é um cartão só repetido cinco vezes e portanto não tem esse problema.
+   Fraca de propósito: ela dá variedade à lista, não protagonismo. */
+.cartao-musica::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 46%;
+  z-index: -1; pointer-events: none;
+  background: radial-gradient(58% 78% at 14% 50%, var(--cor), transparent 72%);
+  opacity: .3;
+}
+.cartao-musica:active { transform: scale(.988); filter: brightness(1.35); }
 /* a aresta clara no alto — o único brilho da peça, e vem da arte dele */
 .cartao-musica::before {
   content: ''; position: absolute; left: 19%; right: 7%; top: 0; height: 1.5px;
@@ -207,7 +223,7 @@ li { margin-bottom: 8px; }
 .abrir {
   flex: 1 1 auto; min-width: 0;
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 2px 13px 11px;
+  padding: 13px 2px 14px 11px;
   background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
@@ -217,8 +233,9 @@ li { margin-bottom: 8px; }
    sobrevive a clip-path (o recorte come a borda e as diagonais ficam sem fio). */
 .lamina {
   flex: none; position: relative; width: 58px; height: 64px; line-height: 0;
-  background: rgba(255,255,255,.28);
+  background: rgba(255,255,255,.26);
   clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
+  transition: background .2s ease;;
 }
 .lamina img,
 .lamina .capa-vazia {
@@ -239,9 +256,9 @@ li { margin-bottom: 8px; }
 .corpo b {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.26;
-  letter-spacing: .005em; text-transform: uppercase; color: #fff;
-  margin-bottom: 6px;
+  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.3;
+  letter-spacing: .008em; text-transform: uppercase; color: #fff;
+  margin-bottom: 7px;
 }
 /* tom e BPM são os dois números que um músico procura antes de escolher o que
    ensaiar — vêm em branco cheio; o resto da linha recua */
@@ -286,13 +303,19 @@ li { margin-bottom: 8px; }
    do cartão ele parecia risco perdido; encostado na borda ele lê como medidor. */
 .estado {
   position: absolute; left: 3.5%; right: 3.5%; bottom: 0; height: 2px; z-index: 2;
-  background: rgba(255,255,255,.06); pointer-events: none;
+  background: rgba(255,255,255,.09); pointer-events: none;
 }
 .estado i {
   display: block; height: 100%; width: 0; background: var(--lima);
+  box-shadow: 0 0 8px rgba(182,255,59,.55);
   transition: width .35s ease;
 }
 .cartao-musica.aqui .estado i { width: 100%; }
+/* JÁ ESTÁ NO APARELHO: a moldura da capa acende. É a única informação do cartão
+   que muda o que dá pra fazer longe do computador, e por isso é a única que
+   ganha cor — e ela acende na peça que o olho bate primeiro, não num canto. */
+.cartao-musica.aqui .lamina { background: rgba(182,255,59,.75); }
+.cartao-musica.indo .lamina { background: rgba(234,179,8,.7); }
 .cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); }
 .cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); }
 
