@@ -163,63 +163,61 @@ header::after {
 }
 
 /* ██████████ O CARTÃO ██████████
-   O dono desenhou uma arte no Canva e pediu copia identica. Eu tentei quatro
-   vezes, medi o PNG pixel a pixel, e o resultado continuou ruim — ele desistiu
-   e mandou: "faz algo decente".
+   Terceira reconstrução, e a lição que faltava: eu vinha PLANTANDO cada peça
+   numa coordenada — capa em tal %, título em tal %, play em tal %. Numa arte
+   parada isso funciona, porque tudo tem sempre o mesmo tamanho. Numa lista de
+   14 músicas de nomes desiguais, não: as peças ficam soltas no preto, sobra
+   buraco embaixo do cartão, e a peça toda parece inacabada. Foi o que o dono
+   viu e disse — "está com cara horrível".
 
-   Por que a copia falhava, e vale ficar escrito: a arte dele e um CARTAZ. Um
-   cartao repetido cinco vezes, mesmo nome, mesma capa, mesmo tom, muito ar em
-   volta de cada peca. Aqui sao 14 musicas de nomes desiguais numa lista que se
-   rola com o polegar. Reproduzir as proporcoes de um cartaz numa lista deu
-   exatamente o que a foto mostrou: capa gigante engolindo o texto, chapa cinza
-   com cara de coisa inacabada, e um vazio embaixo de tudo.
+   Agora o cartão é uma LINHA ARRUMADA: capa, texto, play e levar em fila, tudo
+   centrado na altura. Quem decide a posição é o navegador, e por isso nada
+   fica solto — nome curto ou nome comprido, a linha continua fechada.
 
-   Entao o que ficou dele NAO foi a medida — foi a LINGUAGEM:
-     · corte angular no corpo
-     · capa em hexagono com fio claro
-     · titulo italico maiusculo
-     · play verde dentro de um contorno aberto
-     · uma aresta clara marcando o alto da tarja
+   Da arte do dono ficou a linguagem: as pontas cortadas, a capa em hexágono com
+   fio claro, o título itálico maiúsculo, o verde do play, a aresta clara no
+   alto da peça.
 
-   E o que manda agora e a lista: o nome da musica e a maior coisa do cartao,
-   cabem sete na tela, e nada disputa com o texto. */
+   Duas mudanças de cabeça em relação à tentativa anterior:
+     · O PLAY VIROU CHEIO. O contorno aberto que ele desenhou funciona grande,
+       num cartaz; a 30px ele lê como desenho quebrado, não como botão. Forma
+       cheia lê pequena, contorno não.
+     · O FIO DE ESTADO DESCEU pro pé do cartão, de ponta a ponta. Boiando no
+       meio ele parecia risco perdido; encostado na borda ele lê como medidor,
+       que é o que ele é. */
 ul { list-style: none; margin: 0; padding: 10px 11px 0; overflow: hidden; }
 li { margin-bottom: 8px; }
 
 .cartao-musica {
   --cor: #4a4f57;
-  position: relative; isolation: isolate;
-  aspect-ratio: 345 / 84; min-height: 76px;
-  transition: transform .12s ease;
+  position: relative;
+  display: flex; align-items: stretch;
+  background: #15171d;
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 96.5% 100%, 3.5% 100%, 0 30%);
+  transition: transform .12s ease, background .12s ease;
 }
-.cartao-musica:active { transform: scale(.988); }
+.cartao-musica:active { transform: scale(.988); background: #1a1d24; }
+/* a aresta clara no alto — o único brilho da peça, e vem da arte dele */
+.cartao-musica::before {
+  content: ''; position: absolute; left: 19%; right: 7%; top: 0; height: 1.5px;
+  z-index: 2; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,255,255,.32), rgba(255,255,255,.04));
+}
 
 .abrir {
-  position: absolute; inset: 0; z-index: 1;
-  padding: 0; background: none; border: none; color: var(--txt);
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 2px 13px 11px;
+  background: none; border: none; color: var(--txt);
   text-align: left; cursor: pointer; font: inherit;
 }
 
-/* O CORPO: chapa escura com as duas pontas cortadas em diagonal. O corte e o
-   que sobra da linguagem dele — discreto, porque num cartao de 84px de altura
-   uma diagonal grande vira buraco. */
-.corpo {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: #131519;
-  clip-path: polygon(0 0, 100% 0, 100% 74%, 97.4% 100%, 2.6% 100%, 0 26%);
-}
-/* a aresta clara no alto, da arte dele: o unico brilho da peca */
-.corpo::after {
-  content: ''; position: absolute; left: 21%; right: 8%; top: 0; height: 1.5px;
-  background: linear-gradient(90deg, rgba(255,255,255,.34), rgba(255,255,255,.06));
-}
-
-/* A CAPA em hexagono com fio claro — dele. Menor do que na arte porque aqui o
-   nome da musica e que precisa do espaco: e ele que a pessoa procura. */
+/* A CAPA em hexágono com fio claro em volta — dele. O fio é a peça de baixo
+   pintada de claro com a imagem por cima, encolhida: contorno de verdade não
+   sobrevive a clip-path (o recorte come a borda e as diagonais ficam sem fio). */
 .lamina {
-  position: absolute; left: 2.5%; top: 9%; bottom: 9%; width: 19.5%;
-  z-index: 2; line-height: 0;
-  background: rgba(255,255,255,.42);
+  flex: none; position: relative; width: 58px; height: 64px; line-height: 0;
+  background: rgba(255,255,255,.28);
   clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
 }
 .lamina img,
@@ -235,32 +233,60 @@ li { margin-bottom: 8px; }
   background: linear-gradient(150deg, var(--cor), #0d0f13 70%);
 }
 
-/* O NOME e a maior coisa do cartao. Duas linhas no maximo: nome que quebra em
-   tres empurra o cartao e a lista fica irregular de rolar. */
-.titulo {
-  position: absolute; left: 25.5%; right: 26%; top: 15%; z-index: 3;
+/* O NOME é a maior coisa do cartão: é ele que a pessoa procura. Duas linhas no
+   máximo — nome que quebra em três deixa a lista irregular de rolar. */
+.corpo { flex: 1 1 auto; min-width: 0; }
+.corpo b {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.24;
+  font-size: 12.5px; font-weight: 700; font-style: italic; line-height: 1.26;
   letter-spacing: .005em; text-transform: uppercase; color: #fff;
+  margin-bottom: 6px;
 }
-/* TOM e BPM: os dois numeros que um musico procura antes de escolher o que
-   ensaiar. Brancos e espacados, como na arte dele. */
+/* tom e BPM são os dois números que um músico procura antes de escolher o que
+   ensaiar — vêm em branco cheio; o resto da linha recua */
 .dados {
-  position: absolute; left: 25.5%; right: 46%; top: 66%; z-index: 3;
-  font-size: 10px; font-weight: 500; letter-spacing: .13em;
-  color: rgba(255,255,255,.86);
+  display: block;
+  font-size: 9.5px; font-weight: 500; letter-spacing: .13em;
+  color: rgba(255,255,255,.55);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.dados em { font-style: normal; }
-.dados i { font-style: normal; font-size: 9px; color: var(--mudo); }
+.dados em { font-style: normal; color: #fff; }
+.dados i { font-style: normal; }
 
-/* O FIO que sai do BPM, da arte dele — e que aqui responde ONDE a musica esta:
-   apagado = so no computador, enchendo = vindo, cheio = toca sozinha no
-   ensaio. Mesma forma, e passa a dizer alguma coisa. */
+/* O PLAY: triângulo CHEIO. O contorno aberto da arte dele funciona grande, num
+   cartaz; a 30px ele lê como desenho quebrado. Forma cheia lê pequena. */
+.tocar {
+  flex: none; width: 30px; line-height: 0; pointer-events: none;
+  transition: transform .12s ease;
+}
+.tocar svg { width: 100%; height: auto; display: block; }
+.cartao-musica:active .tocar { transform: scale(.92); }
+
+/* LEVAR PRO CELULAR: coluna própria, alvo grande pro dedo, calada quando não
+   tem nada a dizer e acesa quando a música já está no aparelho. */
+.levar {
+  flex: none; width: 42px; align-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  /* mais apagado e menor que o play: tocar e o que se faz aqui toda hora;
+     levar e o que se faz uma vez por musica. Dois verdes do mesmo tamanho
+     brigavam, e o olho nao sabia qual era o principal. */
+  color: rgba(182,255,59,.3);
+  transition: color .15s ease;
+}
+.levar svg { width: 17px; height: auto; }
+.levar:active { color: rgba(182,255,59,.9); }
+.levar.tem { color: var(--lima); }
+.levar.erro { color: var(--ruim); }
+.levar.indo { color: var(--amarelo); }
+
+/* ONDE A MÚSICA ESTÁ: um fio no pé do cartão, de ponta a ponta. Vazio = só no
+   computador, enchendo = vindo, cheio = toca sozinha no ensaio. Boiando no meio
+   do cartão ele parecia risco perdido; encostado na borda ele lê como medidor. */
 .estado {
-  position: absolute; left: 54%; right: 27%; top: 72%; height: 1.5px; z-index: 3;
-  background: rgba(255,255,255,.2);
+  position: absolute; left: 3.5%; right: 3.5%; bottom: 0; height: 2px; z-index: 2;
+  background: rgba(255,255,255,.06); pointer-events: none;
 }
 .estado i {
   display: block; height: 100%; width: 0; background: var(--lima);
@@ -270,34 +296,9 @@ li { margin-bottom: 8px; }
 .cartao-musica.indo .estado i { width: var(--quanto, 0%); background: var(--amarelo); }
 .cartao-musica.ruim .estado i { width: 100%; background: var(--ruim); }
 
-/* O PLAY: triangulo verde dentro de um contorno aberto, dele. */
-.tocar {
-  position: absolute; right: 10.5%; width: 12.5%; top: 50%; z-index: 3;
-  transform: translateY(-50%); line-height: 0; pointer-events: none;
-  transition: transform .12s ease;
-}
-.tocar svg { width: 100%; height: auto; display: block; }
-.cartao-musica:active .tocar { transform: translateY(-50%) scale(.93); }
-
-/* LEVAR PRO CELULAR: a arte dele nao mostra onde fica, e sumir nao e opcao.
-   Vai pro canto de cima, o pedaco mais quieto da peca, e o botao e bem maior
-   que o desenho que carrega — alvo de dedo nao encolhe junto com a arte. */
-.levar {
-  position: absolute; right: 0; top: 0; bottom: 0; width: 9%; z-index: 4;
-  display: flex; align-items: center; justify-content: center;
-  background: none; border: none; cursor: pointer;
-  color: rgba(182,255,59,.45);
-  transition: color .15s ease;
-}
-.levar svg { width: 52%; height: auto; }
-.levar:active { color: rgba(182,255,59,.9); }
-.levar.tem { color: var(--lima); }
-.levar.erro { color: var(--ruim); }
-.levar.indo { color: var(--amarelo); }
-
-/* A TRAMA de hexagonos no fundo, dele. Bem apagada: ela e o ar da tela, nunca
-   a tela — atras da busca e dos filtros, com forca de estampa, ela os deixava
-   ilegiveis. */
+/* A TRAMA de hexágonos no fundo, da arte dele. Bem apagada: ela é o ar da tela,
+   nunca a tela — com força de estampa ela deixava a busca e os filtros
+   ilegíveis. */
 #tela::before {
   content: ''; position: fixed; left: 0; right: 0; top: 0; height: 44vh;
   z-index: -1; pointer-events: none;
@@ -308,7 +309,7 @@ li { margin-bottom: 8px; }
   background-position: 0 0, 14px 14px;
   -webkit-mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
   mask-image: linear-gradient(198deg, #000 0%, rgba(0,0,0,.28) 28%, transparent 58%);
-  opacity: .22;
+  opacity: .2;
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }
@@ -855,12 +856,13 @@ function abrirAcervo() {
     // rodapé apagado com tudo espremido. Quantas faixas e a duração continuam
     // na tela da música; aqui ficam os dois números que um músico procura
     // antes de escolher o que ensaiar.
+    // TOM e BPM em branco cheio (sao o que um musico procura antes de escolher
+    // o que ensaiar); quantas faixas recua, porque e contexto e nao decisao.
     var info = '';
     if (m.tom) info += '<em>' + m.tom + '</em>';
-    if (m.bpm) info += (info ? '&nbsp;&nbsp;&nbsp;' : '') + '<em>' + m.bpm + ' BPM</em>';
-    // curto de proposito: e o mesmo lugar onde cabe "F# 143 BPM", e ali
-    // "MÚSICA COMPLETA" saia cortada
-    if (!info) info = '<i>' + (m.inteira ? 'COMPLETA' : m.faixas.length + ' FAIXAS') + '</i>';
+    if (m.bpm) info += (info ? ' &nbsp; ' : '') + '<em>' + m.bpm + ' BPM</em>';
+    info += (info ? ' &nbsp;·&nbsp; ' : '') +
+      (m.inteira ? 'MUSICA COMPLETA' : m.faixas.length + ' FAIXAS');
 
     // A COR VEM DA PRÓPRIA CAPA. "Tudo com cor igual" foi a queixa, e cor
     // inventada seria enfeite — que já falhou duas vezes aqui. Esta é a média
@@ -878,26 +880,22 @@ function abrirAcervo() {
     html += '<li><div class="cartao-musica' + (aqui ? ' aqui' : '') + '"' +
       (estilo.length ? ' style="' + estilo.join(';') + '"' : '') + '>' +
       '<button class="abrir" data-i="' + n + '">' +
-        '<span class="corpo" aria-hidden="true"></span>' +
         '<span class="lamina">' +
           (m.capa
             ? '<img src="' + comSenha(m.capa) + '" alt="">'
             : '<span class="capa-vazia"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>') +
         '</span>' +
-        '<b class="titulo">' + esc(m.titulo) + '</b>' +
-        '<span class="dados">' + info + '</span>' +
-        '<span class="estado" aria-hidden="true"><i></i></span>' +
+        '<span class="corpo"><b>' + esc(m.titulo) + '</b>' +
+        '<span class="dados">' + info + '</span></span>' +
         '<span class="tocar" aria-hidden="true">' +
-          '<svg viewBox="0 0 150 128">' +
-            '<path d="M6 76 L70 8 L144 8 L144 88" fill="none" stroke="#5cb82b" stroke-width="8"/>' +
-            '<path d="M50 40 L112 76 L50 110 Z" fill="#4aa81f"/>' +
-          '</svg>' +
+          '<svg viewBox="0 0 30 34"><path d="M3 1.5 L28 17 L3 32.5 Z" fill="#5cb82b"/></svg>' +
         '</span>' +
       '</button>' +
       '<button class="levar' + (aqui ? ' tem' : '') + '" data-levar="' + m.chave + '" data-i="' + n + '" aria-label="Levar pro celular">' +
-        '<svg viewBox="0 0 28 40" fill="currentColor" aria-hidden="true">' +
-        '<path d="M8 1h19v14H14z"/><path d="M3 19h20L13 34z" opacity=".6"/></svg>' +
+        '<svg viewBox="0 0 28 34" fill="currentColor" aria-hidden="true">' +
+        '<path d="M9 2h10v11H9z"/><path d="M3 17h22L14 31z"/></svg>' +
       '</button>' +
+      '<span class="estado" aria-hidden="true"><i></i></span>' +
     '</div></li>';
   }
   tela.innerHTML = html + '</ul>';
