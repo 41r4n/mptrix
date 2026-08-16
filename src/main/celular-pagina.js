@@ -85,15 +85,9 @@ header {
   border-bottom: 1px solid var(--linha);
   background: var(--bg);
 }
-/* a retícula, entrando pela direita e morrendo antes do texto */
-header::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background-image: radial-gradient(circle at center, rgba(182,255,59,.55) 1.1px, transparent 1.5px);
-  background-size: 13px 13px;
-  -webkit-mask-image: linear-gradient(255deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 62%);
-  mask-image: linear-gradient(255deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 62%);
-  opacity: .5;
-}
+/* A retícula de BOLINHAS que morava aqui saiu. A trama de hexágonos do fundo
+   da página já passa por trás do cabeçalho, e duas texturas empilhadas viram
+   sujeira — ainda mais sendo de formatos diferentes. */
 /* a lasca escura angulada, atrás da marca — a mesma do cartaz dele */
 header::after {
   content: ''; position: absolute; left: -30px; top: -20px; bottom: -20px; width: 118px;
@@ -235,7 +229,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    a clip-path: o recorte come a borda e as diagonais ficam sem fio. É o mesmo
    bug que já apareceu meia dúzia de vezes neste projeto. */
 .lamina {
-  position: absolute; left: 0; top: 5%; bottom: 5%; width: 28%;
+  position: absolute; left: 0; top: 8%; bottom: 8%; width: 27%;
   z-index: 2; line-height: 0;
   background: rgba(255,255,255,.62);
   clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
@@ -259,9 +253,13 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 
 /* O TÍTULO EM DUAS LINHAS, itálico e maiúsculo, como na arte. Duas linhas
    cabem porque a altura do cartão é travada pela proporção — não é o texto que
-   manda no tamanho da peça, é a peça que manda no texto. */
+   manda no tamanho da peça, é a peça que manda no texto.
+   ELE COMEÇA DEPOIS DA CAPA (32%), e isso não é detalhe: eu tinha posto em 26%
+   com a capa indo até 28%, e o nome da música ficava POR BAIXO do hexágono.
+   Ninguém conseguia ler o começo de nada. Eu só não vi porque estava olhando o
+   cartão numa maquete solta em vez da tela inteira. */
 .titulo {
-  position: absolute; left: 26%; right: 18%; top: 15%; z-index: 3;
+  position: absolute; left: 32%; right: 17%; top: 20%; z-index: 3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 11.5px; font-weight: 700; font-style: italic; line-height: 1.28;
@@ -270,7 +268,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
 /* TOM E BPM, brancos e fortes. São o que um músico procura primeiro, e na arte
    dele eles são a segunda linha inteira — não um rodapé apagado. */
 .dados {
-  position: absolute; left: 26%; right: 50%; top: 62%; z-index: 3;
+  position: absolute; left: 32%; right: 48%; top: 62%; z-index: 3;
   font-size: 11px; font-weight: 700; letter-spacing: .04em;
   color: var(--txt);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -283,7 +281,7 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    apagado = só no computador, enchendo = vindo, cheio = toca sozinha no
    ensaio. Mesma forma, e passa a dizer alguma coisa. */
 .estado {
-  position: absolute; left: 52%; right: 30%; top: 74%; height: 2px; z-index: 3;
+  position: absolute; left: 54%; right: 31%; top: 72%; height: 2px; z-index: 3;
   background: rgba(255,255,255,.34);
 }
 .estado i {
@@ -312,13 +310,13 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    O botão é bem maior que o desenho que carrega: alvo de dedo não encolhe
    junto com a arte. */
 .levar {
-  position: absolute; right: 15%; top: 46%; width: 14%; height: 54%; z-index: 4;
+  position: absolute; right: 16%; bottom: 0; width: 13%; height: 46%; z-index: 4;
   display: flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer;
   color: rgba(182,255,59,.5);
   transition: color .15s ease;
 }
-.levar svg { width: 58%; height: auto; }
+.levar svg { width: 46%; height: auto; }
 .levar:active { color: rgba(182,255,59,.9); }
 .levar.tem { color: var(--lima); filter: drop-shadow(0 0 8px rgba(182,255,59,.55)); }
 .levar.erro { color: var(--ruim); }
@@ -330,14 +328,17 @@ li { margin-bottom: 9px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.65)); }
    É a mesma retícula da tela do computador — celular e PC falam a mesma
    língua. */
 #tela::before {
-  content: ''; position: fixed; left: 0; right: 0; top: 0; height: 62vh;
+  content: ''; position: fixed; left: 0; right: 0; top: 0; height: 46vh;
   z-index: -1; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 4.6 L14.7 7.3 L14.7 12.7 L10 15.4 L5.3 12.7 L5.3 7.3 Z' fill='%23b6ff3b'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 3.6 L15.6 6.8 L15.6 13.2 L10 16.4 L4.4 13.2 L4.4 6.8 Z' fill='none' stroke='%23b6ff3b' stroke-width='1.3'/%3E%3C/svg%3E");
   background-size: 26px 26px, 26px 26px;
   background-position: 0 0, 13px 13px;
-  -webkit-mask-image: linear-gradient(200deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 68%);
-  mask-image: linear-gradient(200deg, #000 0%, rgba(0,0,0,.35) 34%, transparent 68%);
-  opacity: .3;
+  -webkit-mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
+  mask-image: linear-gradient(196deg, #000 0%, rgba(0,0,0,.3) 30%, transparent 62%);
+  /* ELA PRECISA SER O AR DA TELA, NÃO A TELA. Na primeira foto de verdade a
+     trama passava atrás da busca e dos filtros com força de estampa, e os dois
+     ficaram ilegíveis. Textura que disputa com texto não é textura. */
+  opacity: .11;
 }
 
 .vazio { padding: 44px 24px; text-align: center; color: var(--mudo); line-height: 1.65; font-size: 13.5px; }

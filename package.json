@@ -20,7 +20,8 @@
     "confere:rodape": "electron scripts/confere-rodape.cjs",
     "confere:celular": "node scripts/confere-celular.mjs",
     "confere:pagina": "node scripts/confere-pagina.mjs",
-    "tela:celular": "node scripts/gera-tela-celular.mjs"
+    "tela:celular": "node scripts/gera-tela-celular.mjs",
+    "olha:celular": "electron scripts/olha-celular.cjs"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
