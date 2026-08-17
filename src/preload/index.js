@@ -148,6 +148,12 @@ const api = {
   },
   studio: {
     engineStatus: () => ipcRenderer.invoke('studio:engineStatus'),
+    baixarMotor: () => ipcRenderer.invoke('studio:baixarMotor'),
+    onMotorProgresso: (fn) => {
+      const h = (_e, info) => fn(info)
+      ipcRenderer.on('studio:motorProgresso', h)
+      return () => ipcRenderer.removeListener('studio:motorProgresso', h)
+    },
     models: () => ipcRenderer.invoke('studio:models'),
     open: (opts) => ipcRenderer.invoke('studio:open', opts),
     cancel: (id) => ipcRenderer.invoke('studio:cancel', id),

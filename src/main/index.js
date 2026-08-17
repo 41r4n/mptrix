@@ -43,8 +43,7 @@ import {
   detectChords,
   transcribeLyrics,
   gruposDeRepeticao,
-  saveLyrics
-} from './studio.js'
+  saveLyrics, baixarMotor } from './studio.js'
 import {
   getYtDlpVersion,
   getFfmpegVersion,
@@ -1348,6 +1347,15 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('studio:engineStatus', () => getEngineStatus())
+
+  // BAIXAR O MOTOR DA SEPARAÇÃO. O progresso vai pela mesma porta do resto do
+  // estúdio: uma porta só pra "o computador está trabalhando" é mais fácil de
+  // seguir do que uma por assunto.
+  ipcMain.handle('studio:baixarMotor', async (e) => {
+    return baixarMotor((info) => {
+      if (!e.sender.isDestroyed()) e.sender.send('studio:motorProgresso', info)
+    })
+  })
 
   ipcMain.handle('studio:models', () =>
     Object.values(STUDIO_MODELS).map((m) => ({ id: m.id, name: m.name, stems: m.stems }))

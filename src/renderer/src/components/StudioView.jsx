@@ -925,6 +925,27 @@ export default function StudioView({ source, onClose }) {
   // Se existe trecho marcado, a cabeça é o começo do trecho. Se não existe, é o
   // começo da música. Pedido do dono, e é o gesto dele: para, respira, toca de
   // novo do alto.
+  // ── BAIXAR O MOTOR ──
+  const [tentativa, setTentativa] = useState(0)
+  const [motorMsg, setMotorMsg] = useState({})
+  const [motorErro, setMotorErro] = useState(null)
+
+  const baixarOMotor = useCallback(async () => {
+    setMotorErro(null)
+    setMotorMsg({ etapa: 'baixando', mb: 0, percent: 0 })
+    const off = window.mptrix.studio.onMotorProgresso?.((info) => setMotorMsg(info))
+    const r = await window.mptrix.studio.baixarMotor()
+    off?.()
+    setMotorMsg({})
+    if (r?.erro) { setMotorErro(r.erro); return }
+    // deu certo: volta pro começo e segue como se o motor sempre tivesse
+    // estado ali — quem baixou não quer clicar de novo no mesmo lugar
+    // refaz a partida do estudio: a mesma que rodou quando a tela abriu, agora
+    // com o motor no lugar. Quem acabou de esperar 1 GB nao quer clicar de novo
+    // no mesmo botao.
+    setTentativa((n) => n + 1)
+  }, [])
+
   const cabecaDoEnsaio = useCallback(() => {
     // usa o loopRef que o relógio do transporte já mantém — inventar um ref
     // novo aqui seria uma segunda verdade sobre o mesmo estado, e duas verdades
@@ -2286,10 +2307,22 @@ export default function StudioView({ source, onClose }) {
       setPlanSel(new Set())
       planChoicesRef.current = null
 
-      const engine = await window.mptrix.studio.engineStatus()
-      if (!engine.ok) {
-        setPhase('engine-missing')
-        return
+      // O MOTOR SÓ E COBRADO DE QUEM VAI SEPARAR.
+      //
+      // Este teste vinha ANTES de tudo e barrava a tela inteira. O dono
+      // instalou o MPTRIX no computador do pai e caiu direto em "motor de
+      // separação não instalado" — sem conseguir nem abrir uma música pra
+      // tocar. E a edição rápida NÃO separa nada: decodifica e abre.
+      //
+      // O motor pesa 4 GB (Python, IA, modelos) e nunca coube no instalador de
+      // 145 MB. Fazer ele bloquear o que não depende dele transformava uma
+      // limitação conhecida numa porta trancada.
+      if (model !== 'quick') {
+        const engine = await window.mptrix.studio.engineStatus()
+        if (!engine.ok) {
+          setPhase('engine-missing')
+          return
+        }
       }
 
       // Edição rápida vai direto; separação normal mostra o CATÁLOGO primeiro.
@@ -2402,7 +2435,7 @@ export default function StudioView({ source, onClose }) {
       playerRef.current?.dispose()
       playerRef.current = null
     }
-  }, [source.path, model]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [source.path, model, tentativa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quem está guardado dentro do "outros" obedece o outros — no tocador e na
   // exportação. Recalcula junto com a sessão porque guardar/tirar muda o mapa.
@@ -2871,12 +2904,58 @@ export default function StudioView({ source, onClose }) {
       {phase === 'engine-missing' && (
         <div className="studio-center">
           <div className="studio-progress-card">
-            <h3>Motor de separação não instalado</h3>
-            <p className="muted">
-              O módulo de IA que separa os instrumentos não foi encontrado neste computador.
-              Fale com o desenvolvedor pra instalar o motor (pasta <code>MPTRIX\engine</code>).
-            </p>
-            <button className="btn-secondary" onClick={onClose}>Voltar</button>
+            {/* O MOTOR SE INSTALA SOZINHO.
+                A mensagem antiga mandava "falar com o desenvolvedor" — que não
+                é resposta pra quem instalou o app em casa: empurrava a pessoa
+                pra uma porta que não existe. E a primeira saída que eu propus
+                foi passar o motor pela rede da casa; o dono cortou com razão:
+                "o MPTRIX é um app, ele não pode estar limitado". Depender de
+                estar no mesmo Wi-Fi é remendo, não produto. */}
+            <h3>{motorMsg.etapa === 'baixando' ? 'Baixando o motor da separação'
+              : motorMsg.etapa === 'instalando' ? 'Instalando o motor'
+              : 'Falta o motor da separação'}</h3>
+
+            {!motorMsg.etapa && (
+              <>
+                <p className="muted">
+                  Separar instrumentos usa um módulo de inteligência artificial
+                  que pesa mais de 1&nbsp;GB. Ele não cabe no instalador, então
+                  vem à parte — é baixado uma vez e fica pra sempre.
+                </p>
+                <p className="muted">
+                  <b>O resto do MPTRIX já funciona sem ele:</b> baixar música,
+                  abrir no estúdio, tom e BPM, letra, cifra, metrônomo, marcar
+                  trecho e levar pro celular.
+                </p>
+              </>
+            )}
+
+            {motorMsg.etapa === 'baixando' && (
+              <>
+                <p className="muted studio-hint">
+                  {motorMsg.mb}{motorMsg.totalMb ? ' de ' + motorMsg.totalMb : ''} MB
+                  {' · '}pode deixar rodando e usar o computador
+                </p>
+                <div className="studio-progress-bar">
+                  <div className="studio-progress-fill" style={{ width: `${motorMsg.percent || 0}%` }} />
+                </div>
+              </>
+            )}
+
+            {motorMsg.etapa === 'instalando' && (
+              <p className="muted studio-hint">abrindo o pacote — não feche o MPTRIX</p>
+            )}
+
+            {motorErro && <p className="muted studio-hint">⚠ {motorErro}</p>}
+
+            <div className="studio-mem-actions">
+              {!motorMsg.etapa && (
+                <button className="btn-primary" onClick={baixarOMotor}>
+                  {motorErro ? 'tentar de novo' : 'baixar o motor'}
+                </button>
+              )}
+              <button className="btn-secondary" onClick={onClose}>Voltar</button>
+            </div>
           </div>
         </div>
       )}

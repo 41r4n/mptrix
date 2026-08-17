@@ -11989,3 +11989,22 @@ ul.hlib-grid {
   text-transform: uppercase;
   color: var(--muted-2);
 }
+
+/* ██████████ A BARRA DO MOTOR BAIXANDO ██████████
+   O motor da separação pesa mais de 1 GB e vem à parte. Download longo sem
+   barra é a diferença entre "está trabalhando" e "travou" — e quem não sabe
+   qual dos dois é, fecha o programa no meio. */
+.studio-progress-bar {
+  width: 100%;
+  max-width: 380px;
+  height: 6px;
+  margin: 12px auto 4px;
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+.studio-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 14px rgba(182, 255, 59, 0.45);
+  transition: width 0.25s ease;
+}

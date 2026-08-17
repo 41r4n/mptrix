@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
 import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos, desligarNuvemPor } from './store.js'
 import { freemem } from 'os'
+import { get } from 'https'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
 import { join, basename } from 'path'
@@ -18,7 +19,9 @@ import {
   copyFileSync,
   openSync,
   readSync,
-  closeSync
+  closeSync,
+  unlinkSync,
+  createWriteStream
 } from 'fs'
 
 export const MODELS = {
@@ -96,6 +99,157 @@ export function removeCachesForFile(filePath) {
     try { rmSync(join(STEMS_DIR, key), { recursive: true, force: true }) } catch {}
   }
   try { rmSync(join(STEMS_DIR, '_plans', `${fp.slice(0, 16)}_v3.json`), { force: true }) } catch {}
+}
+
+// ██████████ BAIXAR O MOTOR DA SEPARAÇÃO ██████████
+//
+// O dono instalou o MPTRIX no computador do pai e caiu em "motor não
+// instalado". A causa não é defeito: separar instrumentos usa uma IA de
+// verdade, e ela pesa mais de 1 GB — nunca coube no instalador de 145 MB. Na
+// máquina dele o motor já estava, de quando montamos, e por isso isso nunca
+// tinha aparecido.
+//
+// A primeira saída que me ocorreu foi passar o motor pela rede da casa, e ele
+// cortou na hora, com razão: "o MPTRIX é um app, ele não pode estar limitado,
+// deve funcionar pra qualquer wifi". Depender de estar na mesma casa não é
+// produto, é remendo.
+//
+// Então o app baixa sozinho, de qualquer lugar do mundo, uma vez. Vem só o que
+// a separação usa — Python com a IA, os pesos do modelo e o afinador. Letra
+// automática, os 53 especialistas e as ferramentas de teste ficam de fora: são
+// outros 2,5 GB que não fazem falta pra quem só quer separar.
+const MOTOR_URL = 'https://github.com/41r4n/mptrix/releases/download/motor-v1/motor-mptrix.tar.gz'
+
+// ONDE O WINDOWS GUARDA O DESCOMPACTADOR. Ele existe de fábrica desde 2018, e é
+// o mesmo que lê .tar.gz. Se um dia faltar, é melhor dizer isso na cara do que
+// deixar a instalação morrer no meio sem explicação.
+function descompactadorDoWindows() {
+  const cam = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+  return existsSync(cam) ? cam : null
+}
+
+export function motorInstalando() { return !!estadoDoMotor.baixando }
+
+const estadoDoMotor = { baixando: false, cancelar: null }
+
+export async function baixarMotor(onProgresso) {
+  if (estadoDoMotor.baixando) return { erro: 'já está baixando' }
+
+  const tar = descompactadorDoWindows()
+  if (!tar) {
+    return { erro: 'Este Windows não tem o descompactador de fábrica (tar). Ele existe desde 2018 — o computador pode estar muito desatualizado.' }
+  }
+
+  estadoDoMotor.baixando = true
+  mkdirSync(ENGINE_DIR, { recursive: true })
+  const pacote = join(ENGINE_DIR, 'motor-baixando.tar.gz')
+
+  try {
+    // ── baixa ──
+    await new Promise((resolve, reject) => {
+      const escrever = createWriteStream(pacote)
+      let recebido = 0
+      let total = 0
+      let ultimoAviso = 0
+
+      const pedir = (endereco, saltos) => {
+        if (saltos > 6) return reject(new Error('endereço redirecionou demais'))
+        get(endereco, { headers: { 'User-Agent': 'MPTRIX' } }, (r) => {
+          // o GitHub manda o arquivo em outro endereço; seguir é o normal
+          if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+            r.resume()
+            return pedir(r.headers.location, saltos + 1)
+          }
+          if (r.statusCode !== 200) {
+            r.resume()
+            return reject(new Error('o servidor respondeu ' + r.statusCode))
+          }
+          total = parseInt(r.headers['content-length'] || '0', 10)
+          r.on('data', (pedaco) => {
+            recebido += pedaco.length
+            const agora = Date.now()
+            // avisa 4x por segundo: mais que isso só enche a tela de mensagem
+            if (agora - ultimoAviso > 250) {
+              ultimoAviso = agora
+              onProgresso?.({
+                etapa: 'baixando',
+                percent: total ? Math.round((recebido / total) * 100) : null,
+                mb: Math.round(recebido / 1048576),
+                totalMb: total ? Math.round(total / 1048576) : null
+              })
+            }
+          })
+          r.pipe(escrever)
+          escrever.on('finish', () => escrever.close(resolve))
+          r.on('error', reject)
+        }).on('error', reject)
+      }
+      pedir(MOTOR_URL, 0)
+    })
+
+    // ── confere se veio inteiro ──
+    // Arquivo cortado pela metade extrai "quase" e a separação quebra depois,
+    // longe daqui, com erro que não diz nada. Melhor recusar agora.
+    const tam = statSync(pacote).size
+    if (tam < 200 * 1024 * 1024) {
+      throw new Error('o pacote veio incompleto (' + Math.round(tam / 1048576) + ' MB)')
+    }
+
+    // ── extrai ──
+    onProgresso?.({ etapa: 'instalando', percent: null })
+    await new Promise((resolve, reject) => {
+      const c = spawn(tar, ['-xzf', pacote, '-C', ENGINE_DIR], { windowsHide: true })
+      let erro = ''
+      c.stderr.on('data', (d) => { erro += d })
+      c.on('error', reject)
+      c.on('close', (code) => code === 0 ? resolve() : reject(new Error(erro.trim() || 'falhou ao abrir o pacote')))
+    })
+
+    // ── APONTA O PYTHON PRO LUGAR CERTO ──
+    //
+    // Um ambiente Python guarda, num arquivo de texto, o caminho ABSOLUTO da
+    // instalação de onde ele nasceu — é lá que mora a biblioteca padrão. No
+    // computador de origem isso funciona; em qualquer outro, aquele caminho não
+    // existe.
+    //
+    // E o defeito seria do pior tipo: o app diria "motor instalado" (o
+    // python.exe está lá), e só quebraria na hora de separar, depois de a
+    // pessoa esperar 748 MB — com erro que não explica nada.
+    //
+    // Por isso o Python completo vai dentro do pacote, e aqui o caminho é
+    // reescrito pro lugar onde ele acabou de cair NESTA máquina.
+    const cfg = join(ENGINE_DIR, 'venv', 'pyvenv.cfg')
+    const base = join(ENGINE_DIR, 'python')
+    if (existsSync(cfg) && existsSync(base)) {
+      const NL = String.fromCharCode(10)
+      const CR = String.fromCharCode(13)
+      const linhas = readFileSync(cfg, 'utf8').split(NL).map((l) => l.split(CR).join(''))
+      const novo = linhas
+        .map((l) => l.startsWith('home =') ? 'home = ' + base
+          : l.startsWith('executable =') ? 'executable = ' + join(base, 'python.exe')
+          // a linha `command` guarda o comando que criou o ambiente, com o
+          // caminho antigo dentro. Nao e usada em execucao, e deixa-la ali so
+          // serviria pra confundir quem for depurar depois.
+          : l.startsWith('command =') ? '' : l)
+        .filter((l) => l.trim() !== '')
+        .join(NL)
+      writeFileSync(cfg, novo + NL)
+    }
+
+    try { unlinkSync(pacote) } catch {}
+
+    const st = getEngineStatus()
+    if (!st.ok) throw new Error('o pacote abriu mas o motor não ficou completo')
+    onProgresso?.({ etapa: 'pronto', percent: 100 })
+    return { ok: true }
+  } catch (e) {
+    // pacote pela metade no disco é pior que pacote nenhum: na próxima
+    // tentativa ele seria "encontrado" e daria erro mais na frente
+    try { unlinkSync(pacote) } catch {}
+    return { erro: String(e && e.message ? e.message : e) }
+  } finally {
+    estadoDoMotor.baixando = false
+  }
 }
 
 export function getEngineStatus() {
@@ -296,10 +450,27 @@ function evictOldSessions(keepKey) {
   }
 }
 
+// ── OS PESOS DA IA MORAM DENTRO DO MOTOR ──
+//
+// Os modelos do Demucs (uns 450 MB) ficam, por padrão, num cache escondido na
+// pasta do usuário — longe da pasta engine. Isso funciona em quem montou o
+// motor à mão, mas quebra quem BAIXA o motor pronto: o pacote chegaria sem os
+// pesos, e a primeira separação sairia buscando 450 MB na internet no meio do
+// trabalho, sem avisar.
+//
+// Com o pacote, tudo mora junto em engine/hub, e é isso que este ambiente diz.
+// Só vale quando essa pasta EXISTE: em quem já tinha o motor montado, nada
+// muda — continua usando o cache que ele já tem.
+function ambienteDoMotor() {
+  const dentro = join(ENGINE_DIR, 'hub')
+  if (!existsSync(dentro)) return process.env
+  return { ...process.env, HF_HOME: ENGINE_DIR, HUGGINGFACE_HUB_CACHE: dentro }
+}
+
 function run(exe, args, state, onLine, opts = {}) {
   return new Promise((resolve, reject) => {
     if (state.cancelled) return reject(new Error('cancelado'))
-    const child = spawn(exe, args, { windowsHide: true, env: opts.env || process.env })
+    const child = spawn(exe, args, { windowsHide: true, env: opts.env || ambienteDoMotor() })
     state.child = child
     let pending = ''
     const feed = (chunk) => {
@@ -1584,7 +1755,7 @@ export async function scoutSession({ key, force = false }) {
 
   const state = {}
   const out = await new Promise((resolve, reject) => {
-    const child = spawn(PYTHON_PATH, [SCOUT_SCRIPT, target], { windowsHide: true })
+    const child = spawn(PYTHON_PATH, [SCOUT_SCRIPT, target], { windowsHide: true, env: ambienteDoMotor() })
     state.child = child
     let buf = ''
     let err = ''
@@ -1615,7 +1786,7 @@ export async function scoutSession({ key, force = false }) {
 
 function runScoutScript(targetAudio, state) {
   return new Promise((resolve, reject) => {
-    const child = spawn(PYTHON_PATH, [SCOUT_SCRIPT, targetAudio], { windowsHide: true })
+    const child = spawn(PYTHON_PATH, [SCOUT_SCRIPT, targetAudio], { windowsHide: true, env: ambienteDoMotor() })
     state.child = child
     let buf = ''
     let err = ''
