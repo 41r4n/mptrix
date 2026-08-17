@@ -4138,13 +4138,31 @@ section h2 {
   pointer-events: none;
 }
 
+/* ██████████ O TRECHO MARCADO ██████████
+   Ele era um véu de lima a 5% — some contra a própria onda lima, e o dono viu:
+   "percebe como ele é quase invisível?". Aumentar o véu não resolvia: tingir de
+   lima o que já é lima é pintar de branco em cima de branco.
+
+   A primeira tentativa foi NEGATIVO de verdade (mix-blend-mode: difference).
+   Funcionou demais: a onda dentro do trecho virou preta sobre chão lima, e como
+   as barras são finas o resultado foi um bloco lima chapado — "não consigo nem
+   ver a faixa ali". Inversão total apaga justamente o que a pessoa marcou pra
+   olhar de perto.
+
+   O que ficou é o que ele descreveu desde o começo: o trecho ESCURECE.
+   `backdrop-filter` age no que está EMBAIXO, então a onda continua ali, com a
+   forma inteira — só rebaixada. E rebaixar não depende de contraste de cor: uma
+   faixa escura atravessando um campo aceso se acha de longe, com uma pista ou
+   com seis. */
 .daw-loopreg {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(182, 255, 59, 0.05);
-  border-left: 1px dashed rgba(182, 255, 59, 0.45);
-  border-right: 1px dashed rgba(182, 255, 59, 0.45);
+  backdrop-filter: brightness(0.32) saturate(0.75);
+  -webkit-backdrop-filter: brightness(0.32) saturate(0.75);
+  background: rgba(11, 12, 15, 0.18);
+  border-left: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
   pointer-events: none;
 }
 
@@ -11902,3 +11920,72 @@ ul.hlib-grid {
 .celular-diario li span { flex: 1 1 auto; min-width: 0; color: var(--text-2); word-break: break-all; }
 .celular-diario li i { font-style: normal; flex: none; color: var(--muted-2); font-size: 10px; }
 .celular-nada { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-2); }
+
+/* ██████████ TETO DA PISTA ██████████
+   As pistas dividem a altura da mesa entre si (`flex: 1 1 0%`), e isso é certo
+   com cinco ou seis faixas. Com UMA — a edição rápida, que não separa nada — a
+   faixa única ficava com a tela inteira: uma onda de setecentos pixels de
+   altura, que não conta nada que a de cento e oitenta já não contasse.
+   Altura de onda não é informação: passado um certo tamanho ela só ocupa lugar.
+   Com o teto, sobra chão da mesa embaixo, e sobrar é melhor que esticar. */
+.daw-row { max-height: 190px; }
+
+/* ██████████ SOLTE AQUI ██████████
+   Pedido do dono, pelo pai dele: o estúdio que o pai já usa abre música
+   arrastando o arquivo pra dentro da janela, e é o gesto que a mão dele sabe.
+   Quem vem de outro programa não procura botão — faz o gesto, e se nada
+   acontece conclui que o app não abre música.
+
+   O alvo é a JANELA INTEIRA. Alvo pequeno obriga a mirar, e o gesto existe
+   justamente pra não precisar mirar. E ele só aparece com arquivo no ar: marca
+   fixa de "solte aqui" ocupa espaço o ano inteiro pra servir dois segundos. */
+.solte-aqui {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 12, 15, 0.78);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: none;
+  animation: solte-entra 0.14s ease;
+}
+@keyframes solte-entra { from { opacity: 0 } to { opacity: 1 } }
+
+.solte-aqui-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 64px;
+  /* fio tracejado: tracejado diz "ainda não é, vai ser" — cheio diria que a
+     caixa já existe e o arquivo está dentro */
+  border: 2px dashed rgba(182, 255, 59, 0.55);
+  background: rgba(182, 255, 59, 0.04);
+}
+.solte-hex {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #0b0c0f;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  box-shadow: 0 0 26px rgba(182, 255, 59, 0.4);
+}
+.solte-aqui-in b {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.solte-aqui-in span:last-child {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}

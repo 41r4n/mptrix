@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 function on(channel) {
   return (callback) => {
@@ -64,11 +64,29 @@ const api = {
     copiarTexto: (texto) => ipcRenderer.invoke('clipboard:copiarTexto', texto)
   },
 
+  // ── O CAMINHO DE UM ARQUIVO ARRASTADO PRA DENTRO DA JANELA ──
+  //
+  // Até o Electron 31 dava pra ler `arquivo.path` direto na tela. Da 32 em
+  // diante isso SUMIU por segurança: a página não vê mais onde o arquivo mora
+  // no disco. Quem vê é o preload, e só ele — por isso a ponte existe.
+  //
+  // Sem isso, arrastar um MP3 pra dentro do app parece funcionar e devolve
+  // caminho vazio: o pior tipo de defeito, o que não reclama.
+  arrastado: {
+    caminhoDe: (arquivo) => {
+      try { return webUtils.getPathForFile(arquivo) } catch { return '' }
+    }
+  },
+
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath),
     showInFolder: (filePath) => ipcRenderer.invoke('shell:showInFolder', filePath),
     copyFilesToClipboard: (paths) => ipcRenderer.invoke('shell:copyFilesToClipboard', paths),
+    // arrastar pra fora: `send` e nao `invoke` de proposito — o arrasto comeca
+    // AGORA, no mesmo gesto do dedo. Esperar resposta perderia o momento em que
+    // o sistema ainda aceita comecar um arrasto.
+    arrastarPraFora: (paths) => ipcRenderer.send('shell:arrastar', paths),
     zipFile: (path) => ipcRenderer.invoke('shell:zipFile', path)
   },
 

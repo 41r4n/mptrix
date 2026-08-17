@@ -35,6 +35,10 @@ const ATOS = [
 ]
 
 
+// os mesmos formatos que o botão "escolher do computador" aceita — duas listas
+// pro mesmo assunto viram duas verdades, e um dia uma delas envelhece sozinha
+const SONS = /\.(mp3|m4a|wav|flac|ogg|opus|aac|wma|mp4|webm|mkv)$/i
+
 export default function App() {
   const [env, setEnv] = useState(null)
   const [outputDir, setOutputDir] = useState('')
@@ -121,6 +125,72 @@ export default function App() {
     setStudioSource({ path, title })
   }
 
+  // ██████████ ARRASTAR O ARQUIVO PRA DENTRO ██████████
+  //
+  // Pedido do dono, pelo pai dele: o estúdio que o pai já usa abre música
+  // arrastando o arquivo pra dentro da janela, e ele espera esse gesto. Quem
+  // vem de outro programa não vai procurar o botão certo — vai fazer o que a
+  // mão já sabe, e se não acontecer nada conclui que o app não abre música.
+  //
+  // Vale a JANELA INTEIRA, não uma caixinha marcada. Alvo pequeno obriga a
+  // pessoa a mirar, e o gesto existe justamente pra não precisar mirar.
+  const [arrastando, setArrastando] = useState(false)
+  const arrastandoRef = useRef(0)
+
+  useEffect(() => {
+    const ehArquivo = (e) => Array.from(e.dataTransfer?.types || []).includes('Files')
+
+    const entrou = (e) => {
+      if (!ehArquivo(e)) return
+      e.preventDefault()
+      arrastandoRef.current += 1
+      setArrastando(true)
+    }
+    const saiu = (e) => {
+      if (!ehArquivo(e)) return
+      arrastandoRef.current -= 1
+      // o contador existe porque `dragleave` dispara ao passar de um elemento
+      // pro outro DENTRO da janela: sem contar, o aviso piscaria a cada linha
+      // que o cursor cruzasse
+      if (arrastandoRef.current <= 0) { arrastandoRef.current = 0; setArrastando(false) }
+    }
+    const porCima = (e) => {
+      if (!ehArquivo(e)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+    const soltou = async (e) => {
+      if (!ehArquivo(e)) return
+      // sem isto o Chromium ABRE o arquivo no lugar do app — a tela do MPTRIX
+      // some e vira um tocador de vídeo pelado
+      e.preventDefault()
+      arrastandoRef.current = 0
+      setArrastando(false)
+
+      const arquivo = e.dataTransfer.files?.[0]
+      if (!arquivo) return
+      const caminho = window.mptrix.arrastado?.caminhoDe(arquivo) || ''
+      if (!caminho) return
+      if (!SONS.test(caminho)) {
+        window.alert('Isso não parece som. Arraste um MP3, WAV, M4A, FLAC ou um vídeo.')
+        return
+      }
+      const title = caminho.split(/[\\/]/).pop().replace(/\.[a-z0-9]{2,5}$/i, '')
+      setStudioSource({ path: caminho, title })
+    }
+
+    window.addEventListener('dragenter', entrou)
+    window.addEventListener('dragleave', saiu)
+    window.addEventListener('dragover', porCima)
+    window.addEventListener('drop', soltou)
+    return () => {
+      window.removeEventListener('dragenter', entrou)
+      window.removeEventListener('dragleave', saiu)
+      window.removeEventListener('dragover', porCima)
+      window.removeEventListener('drop', soltou)
+    }
+  }, [])
+
   // ██████ OS QUATRO ATOS, NUM LUGAR SÓ ██████
   //
   // A roda e a aba BAIXAR são duas portas pro mesmo cômodo. Se cada uma
@@ -197,6 +267,21 @@ export default function App() {
 
   return (
     <UpdatesProvider>
+      {/* O ALVO SÓ EXISTE ENQUANTO TEM ARQUIVO NO AR. Marca fixa de "solte aqui"
+          ocupa espaço o ano inteiro pra servir dois segundos. */}
+      {arrastando && (
+        <div className="solte-aqui">
+          <div className="solte-aqui-in">
+            <span className="solte-hex" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+            </span>
+            <b>Solte aqui</b>
+            <span>a música abre no estúdio</span>
+          </div>
+        </div>
+      )}
       <div className="app">
       {/* ═══════════ TRILHO ═══════════
           O app parou de ser uma página que se rola de cima a baixo. As três

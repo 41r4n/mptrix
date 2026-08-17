@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, powerSaveBlocker } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, powerSaveBlocker, nativeImage } from 'electron'
 import { spawn } from 'child_process'
 import { join, basename, extname, dirname } from 'path'
 import { Readable } from 'stream'
@@ -811,6 +811,38 @@ app.whenReady().then(() => {
   ipcMain.handle('shell:openExternal', (_e, url) => {
     shell.openExternal(url)
     return true
+  })
+
+  // ██████████ ARRASTAR PRA FORA ██████████
+  //
+  // Pedido do dono, pelo pai dele: ele tem um estúdio que já usa e prefere, e
+  // quer pegar a música no acervo do MPTRIX e ARRASTAR pra dentro do outro
+  // programa — o gesto que qualquer gerenciador de arquivo tem.
+  //
+  // Isso não é HTML: uma página não consegue entregar arquivo do disco pra
+  // outro aplicativo do sistema. Quem consegue é o Electron, com `startDrag`,
+  // e só a partir do processo principal. Por isso o caminho passa por aqui.
+  //
+  // Vai a MÚSICA SEPARADA INTEIRA quando ela existe: quem arrasta pra dentro de
+  // um estúdio quer as faixas em pistas separadas, que é justamente o que o
+  // MPTRIX fez de diferente. Mandar só o arquivo misturado seria devolver o
+  // trabalho por fazer.
+  ipcMain.on('shell:arrastar', (e, paths) => {
+    const lista = (Array.isArray(paths) ? paths : [paths]).filter((x) => x && existsSync(x))
+    if (!lista.length) return
+    // o ícone é OBRIGATÓRIO — sem ele o Electron recusa o arrasto sem dizer por
+    // quê, e o gesto morre calado na mão de quem tentou
+    const cam = app.isPackaged
+      ? join(process.resourcesPath, 'icon.png')
+      : join(__dirname, '..', '..', 'build', 'icon.png')
+    let icone = nativeImage.createFromPath(cam)
+    if (icone.isEmpty()) icone = nativeImage.createFromBuffer(Buffer.alloc(0))
+    else icone = icone.resize({ width: 64, height: 64 })
+    try {
+      e.sender.startDrag(lista.length === 1
+        ? { file: lista[0], icon: icone }
+        : { files: lista, icon: icone })
+    } catch {}
   })
 
   ipcMain.handle('shell:copyFilesToClipboard', async (_e, paths) => {

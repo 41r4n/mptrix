@@ -1,33 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <!--
+    O ÍCONE DO MPTRIX.
+
+    O que estava aqui era rascunho: quadrado com degradê azul-roxo e um "M"
+    branco, de uma fonte do sistema. Não era da casa — a casa é preto quase
+    total com UM destaque lima, e a marca é a ampulheta dentro do hexágono, que
+    já vive no cabeçalho do app, na tela do celular e no relógio da tela
+    inicial.
+
+    Ícone é a primeira coisa que alguém vê do programa, e era a única peça que
+    ainda falava outra língua.
+
+    A ampulheta é um FURO na chapa lima, não um desenho por cima: é assim no
+    relógio, e é o que faz a marca ser reconhecida de longe. Em 16px o hexágono
+    lima sobre preto continua se lendo — forma cheia lê pequena.
+  -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#3b6dff"/>
-      <stop offset="55%" stop-color="#6b5cff"/>
-      <stop offset="100%" stop-color="#9d4cff"/>
-    </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
-      <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
+    <radialGradient id="brilho" cx="0.5" cy="0.46" r="0.52">
+      <stop offset="0%" stop-color="#b6ff3b" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#b6ff3b" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="chapa">
+      <!-- branco = fica; preto = vira buraco -->
+      <path d="M512 206 L770 356 L770 668 L512 818 L254 668 L254 356 Z" fill="#fff"/>
+      <path d="M4.5 2H19.5L13.4 12L19.5 22H4.5L10.6 12Z"
+            transform="translate(317.6 317.6) scale(16.2)" fill="#000"/>
+    </mask>
   </defs>
 
-  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
-  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#sheen)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0b0c0f"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#brilho)"/>
 
-  <g fill="#ffffff">
-    <text x="512" y="600"
-          font-family="'Segoe UI', system-ui, sans-serif"
-          font-size="560"
-          font-weight="800"
-          text-anchor="middle"
-          letter-spacing="-20">M</text>
-  </g>
-
-  <g fill="#ffffff" opacity="0.92">
-    <rect x="332" y="740" width="50" height="80"  rx="14"/>
-    <rect x="412" y="700" width="50" height="160" rx="14"/>
-    <rect x="492" y="660" width="50" height="240" rx="14"/>
-    <rect x="572" y="700" width="50" height="160" rx="14"/>
-    <rect x="652" y="740" width="50" height="80"  rx="14"/>
+  <g mask="url(#chapa)">
+    <rect x="0" y="0" width="1024" height="1024" fill="#b6ff3b"/>
   </g>
 </svg>

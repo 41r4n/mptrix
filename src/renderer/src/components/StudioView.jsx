@@ -809,6 +809,15 @@ export default function StudioView({ source, onClose }) {
   }, [shelfOpen])
   // altura da área das pistas — usada pra enquadrar um número inteiro de faixas
   const dawScrollRef = useRef(null)
+  // QUANDO A MAO PEGA A MESA, O PLAYHEAD SOLTA O VOLANTE.
+  // Tocando, a mesa persegue o playhead pra ele nao sumir de vista. So que ela
+  // perseguia SEMPRE: o dono arrastava a barra de rolagem pra olhar outro
+  // pedaco e o quadro seguinte puxava de volta — "ela nao deixa eu ir pra
+  // frente nem pra tras, ela trava". Perseguir e certo; perseguir por cima da
+  // mao do dono, nao. Aqui a perseguicao dorme alguns segundos depois de
+  // qualquer rolagem feita a mao, e volta sozinha.
+  const maoNaMesaRef = useRef(0)
+  const SONO_DA_PERSEGUICAO = 4000
   // ZOOM HORIZONTAL da mesa. 1 = a música inteira cabe na tela; 4 = cada
   // segundo ocupa quatro vezes mais espaço. Existe pra dar PRECISÃO no loop:
   // sem isso, marcar dois segundos numa música de cinco minutos são quatro
@@ -906,20 +915,55 @@ export default function StudioView({ source, onClose }) {
   const stemUrl = useCallback((sessKey, variant, format) =>
     (stem) => `stems://s/${sessKey}/${variant}/${stem}.${format}?v=${Date.now()}`, [])
 
+  // ██████████ PAUSAR VOLTA PRA CABEÇA ██████████
+  //
+  // Num tocador de música, pausar guarda o lugar e o play continua dali. Aqui
+  // não é um tocador: é uma sala de ensaio. Quem para no meio de uma frase
+  // parou pra tentar de novo — e tentar de novo começa do começo do pedaço,
+  // não de onde a mão travou.
+  //
+  // Se existe trecho marcado, a cabeça é o começo do trecho. Se não existe, é o
+  // começo da música. Pedido do dono, e é o gesto dele: para, respira, toca de
+  // novo do alto.
+  const cabecaDoEnsaio = useCallback(() => {
+    // usa o loopRef que o relógio do transporte já mantém — inventar um ref
+    // novo aqui seria uma segunda verdade sobre o mesmo estado, e duas verdades
+    // sobre a mesma coisa é como o loop e o playhead se desencontram
+    const { on, sel } = loopRef.current || {}
+    if (on && sel && sel.end - sel.start > 0.15) return sel.start
+    return 0
+  }, [])
+
+  // quem pausou fica marcado, e o PLAY e quem decide de onde recomeca. A
+  // primeira versao disto so mandava o tocador voltar no momento do pause e
+  // confiava que a posicao ficaria parada ate o play — e nao ficava: entre um
+  // toque e outro passam o relogio do transporte, o guarda do loop e qualquer
+  // troca de faixa, e todos escrevem posicao. Decidir na hora do play tira
+  // todos eles do caminho.
+  const pausouRef = useRef(false)
+
   const pause = useCallback(() => {
     const p = playerRef.current
     if (!p) return
     p.pause()
     setPlaying(false)
-    setPos(p.position())
-  }, [])
+    pausouRef.current = true
+    // volta o cursor na hora, pra pessoa VER de onde vai recomecar
+    const volta = cabecaDoEnsaio()
+    p.seek(volta)
+    setPos(volta)
+  }, [cabecaDoEnsaio])
 
   const play = useCallback(async (fromOffset) => {
     const p = playerRef.current
     if (!p) return
-    await p.play(fromOffset)
+    // sem ponto pedido e vindo de uma pausa: recomeca da cabeca do ensaio
+    let de = fromOffset
+    if (de == null && pausouRef.current) de = cabecaDoEnsaio()
+    pausouRef.current = false
+    await p.play(de)
     setPlaying(true)
-  }, [])
+  }, [cabecaDoEnsaio])
 
   const seekTo = useCallback((sec) => {
     const p = playerRef.current
@@ -991,7 +1035,8 @@ export default function StudioView({ source, onClose }) {
           // (margem de 12%): rolar a cada quadro deixaria a onda escorrendo o
           // tempo todo e embrulharia o olho.
           const sc = dawScrollRef.current
-          if (sc && sc.scrollWidth > sc.clientWidth + 4 && p.playing && !draggingRef.current) {
+          const maoSolta = Date.now() - maoNaMesaRef.current > SONO_DA_PERSEGUICAO
+          if (sc && sc.scrollWidth > sc.clientWidth + 4 && p.playing && !draggingRef.current && maoSolta) {
             const railW = sc.scrollWidth - (contentWRef.current || 0)
             const x = railW + (dur ? (t / dur) * (contentWRef.current || 0) : 0)
             const vis0 = sc.scrollLeft + railW
@@ -1656,6 +1701,21 @@ export default function StudioView({ source, onClose }) {
   }, [])
 
   // Sombras de borda: avisam ao olho que há faixa cortada acima/abaixo
+  // roda, dedo ou barra de rolagem: os tres sao a mao do dono na mesa
+  const maoMexeu = useCallback(() => { maoNaMesaRef.current = Date.now() }, [])
+  useEffect(() => {
+    const el = dawScrollRef.current
+    if (!el) return
+    el.addEventListener('wheel', maoMexeu, { passive: true })
+    el.addEventListener('pointerdown', maoMexeu)
+    el.addEventListener('touchstart', maoMexeu, { passive: true })
+    return () => {
+      el.removeEventListener('wheel', maoMexeu)
+      el.removeEventListener('pointerdown', maoMexeu)
+      el.removeEventListener('touchstart', maoMexeu)
+    }
+  }, [maoMexeu, phase])
+
   const [dawCut, setDawCut] = useState({ top: false, bottom: false })
   const updateDawCut = useCallback(() => {
     const el = dawScrollRef.current
@@ -2232,9 +2292,22 @@ export default function StudioView({ source, onClose }) {
         return
       }
 
-      // Edição rápida vai direto; separação normal mostra o CATÁLOGO primeiro
+      // Edição rápida vai direto; separação normal mostra o CATÁLOGO primeiro.
+      //
+      // E vai direto MESMO: sem fiscal de memória. Ele estava aqui pedindo
+      // 800 MB livres, e o dono levava um aviso de "seu computador está muito
+      // carregado" só pra abrir uma música. Não fazia sentido, e ele viu:
+      // olhando o motor, a edição rápida NÃO SEPARA NADA —
+      //
+      //     } else if (model === 'quick') {
+      //       // Edição rápida: sem separação — a música inteira vira uma faixa
+      //       rawPaths.song = srcWav
+      //
+      // Ela decodifica o arquivo e abre, e custa o mesmo que tocar a música.
+      // Fiscal existe pra segurar o Demucs, que come giga; barrar quem não
+      // gasta é atrapalhar de graça, e ensina a pessoa a ignorar o aviso —
+      // que é o pior estrago, porque na hora que ele importar ela não lê.
       if (model === 'quick') {
-        if (!(await waitForMemory(800))) return
         await runSeparation()
         return
       }
@@ -2473,14 +2546,14 @@ export default function StudioView({ source, onClose }) {
       const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)
       if (digitando) return
       e.preventDefault() // senão o navegador também rola a página / reclica o botão focado
-      const sel = waveSel
-      if (sel && sel.end - sel.start > 0.15) {
-        play(sel.start) // volta pro A e segue tocando, pausado ou não
-      } else if (playing) {
-        pause()
-      } else {
-        play()
-      }
+      // A BARRA DE ESPACO E O MESMO BOTAO. Ela tinha um caminho proprio: com
+      // trecho marcado ela SEMPRE mandava tocar do A, e por isso nunca pausava
+      // — quem apertava esperando parar via a musica voltar pro comeco e
+      // seguir. Duas regras pro mesmo gesto e uma regra a mais do que a pessoa
+      // consegue guardar. Agora espaco faz o que o botao faz: para, e o proximo
+      // toque recomeca da cabeca do ensaio.
+      if (playing) pause()
+      else play()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

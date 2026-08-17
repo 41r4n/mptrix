@@ -206,6 +206,20 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
     )
   }
 
+  // ARRASTAR PRA FORA: pega os arquivos da música e entrega pro sistema, que
+  // solta dentro de qualquer outro programa. `preventDefault` é o que faz o
+  // navegador soltar o volante — sem ele o Chromium começa o arrasto DELE (um
+  // texto), e o outro programa recebe letrinha em vez de música.
+  const arquivosDe = (entry) =>
+    (entry.files && entry.files.length ? entry.files : [entry.primaryFile]).filter(Boolean)
+
+  const arrastarPraFora = (entry) => (e) => {
+    const arqs = arquivosDe(entry)
+    if (!arqs.length) return
+    e.preventDefault()
+    window.mptrix.shell.arrastarPraFora(arqs)
+  }
+
   const openFile = (entry) => entry.primaryFile && window.mptrix.shell.openPath(entry.primaryFile)
   const showInExplorer = (entry) => entry.primaryFile && window.mptrix.shell.showInFolder(entry.primaryFile)
 
@@ -560,6 +574,17 @@ export default function HistoryList({ history, onChange, onOpenStudio, onQuickEd
                 key={entry.id}
                 className={`hcard ${selected ? 'selected' : ''} ${selectionMode ? 'clickable' : ''}`}
                 onClick={onItemClick}
+                // ARRASTAR PRA FORA. O pai do dono tem um estúdio que já usa e
+                // prefere; ele quer pegar a música aqui e soltar lá dentro, que
+                // é o gesto de qualquer gerenciador de arquivo. Vai a música
+                // SEPARADA inteira quando ela existe — quem arrasta pra dentro
+                // de um estúdio quer as faixas em pistas, que é justamente o
+                // que o MPTRIX fez de diferente.
+                draggable={!selectionMode && arquivosDe(entry).length > 0}
+                onDragStart={arrastarPraFora(entry)}
+                title={arquivosDe(entry).length > 1
+                  ? `Arraste pra fora: ${arquivosDe(entry).length} faixas separadas`
+                  : 'Arraste pra fora pra abrir em outro programa'}
               >
                 {/* CAPA DE VERDADE. Os cartoes antigos nao eram feios por serem
                     cartoes — eram feios pela CAPA FALSA: bloco de cor sorteada
