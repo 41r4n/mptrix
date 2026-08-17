@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { carregarLexico, corrigirVersos } from './lexico.js'
 import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos, desligarNuvemPor } from './store.js'
-import { freemem } from 'os'
+import { freemem, homedir } from 'os'
 import { get } from 'https'
 import { spawn } from 'child_process'
 import { createHash, randomUUID } from 'crypto'
@@ -119,6 +119,7 @@ export function removeCachesForFile(filePath) {
 // automática, os 53 especialistas e as ferramentas de teste ficam de fora: são
 // outros 2,5 GB que não fazem falta pra quem só quer separar.
 const MOTOR_URL = 'https://github.com/41r4n/mptrix/releases/download/motor-v1/motor-mptrix.tar.gz'
+const OLHEIRO_URL = 'https://github.com/41r4n/mptrix/releases/download/motor-v1/olheiro-mptrix.tar.gz'
 
 // ONDE O WINDOWS GUARDA O DESCOMPACTADOR. Ele existe de fábrica desde 2018, e é
 // o mesmo que lê .tar.gz. Se um dia faltar, é melhor dizer isso na cara do que
@@ -128,9 +129,171 @@ function descompactadorDoWindows() {
   return existsSync(cam) ? cam : null
 }
 
+// ██████████ OS PACOTES QUE VÊM DEPOIS ██████████
+//
+// O MPTRIX instalado tem 145 MB e já faz quase tudo. O que pesa são as
+// inteligências artificiais — juntas passam de 2 GB, e nunca caberiam no
+// instalador.
+//
+// A REGRA, dada pelo dono depois de instalar no computador do pai e ser
+// interrompido no meio do uso por um pedido de instalação sem explicação:
+//
+//   nada aparece sem dizer O QUE É, PRA QUE SERVE, O QUE ACONTECE SE
+//   NÃO INSTALAR, e que VAI PERGUNTAR DE NOVO num momento parecido.
+//
+// Por isso a explicação mora aqui, junto da instalação, e não espalhada pelas
+// telas: texto longe do que ele descreve é texto que envelhece sozinho.
+export const PACOTES = {
+  motor: {
+    nome: 'Separar instrumentos',
+    mb: 790,
+    recomendado: true,
+    oque: 'A inteligência artificial que ouve a música e a divide em voz, bateria, baixo, guitarra e piano — cada uma numa pista sua.',
+    porque: 'É o que o MPTRIX faz de diferente. Com ela você tira a voz pra cantar por cima, isola o baixo pra tirar de ouvido, ou abaixa a guitarra pra ensaiar a sua.',
+    sem: 'A música toca inteira, como em qualquer tocador. Você continua baixando música, vendo tom e BPM, letra, cifra, metrônomo, marcando trecho e levando pro celular — só não dá pra mexer nos instrumentos separados.'
+  },
+  letra: {
+    nome: 'Letra automática',
+    mb: 1030,
+    recomendado: true,
+    oque: 'Um modelo que escuta a voz isolada e escreve a letra, já sincronizada com o tempo da música.',
+    porque: 'Ele acompanha a música enquanto toca, verso por verso, e você corrige o que ele errar. É a diferença entre ler a letra e acompanhar a letra.',
+    sem: 'A tela de letra continua funcionando, mas em branco: você cola a letra de onde quiser e ajusta o tempo à mão.'
+  },
+  olheiro: {
+    nome: 'Achar instrumentos escondidos',
+    mb: 628,
+    recomendado: false,
+    oque: 'Um ouvido treinado que varre o que sobrou depois da separação atrás de instrumentos que os cinco principais não pegaram — sopro, sanfona, cordas, percussão.',
+    porque: 'Numa música com metais ou sanfona, é ele que acha e diz onde estão, pra você poder tirar cada um.',
+    sem: 'Tudo que não é voz, bateria, baixo, guitarra ou piano fica junto numa pista só, chamada "outros".'
+  }
+}
+
+export function pacotesInstalados() {
+  const st = getEngineStatus()
+  return {
+    motor: st.ok,
+    letra: !!findWhisperExe() && existsSync(join(WHISPER_DIR, WHISPER_MODEL)),
+    olheiro: existsSync(SCOUT_SCRIPT)
+  }
+}
+
+export async function instalarPacote(id, onProgresso) {
+  if (id === 'motor') return baixarMotor(onProgresso)
+  if (id === 'letra') {
+    try {
+      onProgresso?.({ etapa: 'baixando', percent: null })
+      await ensureWhisper()
+      onProgresso?.({ etapa: 'pronto', percent: 100 })
+      return { ok: true }
+    } catch (e) {
+      return { erro: String(e && e.message ? e.message : e) }
+    }
+  }
+  if (id === 'olheiro') {
+    // O OLHEIRO VINHA DE CARONA: nunca teve download proprio, existia so em quem
+    // montou o motor a mao. Na maquina de outra pessoa ele falhava CALADO — o
+    // dono nem saberia que existe. Agora tem pacote proprio.
+    //
+    // Ele cai em DOIS lugares: o script junto do motor, e os dados na pasta do
+    // usuario, que e onde o proprio script os procura. Nao adianta discordar de
+    // onde ele procura — quem le e ele.
+    if (!pacotesInstalados().motor) {
+      return { erro: 'primeiro instale o Separar instrumentos — o olheiro trabalha em cima do que ela deixa' }
+    }
+    return baixarPacote(OLHEIRO_URL, [
+      ['scout', ENGINE_DIR],
+      ['panns_data', homedir()]
+    ], 300, onProgresso)
+  }
+  return { erro: 'pacote desconhecido' }
+}
+
 export function motorInstalando() { return !!estadoDoMotor.baixando }
 
 const estadoDoMotor = { baixando: false, cancelar: null }
+
+// BAIXA E ABRE UM PACOTE. Vale pro motor e pro olheiro: os dois vem do mesmo
+// jeito, e ter duas copias deste codigo seria ter dois lugares pra consertar
+// quando um deles quebrasse.
+//
+// `destinos` diz onde cada pasta de dentro do pacote deve cair. O olheiro
+// precisa disso: o script mora no motor, mas os dados dele o proprio script
+// procura na pasta do usuario — e nao adianta discordar, quem le e ele.
+async function baixarPacote(url, destinos, minimoMB, onProgresso) {
+  const tar = descompactadorDoWindows()
+  if (!tar) {
+    return { erro: 'Este Windows não tem o descompactador de fábrica (tar). Ele existe desde 2018 — o computador pode estar muito desatualizado.' }
+  }
+  mkdirSync(ENGINE_DIR, { recursive: true })
+  const pacote = join(ENGINE_DIR, 'pacote-baixando.tar.gz')
+
+  try {
+    await new Promise((resolve, reject) => {
+      const escrever = createWriteStream(pacote)
+      let recebido = 0
+      let total = 0
+      let ultimoAviso = 0
+      const pedir = (endereco, saltos) => {
+        if (saltos > 6) return reject(new Error('endereço redirecionou demais'))
+        get(endereco, { headers: { 'User-Agent': 'MPTRIX' } }, (r) => {
+          if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+            r.resume()
+            return pedir(r.headers.location, saltos + 1)
+          }
+          if (r.statusCode !== 200) {
+            r.resume()
+            return reject(new Error('o servidor respondeu ' + r.statusCode))
+          }
+          total = parseInt(r.headers['content-length'] || '0', 10)
+          r.on('data', (pedaco) => {
+            recebido += pedaco.length
+            const agora = Date.now()
+            if (agora - ultimoAviso > 250) {
+              ultimoAviso = agora
+              onProgresso?.({
+                etapa: 'baixando',
+                percent: total ? Math.round((recebido / total) * 100) : null,
+                mb: Math.round(recebido / 1048576),
+                totalMb: total ? Math.round(total / 1048576) : null
+              })
+            }
+          })
+          r.pipe(escrever)
+          escrever.on('finish', () => escrever.close(resolve))
+          r.on('error', reject)
+        }).on('error', reject)
+      }
+      pedir(url, 0)
+    })
+
+    // Arquivo cortado pela metade extrai "quase" e quebra depois, longe daqui,
+    // com erro que nao diz nada. Melhor recusar agora.
+    const tam = statSync(pacote).size
+    if (tam < minimoMB * 1024 * 1024) {
+      throw new Error('o pacote veio incompleto (' + Math.round(tam / 1048576) + ' MB)')
+    }
+
+    onProgresso?.({ etapa: 'instalando', percent: null })
+    for (const [pasta, ondeVai] of destinos) {
+      mkdirSync(ondeVai, { recursive: true })
+      await new Promise((resolve, reject) => {
+        const c = spawn(tar, ['-xzf', pacote, '-C', ondeVai, pasta], { windowsHide: true })
+        let erro = ''
+        c.stderr.on('data', (d) => { erro += d })
+        c.on('error', reject)
+        c.on('close', (code) => code === 0 ? resolve() : reject(new Error(erro.trim() || 'falhou ao abrir o pacote')))
+      })
+    }
+    try { unlinkSync(pacote) } catch {}
+    return { ok: true }
+  } catch (e) {
+    // pacote pela metade no disco e pior que pacote nenhum
+    try { unlinkSync(pacote) } catch {}
+    return { erro: String(e && e.message ? e.message : e) }
+  }
+}
 
 export async function baixarMotor(onProgresso) {
   if (estadoDoMotor.baixando) return { erro: 'já está baixando' }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Preparacao from './components/Preparacao.jsx'
 import DownloadModal from './components/DownloadModal.jsx'
 import Omnitrix from './components/Omnitrix.jsx'
 import TituloVivo, { useFalaDaVez } from './components/TituloVivo.jsx'
@@ -53,6 +54,19 @@ export default function App() {
   const fala = useFalaDaVez()
   const [history, setHistory] = useState([])
   const [studioSource, setStudioSource] = useState(null)
+  const [preparando, setPreparando] = useState(false)
+
+  useEffect(() => {
+    window.mptrix.studio.preparacaoFeita?.().then((feita) => {
+      if (feita) return
+      // se nao falta nada (a pessoa copiou o motor a mao, por exemplo), nao ha
+      // o que preparar: marca como feita e nem aparece
+      window.mptrix.studio.pacotes().then((l) => {
+        if ((l || []).some((x) => !x.instalado)) setPreparando(true)
+        else window.mptrix.studio.marcarPreparacao?.()
+      })
+    })
+  }, [])
   // estado da nuvem só pra LEITURA do console (o controle continua no painel
   // da nuvem, mais abaixo) — null enquanto não respondeu
   const [nuvemLigada, setNuvemLigada] = useState(null)
@@ -251,6 +265,17 @@ export default function App() {
       title: entry.customName || entry.displayName || entry.title || 'Edição rápida',
       model: 'quick'
     })
+  }
+
+  // A PREPARACAO abre antes de tudo, e so na primeira vez. Depois disso quem
+  // pede instalacao e o proprio momento em que ela faz falta.
+  if (preparando) {
+    return (
+      <Preparacao onEntrar={() => {
+        window.mptrix.studio.marcarPreparacao?.()
+        setPreparando(false)
+      }} />
+    )
   }
 
   if (!env) {

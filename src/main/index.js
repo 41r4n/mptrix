@@ -43,7 +43,7 @@ import {
   detectChords,
   transcribeLyrics,
   gruposDeRepeticao,
-  saveLyrics, baixarMotor } from './studio.js'
+  saveLyrics, baixarMotor, PACOTES, pacotesInstalados, instalarPacote } from './studio.js'
 import {
   getYtDlpVersion,
   getFfmpegVersion,
@@ -1354,6 +1354,25 @@ app.whenReady().then(() => {
   ipcMain.handle('studio:baixarMotor', async (e) => {
     return baixarMotor((info) => {
       if (!e.sender.isDestroyed()) e.sender.send('studio:motorProgresso', info)
+    })
+  })
+
+  // ── OS PACOTES QUE VÊM DEPOIS ──
+  // A descrição de cada um mora junto da instalação (em studio.js), não aqui e
+  // nem na tela: texto longe do que ele descreve envelhece sozinho.
+  // A PREPARACAO E DE UMA VEZ SO. Ela nao pode voltar a cada abertura: quem ja
+  // decidiu o que quer instalar nao quer ser perguntado de novo toda vez que
+  // abre o programa — isso vira o pedagio que o dono odiou, so que diario.
+  ipcMain.handle('pacotes:preparacaoFeita', () => !!lerAjuste('preparacao.feita', false))
+  ipcMain.handle('pacotes:marcarPreparacao', () => { guardarAjuste('preparacao.feita', true); return true })
+
+  ipcMain.handle('pacotes:lista', () => {
+    const feitos = pacotesInstalados()
+    return Object.entries(PACOTES).map(([id, p]) => ({ id, ...p, instalado: !!feitos[id] }))
+  })
+  ipcMain.handle('pacotes:instalar', async (e, id) => {
+    return instalarPacote(id, (info) => {
+      if (!e.sender.isDestroyed()) e.sender.send('pacotes:progresso', { id, ...info })
     })
   })
 

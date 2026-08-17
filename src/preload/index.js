@@ -149,6 +149,15 @@ const api = {
   studio: {
     engineStatus: () => ipcRenderer.invoke('studio:engineStatus'),
     baixarMotor: () => ipcRenderer.invoke('studio:baixarMotor'),
+    pacotes: () => ipcRenderer.invoke('pacotes:lista'),
+    preparacaoFeita: () => ipcRenderer.invoke('pacotes:preparacaoFeita'),
+    marcarPreparacao: () => ipcRenderer.invoke('pacotes:marcarPreparacao'),
+    instalarPacote: (id) => ipcRenderer.invoke('pacotes:instalar', id),
+    onPacoteProgresso: (fn) => {
+      const h = (_e, info) => fn(info)
+      ipcRenderer.on('pacotes:progresso', h)
+      return () => ipcRenderer.removeListener('pacotes:progresso', h)
+    },
     onMotorProgresso: (fn) => {
       const h = (_e, info) => fn(info)
       ipcRenderer.on('studio:motorProgresso', h)

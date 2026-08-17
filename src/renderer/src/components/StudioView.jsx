@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import PedidoDePacote from './PedidoDePacote.jsx'
 import { STEM_META } from '../../../shared/instrumentos.js'
 
 
@@ -927,6 +928,10 @@ export default function StudioView({ source, onClose }) {
   // novo do alto.
   // ── BAIXAR O MOTOR ──
   const [tentativa, setTentativa] = useState(0)
+  // qual pacote esta sendo pedido agora. Um so por vez: dois pedidos na tela
+  // ao mesmo tempo viram uma fila de pedagio, e ai a pessoa clica em tudo pra
+  // se livrar — que e o contrario de escolher.
+  const [pedindoPacote, setPedindoPacote] = useState(null)
   const [motorMsg, setMotorMsg] = useState({})
   const [motorErro, setMotorErro] = useState(null)
 
@@ -1413,6 +1418,14 @@ export default function StudioView({ source, onClose }) {
     setShowLyrics(next)
     if (next) { setShowChords(false); setShowExtract(false) }
     if (next && !lyrics && session) {
+      // PEDE ANTES DE TENTAR. Sem isto o app comecava a baixar 1 GB no meio do
+      // ensaio, sem avisar — o dono chamou isso de "instalar uma coisa de novo"
+      // e ficou irritado, com razao.
+      const feitos = await window.mptrix.studio.pacotes()
+      if (!(feitos || []).find((x) => x.id === 'letra')?.instalado) {
+        setPedindoPacote('letra')
+        return
+      }
       setLyrics('loading')
       let r = await window.mptrix.studio.lyrics({ key: session.key })
       // letra guardada sem marcação de palavra: refaz sozinha, sem pedir nada
@@ -1993,12 +2006,23 @@ export default function StudioView({ source, onClose }) {
     if (phase !== 'ready' || !session || scout !== null) return
     if (!session.stems.includes('other')) return
     if (naNuvem) { setScout({ detections: [] }); return }
-    setScout('loading')
-    window.mptrix.studio.scout({ key: session.key }).then((res) => {
-      if (!aliveRef.current) return
-      if (res?.error) { setScout({ detections: [] }); return }
-      setScout(res)
-      setExtractSel(defaultExtractSel(res, session))
+    const rodar = () => {
+      setScout('loading')
+      window.mptrix.studio.scout({ key: session.key }).then((res) => {
+        if (!aliveRef.current) return
+        if (res?.error) { setScout({ detections: [] }); return }
+        setScout(res)
+        setExtractSel(defaultExtractSel(res, session))
+      })
+    }
+    // O OLHEIRO RODA SOZINHO ao abrir uma música separada — e por isso ele NÃO
+    // pode pedir instalação do nada no meio da abertura: seria exatamente o
+    // pedágio que irritou o dono no computador do pai. Sem o pacote ele
+    // simplesmente se cala, e quem pede é o botão de procurar de novo, que é
+    // onde a pessoa DECIDIU querer isso.
+    window.mptrix.studio.pacotes().then((ps) => {
+      if (!(ps || []).find((x) => x.id === 'olheiro')?.instalado) { setScout({ detections: [] }); return }
+      rodar()
     })
   }, [phase, session, scout]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2141,6 +2165,13 @@ export default function StudioView({ source, onClose }) {
   // e os níveis de presença do arsenal)
   const rescout = async () => {
     if (!session || extractJob) return
+    // AQUI o pedido cabe: a pessoa APERTOU procurar de novo. Pedir instalacao
+    // em cima de um gesto e outra coisa de pedir do nada no meio da abertura.
+    const ps = await window.mptrix.studio.pacotes()
+    if (!(ps || []).find((x) => x.id === 'olheiro')?.instalado) {
+      setPedindoPacote('olheiro')
+      return
+    }
     setScout('loading')
     const res = await window.mptrix.studio.scout({ key: session.key, force: true })
     if (res?.error) { setScout({ detections: [] }); setExportMsg(`⚠ ${res.error}`); return }
@@ -2901,63 +2932,38 @@ export default function StudioView({ source, onClose }) {
         </div>
       </header>
 
+      {/* O PEDIDO DE PACOTE, um so por vez. Ele cobre a tela porque a pessoa
+          precisa LER antes de decidir — pedido de canto vira propaganda, e
+          propaganda a gente fecha sem ler. */}
+      {pedindoPacote && (
+        <PedidoDePacote
+          id={pedindoPacote}
+          onPronto={() => {
+            const qual = pedindoPacote
+            setPedindoPacote(null)
+            if (qual === 'letra') { setLyrics(null); setShowLyrics(false) }
+            if (qual === 'olheiro') setScout(null)
+          }}
+          onAgoraNao={() => {
+            const qual = pedindoPacote
+            setPedindoPacote(null)
+            // a tela volta pro estado de antes: quem disse "agora nao" nao
+            // quer ficar olhando um painel vazio esperando
+            if (qual === 'letra') setShowLyrics(false)
+          }}
+        />
+      )}
+
+      {/* O MURO VIROU PEDIDO. Antes aqui morava uma tela que dizia "motor nao
+          instalado, fale com o desenvolvedor" — que nao e resposta pra quem
+          instalou o app em casa. O pedido explica o que e, pra que serve, o
+          que acontece sem, e que volta a perguntar. */}
       {phase === 'engine-missing' && (
-        <div className="studio-center">
-          <div className="studio-progress-card">
-            {/* O MOTOR SE INSTALA SOZINHO.
-                A mensagem antiga mandava "falar com o desenvolvedor" — que não
-                é resposta pra quem instalou o app em casa: empurrava a pessoa
-                pra uma porta que não existe. E a primeira saída que eu propus
-                foi passar o motor pela rede da casa; o dono cortou com razão:
-                "o MPTRIX é um app, ele não pode estar limitado". Depender de
-                estar no mesmo Wi-Fi é remendo, não produto. */}
-            <h3>{motorMsg.etapa === 'baixando' ? 'Baixando o motor da separação'
-              : motorMsg.etapa === 'instalando' ? 'Instalando o motor'
-              : 'Falta o motor da separação'}</h3>
-
-            {!motorMsg.etapa && (
-              <>
-                <p className="muted">
-                  Separar instrumentos usa um módulo de inteligência artificial
-                  que pesa mais de 1&nbsp;GB. Ele não cabe no instalador, então
-                  vem à parte — é baixado uma vez e fica pra sempre.
-                </p>
-                <p className="muted">
-                  <b>O resto do MPTRIX já funciona sem ele:</b> baixar música,
-                  abrir no estúdio, tom e BPM, letra, cifra, metrônomo, marcar
-                  trecho e levar pro celular.
-                </p>
-              </>
-            )}
-
-            {motorMsg.etapa === 'baixando' && (
-              <>
-                <p className="muted studio-hint">
-                  {motorMsg.mb}{motorMsg.totalMb ? ' de ' + motorMsg.totalMb : ''} MB
-                  {' · '}pode deixar rodando e usar o computador
-                </p>
-                <div className="studio-progress-bar">
-                  <div className="studio-progress-fill" style={{ width: `${motorMsg.percent || 0}%` }} />
-                </div>
-              </>
-            )}
-
-            {motorMsg.etapa === 'instalando' && (
-              <p className="muted studio-hint">abrindo o pacote — não feche o MPTRIX</p>
-            )}
-
-            {motorErro && <p className="muted studio-hint">⚠ {motorErro}</p>}
-
-            <div className="studio-mem-actions">
-              {!motorMsg.etapa && (
-                <button className="btn-primary" onClick={baixarOMotor}>
-                  {motorErro ? 'tentar de novo' : 'baixar o motor'}
-                </button>
-              )}
-              <button className="btn-secondary" onClick={onClose}>Voltar</button>
-            </div>
-          </div>
-        </div>
+        <PedidoDePacote
+          id="motor"
+          onPronto={() => setTentativa((n) => n + 1)}
+          onAgoraNao={onClose}
+        />
       )}
 
       {phase === 'error' && (
