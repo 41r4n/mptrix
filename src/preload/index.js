@@ -78,6 +78,20 @@ const api = {
     }
   },
 
+  emenda: {
+    fazer: (pedido) => ipcRenderer.invoke('emenda:fazer', pedido),
+    analiseDe: (a) => ipcRenderer.invoke('emenda:analiseDe', a),
+    onda: (a) => ipcRenderer.invoke('emenda:onda', a),
+    // o barulho que preenche um buraco entre duas peças: cauda, puxada ou
+    // contagem. Devolve um arquivo de verdade, que a tela trata como peça
+    vao: (pedido) => ipcRenderer.invoke('emenda:vao', pedido),
+    onProgresso: (fn) => {
+      const h = (_e, info) => fn(info)
+      ipcRenderer.on('emenda:progresso', h)
+      return () => ipcRenderer.removeListener('emenda:progresso', h)
+    }
+  },
+
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath),

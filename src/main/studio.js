@@ -1553,6 +1553,10 @@ export function saveLyrics({ key, segments }) {
 }
 
 // Retorna a sessão pronta do cache (ou null) — resposta síncrona, sem corrida de eventos
+// o meta cru de uma sessao, pra quem so quer o tom e o bpm sem montar a
+// sessao inteira (a tela de emendar, por exemplo)
+export function readSessionMeta(dir) { return readMeta(dir) }
+
 export function getCachedSession(filePath, model = 'htdemucs') {
   const found = findSession(filePath, model)
   if (!found) return null

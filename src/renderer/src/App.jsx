@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Emenda from './components/Emenda.jsx'
 import Preparacao from './components/Preparacao.jsx'
 import DownloadModal from './components/DownloadModal.jsx'
 import Omnitrix from './components/Omnitrix.jsx'
@@ -328,7 +329,10 @@ export default function App() {
             { id: 'estudio', n: '01', rot: 'ESTÚDIO', sub: 'separar e ensaiar' },
             { id: 'baixar', n: '02', rot: 'BAIXAR', sub: 'MP3, WAV, vídeo' },
             { id: 'acervo', n: '03', rot: 'ACERVO', sub: `${history.length} itens` },
-            { id: 'nuvem', n: '04', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
+            // EMENDAR entra antes da NUVEM porque e coisa de fazer musica; a
+            // nuvem e coisa de aparelho, e coisa de aparelho fica por ultimo.
+            { id: 'emendar', n: '04', rot: 'EMENDAR', sub: 'juntar músicas' },
+            { id: 'nuvem', n: '05', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
           ].map((it) => (
             <button
               key={it.id}
@@ -491,6 +495,8 @@ export default function App() {
             />
           </div>
         )}
+
+        {aba === 'emendar' && <Emenda history={history} />}
 
         {aba === 'nuvem' && (
           <div className="palco-in">

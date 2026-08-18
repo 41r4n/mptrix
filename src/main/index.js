@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, powerSaveBlocker, nativeImage } from 'electron'
+import { emendar, prepararEmenda, ondaDoArquivo, preencherVao } from './emenda.js'
 import { spawn } from 'child_process'
 import { join, basename, extname, dirname } from 'path'
 import { Readable } from 'stream'
@@ -43,7 +44,7 @@ import {
   detectChords,
   transcribeLyrics,
   gruposDeRepeticao,
-  saveLyrics, baixarMotor, PACOTES, pacotesInstalados, instalarPacote } from './studio.js'
+  saveLyrics, baixarMotor, PACOTES, pacotesInstalados, instalarPacote, findSession, readSessionMeta } from './studio.js'
 import {
   getYtDlpVersion,
   getFfmpegVersion,
@@ -197,6 +198,7 @@ const ondeYtDlp = resolverYtDlp({
 if (ondeYtDlp.erro) console.error('[yt-dlp] pasta gravável falhou:', ondeYtDlp.erro)
 const YT_DLP_PATH = ondeYtDlp.caminho
 const FFMPEG_PATH = getBinPath('ffmpeg.exe')
+prepararEmenda({ ffmpeg: FFMPEG_PATH })
 
 let mainWindow = null
 const activeJobs = new Map()
@@ -226,6 +228,12 @@ function heavyJobEnd() {
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'stems',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true }
+  },
+  // a porta de ouvir musica do acervo: mesma disciplina da de cima, so que o
+  // que ela serve mora na pasta de downloads e nao na de faixas separadas
+  {
+    scheme: 'acervo',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true }
   }
 ])
@@ -1298,6 +1306,50 @@ app.whenReady().then(() => {
   // ---------- Estúdio (separação de instrumentos) ----------
   // Serve os stems com suporte a Range (206) — sem isso o player não consegue
   // navegar livremente pela música (voltava pro início ao pular pra frente).
+  // ██████████ OUVIR UM ARQUIVO DO ACERVO ██████████
+  //
+  // Cortar sem ouvir e adivinhar. A porta `stems` so serve o que esta dentro da
+  // pasta de faixas separadas; musica do acervo mora na pasta de downloads.
+  //
+  // Esta porta tem a MESMA disciplina da outra: ela nao serve caminho qualquer
+  // que a tela pedir — ela confere se aquele arquivo esta no historico. Sem
+  // isso, uma falha na tela viraria "leia qualquer arquivo deste computador".
+  protocol.handle('acervo', async (request) => {
+    try {
+      const alvo = decodeURIComponent(new URL(request.url).searchParams.get('f') || '')
+      if (!alvo || !existsSync(alvo)) return new Response('não encontrado', { status: 404 })
+      const noAcervo = (getHistory() || []).some((h) =>
+        h.primaryFile === alvo || (h.files || []).includes(alvo))
+      if (!noAcervo) return new Response('não permitido', { status: 403 })
+      const size = statSync(alvo).size
+      const tipo = alvo.endsWith('.wav') ? 'audio/wav'
+        : alvo.endsWith('.flac') ? 'audio/flac'
+          : alvo.endsWith('.m4a') || alvo.endsWith('.mp4') ? 'audio/mp4'
+            : alvo.endsWith('.ogg') || alvo.endsWith('.opus') ? 'audio/ogg'
+              : 'audio/mpeg'
+      const faixa = request.headers.get('range')
+      if (faixa) {
+        const m = /bytes=(\d*)-(\d*)/.exec(faixa)
+        const de = m && m[1] ? parseInt(m[1], 10) : 0
+        const ate = m && m[2] ? parseInt(m[2], 10) : size - 1
+        return new Response(createReadStream(alvo, { start: de, end: ate }), {
+          status: 206,
+          headers: {
+            'Content-Type': tipo,
+            'Content-Length': String(ate - de + 1),
+            'Content-Range': `bytes ${de}-${ate}/${size}`,
+            'Accept-Ranges': 'bytes'
+          }
+        })
+      }
+      return new Response(createReadStream(alvo), {
+        headers: { 'Content-Type': tipo, 'Content-Length': String(size), 'Accept-Ranges': 'bytes' }
+      })
+    } catch {
+      return new Response('erro', { status: 500 })
+    }
+  })
+
   protocol.handle('stems', async (request) => {
     try {
       const u = new URL(request.url)
@@ -1365,6 +1417,67 @@ app.whenReady().then(() => {
   // abre o programa — isso vira o pedagio que o dono odiou, so que diario.
   ipcMain.handle('pacotes:preparacaoFeita', () => !!lerAjuste('preparacao.feita', false))
   ipcMain.handle('pacotes:marcarPreparacao', () => { guardarAjuste('preparacao.feita', true); return true })
+
+  // ── EMENDAR MÚSICAS ──
+  // Vai ter festividade na igreja do dono, e lá o pessoal emenda um louvor no
+  // outro. Não há IA aqui: quem corta e junta é o ffmpeg, que já vai dentro.
+  // O TOM E O BPM DE UM ARQUIVO, se o MPTRIX ja tiver ouvido ele alguma vez.
+  // Nao manda analisar: se nao souber, devolve vazio e a tela simplesmente nao
+  // mostra. Analisar 12 musicas so pra enfeitar a lista da emenda seria fazer o
+  // computador trabalhar por causa de informacao que e bom ter, nao necessaria.
+  ipcMain.handle('emenda:analiseDe', (_e, { path: arquivo }) => {
+    try {
+      // procura em qualquer um dos modelos: o que interessa e se ESTE arquivo
+      // ja passou pelo estudio alguma vez, nao com qual qualidade
+      for (const modelo of ['htdemucs_ft', 'htdemucs', 'htdemucs_6s', 'quick']) {
+        const achado = findSession(arquivo, modelo)
+        if (!achado) continue
+        const meta = readSessionMeta(achado.dir)
+        const a = meta?.analysis
+        if (!a) continue
+        return {
+          tom: a.key ? `${a.key}${a.scale === 'minor' ? 'm' : ''}` : null,
+          bpm: a.bpm ? Math.round(a.bpm) : null,
+          duracao: meta.duration || 0,
+          // AS BATIDAS VÃO JUNTO. O estúdio da emenda precisa delas pra encaixar
+          // uma música na outra no lugar onde o ouvido espera — emenda que cai
+          // meio tempo fora soa "seca" por mais fade que se ponha nela. O
+          // analisador já as tinha; elas só não chegavam até aqui.
+          batidas: Array.isArray(a.ticks) ? a.ticks : null,
+          // grade = pulso constante, quando um pulso constante REALMENTE
+          // descreve a gravação. Serve de plano B quando não há batidas.
+          grade: a.grade || null
+        }
+      }
+      return null
+    } catch { return null }
+  })
+
+  ipcMain.handle('emenda:onda', async (_e, { path: arquivo }) => {
+    try { return await ondaDoArquivo(arquivo) } catch { return null }
+  })
+
+  // O BARULHO QUE PREENCHE O VÃO.
+  //
+  // Ele vai pra dentro da pasta de faixas separadas, em `_vaos/wav`, e NÃO pra
+  // pasta de downloads — por um motivo de porta: a porta `acervo:` só serve
+  // arquivo que está no histórico, então um pedaço criado por aqui seria
+  // recusado com 403 e a tela não conseguiria tocar o que ela mesma pediu. A
+  // porta `stems:` serve qualquer coisa a três níveis dentro da pasta de faixas,
+  // e já sabe o tipo de .wav. É a mesma porta que serve as capas.
+  ipcMain.handle('emenda:vao', async (_e, pedido) => {
+    try {
+      return await preencherVao({ ...pedido, pasta: join(stemsRoot(), '_vaos', 'wav') })
+    } catch (e) {
+      return { erro: String(e?.message || e) }
+    }
+  })
+
+  ipcMain.handle('emenda:fazer', async (e, pedido) => {
+    return emendar({ ...pedido, pasta: resolveDownloadDir() }, (info) => {
+      if (!e.sender.isDestroyed()) e.sender.send('emenda:progresso', info)
+    })
+  })
 
   ipcMain.handle('pacotes:lista', () => {
     const feitos = pacotesInstalados()

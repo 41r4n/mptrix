@@ -1,6 +1,6 @@
 {
   "name": "mptrix",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "MPTRIX — baixador de MP3/MP4 do YouTube com interface gráfica (wrapper de yt-dlp + ffmpeg)",
   "main": "out/main/index.js",
   "author": "MPTRIX",
@@ -21,7 +21,8 @@
     "confere:celular": "node scripts/confere-celular.mjs",
     "confere:pagina": "node scripts/confere-pagina.mjs",
     "tela:celular": "node scripts/gera-tela-celular.mjs",
-    "olha:celular": "electron scripts/olha-celular.cjs"
+    "olha:celular": "electron scripts/olha-celular.cjs",
+    "olha:mesa": "electron scripts/olha-mesa.cjs"
   },
   "dependencies": {
     "electron-store": "^8.2.0",

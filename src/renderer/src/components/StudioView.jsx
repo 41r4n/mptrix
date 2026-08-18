@@ -951,13 +951,34 @@ export default function StudioView({ source, onClose }) {
     setTentativa((n) => n + 1)
   }, [])
 
+  // ── O PONTO DE RETORNO ──
+  //
+  // Onde a MÃO deixou a linha, e só ela: o relógio do transporte anda a cada
+  // quadro e não pode encostar aqui. É essa a diferença entre "onde a música
+  // parou" e "onde eu deixei a linha", e era ela que faltava.
+  const pontoRef = useRef(0)
+
+  // ── DE ONDE O PLAY RECOMEÇA ──
+  //
+  // COM LOOP: do começo do trecho. Mecânica do loop, fica como está.
+  //
+  // SEM LOOP: DO PONTO ONDE A PESSOA DEIXOU A LINHA — e é pra se comportar
+  // IGUAL AO LOOP, com o ponto dela no lugar do trecho. Antes voltava pro zero,
+  // e isso torrava o ensaio: você põe a linha no meio do refrão pra repetir
+  // aquele pedaço, toca, pausa — e a música volta pro começo da música. Aí tem
+  // que mirar o ponto de novo, toda vez.
+  //
+  // NÃO é "continuar de onde parou". Já tentei assim e é outra coisa: a linha
+  // ficaria onde a música chegou, e pra repetir o trecho ele teria que mirar de
+  // novo do mesmo jeito. O que serve pra ensaiar é VOLTAR PRO PONTO: para,
+  // respira, toca de novo do alto.
   const cabecaDoEnsaio = useCallback(() => {
     // usa o loopRef que o relógio do transporte já mantém — inventar um ref
     // novo aqui seria uma segunda verdade sobre o mesmo estado, e duas verdades
     // sobre a mesma coisa é como o loop e o playhead se desencontram
     const { on, sel } = loopRef.current || {}
     if (on && sel && sel.end - sel.start > 0.15) return sel.start
-    return 0
+    return pontoRef.current || 0
   }, [])
 
   // quem pausou fica marcado, e o PLAY e quem decide de onde recomeca. A
@@ -974,7 +995,8 @@ export default function StudioView({ source, onClose }) {
     p.pause()
     setPlaying(false)
     pausouRef.current = true
-    // volta o cursor na hora, pra pessoa VER de onde vai recomecar
+    // volta o cursor NA HORA, pra pessoa VER de onde vai recomecar — sem isso a
+    // linha ficaria parada num lugar e o som sairia de outro
     const volta = cabecaDoEnsaio()
     p.seek(volta)
     setPos(volta)
@@ -991,9 +1013,15 @@ export default function StudioView({ source, onClose }) {
     setPlaying(true)
   }, [cabecaDoEnsaio])
 
+  // TODO MOVIMENTO DE MÃO PASSA POR AQUI — arrastar na onda, clicar num acorde,
+  // pular 10 segundos, tocar numa marca. É por isso que o ponto de retorno mora
+  // neste lugar e em nenhum outro: os seeks internos (troca de faixa, recarga em
+  // qualidade máxima, guarda do loop) chamam p.seek direto e NÃO podem mexer no
+  // ponto — eles só estão preservando a posição, não escolhendo uma.
   const seekTo = useCallback((sec) => {
     const p = playerRef.current
     if (!p) return
+    pontoRef.current = Math.max(0, sec)
     p.seek(sec)
     setPos(sec)
   }, [])
@@ -1023,8 +1051,12 @@ export default function StudioView({ source, onClose }) {
               p.play(A).catch(() => {})
               t = A
             } else {
+              // a música acabou por conta própria: o ponto de retorno volta pro
+              // começo junto com a linha. Guardar o ponto antigo aqui faria o
+              // próximo play saltar pra um lugar que a tela não está mostrando
               p.pause()
               p.seek(0)
+              pontoRef.current = 0
               setPlaying(false)
               setPos(0)
               t = 0
@@ -1826,12 +1858,30 @@ export default function StudioView({ source, onClose }) {
   const aplicarZoom = useCallback((alvo, xAncora) => {
     const sc = dawScrollRef.current
     if (!sc) return
-    const z = Math.max(1, Math.min(16, alvo))
-    const atual = zoomRef.current || 1
-    if (Math.abs(z - atual) < 0.0005) return
     const rail = sc.querySelector('.daw-rail')
     const railW = rail ? rail.getBoundingClientRect().width : 264
     const visivel = Math.max(120, sc.clientWidth - railW)
+    // ── ATÉ ONDE VALE APROXIMAR ──
+    //
+    // O teto era 16× fixo, e "16 vezes" não quer dizer nada: é 16 vezes A TELA
+    // CHEIA, então num louvor de 4 minutos dá uns 70 pixels por segundo (fundo
+    // de verdade) e numa gravação ao vivo de uma hora dá 5 — quase nada. O mesmo
+    // número entregava duas experiências opostas.
+    //
+    // Agora o teto é medido no que a pessoa realmente vê: PIXELS POR SEGUNDO.
+    // Vai até 200, que é onde meio décimo de segundo ocupa 10px e dá pra achar
+    // o exato ponto em que a voz entra.
+    //
+    // E tem um segundo teto, de largura: passando de umas 200 mil colunas de
+    // pixel a rolagem do navegador começa a perder precisão e o arrasto fica
+    // impreciso — aproximar além disso pioraria a mira em vez de melhorar.
+    const dur = playerRef.current?.duration?.() || 0
+    const porLargura = 200000 / visivel
+    const porSegundo = dur > 0 ? (200 * dur) / visivel : 16
+    const TETO = Math.max(16, Math.min(porSegundo, porLargura))
+    const z = Math.max(1, Math.min(TETO, alvo))
+    const atual = zoomRef.current || 1
+    if (Math.abs(z - atual) < 0.0005) return
     // ancora: o ponto que precisa ficar PARADO (cursor, ou centro da tela)
     const ancoraPx = xAncora != null
       ? Math.max(0, Math.min(visivel, xAncora - sc.getBoundingClientRect().left - railW))
@@ -1884,8 +1934,14 @@ export default function StudioView({ source, onClose }) {
       }
       e.preventDefault()
       // exponencial pelo tamanho do passo: roda de mouse manda ~100 por clique,
-      // trackpad manda valores pequenos e contínuos — os dois ficam suaves
-      const fator = Math.exp(-e.deltaY * 0.0015)
+      // trackpad manda valores pequenos e contínuos — os dois ficam suaves.
+      //
+      // O ENTALHE FICOU MAIS FORTE (era 0,0015, dava 1,16× por clique). Com o
+      // teto subindo de 16× pra até 180×, o passo antigo virava trinta e cinco
+      // giros de roda pra chegar no fundo — teto alto que ninguém alcança é o
+      // mesmo que teto baixo. Em 0,0022 cada clique multiplica por ~1,25 e o
+      // caminho inteiro cabe em uns vinte giros, que é o que a mão aguenta.
+      const fator = Math.exp(-e.deltaY * 0.0022)
       aplicarZoom(zoomRef.current * fator, e.clientX)
     }
     sc.addEventListener('wheel', onWheel, { passive: false })
@@ -2623,6 +2679,69 @@ export default function StudioView({ source, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, waveSel, playing, play, pause])
 
+  // ── AS SETAS DO TECLADO: 10 SEGUNDOS, E ACELERA SE SEGURAR ──
+  //
+  // O gesto do YouTube, pedido com essas palavras pelo dono. Um toque anda 10
+  // segundos pro lado; segurando, ele vai abrindo passo. Voltar três minutos
+  // batendo na seta dezoito vezes é trabalho que a máquina devia fazer.
+  //
+  // A ACELERAÇÃO É POR TEMPO SEGURADO, e não pelo repetidor de tecla do sistema.
+  // O repetidor depende da configuração de cada Windows: usando ele, a mesma
+  // tecla andaria em velocidades diferentes em cada computador, e ninguém
+  // entenderia por quê. Aqui o relógio é nosso, então o gesto é o mesmo em todo
+  // lugar. (Por isso o `e.repeat` é ignorado: quem manda é o nosso relógio.)
+  const setaRef = useRef(null)
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const digitando = (a) => a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)
+    const ladoDa = (k) => (k === 'ArrowRight' ? 1 : k === 'ArrowLeft' ? -1 : 0)
+    const soltar = () => {
+      if (!setaRef.current) return
+      cancelAnimationFrame(setaRef.current.raf)
+      setaRef.current = null
+    }
+    const onDown = (e) => {
+      const lado = ladoDa(e.key)
+      if (!lado || digitando(e.target) || e.ctrlKey || e.altKey || e.metaKey) return
+      e.preventDefault()
+      if (setaRef.current) return
+      const p = playerRef.current
+      if (!p) return
+      const dur = p.duration() || 0
+      const irPara = (t) => seekTo(Math.max(0, Math.min(dur, t)))
+      irPara(p.position() + lado * 10)   // o toque: dez segundos, na hora
+      const nasceu = Date.now()
+      let anterior = nasceu
+      const passo = () => {
+        const agora = Date.now()
+        const segurando = (agora - nasceu) / 1000
+        const dt = (agora - anterior) / 1000
+        anterior = agora
+        // meio segundo de carência: um toque rápido não pode virar corrida
+        if (segurando > 0.5) {
+          // de 20 até 240 segundos por segundo, abrindo ao longo de ~3s de tecla
+          // presa — no fim, uma música inteira passa em poucos instantes
+          const vel = Math.min(240, 20 + (segurando - 0.5) * 80)
+          irPara(p.position() + lado * vel * dt)
+        }
+        if (setaRef.current) setaRef.current.raf = requestAnimationFrame(passo)
+      }
+      setaRef.current = { raf: requestAnimationFrame(passo) }
+    }
+    const onUp = (e) => { if (ladoDa(e.key)) soltar() }
+    window.addEventListener('keydown', onDown)
+    window.addEventListener('keyup', onUp)
+    // PERDER O FOCO COM A TECLA PRESA: o keyup nunca chega, e a música ficaria
+    // correndo sozinha pra sempre. Já vi isso acontecer em player de verdade.
+    window.addEventListener('blur', soltar)
+    return () => {
+      window.removeEventListener('keydown', onDown)
+      window.removeEventListener('keyup', onUp)
+      window.removeEventListener('blur', soltar)
+      soltar()
+    }
+  }, [phase, seekTo])
+
   // Cão de guarda: se algum aviso de "pronto!" se perder (app piscou, evento
   // sumiu), a tela consulta o estado real a cada 3s e se cura sozinha.
   useEffect(() => {
@@ -3357,21 +3476,51 @@ export default function StudioView({ source, onClose }) {
                 <div className="daw-gutter daw-ruler">
                   <div className="daw-ruler-inner" ref={rulerInnerRef}>
                   {playDuration > 0 && (() => {
-                    // com zoom cabe marca mais fina: de 5 em 5s à vista normal,
-                    // de 1 em 1s (e até meio segundo) quando esticado — régua
-                    // sem marca não ajuda a acertar ponto nenhum
-                    const passo = zoomX >= 8 ? 1 : zoomX >= 4 ? 2 : 5
-                    const grande = zoomX >= 8 ? 10 : zoomX >= 4 ? 10 : 30
+                    // ── A MARCA ACOMPANHA O ZOOM, E O ZOOM AGORA VAI FUNDO ──
+                    //
+                    // Antes o passo vinha de degraus fixos e parava em 1 segundo:
+                    // aproximando de verdade, a régua ficava com uma marca a cada
+                    // 200px e deixava de servir pra mirar. Régua sem marca não
+                    // ajuda a acertar ponto nenhum, que era o motivo dela existir.
+                    //
+                    // Agora o passo sai do que está na tela — pixels por segundo —
+                    // e desce até 5 centésimos. O piso de espaçamento também
+                    // protege a tela: sem ele, uma gravação de uma hora bem
+                    // aproximada viraria dezenas de milhares de risquinhos.
+                    const pxs = (contentW || 0) / playDuration
+                    const escala = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]
+                    // 22px entre risquinhos é o que a vista normal já tinha (5 em
+                    // 5 segundos); o segundo piso existe só pra que aproximar uma
+                    // gravação de uma hora não vire dezenas de milhares de nós.
+                    const minimo = Math.max(22, (contentW || 0) / 1200)
+                    const passo = escala.find((p) => p * pxs >= minimo) || 900
+                    // rótulo a cada quatro ou cinco risquinhos: é a proporção que
+                    // a régua já tinha (5s marcados, 30s escritos) e ela continua
+                    // valendo em qualquer profundidade
+                    const grande = escala.find((g) => g >= passo * 4) || passo * 5
+                    // CONTA POR ÍNDICE, não somando o passo: somando 0,05 mil
+                    // vezes o erro de arredondamento se acumula e as marcas
+                    // desandam do relógio lá pro fim da música.
                     const ticks = []
-                    for (let s = 0; s < playDuration; s += passo) {
-                      const major = s % grande === 0
+                    const quantas = Math.floor(playDuration / passo)
+                    for (let i = 0; i <= quantas; i++) {
+                      const s = i * passo
+                      const resto = s % grande
+                      const major = resto < 0.001 || grande - resto < 0.001
                       ticks.push(
                         <div
-                          key={s}
+                          key={i}
                           className={`ruler-tick ${major ? 'major' : ''}`}
                           style={{ left: `${(s / playDuration) * 100}%` }}
                         >
-                          {major && s > 0 && <span className="ruler-label">{fmtTime(s)}</span>}
+                          {/* com passo menor que um segundo, minuto:segundo
+                              escreveria o MESMO rótulo em dez marcas seguidas —
+                              aí o décimo é a única coisa que informa */}
+                          {major && s > 0 && (
+                            <span className="ruler-label">
+                              {passo < 1 ? fmtTime(Math.floor(s)) + ',' + Math.round((s % 1) * 10) : fmtTime(s)}
+                            </span>
+                          )}
                         </div>
                       )
                     }
