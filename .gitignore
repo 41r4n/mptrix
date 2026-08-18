@@ -27,3 +27,8 @@ release/MPTRIX-celular.apk
 release/motor-mptrix.tar.gz
 release/olheiro-mptrix.tar.gz
 release/*.zip
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

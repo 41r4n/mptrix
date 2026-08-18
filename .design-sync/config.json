@@ -1,0 +1,72 @@
+{
+  "projectId": "019e14b8-ce59-75f1-a1ac-89b8f3a5adec",
+  "shape": "package",
+  "pkg": "mptrix",
+  "globalName": "MPTRIX",
+  "srcDir": "src/renderer/src",
+  "cssEntry": "src/renderer/src/styles.css",
+  "extraFonts": [
+    "design-system/fontes-do-catalogo.css"
+  ],
+  "componentSrcMap": {
+    "Omnitrix": "src/renderer/src/components/Omnitrix.jsx",
+    "Ico": "src/renderer/src/components/Icones.jsx",
+    "TituloVivo": "src/renderer/src/components/TituloVivo.jsx",
+    "Guarda": "src/renderer/src/components/Guarda.jsx",
+    "ConfirmDialog": "src/renderer/src/components/ConfirmDialog.jsx",
+    "BatchActionsDialog": "src/renderer/src/components/BatchActionsDialog.jsx",
+    "PeriodPickerModal": "src/renderer/src/components/PeriodPickerModal.jsx",
+    "UpdateHelpModal": "src/renderer/src/components/UpdateHelpModal.jsx",
+    "ZoomChip": "src/renderer/src/components/ZoomChip.jsx"
+  },
+  "dtsPropsFor": {
+    "Ico": "  /** qual desenho — cai em 'baixar' se o nome nao existir */\n  nome: 'ampulheta' | 'apagar' | 'audio_m4a' | 'audio_wav' | 'aviso' | 'baixar' | 'buscar' | 'caixa' | 'calendario' | 'certo' | 'copiar' | 'estrela' | 'estrelaCheia' | 'fast' | 'livroReg' | 'lixeira' | 'music' | 'pasta' | 'playlist' | 'rapido' | 'renomear' | 'sair' | 'studio' | 'tempo' | 'tocar' | 'video';\n  /** lado do quadrado, em px (padrao 20) */\n  tamanho?: number;",
+    "Omnitrix": "  /** false deixa a roda apagada, sem vigiar a area de transferencia */\n  ligado?: boolean;\n  /** chamado com o formato escolhido na coroa */\n  onEscolher?: (formato: string) => void;",
+    "TituloVivo": "  /** a frase da vez; sem ela o titulo fica parado */\n  fala?: string;",
+    "Guarda": "  /** a arvore que ela protege — se quebrar, a Guarda mostra o aviso no lugar */\n  children?: React.ReactNode;",
+    "ConfirmDialog": "  /** nada aparece enquanto for false */\n  open?: boolean;\n  title?: string;\n  message?: string;\n  /** itens listados sob a mensagem (ex: os arquivos que serao apagados) */\n  list?: string[];\n  /** letra miuda embaixo, pra consequencia que nao cabe na mensagem */\n  note?: string;\n  /** caixa de marcar opcional: { label, checked, onChange } */\n  checkbox?: { label: string; checked: boolean; onChange: (v: boolean) => void };\n  confirmLabel?: string;\n  cancelLabel?: string;\n  /** true pinta o botao de confirmar como destrutivo */\n  danger?: boolean;\n  onConfirm?: () => void;\n  onCancel?: () => void;",
+    "BatchActionsDialog": "  open?: boolean;\n  /** quantos itens estao marcados */\n  count?: number;\n  onClose?: () => void;\n  onDelete?: () => void;\n  onShare?: () => void;",
+    "PeriodPickerModal": "  /** o acervo. O campo de data e `timestamp` (ms) -- nao `createdAt`:\n   *  a peca so oferece os periodos que EXISTEM aqui dentro, entao com o\n   *  nome errado ela abre vazia dizendo \"Nada registrado\". */\n  history?: Array<{ id?: string; timestamp: number }>;\n  /** periodo que ja estava escolhido */\n  initial?: unknown;\n  onApply?: (periodo: unknown) => void;\n  onClose?: () => void;",
+    "UpdateHelpModal": "  open?: boolean;\n  onClose?: () => void;",
+    "ZoomChip": "  /** sem props: le e escreve o zoom da janela */"
+  },
+  "overrides": {
+    "ConfirmDialog": {
+      "cardMode": "single",
+      "primaryStory": "Destrutivo",
+      "viewport": "760x520"
+    },
+    "BatchActionsDialog": {
+      "cardMode": "single",
+      "primaryStory": "Padrao",
+      "viewport": "760x460"
+    },
+    "PeriodPickerModal": {
+      "cardMode": "single",
+      "primaryStory": "Padrao",
+      "viewport": "900x680"
+    },
+    "UpdateHelpModal": {
+      "cardMode": "single",
+      "primaryStory": "Aberto",
+      "viewport": "760x560"
+    },
+    "Omnitrix": {
+      "cardMode": "single",
+      "primaryStory": "AMarcaDoEstudio",
+      "viewport": "900x460"
+    },
+    "Guarda": {
+      "cardMode": "single",
+      "primaryStory": "QuandoAlgoQuebra",
+      "viewport": "760x420"
+    },
+    "TituloVivo": {
+      "cardMode": "column"
+    },
+    "Ico": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
