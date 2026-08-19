@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, statSync, renameSync, createReadStream, writeFil
 import { randomUUID, createHash } from 'crypto'
 import { PRESETS, startDownload, probeVideo, probePlaylist, probeVideoMaxHeight, formatBytes, qualityLabel } from './downloader.js'
 import { resolverYtDlp } from './binpath.js'
+import { programa } from './plataforma.js'
 import { ligarCelular, desligarCelular, infoCelular, pedidosRecentes } from './celular.js'
 import { paginaCelular } from './celular-pagina.js'
 import { paginaProvas } from './celular-provas.js'
@@ -190,14 +191,21 @@ function getBinPath(name) {
 
 // Onde mora o yt-dlp: a decisão inteira, com o porquê, está em binpath.js —
 // ela vive lá fora pra poder ser medida sem subir o app.
+// O NOME MUDA COM O SISTEMA — a decisão inteira mora em plataforma.js. Aqui
+// só se usa o nome que ela devolve, e as mensagens de erro usam o MESMO nome:
+// dizer "yt-dlp.exe não encontrado" pra quem está num Mac manda a pessoa
+// procurar um arquivo que nunca vai existir na máquina dela.
+const NOME_YTDLP = programa('yt-dlp')
+const NOME_FFMPEG = programa('ffmpeg')
+
 const ondeYtDlp = resolverYtDlp({
-  noPacote: getBinPath('yt-dlp.exe'),
+  noPacote: getBinPath(NOME_YTDLP),
   pastaDeDados: app.getPath('userData'),
   empacotado: app.isPackaged
 })
 if (ondeYtDlp.erro) console.error('[yt-dlp] pasta gravável falhou:', ondeYtDlp.erro)
 const YT_DLP_PATH = ondeYtDlp.caminho
-const FFMPEG_PATH = getBinPath('ffmpeg.exe')
+const FFMPEG_PATH = getBinPath(NOME_FFMPEG)
 prepararEmenda({ ffmpeg: FFMPEG_PATH })
 
 let mainWindow = null
@@ -436,6 +444,10 @@ app.whenReady().then(() => {
     platform: process.platform,
     appVersion: app.getVersion(),
     binPaths: { ytDlp: YT_DLP_PATH, ffmpeg: FFMPEG_PATH },
+    // OS NOMES VÃO JUNTO porque a tela precisa dizer qual arquivo falta, e
+    // quem sabe o nome é plataforma.js. Sem isto a tela chutaria `.exe` e
+    // mandaria quem está num Mac procurar um arquivo que não existe lá.
+    binNames: { ytDlp: NOME_YTDLP, ffmpeg: NOME_FFMPEG },
     binariesPresent: {
       ytDlp: existsSync(YT_DLP_PATH),
       ffmpeg: existsSync(FFMPEG_PATH)
@@ -574,7 +586,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('video:probe', async (_e, url) => {
     if (!existsSync(YT_DLP_PATH)) {
-      return { error: 'yt-dlp.exe não encontrado em resources/bin.' }
+      return { error: `${NOME_YTDLP} não encontrado em resources/bin.` }
     }
     try {
       const info = await probeVideo({ ytDlpPath: YT_DLP_PATH, url })
@@ -586,7 +598,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('playlist:probe', async (_e, url) => {
     if (!existsSync(YT_DLP_PATH)) {
-      return { error: 'yt-dlp.exe não encontrado em resources/bin.' }
+      return { error: `${NOME_YTDLP} não encontrado em resources/bin.` }
     }
     try {
       const info = await probePlaylist({ ytDlpPath: YT_DLP_PATH, url })
@@ -600,8 +612,8 @@ app.whenReady().then(() => {
     if (!Array.isArray(items) || items.length === 0) {
       return { error: 'Nenhum vídeo selecionado.' }
     }
-    if (!existsSync(YT_DLP_PATH)) return { error: 'yt-dlp.exe não encontrado.' }
-    if (!existsSync(FFMPEG_PATH)) return { error: 'ffmpeg.exe não encontrado.' }
+    if (!existsSync(YT_DLP_PATH)) return { error: `${NOME_YTDLP} não encontrado.` }
+    if (!existsSync(FFMPEG_PATH)) return { error: `${NOME_FFMPEG} não encontrado.` }
     const dir = outputDir || resolveDownloadDir()
     try { mkdirSync(dir, { recursive: true }) } catch (err) {
       return { error: `Pasta inválida: ${err.message}` }
@@ -718,7 +730,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('playlist:probeQualities', async (_e, { entries, concurrency = 2 }) => {
-    if (!existsSync(YT_DLP_PATH)) return { error: 'yt-dlp.exe não encontrado.' }
+    if (!existsSync(YT_DLP_PATH)) return { error: `${NOME_YTDLP} não encontrado.` }
     if (!Array.isArray(entries) || entries.length === 0) return { error: 'Lista vazia.' }
     const probeId = randomUUID()
     const state = { cancelled: false, consecutiveNulls: 0, rateLimited: false }
@@ -1164,7 +1176,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('updates:run', async () => {
     if (updateRunning) return { error: 'Já tem uma atualização rodando.' }
-    if (!existsSync(YT_DLP_PATH)) return { error: 'yt-dlp.exe não encontrado.' }
+    if (!existsSync(YT_DLP_PATH)) return { error: `${NOME_YTDLP} não encontrado.` }
 
     if (activeJobs.size > 0) {
       return { error: 'Há downloads em andamento. Espere terminarem antes de atualizar.' }
@@ -1206,10 +1218,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('download:start', (_e, { url, presetId, outputDir, qualityHeight }) => {
     if (!existsSync(YT_DLP_PATH)) {
-      return { error: 'yt-dlp.exe não encontrado em resources/bin.' }
+      return { error: `${NOME_YTDLP} não encontrado em resources/bin.` }
     }
     if (!existsSync(FFMPEG_PATH)) {
-      return { error: 'ffmpeg.exe não encontrado em resources/bin.' }
+      return { error: `${NOME_FFMPEG} não encontrado em resources/bin.` }
     }
     const dir = outputDir || resolveDownloadDir()
     try {
@@ -1649,7 +1661,7 @@ app.whenReady().then(() => {
       return { error: 'Arquivo não encontrado no disco.' }
     }
     if (!existsSync(FFMPEG_PATH)) {
-      return { error: 'ffmpeg.exe não encontrado em resources/bin.' }
+      return { error: `${NOME_FFMPEG} não encontrado em resources/bin.` }
     }
     const cached = getCachedSession(inputFile, model || 'htdemucs')
     if (cached) {
@@ -1792,6 +1804,10 @@ app.whenReady().then(() => {
     const freeMB = freeMemMB()
     const result = { freeMB, needMB, ok: freeMB >= needMB, hogs: [] }
     if (!withHogs || result.ok) return result
+    // quem lista os programas por memória aqui é o PowerShell. Fora do Windows
+    // ele não existe: o aviso de memória continua (o número é do sistema), só
+    // não vem acompanhado da lista de quem está comendo.
+    if (process.platform !== 'win32') return result
     try {
       const out = await new Promise((resolve, reject) => {
         const child = spawn('powershell.exe', [
@@ -1864,7 +1880,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('studio:plan', (_e, { path: inputFile, cachedOnly }) => {
     if (!inputFile || !existsSync(inputFile)) return { error: 'Arquivo não encontrado no disco.' }
-    if (!existsSync(FFMPEG_PATH)) return { error: 'ffmpeg.exe não encontrado em resources/bin.' }
+    if (!existsSync(FFMPEG_PATH)) return { error: `${NOME_FFMPEG} não encontrado em resources/bin.` }
     const cachedPlan = getCachedPlan(inputFile)
     if (cachedPlan) return { plan: cachedPlan }
     if (cachedOnly) return { plan: null }

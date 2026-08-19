@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { programa, caminhoDoPython, pythonDoPacote, descompactador, SEM_DESCOMPACTADOR, temPacoteDeIA, recadoSemPacote } from './plataforma.js'
 import { carregarLexico, corrigirVersos } from './lexico.js'
 import { usarNuvem, lerChaveNuvem, somarGastoNuvem, getNuvem, estimativaCentavos, gastoCentavos, desligarNuvemPor } from './store.js'
 import { freemem, homedir } from 'os'
@@ -54,8 +55,8 @@ const MAX_CACHE_BYTES = 4 * 1024 * 1024 * 1024
 const LOCAL_DIR = join(process.env.LOCALAPPDATA || app.getPath('userData'), 'MPTRIX')
 const ENGINE_DIR = join(LOCAL_DIR, 'engine')
 const STEMS_DIR = join(LOCAL_DIR, 'stems')
-const PYTHON_PATH = join(ENGINE_DIR, 'venv', 'Scripts', 'python.exe')
-const RUBBERBAND_PATH = join(ENGINE_DIR, 'rubberband', 'rubberband.exe')
+const PYTHON_PATH = caminhoDoPython(ENGINE_DIR)
+const RUBBERBAND_PATH = join(ENGINE_DIR, 'rubberband', programa('rubberband'))
 
 function analyzeScriptPath() {
   if (app.isPackaged) {
@@ -121,12 +122,12 @@ export function removeCachesForFile(filePath) {
 const MOTOR_URL = 'https://github.com/41r4n/mptrix/releases/download/motor-v1/motor-mptrix.tar.gz'
 const OLHEIRO_URL = 'https://github.com/41r4n/mptrix/releases/download/motor-v1/olheiro-mptrix.tar.gz'
 
-// ONDE O WINDOWS GUARDA O DESCOMPACTADOR. Ele existe de fábrica desde 2018, e é
-// o mesmo que lê .tar.gz. Se um dia faltar, é melhor dizer isso na cara do que
-// deixar a instalação morrer no meio sem explicação.
-function descompactadorDoWindows() {
-  const cam = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
-  return existsSync(cam) ? cam : null
+// QUEM ABRE O .tar.gz. No Windows é o descompactador de fábrica, que existe
+// desde 2018 e mora em lugar fixo — se um dia faltar, é melhor dizer isso na
+// cara do que deixar a instalação morrer no meio sem explicação. Em Mac e Linux
+// é o tar do sistema. Qual dos dois é decisão de plataforma.js.
+function descompactadorDoSistema() {
+  return descompactador()
 }
 
 // ██████████ OS PACOTES QUE VÊM DEPOIS ██████████
@@ -180,6 +181,9 @@ export function pacotesInstalados() {
 }
 
 export async function instalarPacote(id, onProgresso) {
+  // a mesma verdade vale pros três pacotes, e o motor confere de novo por
+  // dentro: ele também é chamado direto, sem passar por aqui.
+  if (!temPacoteDeIA()) return { erro: recadoSemPacote() }
   if (id === 'motor') return baixarMotor(onProgresso)
   if (id === 'letra') {
     try {
@@ -222,9 +226,9 @@ const estadoDoMotor = { baixando: false, cancelar: null }
 // precisa disso: o script mora no motor, mas os dados dele o proprio script
 // procura na pasta do usuario — e nao adianta discordar, quem le e ele.
 async function baixarPacote(url, destinos, minimoMB, onProgresso) {
-  const tar = descompactadorDoWindows()
+  const tar = descompactadorDoSistema()
   if (!tar) {
-    return { erro: 'Este Windows não tem o descompactador de fábrica (tar). Ele existe desde 2018 — o computador pode estar muito desatualizado.' }
+    return { erro: SEM_DESCOMPACTADOR }
   }
   mkdirSync(ENGINE_DIR, { recursive: true })
   const pacote = join(ENGINE_DIR, 'pacote-baixando.tar.gz')
@@ -298,9 +302,16 @@ async function baixarPacote(url, destinos, minimoMB, onProgresso) {
 export async function baixarMotor(onProgresso) {
   if (estadoDoMotor.baixando) return { erro: 'já está baixando' }
 
-  const tar = descompactadorDoWindows()
+  // OS PACOTES SÃO DE WINDOWS, E ISSO PRECISA SER DITO ANTES DO DOWNLOAD.
+  // Dentro deles vai um Python de Windows inteiro. Num Mac o download terminaria
+  // bem, a instalação diria "pronto", e a coisa só quebraria na hora de separar
+  // — depois de 790 MB e da espera, com erro que não explica nada. É o mesmo
+  // defeito que o resto deste arquivo se esforça pra não cometer.
+  if (!temPacoteDeIA()) return { erro: recadoSemPacote() }
+
+  const tar = descompactadorDoSistema()
   if (!tar) {
-    return { erro: 'Este Windows não tem o descompactador de fábrica (tar). Ele existe desde 2018 — o computador pode estar muito desatualizado.' }
+    return { erro: SEM_DESCOMPACTADOR }
   }
 
   estadoDoMotor.baixando = true
@@ -389,7 +400,7 @@ export async function baixarMotor(onProgresso) {
       const linhas = readFileSync(cfg, 'utf8').split(NL).map((l) => l.split(CR).join(''))
       const novo = linhas
         .map((l) => l.startsWith('home =') ? 'home = ' + base
-          : l.startsWith('executable =') ? 'executable = ' + join(base, 'python.exe')
+          : l.startsWith('executable =') ? 'executable = ' + pythonDoPacote(base)
           // a linha `command` guarda o comando que criou o ambiente, com o
           // caminho antigo dentro. Nao e usada em execucao, e deixa-la ali so
           // serviria pra confundir quem for depurar depois.
@@ -827,7 +838,7 @@ function findWhisperExe() {
     }
     return null
   }
-  return scan(WHISPER_DIR, 'whisper-cli.exe') || scan(WHISPER_DIR, 'main.exe')
+  return scan(WHISPER_DIR, programa('whisper-cli')) || scan(WHISPER_DIR, programa('main'))
 }
 
 async function ensureWhisper() {
@@ -2236,7 +2247,7 @@ async function assembleWithSilence(ffmpegPath, pieces, durationSec, outFlac, sta
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
-    const child = spawn('curl.exe', ['-sL', '--fail', '-o', dest, url], { windowsHide: true })
+    const child = spawn(programa('curl'), ['-sL', '--fail', '-o', dest, url], { windowsHide: true })
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0 && existsSync(dest)) resolve()

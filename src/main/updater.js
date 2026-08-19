@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import { createWriteStream, existsSync, renameSync, unlinkSync, statSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, dirname, basename } from 'path'
+import { sabeAtualizarYtDlp, NAO_SABE_ATUALIZAR } from './plataforma.js'
 
 const STABLE_API = 'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest'
 const NIGHTLY_API = 'https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest'
@@ -124,6 +125,10 @@ export function isAheadOfStable(current, stableVersion) {
 }
 
 export async function downloadAndReplace(ytDlpPath, downloadUrl, onProgress) {
+  // A PORTA ESTREITA: é por aqui que o arquivo bom é trocado pelo baixado. Se
+  // o endereço for de outro sistema, a troca ESTRAGA o que funcionava — então
+  // a recusa fica aqui, e não só na tela, que é onde ninguém garante que passa.
+  if (!sabeAtualizarYtDlp()) throw new Error(NAO_SABE_ATUALIZAR)
   const dir = dirname(ytDlpPath)
   const tmpPath = join(tmpdir(), `mptrix-ytdlp-${Date.now()}.exe`)
   const backupPath = `${ytDlpPath}.old`
