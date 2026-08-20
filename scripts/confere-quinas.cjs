@@ -16,7 +16,7 @@ const { app, BrowserWindow } = require('electron')
 const fs = require('fs')
 app.disableHardwareAcceleration()
 const path = require('path')
-const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8')
+const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8').replace(/^\uFEFF/, '')
 
 app.whenReady().then(async () => {
   const w = new BrowserWindow({ show: false, width: 900, height: 700 })
@@ -35,6 +35,31 @@ app.whenReady().then(async () => {
     <button class="preset-chip chanfro" id="c1">chip</button>
     <button class="preset-chip chanfro active" id="c2">chip aceso</button>`
   await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+
+  // ── ANTES DE MEDIR: OS TOKENS CHEGARAM? ──
+  //
+  // Este fiscal ja acusou nove defeitos que nao existiam. A causa: o styles.css
+  // comecava com BOM, e injetado cru num <style> o BOM deixa de ser BOM e vira
+  // caractere solto — que gruda no primeiro seletor e DERRUBA a regra inteira.
+  // A primeira regra do arquivo e o :root, ou seja, a paleta toda. Sem ela,
+  // `--fio: var(--border-control)` nasce invalido e a diagonal some — em toda
+  // peca que tira a cor de um token. As que escrevem a cor na mao (parou,
+  // pouco, foco) continuavam passando, e por isso a lista de "defeitos" parecia
+  // ate plausivel. No app nada disso acontece: o Vite tira o BOM ao empacotar.
+  //
+  // O erro custou uma investigacao inteira, e o estrago maior nao foi o tempo:
+  // um fiscal que mede NADA e acusa TUDO ensina a ignorar fiscal. Entao agora
+  // ele confere primeiro se tem chao debaixo do pe, e se nao tiver, para —
+  // porque acusar as pecas seria acusar inocente.
+  const chao = await w.webContents.executeJavaScript(
+    `getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)
+  if (!chao) {
+    console.log('✘ OS TOKENS DO :root NAO CHEGARAM NESTA PAGINA.')
+    console.log('   Sem eles todo --fio nasce invalido e TODA peca pareceria sem quina.')
+    console.log('   Nao ha o que medir aqui: conserte o carregamento do css antes.')
+    app.exit(1)
+    return
+  }
 
   const bruto = await w.webContents.executeJavaScript(`(() => {
     const g = (id) => getComputedStyle(document.getElementById(id)).backgroundImage

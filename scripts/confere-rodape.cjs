@@ -12,7 +12,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 app.disableHardwareAcceleration()
-const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8')
+const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8').replace(/^\uFEFF/, '')
 
 const html = `<style>${css}</style>
 <div class="app">

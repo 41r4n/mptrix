@@ -14,7 +14,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 app.disableHardwareAcceleration()
-const cssOriginal = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8')
+const cssOriginal = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'src', 'styles.css'), 'utf8').replace(/^\uFEFF/, '')
 
 const comTela = (altura) =>
   cssOriginal.replace(/([\d.]+)vh/g, (_, n) => (parseFloat(n) / 100 * altura).toFixed(1) + 'px')
