@@ -62,6 +62,13 @@ nunca `scrollIntoView` — use `scrollTo({ behavior: 'smooth' })`.
   usuário**; o motor de apontar (`isolarTrecho`) vive na colheita automática.
 - Biblioteca real = histórico com ações por item (lista, não grade) — reskin aplica os tokens
   mantendo TODAS as ações; features nunca são removidas por causa de visual.
+- O **editor (EMENDAR)** foi **rebaixado** (2026-08-20, decisão do dono): montar medley continua e
+  o que existe fica, mas ele **para de crescer**. Efeito novo só entra quando uma pessoa de verdade
+  pedir numa música de verdade — **nada de "e se"**. O buraco não é o editor: é o "e se", que puxa
+  opção atrás de opção e come os dias que pertencem ao separador, à letra e à cifra. Editor de
+  áudio o mundo tem aos montes; separar louvor pra ensaiar, com letra e cifra, não tem. E copiar o
+  Reaper contrariaria a casa: aqui **o sistema decide pelo usuário** (foi por isso que a Lupa saiu),
+  e um DAW faz o contrário — entrega o botão e a responsabilidade junto.
 
 ## O acabamento (regra do dono, 2026-08-20, depois de três dias travado no editor)
 

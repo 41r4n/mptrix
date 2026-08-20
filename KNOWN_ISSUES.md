@@ -23,7 +23,8 @@ Usuário relatou ter visto uma vez algo como "não está sendo possível entrar 
 
 ## 3. O MP3 do editor sai diferente do que a tela toca (diagnosticado, não consertado)
 
-**Status:** a causa está achada. Não é defeito do exportador — `emendar()` em
+**Status:** a causa está achada, e o conserto está na fila — o editor foi rebaixado em
+2026-08-20 (veja o CLAUDE.md), então isto não é urgente; é o que fazer quando ele voltar a ser. Não é defeito do exportador — `emendar()` em
 [src/main/emenda.js](src/main/emenda.js) está certo. É a tela que toca uma **aproximação**.
 
 A prévia usa um `<audio>` por faixa ([FaixasDaEmenda.jsx](src/renderer/src/components/FaixasDaEmenda.jsx)),
