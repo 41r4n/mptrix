@@ -63,6 +63,30 @@ nunca `scrollIntoView` — use `scrollTo({ behavior: 'smooth' })`.
 - Biblioteca real = histórico com ações por item (lista, não grade) — reskin aplica os tokens
   mantendo TODAS as ações; features nunca são removidas por causa de visual.
 
+## O acabamento (regra do dono, 2026-08-20, depois de três dias travado no editor)
+
+O editor tinha um defeito que ninguém achava: o MP3 saía diferente do que a tela tocava. Dias
+procurando erro no exportador — e o exportador estava certo. A tela é que tocava uma
+**aproximação**: sem as rampas, com o volume travado em 100% (o controle vai a 200%) e sem o tom.
+Nada disso foi dito ao dono. Estava num comentário do código, escrito com calma, como se comentar
+resolvesse.
+
+Não resolve. **Comentário não é autorização.**
+
+- **Nada de meia entrega calada.** Se o caminho completo é caro, PARE antes de escrever e diga:
+  o que dá, o que não dá, e o que a pessoa perde no atalho. Quem decide encurtar é o dono — não
+  quem digita.
+- **Se você está escrevendo a justificativa do atalho, era pra ter perguntado.** O comentário
+  caprichado é o sintoma: ele prova que você sabia que estava entregando a fatia.
+- **Dois caminhos pra mesma coisa têm que dar o mesmo resultado.** O que a tela toca e o que o
+  arquivo guarda são a mesma promessa. A diferença que sobrar vai **escrita na tela**, onde a
+  pessoa lê antes de exportar — nunca em letra miúda, nunca em comentário.
+- **O pedido inteiro, não o mínimo que passa.** "Funciona" é o começo do trabalho, não o fim.
+  Faça como quem entrega pra alguém usar de verdade, e diga em voz alta o que ficou de fora.
+- **Antes de dizer "pronto", olhe.** Build limpo prova que o JavaScript é válido; não prova que
+  existe alguma coisa na tela. Abra o app, rode os fiscais (`npm run confere:*`, `olha:mesa`) e
+  conte o que VIU — não o que devia acontecer.
+
 ## Regra de ouro
 Só a camada visual/UX muda em reskins. Lógica de negócio, IPC, rotas de dados e nomes existentes
 ficam intactos.
