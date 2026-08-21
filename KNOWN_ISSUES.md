@@ -21,30 +21,37 @@
 
 Usuário relatou ter visto uma vez algo como "não está sendo possível entrar no vídeo" em algum momento aleatório durante uso. Sem repro consistente. Pedir print/texto exato se reaparecer.
 
-## 3. O MP3 do editor sai diferente do que a tela toca (diagnosticado, não consertado)
+## 3. O MP3 do editor sai diferente do que a tela toca (três quartos resolvido)
 
-**Status:** a causa está achada, e o conserto está na fila — o editor foi rebaixado em
-2026-08-20 (veja o CLAUDE.md), então isto não é urgente; é o que fazer quando ele voltar a ser. Não é defeito do exportador — `emendar()` em
-[src/main/emenda.js](src/main/emenda.js) está certo. É a tela que toca uma **aproximação**.
+**Status em 2026-08-20:** o diagnóstico abaixo estava certo, e **três das quatro diferenças foram
+consertadas e medidas** na máquina do dono no mesmo dia. Sobra uma. O editor está rebaixado (veja o
+CLAUDE.md), então o que sobrou não é urgente — mas quem voltar aqui precisa saber o que **já está
+feito**, senão gasta os dias de novo no mesmo lugar.
 
-A prévia usa um `<audio>` por faixa ([FaixasDaEmenda.jsx](src/renderer/src/components/FaixasDaEmenda.jsx)),
-e um `<audio>` não faz o que o ffmpeg faz. Quatro diferenças, medidas lendo os dois lados:
+Nunca foi defeito do exportador. `emendar()` em [src/main/emenda.js](src/main/emenda.js) está
+certo, e agora isso está **medido**, não suposto: cruzando o MP3 gerado com a gravação original em
+cada corte, o desencontro é de **5 milissegundos** — que é o atraso do próprio codificador MP3, não
+erro de recorte. Era a tela que tocava uma **aproximação**.
 
-| o quê | na tela | no MP3 |
+| o quê | como estava | agora |
 |---|---|---|
-| tom (semitons) | não aplica | `rubberband=pitch` |
-| rampas de entrada/saída | desenhadas, nunca ouvidas — o laço que toca não mexe nelas | `afade` |
-| ganho acima de 100% | `a.volume` trava em 1, e o controle vai até 200% | `volume=` até 4× |
-| limitador do cruzamento | não existe | `alimiter=0.97` |
+| tom (semitons) | não aplicava | **soa.** `previaComTom()` fabrica o pedaço com o pitch aplicado e o play toca esse arquivo. Medido por autocorrelação: prévia 495,5 Hz, MP3 495,5 Hz |
+| rampas de entrada/saída | desenhadas, nunca ouvidas | **soam.** O envelope é calculado por quadro no mesmo relógio que move a linha |
+| ganho acima de 100% | `a.volume` trava em 1 | **proporção fiel.** Todas as faixas são divididas pelo maior ganho da mesa: o conjunto toca mais baixo e a relação entre elas fica idêntica à do arquivo. A tela avisa por escrito quando está atenuando |
+| limitador do cruzamento | não existe | **continua sem existir** — a única que sobrou |
 
-Só a primeira estava avisada (letra miúda). As outras três surpreendem calado — e é a soma delas
-que faz o arquivo "soar um pouco diferente".
+**O que falta, e só isso:** onde duas músicas se cruzam, o MP3 passa por `alimiter=0.97` e o play
+não. O arquivo sai mais comprimido no cruzamento do que se ouviu. É a menor das quatro (só aparece
+em sobreposição, e só quando a soma passa do teto), e o caminho continua sendo o que estava escrito
+aqui: **Web Audio** (`GainNode` + `DynamicsCompressorNode`), que resolveria isso e ainda tiraria a
+gambiarra de dividir todo mundo pelo maior ganho.
 
-**Caminho pro conserto:** trocar o `<audio>.volume` por um grafo de Web Audio (`GainNode`), que
-resolve rampa e ganho acima de 100% de uma vez — a rampa vira desenho de ganho no tempo, e o
-ganho deixa de ter teto em 1. O tom continua sendo a exceção honesta (mudar tom ao vivo no
-navegador é conta pesada); **mas o aviso tem que sair da letra miúda e ir pra tela**, junto do
-botão de exportar.
+**Uma coisa tentada e desfeita, pra ninguém repetir:** a posição do play tem tolerância larga
+(350 ms) antes de se corrigir, e isso é uma diferença real em relação ao arquivo. Tentei trocar por
+correção contínua, puxando a velocidade em 1,5% até encaixar — a ideia é a que tocadores de verdade
+usam, mas aqui **piorou**: mexer no `playbackRate` a cada quadro obriga o navegador a refazer o
+esticamento o tempo todo e o som ondula. O dono ouviu e mandou reverter. Largo e estável ganhou de
+exato e ondulado; se alguém for tentar de novo, o caminho é Web Audio, não `playbackRate`.
 
-**Não medido:** nada disso foi ouvido. A causa foi achada lendo os dois caminhos e comparando
-filtro por filtro; falta ouvir na máquina do dono.
+**O que ainda não foi ouvido:** os consertos foram medidos em arquivo (frequência, nível, alinhamento),
+e o dono não confirmou por escuta que a queixa original sumiu.
