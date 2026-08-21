@@ -20,3 +20,31 @@
 ## 2. Mensagem de erro avulsa (não reproduzida)
 
 Usuário relatou ter visto uma vez algo como "não está sendo possível entrar no vídeo" em algum momento aleatório durante uso. Sem repro consistente. Pedir print/texto exato se reaparecer.
+
+## 3. O MP3 do editor sai diferente do que a tela toca (diagnosticado, não consertado)
+
+**Status:** a causa está achada, e o conserto está na fila — o editor foi rebaixado em
+2026-08-20 (veja o CLAUDE.md), então isto não é urgente; é o que fazer quando ele voltar a ser. Não é defeito do exportador — `emendar()` em
+[src/main/emenda.js](src/main/emenda.js) está certo. É a tela que toca uma **aproximação**.
+
+A prévia usa um `<audio>` por faixa ([FaixasDaEmenda.jsx](src/renderer/src/components/FaixasDaEmenda.jsx)),
+e um `<audio>` não faz o que o ffmpeg faz. Quatro diferenças, medidas lendo os dois lados:
+
+| o quê | na tela | no MP3 |
+|---|---|---|
+| tom (semitons) | não aplica | `rubberband=pitch` |
+| rampas de entrada/saída | desenhadas, nunca ouvidas — o laço que toca não mexe nelas | `afade` |
+| ganho acima de 100% | `a.volume` trava em 1, e o controle vai até 200% | `volume=` até 4× |
+| limitador do cruzamento | não existe | `alimiter=0.97` |
+
+Só a primeira estava avisada (letra miúda). As outras três surpreendem calado — e é a soma delas
+que faz o arquivo "soar um pouco diferente".
+
+**Caminho pro conserto:** trocar o `<audio>.volume` por um grafo de Web Audio (`GainNode`), que
+resolve rampa e ganho acima de 100% de uma vez — a rampa vira desenho de ganho no tempo, e o
+ganho deixa de ter teto em 1. O tom continua sendo a exceção honesta (mudar tom ao vivo no
+navegador é conta pesada); **mas o aviso tem que sair da letra miúda e ir pra tela**, junto do
+botão de exportar.
+
+**Não medido:** nada disso foi ouvido. A causa foi achada lendo os dois caminhos e comparando
+filtro por filtro; falta ouvir na máquina do dono.

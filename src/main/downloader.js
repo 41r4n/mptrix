@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { programa } from './plataforma.js'
 import { randomUUID } from 'crypto'
 
 // MOTOR DE JAVASCRIPT PRO BAIXADOR.
@@ -286,7 +287,7 @@ function classifyError(stderr, code) {
   if (text.includes('http error 4')) return 'Vídeo não encontrado (erro 4xx).'
   if (text.includes('getaddrinfo') || text.includes('failed to resolve') || text.includes('network')) return 'Sem conexão com a internet.'
   if (text.includes('copyright')) return 'Bloqueado por direitos autorais.'
-  if (text.includes('ffmpeg')) return 'Erro no ffmpeg. Verifique se ffmpeg.exe está em resources/bin.'
+  if (text.includes('ffmpeg')) return `Erro no ffmpeg. Verifique se ${programa('ffmpeg')} está em resources/bin.`
   const firstErrLine = (stderr || '').split('\n').find((l) => l.toLowerCase().includes('error'))
   return firstErrLine ? firstErrLine.replace(/^error:\s*/i, '').trim() : `Falha (código ${code})`
 }

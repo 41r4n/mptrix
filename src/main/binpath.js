@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, copyFileSync } from 'fs'
-import { join } from 'path'
+import { join, basename } from 'path'
 
 // ██████████ ONDE MORA O yt-dlp ██████████
 //
@@ -28,7 +28,11 @@ export function resolverYtDlp({ noPacote, pastaDeDados, empacotado }) {
   try {
     const casa = join(pastaDeDados, 'bin')
     if (!existsSync(casa)) mkdirSync(casa, { recursive: true })
-    const destino = join(casa, 'yt-dlp.exe')
+    // O NOME VEM DO PRÓPRIO PACOTE, não escrito aqui: no Windows é
+    // `yt-dlp.exe`, em Mac e Linux é `yt-dlp` sem sufixo. Copiar com nome fixo
+    // deixaria, num Mac, uma cópia chamada `.exe` que ninguém executa — e o app
+    // acharia que se atualizou.
+    const destino = join(casa, basename(noPacote))
 
     if (existsSync(destino)) return { caminho: destino, motivo: 'ja-estava' }
 

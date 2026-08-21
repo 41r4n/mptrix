@@ -123,6 +123,11 @@ export default function App() {
 
   const presets = env?.presets ?? []
   const binariesOk = env && env.binariesPresent.ytDlp && env.binariesPresent.ffmpeg
+  // o nome do arquivo que falta muda com o sistema, e quem decide isso e o
+  // processo principal — a tela so repete. O socorro e o nome de Windows,
+  // porque e o que responde quando o env vem de uma versao velha ou da maquete.
+  const nomeYtDlp = env?.binNames?.ytDlp || 'yt-dlp.exe'
+  const nomeFfmpeg = env?.binNames?.ffmpeg || 'ffmpeg.exe'
 
   const pickFolder = async () => {
     const picked = await window.mptrix.settings.pickDir()
@@ -383,13 +388,13 @@ export default function App() {
         {!binariesOk && (
           <div className="banner banner-error">
             <strong>Binários ausentes.</strong>{' '}
-            Coloque <code>yt-dlp.exe</code> e <code>ffmpeg.exe</code> em <code>resources/bin/</code> e reinicie.
+            Coloque <code>{nomeYtDlp}</code> e <code>{nomeFfmpeg}</code> em <code>resources/bin/</code> e reinicie.
             <ul>
               <li className={env.binariesPresent.ytDlp ? 'ok' : 'missing'}>
-                yt-dlp.exe — {env.binariesPresent.ytDlp ? 'ok' : 'faltando'}
+                {nomeYtDlp} — {env.binariesPresent.ytDlp ? 'ok' : 'faltando'}
               </li>
               <li className={env.binariesPresent.ffmpeg ? 'ok' : 'missing'}>
-                ffmpeg.exe — {env.binariesPresent.ffmpeg ? 'ok' : 'faltando'}
+                {nomeFfmpeg} — {env.binariesPresent.ffmpeg ? 'ok' : 'faltando'}
               </li>
             </ul>
           </div>
