@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, protocol, powerSaveBlocker, nativeImage } from 'electron'
-import { emendar, prepararEmenda, ondaDoArquivo, preencherVao } from './emenda.js'
+import { emendar, prepararEmenda, ondaDoArquivo, preencherVao, previaComTom } from './emenda.js'
 import { spawn } from 'child_process'
 import { join, basename, extname, dirname } from 'path'
 import { Readable } from 'stream'
@@ -1468,6 +1468,17 @@ app.whenReady().then(() => {
   ipcMain.handle('emenda:vao', async (_e, pedido) => {
     try {
       return await preencherVao({ ...pedido, pasta: join(stemsRoot(), '_vaos', 'wav') })
+    } catch (e) {
+      return { erro: String(e?.message || e) }
+    }
+  })
+
+  // o audio com o tom aplicado, pro play tocar o que vai sair no arquivo em vez
+  // de tocar o tom original e mentir. Mora na mesma pasta das passagens: e a
+  // mesma natureza — som fabricado pelo MPTRIX, servido pela porta `stems:`
+  ipcMain.handle('emenda:previaTom', async (_e, pedido) => {
+    try {
+      return await previaComTom({ ...pedido, pasta: join(stemsRoot(), '_vaos', 'wav') })
     } catch (e) {
       return { erro: String(e?.message || e) }
     }

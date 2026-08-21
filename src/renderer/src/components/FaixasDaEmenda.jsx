@@ -38,6 +38,43 @@ const mmss = (s) => {
   return Math.floor(n / 60) + ':' + String(Math.floor(n % 60)).padStart(2, '0')
 }
 
+// ── O RELÓGIO TEM QUE TER A PRECISÃO QUE A TELA TEM ──
+//
+// "não tem como você saber, porque você esqueceu de colocar os milissegundos na
+// merda do tempo pra você mesmo saber." Ele está certo, e o problema é maior do
+// que parece: com 40 pixels por segundo, a mão posiciona com 25 milissegundos de
+// precisão e o relógio dizia só "4:45". A tela deixava fazer o que ela não
+// deixava ver — e aí ninguém consegue nem conferir, nem descrever o erro pro
+// outro.
+//
+// Os decimais aparecem conforme o ZOOM, e não sempre: mostrar centésimos numa
+// vista onde um segundo tem 3 pixels é precisão de mentira, e número que finge
+// exatidão é pior que número curto.
+const relogioNoZoom = (s, zoom) => {
+  const n = Math.max(0, Number(s) || 0)
+  // Os degraus saem de uma conta só: o último dígito do relógio deve valer mais
+  // ou menos UM PIXEL na tela. Acima disso o relógio esconde movimento que a mão
+  // consegue fazer; muito abaixo, o dígito vira ruído tremendo sem informar.
+  //   30 px/s → 1px = 33ms → centésimos
+  //    4 px/s → 1px = 250ms → décimos
+  const casas = zoom >= 30 ? 2 : zoom >= 4 ? 1 : 0
+  const passo = Math.pow(10, -casas)
+  // ── TRUNCA, NUNCA ARREDONDA ──
+  //
+  // Foi assim que uma peça "cresceu" só por mexer no zoom: 1:51,96 lido com
+  // Math.floor dá 1:51, e lido com toFixed(1) dá 1:52,0. Mudar a aproximação
+  // mudava o NÚMERO, e o dono viu o pedaço ficar maior sem ter tocado nele.
+  //
+  // Truncando, o mesmo instante só perde dígitos à direita conforme se afasta —
+  // nunca muda de valor. E some junto o absurdo de "1:60,0", que arredondar
+  // produzia em 59,96s.
+  const t = Math.floor(n / passo + 1e-9) * passo
+  const m = Math.floor(t / 60)
+  const seg = t - m * 60
+  if (casas === 0) return m + ':' + String(Math.floor(seg)).padStart(2, '0')
+  return m + ':' + seg.toFixed(casas).padStart(casas + 3, '0')
+}
+
 const CORES = ['#b4e85a', '#4ecb8c', '#dff9a0', '#27a08d', '#7ed97a', '#8fa57a']
 // --stem-6, o verde apagado que a casa usa pra "Outros" — som sem dono. A
 // passagem entre duas músicas é exatamente isso, e por isso não entra na escala
@@ -166,7 +203,27 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   // `acervo:` recusaria ele com 403 — ela só serve arquivo que está no histórico,
   // e com toda razão. Esse mora na pasta das faixas e vem pela porta `stems:`,
   // que é a mesma que serve as capas.
-  const enderecoDe = (m) => (m.som || 'acervo://a/?f=' + encodeURIComponent(m.arquivo))
+  // ── E SE A PEÇA TEM TOM, TOCA A PRÉVIA COM O TOM ──
+  //
+  // O <audio> do navegador não muda tom — muda velocidade e mais nada. Então o
+  // tom era desenhado, guardado e aplicado no mp3, mas NUNCA soava aqui: a
+  // pessoa escolhia o tom ouvindo o tom errado, e só descobria depois de baixar.
+  // Era a última mentira do play, e a que mais dói porque a tela tem um controle
+  // convidando a mexer.
+  //
+  // A chave junta arquivo, recorte e semitons: mudar qualquer um dos três é
+  // outro áudio. Enquanto ele não fica pronto, toca o original — é melhor tocar
+  // no tom errado por dois segundos do que ficar mudo sem explicação.
+  const chaveDoTom = (m) => m.arquivo + '|' + iniDe(m).toFixed(2) + '|' + fimDe(m).toFixed(2) + '|' + tomDe(m)
+  const enderecoDe = (m) => {
+    if (m.som) return m.som
+    const t = tomDe(m)
+    if (t !== 0) {
+      const pronta = previasRef.current[chaveDoTom(m)]
+      if (pronta) return pronta
+    }
+    return 'acervo://a/?f=' + encodeURIComponent(m.arquivo)
+  }
   const arquivoDe = (m) => ondas[m.arquivo]?.duracao || 0
   const iniDe = (m) => Number(m.ini) || 0
   const fimDe = (m) => Number(m.fim) || arquivoDe(m)
@@ -536,7 +593,9 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
     agulhaRef.current = t
     // lê o zoom de AGORA, não o de quando esta função nasceu
     const x = 'translateX(' + (t * zoomRef.current) + 'px)'
-    if (relogioRef.current) relogioRef.current.textContent = mmss(t)
+    // o relógio grande acompanha a mesma precisão: com a mesa aproximada, ver
+    // décimos aqui é o que permite anotar um ponto e voltar nele depois
+    if (relogioRef.current) relogioRef.current.textContent = relogioNoZoom(t, zoomRef.current)
     if (linhaRef.current) linhaRef.current.style.transform = x
     if (triRef.current) triRef.current.style.transform = x
     // A HORA EM CIMA DO TRIÂNGULO. O relógio lá embaixo diz a mesma coisa, mas
@@ -547,8 +606,10 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
     // centrada de verdade, ela sairia meia largura pra fora no começo da régua
     // e o minuto ficaria cortado bem no lugar mais visitado da tela.
     if (horaRef.current) {
-      horaRef.current.textContent = mmss(t)
-      horaRef.current.style.transform = 'translateX(' + Math.max(0, t * zoomRef.current - 22) + 'px)'
+      // com o zoom do MOMENTO, não do render: o relógio é escrito por quadro e
+      // a precisão que ele pode mostrar muda junto com a aproximação
+      horaRef.current.textContent = relogioNoZoom(t, zoomRef.current)
+      horaRef.current.style.transform = 'translateX(' + Math.max(0, t * zoomRef.current - 30) + 'px)'
     }
   }
   // a cada desenho: põe os refs em dia e devolve a linha ao lugar certo com o
@@ -662,6 +723,11 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   // velocidade com o som andando passa a valer na hora, porque não existe mais
   // uma cópia do passado governando nada.
   const pecasRef = useRef(pecas)
+  // as prévias com tom já prontas, por chave. Em ref porque quem lê é o relógio,
+  // que roda por quadro e não pode depender de re-render pra achar o arquivo
+  const previasRef = useRef({})
+  const [previasProntas, setPreviasProntas] = useState(0)
+  const [preparandoTom, setPreparandoTom] = useState(0)
   // ── O PONTO DE RETORNO ──
   //
   // De onde este play saiu. Parar devolve a linha PRA CÁ, e não pro lugar onde a
@@ -686,6 +752,15 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       if (Math.abs(t - ultimo) > 0.25) { ultimo = t; setAgulha(t); bateu = true }
 
       // ── quem toca agora, lido do estado de AGORA ──
+      //
+      // O TETO É O MAIOR GANHO DA MESA, calculado a cada quadro porque o dono
+      // pode mexer no volume com o som andando. Nunca abaixo de 1: sem faixa
+      // reforçada, nada é dividido e o play soa no volume cheio, como sempre.
+      let tetoDeGanho = 1
+      for (const m of pecasRef.current) {
+        const g = m.ganho === undefined ? 1 : Number(m.ganho)
+        if (g > tetoDeGanho) tetoDeGanho = g
+      }
       const acesas = []
       for (const m of pecasRef.current) {
         const entra = Number(m.entra) || 0
@@ -699,10 +774,22 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
         let a = somRef.current.get(m.id)
         if (dentro) acesas.push(m.id)
         if (dentro) {
+          const endereco = enderecoDe(m)
+          // A FONTE PODE MUDAR COM O SOM ANDANDO. A prévia com o tom fica pronta
+          // alguns segundos depois de a pessoa mexer no controle; sem esta
+          // troca, o elemento continuaria tocando o áudio antigo pra sempre e o
+          // conserto do tom só valeria na próxima vez que a peça fosse criada.
+          if (a && a.dataset.fonte !== endereco) {
+            try { a.pause() } catch { /* segue */ }
+            a.src = endereco
+            a.dataset.fonte = endereco
+            a.load()
+          }
           if (!a) {
             // o endereço vem do `enderecoDe`, não colado aqui: peça de vão toca
             // por outra porta, e o relógio não tem que saber a diferença
-            a = new Audio(enderecoDe(m))
+            a = new Audio(endereco)
+            a.dataset.fonte = endereco
             // preservesPitch: muda a velocidade SEM descer o tom — o mesmo
             // compromisso do rubberband na exportação
             a.preservesPitch = true
@@ -710,11 +797,59 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             somRef.current.set(m.id, a)
             sonsRef.current?.appendChild(a)
           }
-          a.volume = Math.max(0, Math.min(1, m.ganho === undefined ? 1 : Number(m.ganho)))
+          // ── AS RAMPAS TÊM QUE SOAR AQUI ──
+          //
+          // Elas só existiam no arquivo exportado. Ou seja: o dono arrastava a
+          // bolinha, ouvia exatamente a mesma coisa, e concluía que o efeito
+          // "entra e sai muito seco" — a ferramenta de amaciar estava muda.
+          // Ajustar no escuro e conferir só depois de gerar o mp3 não é ajustar.
+          //
+          // A conta é por quadro, como todo o resto deste relógio: onde estou
+          // DENTRO da peça, e quanto disso ainda é subida ou já é descida.
+          const desdeOInicio = t - entra
+          const subida = fadeInDe(m)
+          const descida = fadeOutDe(m)
+          let envelope = 1
+          if (subida > 0.01 && desdeOInicio < subida) {
+            envelope = Math.max(0, desdeOInicio / subida)
+          }
+          if (descida > 0.01 && desdeOInicio > durNaLinha - descida) {
+            envelope = Math.min(envelope, Math.max(0, (durNaLinha - desdeOInicio) / descida))
+          }
+          // ── O PLAY NÃO PODE MENTIR SOBRE O EQUILÍBRIO ──
+          //
+          // O <audio> do navegador não passa de 1,0. Uma faixa em 200% saía
+          // tocando a 100% aqui e a 200% no mp3 — o dono equilibrou ouvindo uma
+          // coisa e recebeu outra, exatamente na faixa que ele tinha reforçado.
+          //
+          // A saída é dividir TODO MUNDO pelo maior ganho da mesa. O conjunto
+          // toca mais baixo, mas a PROPORÇÃO entre as faixas fica idêntica à do
+          // arquivo — e proporção é o que se julga ao montar. Volume absoluto
+          // quem decide é o alto-falante.
+          const forca = (m.ganho === undefined ? 1 : Number(m.ganho)) / tetoDeGanho
+          a.volume = Math.max(0, Math.min(1, forca * envelope))
+          // ── DE ONDE CONTAR DENTRO DO ARQUIVO ──
+          //
+          // Depende de QUAL arquivo está tocando. A gravação do acervo é a
+          // música inteira, então o recorte começa em `ini`. A prévia com tom e a
+          // passagem JÁ SÃO o pedaço: elas começam no zero. Somar `ini` nelas
+          // faria a peça tocar de um lugar que não existe — e a peça ficaria
+          // muda ou tocaria outro trecho, sem erro nenhum aparecer.
+          const base = endereco.indexOf('acervo:') === 0 ? ini : 0
+          const deveEstarEm = base + (t - entra) * vel
+          // ── DESFEITO: a correção fina de posição ──
+          //
+          // Eu tinha trocado esta tolerância por uma correção contínua, puxando a
+          // velocidade 1,5% pra encaixar sem estalo. A ideia é a que os tocadores
+          // de verdade usam, mas aqui PIOROU o som na prática — mexer no
+          // playbackRate a cada quadro obriga o navegador a refazer o
+          // esticamento o tempo todo, e o resultado ondula.
+          //
+          // Voltou ao que era. Fica registrado que a tolerância é larga (350ms) e
+          // que isso é uma diferença real entre o play e o arquivo — mas larga e
+          // estável é melhor que exata e ondulada, e quem decide isso é o ouvido
+          // do dono, não a minha teoria.
           a.playbackRate = Math.max(0.25, Math.min(4, vel))
-          const deveEstarEm = ini + (t - entra) * vel
-          // só recoloca a agulha do arquivo quando ela saiu do lugar de
-          // verdade: corrigir todo quadro faria o som picotar
           if (a.paused || Math.abs(a.currentTime - deveEstarEm) > 0.35) {
             a.currentTime = deveEstarEm
             // ── NÃO INSISTIR SESSENTA VEZES POR SEGUNDO ──
@@ -831,6 +966,42 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
     }
   }, [tocando]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── PREPARAR O TOM DE QUEM PRECISA ──
+  //
+  // Toda peça com tom diferente de zero ganha um áudio próprio, com o pitch já
+  // aplicado. É pedido uma vez por combinação (arquivo + recorte + semitons) e
+  // fica guardado, então mexer no controle de tom pra frente e pra trás não
+  // refaz o que já existe.
+  //
+  // Roda quando as peças mudam, e não a cada quadro: o relógio só CONSULTA o que
+  // já está pronto.
+  useEffect(() => {
+    let vivo = true
+    const pedir = async () => {
+      for (const m of pecas) {
+        if (m.vao) continue                    // passagem já é som fabricado
+        const t = tomDe(m)
+        if (t === 0) continue
+        const chave = chaveDoTom(m)
+        if (previasRef.current[chave]) continue
+        if (previasRef.current[chave] === null) continue   // já falhou; não insiste
+        previasRef.current[chave] = null
+        setPreparandoTom((n) => n + 1)
+        const r = await window.mptrix.emenda.previaTom({
+          arquivo: m.arquivo, inicio: iniDe(m), fim: fimDe(m), tom: t
+        }).catch(() => null)
+        if (!vivo) return
+        setPreparandoTom((n) => Math.max(0, n - 1))
+        if (r && r.ok && r.nome) {
+          previasRef.current[chave] = 'stems://s/_vaos/wav/' + r.nome
+          setPreviasProntas((n) => n + 1)      // acorda o resto da tela
+        }
+      }
+    }
+    pedir()
+    return () => { vivo = false }
+  }, [pecas])
+
   const sel = pecas.find((m) => m.id === escolhida) || null
   const anSel = sel ? analises[sel.arquivo] : null
   const mexer = (campo, v) => onMudar({
@@ -879,7 +1050,25 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       const naTela = (ev.clientX - x0) / zoom
       const noArquivo = naTela * vel
       let campos
-      if (lado === 'fim') {
+      if (m.vao) {
+        // ── PASSAGEM NÃO SE RECORTA: SE REFAZ ──
+        //
+        // Numa gravação, puxar a lateral revela mais som — o som já existe, só
+        // estava escondido. Numa passagem não existe nada pra revelar: o arquivo
+        // tem exatamente o tamanho do buraco. Puxar a borda dela não fazia nada,
+        // e o dono pediu justamente pra "alongar mais os efeitos".
+        //
+        // Então aqui a borda muda o TAMANHO PEDIDO, e ao soltar o som é
+        // fabricado de novo nesse tamanho. Uma subida de 4 segundos não é uma
+        // subida de 2 esticada: é outra subida, que sobe mais devagar.
+        const tam0 = fim0 - ini0
+        if (lado === 'fim') {
+          campos = { fim: Math.max(MINIMO, Math.min(30, tam0 + naTela)) }
+        } else {
+          const novoTam = Math.max(MINIMO, Math.min(30, tam0 - naTela))
+          campos = { fim: novoTam, entra: Math.max(0, entra0 + (tam0 - novoTam)) }
+        }
+      } else if (lado === 'fim') {
         const novoFim = Math.max(ini0 + MINIMO, Math.min(arq, fim0 + noArquivo))
         campos = { fim: novoFim }
       } else {
@@ -897,9 +1086,74 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       setArrastando(null)
       window.removeEventListener('pointermove', mover)
       window.removeEventListener('pointerup', soltar)
+      // SÓ AO SOLTAR. Refazer o som a cada quadro do arrasto seria uma chamada
+      // de ffmpeg por pixel — a mão travaria e o disco encheria de arquivos que
+      // ninguém vai ouvir. Enquanto ela é puxada, a peça só estica na tela.
+      if (m.vao) refazerVao(m.id)
     }
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
+  }
+
+  // ── REFAZER A PASSAGEM NO TAMANHO NOVO ──
+  //
+  // Lê o tamanho que a peça ficou depois do arrasto e pede o som outra vez. Tudo
+  // o mais é preservado: o lugar, a linha, o volume, as rampas — quem esticou
+  // quer o mesmo efeito maior, não um efeito novo no lugar do antigo.
+  const refazerVao = async (id) => {
+    const m = pecasRef.current.find((x) => x.id === id)
+    if (!m || !m.vao) return
+    const comprimento = Math.max(0.25, Math.min(30, fimDe(m) - iniDe(m)))
+    const sobra = SOBRA_DE[m.vao] || 0
+    // o impacto guarda a sobra DENTRO do arquivo: o buraco que ele preenche é o
+    // que sobra depois de tirar a cauda que toca por baixo da próxima
+    const vaoPedido = Math.max(0.25, comprimento - sobra)
+    const distancia = Math.max(0, Math.min(1, Number(m.distancia) || 0))
+    // NÃO MUDOU NADA? então não gasta ffmpeg. Mas são DUAS coisas que podem ter
+    // mudado — o tamanho e a distância —, e olhar só o tamanho fazia o controle
+    // de distância não valer nada: ele mexia no número e o som continuava igual.
+    const igualNoTamanho = Math.abs(vaoPedido - (Number(m.vaoDur) || 0)) < 0.02
+    const igualNaDistancia = Math.abs(distancia - (Number(m.vaoDist) || 0)) < 0.01
+    if (igualNoTamanho && igualNaDistancia) return
+    const v = vaoDaPeca(m)
+    const fonte = m.vao === 'cauda'
+      ? (v.antes ? { arquivo: v.antes.arquivo, ate: fimDe(v.antes) } : null)
+      : m.vao === 'puxada'
+        ? (v.depois ? { arquivo: v.depois.arquivo, de: iniDe(v.depois) } : null)
+        : {}
+    if (!fonte) return
+    setFazendoVao(m.vao)
+    const r = await window.mptrix.emenda.vao({
+      tipo: m.vao,
+      dur: vaoPedido,
+      fonte,
+      sobra,
+      distancia,
+      cliques: m.vao === 'contagem' ? contagemDoVao({ ...v, dur: vaoPedido }) : []
+    }).catch((e) => ({ erro: String(e?.message || e) }))
+    setFazendoVao(null)
+    if (!r || r.erro || !r.arquivo) { setRecadoVao(r?.erro || 'não deu pra refazer a passagem'); return }
+    onMudar({
+      ...criacao,
+      musicas: criacao.musicas.map((x) => (x.id === id
+        // AS RAMPAS CRESCEM JUNTO. Efeito que "vem de longe" precisa de mais
+        // tempo pra emergir: manter meio segundo de subida num efeito que passou
+        // de 2 pra 8 segundos faz ele nascer de supetão no meio do silêncio. A
+        // proporção é preservada, então quem mexeu na rampa na mão não perde o
+        // ajuste — ele acompanha o novo tamanho.
+        ? {
+            ...x,
+            arquivo: r.arquivo,
+            som: 'stems://s/_vaos/wav/' + r.nome,
+            ini: 0,
+            fim: r.duracao,
+            vaoDur: vaoPedido,
+            vaoDist: distancia,
+            fadeIn: Math.round(fadeInDe(x) * (r.duracao / Math.max(0.01, comprimento)) * 100) / 100,
+            fadeOut: Math.round(fadeOutDe(x) * (r.duracao / Math.max(0.01, comprimento)) * 100) / 100
+          }
+        : x))
+    })
   }
 
 
@@ -1030,7 +1284,52 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   // barulho sai — a cauda vem de quem SAI, a puxada de quem ENTRA.
   const [fazendoVao, setFazendoVao] = useState(null)
   const [recadoVao, setRecadoVao] = useState(null)
-  const NOMES_DE_VAO = { cauda: 'cauda', puxada: 'puxada', contagem: 'contagem' }
+  const NOMES_DE_VAO = {
+    cauda: 'cauda', puxada: 'puxada', contagem: 'contagem',
+    subida: 'subida', prato: 'prato', sopro: 'sopro', queda: 'queda', impacto: 'impacto'
+  }
+  // O IMPACTO É MAIS COMPRIDO QUE O BURACO, de propósito: pancada que termina no
+  // tempo forte não é pancada, é susto. Ela bate na entrada e continua ressoando
+  // por baixo da música que começou — e é essa sobra que dá o peso.
+  const SOBRA_DE = { impacto: 1.5 }
+
+  // ── COMO CADA PASSAGEM NASCE E MORRE ──
+  //
+  // "quando acaba ou começa o efeito ele entra muito... acaba entrando ou saindo
+  // muito seco... precisa ser mais fluido, quase como uma metamorfose."
+  //
+  // Entrar e sair é decisão de cada efeito, não regra geral — e é por isso que
+  // não dá pra pôr a mesma rampa em todos:
+  //
+  //   as que ANUNCIAM (subida, prato, sopro, puxada) precisam nascer do nada,
+  //   mas NÃO podem morrer: quem termina a subida é a música que entra. Rampa de
+  //   saída nelas mata justamente o corte que faz a chegada ser sentida.
+  //
+  //   as que DESPEDEM (queda, cauda) fazem o contrário: entram junto com o
+  //   último acorde, então já nascem sonoras, e têm que sumir devagar.
+  //
+  //   o IMPACTO não tem rampa nenhuma: pancada com subida não é pancada.
+  //
+  // Em fração do tamanho, não em segundos fixos: um efeito longo "vem de longe" e
+  // precisa de mais tempo pra emergir; o mesmo meio segundo que amacia um efeito
+  // de 1s não faz cócegas num de 8s.
+  const RAMPA_DE = {
+    subida: { entra: 0.22, sai: 0 },
+    prato: { entra: 0.25, sai: 0 },
+    sopro: { entra: 0.30, sai: 0.30 },
+    queda: { entra: 0.03, sai: 0.35 },
+    impacto: { entra: 0, sai: 0 },
+    cauda: { entra: 0.05, sai: 0.30 },
+    puxada: { entra: 0.20, sai: 0 },
+    contagem: { entra: 0, sai: 0 }
+  }
+  const rampasDe = (tipo, comprimento) => {
+    const r = RAMPA_DE[tipo] || { entra: 0, sai: 0 }
+    return {
+      fadeIn: Math.round(comprimento * r.entra * 100) / 100,
+      fadeOut: Math.round(comprimento * r.sai * 100) / 100
+    }
+  }
 
   const vaoEm = (t) => {
     let ini = 0
@@ -1139,6 +1438,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       tipo,
       dur: vao.dur,
       fonte,
+      sobra: SOBRA_DE[tipo] || 0,
       cliques: tipo === 'contagem' ? contagemDoVao(vao) : []
     }).catch((e) => ({ erro: String(e?.message || e) }))
     setFazendoVao(null)
@@ -1152,6 +1452,11 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       musicas: [...criacao.musicas.filter((x) => x.id !== trocando), {
         id,
         vao: tipo,                       // é isto que faz a tela desenhar diferente
+        // o tamanho de buraco com que ela foi fabricada: é por ele que se sabe,
+        // depois de um arrasto de lateral, se o som precisa ser refeito
+        vaoDur: vao.dur,
+        distancia: 0,        // nasce perto; quem quiser longe puxa o controle
+        vaoDist: 0,
         nome: NOMES_DE_VAO[tipo],
         arquivo: r.arquivo,
         som: 'stems://s/_vaos/wav/' + r.nome,
@@ -1162,8 +1467,8 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
         ganho: 1,
         velocidade: 1,
         tom: 0,
-        fadeIn: 0,
-        fadeOut: 0
+        // já nasce amaciada, do jeito que este efeito específico pede
+        ...rampasDe(tipo, r.duracao || vao.dur)
       }]
     })
     setEscolhida(id)
@@ -1448,7 +1753,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                       // testar e ver qual fica melhor". Obrigar a apagar e
                       // remarcar o vão a cada tentativa mataria a comparação.
                       const v = vaoDaPeca(alvo)
-                      const outros = ['cauda', 'puxada', 'contagem']
+                      const outros = ['subida', 'prato', 'sopro', 'queda', 'impacto', 'cauda', 'puxada', 'contagem']
                         .filter((x) => x !== alvo.vao)
                         .filter((x) => (x === 'cauda' ? !!v.antes : x === 'puxada' ? !!v.depois : true))
                       return (
@@ -1506,6 +1811,31 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                         <button onClick={() => preencher('contagem', menu.vao, menu.lane)}>
                           A contagem <em>cliques no tempo da próxima</em>
                         </button>
+                        {/* ── AS FABRICADAS ──
+                            Separadas das de cima porque são outra coisa: aquelas
+                            tiram som da SUA gravação, estas são feitas do nada
+                            com ruído e varredura de frequência — que é como as
+                            bibliotecas de efeito dos programas grandes fazem as
+                            delas. Misturar as duas famílias na mesma lista faria
+                            a pessoa achar que "cauda" e "impacto" vêm do mesmo
+                            lugar, e elas não vêm. */}
+                        <span className="fx-menu-fio" />
+                        <span className="fx-menu-olho">feitos pelo MPTrix</span>
+                        <button onClick={() => preencher('subida', menu.vao, menu.lane)}>
+                          A subida <em>chiado crescendo, corta seco na entrada</em>
+                        </button>
+                        <button onClick={() => preencher('prato', menu.vao, menu.lane)}>
+                          O prato ao contrário <em>chiado agudo inchando até a entrada</em>
+                        </button>
+                        <button onClick={() => preencher('sopro', menu.vao, menu.lane)}>
+                          O sopro <em>passa por você e vai embora</em>
+                        </button>
+                        <button onClick={() => preencher('queda', menu.vao, menu.lane)}>
+                          A queda <em>escorrega pra baixo quando a música acaba</em>
+                        </button>
+                        <button onClick={() => preencher('impacto', menu.vao, menu.lane)}>
+                          O impacto <em>pancada grave na entrada, ressoa por baixo</em>
+                        </button>
                       </>
                     )}
                     {menu.vao && (alvo || menu.noTrecho) && <span className="fx-menu-fio" />}
@@ -1513,7 +1843,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                     {menu.noTrecho && trecho && (
                       <>
                         <span className="fx-menu-olho">
-                          trecho {mmss(trecho.ini)} → {mmss(trecho.fim)}
+                          trecho {relogioNoZoom(trecho.ini, zoom)} → {relogioNoZoom(trecho.fim, zoom)}
                         </span>
                         <button onClick={duplicarTrecho}>Duplicar trecho</button>
                         <button className="perigo" onClick={apagarTrecho}>Apagar trecho</button>
@@ -1624,13 +1954,17 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                       {/* a passagem é curta: em minuto:segundo ela viraria
                           "0:02" e some a diferença entre 1,5s e 2,4s, que é
                           justamente o que se está ajustando nela */}
-                      {mmss(entraDe(m))}
-                      {dur ? ` · ${m.vao ? dur.toFixed(1) + 's' : mmss(dur)}` : ''}
+                      {/* MESMA PRECISÃO DO RELÓGIO. Ler "4:58" na etiqueta e
+                          "4:58,32" na régua é ter duas verdades sobre o mesmo
+                          instante — e conferir onde a peça entra vira adivinhação
+                          justamente na hora em que se está mirando um corte. */}
+                      {relogioNoZoom(entraDe(m), zoom)}
+                      {dur ? ` · ${m.vao ? dur.toFixed(1) + 's' : relogioNoZoom(dur, zoom)}` : ''}
                       {fadeInDe(m) > 0.05 || fadeOutDe(m) > 0.05
                         ? ` · rampa ${fadeInDe(m).toFixed(1)}s↗ ${fadeOutDe(m).toFixed(1)}s↘`
                         : ''}
                       {iniDe(m) > 0.05 || fimDe(m) < arquivoDe(m) - 0.05
-                        ? ` · recorte ${mmss(iniDe(m))}→${mmss(fimDe(m))}`
+                        ? ` · recorte ${relogioNoZoom(iniDe(m), zoom)}→${relogioNoZoom(fimDe(m), zoom)}`
                         : ''}
                       {an?.tom ? ` · ${an.tom}` : ''}
                     </em>
@@ -1663,7 +1997,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
         >{'\u21bb'}</button>
 
         <span className="mesa-relogio">
-          <b ref={relogioRef}>{mmss(agulha)}</b><i>/ {mmss(fim)}</i>
+          <b ref={relogioRef}>{relogioNoZoom(agulha, zoom)}</b><i>/ {mmss(fim)}</i>
         </span>
 
         <span className="fx-sep" />
@@ -1673,6 +2007,28 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             <span className="fx-alvo" style={{ '--cor': CORES[pecas.indexOf(sel) % CORES.length] }}>
               <i />{sel.nome}
             </span>
+
+            {/* ── PERTO ↔ LONGE, só pra passagem ──
+                "ele tem que vir de longe... precisa ser mais fluido, quase como
+                uma metamorfose." Distância não é volume baixo: é baixar,
+                escurecer e espalhar ao mesmo tempo, e as três juntas num
+                controle só, porque quem quer "longe" não quer escolher três
+                números — quer apontar pra longe.
+                Só aparece na passagem porque só nela o som é fabricado na hora;
+                numa gravação isso exigiria refazer o áudio da música. */}
+            {sel.vao && (
+              <label className="fx-ctrl" title="perto chega na sua cara; longe abaixa, escurece e espalha">
+                distância
+                <input type="range" min="0" max="100" step="5"
+                  value={Math.round((Number(sel.distancia) || 0) * 100)}
+                  onChange={(e) => mexer('distancia', Number(e.target.value) / 100)}
+                  onPointerUp={() => refazerVao(sel.id)}
+                  onKeyUp={() => refazerVao(sel.id)} />
+                <b>{(Number(sel.distancia) || 0) < 0.05
+                  ? 'perto'
+                  : (Number(sel.distancia) || 0) > 0.9 ? 'longe' : Math.round((Number(sel.distancia) || 0) * 100) + '%'}</b>
+              </label>
+            )}
 
             <label className="fx-ctrl" title="volume desta faixa">
               volume
@@ -1766,8 +2122,19 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             já manda repetir; um <b>clique</b> solta a marcação. Com um trecho marcado, o <b>botão direito</b> dentro dele
             duplica ou apaga aquele pedaço. <b>Botão direito num buraco</b> entre
             duas faixas preenche o vão com <b>cauda</b>, <b>puxada</b> ou <b>contagem</b> —
-            e no botão direito da passagem dá pra trocar uma pela outra e comparar. O <b>tom</b> entra só no
-            arquivo final — no play aqui ele ainda não é ouvido.
+            e no botão direito da passagem dá pra trocar uma pela outra e comparar.
+            {preparandoTom > 0 && <> <b>Preparando o tom…</b> alguns segundos, e o play passa a tocar no tom novo.</>}
+            {/* AVISAR QUE ESTÁ ATENUANDO. O navegador não passa de 100%, então
+                com alguma faixa reforçada o play toca tudo mais baixo pra manter
+                a PROPORÇÃO igual à do arquivo. Sem dizer isso, a pessoa acha que
+                o programa abaixou o som sozinho — e desconfiar do play é pior
+                que o play estar baixo. */}
+            {pecas.some((m) => (m.ganho === undefined ? 1 : Number(m.ganho)) > 1.001) && (
+              <>
+                {' '}Com faixa acima de 100%, o play toca <b>tudo mais baixo</b> pra
+                manter o equilíbrio igual ao do arquivo — o mp3 sai no volume cheio.
+              </>
+            )}
           </p>
         )}
       </div>

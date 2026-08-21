@@ -85,6 +85,8 @@ const api = {
     // o barulho que preenche um buraco entre duas peças: cauda, puxada ou
     // contagem. Devolve um arquivo de verdade, que a tela trata como peça
     vao: (pedido) => ipcRenderer.invoke('emenda:vao', pedido),
+    // o pedaço com o tom já aplicado, pro play não mentir sobre o tom
+    previaTom: (pedido) => ipcRenderer.invoke('emenda:previaTom', pedido),
     onProgresso: (fn) => {
       const h = (_e, info) => fn(info)
       ipcRenderer.on('emenda:progresso', h)

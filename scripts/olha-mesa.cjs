@@ -107,14 +107,22 @@ const alvo = {
     },
     // o motor de verdade chama o ffmpeg; aqui so devolve a forma da resposta.
     // O motor tem prova separada (prova-vao) que mede o som que sai.
-    vao: async ({ tipo, dur, cliques }) => ({
+    // O DUBLE TEM QUE COPIAR OS LIMITES DO MOTOR, senao ele mente por omissao: o
+    // motor de verdade prende a passagem entre 0,25s e 30s, e sem isso a maquete
+    // devolvia "117 segundos de contagem" -- um som que nunca existiria -- e o
+    // teste media uma peca impossivel.
+    vao: async ({ tipo, dur, cliques, sobra }) => {
+      const d = Math.max(0.25, Math.min(30, Number(dur) || 0))
+      const total = tipo === 'impacto' ? d + Math.max(0.6, Math.min(2.2, Number(sobra) || 0)) : d
+      return {
       ok: true,
       tipo,
-      arquivo: 'C:/stems/_vaos/wav/' + tipo + '-' + Number(dur).toFixed(2) + '.wav',
-      nome: tipo + '-' + Number(dur).toFixed(2) + '.wav',
-      duracao: dur,
+      arquivo: 'C:/stems/_vaos/wav/' + tipo + '-' + total.toFixed(2) + '.wav',
+      nome: tipo + '-' + total.toFixed(2) + '.wav',
+      duracao: total,
       cliques: (cliques || []).length
-    }),
+      }
+    },
     analiseDe: async ({ path }) => {
       const i = Math.max(0, CAMINHOS.indexOf(path))
       // BATIDAS DE MENTIRA COM FORMA DE VERDADE: um pulso constante no BPM da
@@ -1448,6 +1456,59 @@ app.whenReady().then(async () => {
   console.log('na lateral com rampa de 120px, o dedo pega: ' + quemPegou)
   console.log('encolher pela esquerda: ' + comRampaAntes + 'px → ' + comRampaDepois + 'px')
 
+  // ── A RAMPA TEM QUE SOAR, NAO SO APARECER ──
+  //
+  // Ela existia so no arquivo exportado: o dono arrastava a bolinha, ouvia
+  // exatamente a mesma coisa, e concluia que o efeito "entra e sai muito seco".
+  // A ferramenta de amaciar estava muda, e ajustar no escuro nao e ajustar.
+  //
+  // O teste le o VOLUME REAL do elemento de audio enquanto a musica anda: no
+  // comeco da peca, dentro da rampa, ele tem que estar abaixo do cheio; passada
+  // a rampa, tem que voltar pro cheio. Medir a largura desenhada nao provaria
+  // nada -- era justamente ela que ja estava certa.
+  const volumeSoando = () => passo(
+    '(() => {' +
+    ' const sons = [...document.querySelectorAll(".fx-sons audio")];' +
+    ' if (!sons.length) return null;' +
+    ' return Math.round(Math.max(...sons.map((a) => a.volume)) * 1000) / 1000;' +
+    '})()')
+  // poe a linha no comeco da peca 0, que acabou de ganhar 120px de rampa
+  const inicioDaPeca0 = await passo(
+    '(() => {' +
+    ' const p = document.querySelectorAll(".fx-peca")[0];' +
+    ' const campo = document.querySelector(".fx-campo").getBoundingClientRect();' +
+    ' return Math.round(p.getBoundingClientRect().left - campo.left);' +
+    '})()')
+  const irPara = (xNoCampo) => passo(
+    '(() => {' +
+    ' const el = document.querySelector(".fx-regua");' +
+    ' const campo = document.querySelector(".fx-campo").getBoundingClientRect();' +
+    ' const r = el.getBoundingClientRect();' +
+    ' const x = campo.left + ' + xNoCampo + ';' +
+    ' el.dispatchEvent(new PointerEvent("pointerdown", { clientX: x, clientY: r.top + 14, bubbles: true, pointerId: 61 }));' +
+    ' window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 61 }));' +
+    ' return "fui";' +
+    '})()')
+  await irPara(inicioDaPeca0 + 8)          // 8px dentro da peca: bem no pe da rampa
+  await new Promise((r) => setTimeout(r, 250))
+  await passo("document.querySelector('.fx-ferramentas .ed-tp-play').click()")
+  await new Promise((r) => setTimeout(r, 500))
+  const volumeNaRampa = await volumeSoando()
+  await passo("(() => { const b = document.querySelector('.fx-ferramentas .ed-tp-play'); if (b.textContent.trim() === '■') b.click() })()")
+  await new Promise((r) => setTimeout(r, 250))
+  await irPara(inicioDaPeca0 + 400)        // bem depois da rampa de 120px
+  await new Promise((r) => setTimeout(r, 250))
+  await passo("document.querySelector('.fx-ferramentas .ed-tp-play').click()")
+  await new Promise((r) => setTimeout(r, 500))
+  const volumeCheio = await volumeSoando()
+  await passo("(() => { const b = document.querySelector('.fx-ferramentas .ed-tp-play'); if (b.textContent.trim() === '■') b.click() })()")
+  await new Promise((r) => setTimeout(r, 250))
+  const rampaSoa = volumeNaRampa !== null && volumeCheio !== null &&
+    volumeNaRampa < volumeCheio - 0.25 && volumeCheio > 0.9
+  console.log('')
+  console.log('── a rampa soa? ──')
+  console.log('volume dentro da rampa: ' + volumeNaRampa + ' | passada a rampa: ' + volumeCheio)
+
   // ── O BARULHO QUE PREENCHE O VAO ──
   //
   // O dono deixou um buraco entre duas pecas e pediu "pelo menos algum barulho"
@@ -1571,7 +1632,9 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 350))
   const menuDoVao = oVao ? await opcoesDoMenu() : []
   console.log('menu do vao:   ' + JSON.stringify(menuDoVao))
-  const ofereceOsTres = ['cauda', 'puxada', 'contagem']
+  // a subida entrou depois das outras tres: ela e a unica FABRICADA do nada, e a
+  // que responde ao pedido de "a passagem tem que parecer natural"
+  const ofereceOsTres = ['cauda', 'puxada', 'contagem', 'subida']
     .every((t) => menuDoVao.some((o) => o.toLowerCase().indexOf(t) >= 0))
   console.log('clique na cauda: ' + await clicarNoMenu('A cauda'))
   await new Promise((r) => setTimeout(r, 700))
@@ -1603,6 +1666,68 @@ app.whenReady().then(async () => {
     !!comCauda[0] && Math.abs(comContagem[0].esq - comCauda[0].esq) <= 2
   console.log('trocada:       ' + JSON.stringify(comContagem))
   await fotografar(destino.replace('.png', '-vao.png'))
+
+  // ── ESTICAR A PASSAGEM TEM QUE REFAZER O SOM ──
+  //
+  // "claude, se desse pra alongar mais os efeitos". Nao dava: o arquivo da
+  // passagem tem o tamanho exato do buraco, entao puxar a lateral dela nao
+  // revelava som nenhum -- nao havia som escondido pra revelar, e a peca
+  // simplesmente nao mexia.
+  //
+  // Aqui a borda passou a mudar o TAMANHO PEDIDO e o som e fabricado de novo ao
+  // soltar. O teste cobra as duas metades: a peca cresce NA TELA e o ARQUIVO
+  // muda de nome (nome novo = som novo; nome igual = so esticou o desenho, que e
+  // exatamente o defeito).
+  const passagemAgora = () => passo(
+    '(() => {' +
+    ' const v = document.querySelector(".fx-vao");' +
+    ' if (!v) return null;' +
+    ' const cs = JSON.parse(localStorage.getItem("mptrix.emendas.v1") || "[]");' +
+    ' const m = ((cs[0] && cs[0].musicas) || []).find((x) => x.vao);' +
+    ' return {' +
+    '   largura: Math.round(v.getBoundingClientRect().width),' +
+    '   arquivo: m ? String(m.arquivo).split("/").pop() : null' +
+    ' };' +
+    '})()')
+  // DUAS ETAPAS, e a ordem importa: primeiro ENCOLHO, depois ALONGO. O motor
+  // prende a passagem em 30 segundos, entao tentar alongar uma que ja esta no
+  // teto nao prova nada -- ela nao tem pra onde crescer. Encolhendo antes, a
+  // segunda etapa mede crescimento de verdade.
+  const puxarLateralDoVao = (dx) => passo(
+    '(() => {' +
+    ' const v = document.querySelector(".fx-vao");' +
+    ' if (!v) return "sem passagem";' +
+    ' const a = v.querySelector(".fx-alca-e");' +
+    ' const r = a.getBoundingClientRect();' +
+    ' const x = r.left + r.width / 2, y = r.top + r.height / 2;' +
+    ' const ev = (t, cx, alvo) => alvo.dispatchEvent(new PointerEvent(t, {' +
+    '   clientX: cx, clientY: y, bubbles: true, cancelable: true, pointerId: 91, button: 0 }));' +
+    ' ev("pointerdown", x, a);' +
+    ' ev("pointermove", x + (' + dx + ') / 2, window);' +
+    ' ev("pointermove", x + (' + dx + '), window);' +
+    ' ev("pointerup", x + (' + dx + '), window);' +
+    ' return "puxei";' +
+    '})()')
+
+  await puxarLateralDoVao(160)              // encolhe: borda esquerda pra direita
+  await new Promise((r) => setTimeout(r, 1200))
+  const encolhida = await passagemAgora()
+  const antesDeEsticar = encolhida
+  await puxarLateralDoVao(-160)             // alonga: borda esquerda pra esquerda
+  await new Promise((r) => setTimeout(r, 1400))
+  const depoisDeEsticar = await passagemAgora()
+  const esticouNaTela = !!antesDeEsticar && !!depoisDeEsticar &&
+    depoisDeEsticar.largura > antesDeEsticar.largura + 40
+  // o nome do arquivo do duble carrega a duracao pedida: nome novo = som
+  // fabricado de novo; nome igual = so o desenho esticou, que e o defeito
+  const refezOSom = !!antesDeEsticar && !!depoisDeEsticar &&
+    !!depoisDeEsticar.arquivo && depoisDeEsticar.arquivo !== antesDeEsticar.arquivo
+  console.log('')
+  console.log('── alongar a passagem ──')
+  console.log('largura: ' + (antesDeEsticar && antesDeEsticar.largura) + 'px → ' +
+    (depoisDeEsticar && depoisDeEsticar.largura) + 'px')
+  console.log('arquivo: ' + (antesDeEsticar && antesDeEsticar.arquivo) + ' → ' +
+    (depoisDeEsticar && depoisDeEsticar.arquivo))
   // e some quando se pede pra sumir
   await menuNaPassagem()
   await new Promise((r) => setTimeout(r, 300))
@@ -1877,6 +2002,8 @@ app.whenReady().then(async () => {
   if (!encaixouNaBatida) console.log('✘ a peca nao encaixou na batida: ficou a ' +
     naBatida.toFixed(3) + 's (' + (naBatida * zoomNoEncaixe).toFixed(2) + 'px) dela')
   if (!rampaCresceu) console.log('✘ a ponta de entrada nao virou rampa: ' + JSON.stringify(pontasDepois))
+  if (!rampaSoa) console.log('✘ a rampa NAO muda o som: dentro dela ' + volumeNaRampa +
+    ', depois dela ' + volumeCheio + ' (era pra ser bem menor dentro)')
   if (!alcaVenceARampa) console.log('✘ com rampa na peca, a lateral nao obedece: o dedo pegou "' +
     quemPegou + '" e a peca foi de ' + comRampaAntes + 'px pra ' + comRampaDepois + 'px')
   // ── o vao ──
@@ -1908,8 +2035,12 @@ app.whenReady().then(async () => {
   if (!trocouNoLugar) console.log('✘ nao deu pra TROCAR um barulho pelo outro no mesmo lugar: ' +
     JSON.stringify(menuDaPassagem) + ' → ' + JSON.stringify(comContagem))
   if (!semPassagem) console.log('✘ tirar a passagem nao tirou')
+  if (!esticouNaTela) console.log('✘ puxar a lateral da passagem nao alongou ela: ' +
+    JSON.stringify(antesDeEsticar) + ' → ' + JSON.stringify(depoisDeEsticar))
+  if (!refezOSom) console.log('✘ alongou o desenho mas NAO refez o som: o arquivo continua ' +
+    (depoisDeEsticar && depoisDeEsticar.arquivo))
   const oVaoFecha = achouOVao && ofereceOsTres && cobriuOBuraco && vaoSeDeclara &&
-    ofereceTroca && passagemSabeApagar && trocouNoLugar && semPassagem
+    ofereceTroca && passagemSabeApagar && trocouNoLugar && esticouNaTela && refezOSom && semPassagem
   if (!andouDez) console.log('✘ um toque na seta nao andou 10s: ' + antesDaSeta + 's → ' + depoisDoToque + 's')
   if (!seguradaAcelera) console.log('✘ segurar a seta NAO acelerou: ' + depoisDoToque + 's → ' + depoisDaSegurada + 's')
   if (!voltaPraTras) console.log('✘ a seta da esquerda nao voltou 10s: ' + depoisDaSegurada + 's → ' + depoisDaVolta + 's')
@@ -1917,7 +2048,7 @@ app.whenReady().then(async () => {
   if (!voltouProPonto) console.log('✘ parar NAO devolveu a linha pro ponto: pus em ' + pontoPosto +
     's, tocou ate ' + linhaAndando + 's e parou em ' + linhaDepoisDeParar + 's')
   const ok = oVaoFecha && encaixouNaBatida && rampaCresceu && alcaVenceARampa && naoEmudeceu &&
-    saiuDoPonto && voltouProPonto && andouDez && seguradaAcelera && voltaPraTras && batiaAntes && bateDepois && umToqueSoAnda && aprofundou && voltouDaRoda && ancorou && cresceu && soAPrimeira &&
+    saiuDoPonto && voltouProPonto && andouDez && seguradaAcelera && voltaPraTras && rampaSoa && batiaAntes && bateDepois && umToqueSoAnda && aprofundou && voltouDaRoda && ancorou && cresceu && soAPrimeira &&
     colunaAcompanha && voltouAoAutomatico && encheATela && naoEmpilhou && bandeiraTira && cravou && dosPontos && descravou && horaAcompanha && horaNaoVaza && temAcoesDaFaixa && apagouAFaixa && barrouONativo &&
     alinhadas && mudoCalou && isolarCalouORestо && isolarGanhaDeMudo && colunaFixa &&
     encolheuPelaDireita && encolheuPelaEsquerda && menuSoDentro && duasOpcoes &&

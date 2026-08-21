@@ -329,10 +329,18 @@ export default function App() {
             { id: 'estudio', n: '01', rot: 'ESTÚDIO', sub: 'separar e ensaiar' },
             { id: 'baixar', n: '02', rot: 'BAIXAR', sub: 'MP3, WAV, vídeo' },
             { id: 'acervo', n: '03', rot: 'ACERVO', sub: `${history.length} itens` },
-            // EMENDAR entra antes da NUVEM porque e coisa de fazer musica; a
-            // nuvem e coisa de aparelho, e coisa de aparelho fica por ultimo.
-            { id: 'emendar', n: '04', rot: 'EMENDAR', sub: 'juntar músicas' },
-            { id: 'nuvem', n: '05', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
+            // ── EMENDAR: ARQUIVADA (2026-08-19, decisão do dono) ──
+            //
+            // "por enquanto a aba EMENDAR estará arquivada."
+            //
+            // ARQUIVADA, NÃO APAGADA — e a diferença é o ponto. O estúdio inteiro
+            // continua no repositório, o motor continua no lugar, e os medleys
+            // que ele montou continuam guardados. O que sai é a PORTA: a aba some
+            // do trilho e ninguém entra nela sem querer.
+            //
+            // Pra trazer de volta é esta linha aqui, descomentada. Nada mais.
+            // { id: 'emendar', n: '04', rot: 'EMENDAR', sub: 'juntar músicas' },
+            { id: 'nuvem', n: '04', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
           ].map((it) => (
             <button
               key={it.id}
