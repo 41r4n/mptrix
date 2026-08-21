@@ -334,18 +334,21 @@ export default function App() {
             { id: 'estudio', n: '01', rot: 'ESTÚDIO', sub: 'separar e ensaiar' },
             { id: 'baixar', n: '02', rot: 'BAIXAR', sub: 'MP3, WAV, vídeo' },
             { id: 'acervo', n: '03', rot: 'ACERVO', sub: `${history.length} itens` },
-            // ── EMENDAR: ARQUIVADA (2026-08-19, decisão do dono) ──
+            // ── EMENDAR: arquivada e DESARQUIVADA no mesmo dia (2026-08-20) ──
             //
-            // "por enquanto a aba EMENDAR estará arquivada."
+            // Ela saiu do trilho de manhã ("por enquanto a aba EMENDAR estará
+            // arquivada") e voltou à tarde: o medley precisava ficar pronto, e o
+            // dono quis a mão nele.
             //
-            // ARQUIVADA, NÃO APAGADA — e a diferença é o ponto. O estúdio inteiro
-            // continua no repositório, o motor continua no lugar, e os medleys
-            // que ele montou continuam guardados. O que sai é a PORTA: a aba some
-            // do trilho e ninguém entra nela sem querer.
+            // Ficou provado que arquivar do jeito certo vale a pena: como só a
+            // PORTA tinha saído — nada de código, nada de dado —, trazer de volta
+            // foi descomentar uma linha, e os medleys estavam onde ele deixou.
             //
-            // Pra trazer de volta é esta linha aqui, descomentada. Nada mais.
-            // { id: 'emendar', n: '04', rot: 'EMENDAR', sub: 'juntar músicas' },
-            { id: 'nuvem', n: '04', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
+            // O rebaixamento escrito no CLAUDE.md continua valendo, e é outra
+            // coisa: o editor não cresce mais. Usar o que existe é justamente
+            // pra isso que ele existe.
+            { id: 'emendar', n: '04', rot: 'EMENDAR', sub: 'juntar músicas' },
+            { id: 'nuvem', n: '05', rot: 'NUVEM', sub: nuvemLigada ? 'ligada' : 'desligada' }
           ].map((it) => (
             <button
               key={it.id}

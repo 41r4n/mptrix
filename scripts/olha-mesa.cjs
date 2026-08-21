@@ -551,6 +551,225 @@ app.whenReady().then(async () => {
     }))()`)
 
   const nasFaixas = await estado()
+
+  // ██████████ O FIM DA FAIXA SOBREVIVE AO ZOOM? ██████████
+  //
+  //   SO_ZOOM=1 npm run olha:mesa
+  //
+  // Queixa do dono, e ela e precisa: "as vezes o profissional precisa dar um
+  // zoom na musica pra acertar o ponto certo, e isso funciona muito bem. Mas
+  // quando eu tiro esse zoom, acaba tocando mais do que eu tinha fixado ali...
+  // acontece mais na questao dos finais das faixas, e nos cortes."
+  //
+  // Sao TRES coisas diferentes que podem estar quebradas, e o teste separa as
+  // tres em vez de julgar pelo que se ouve:
+  //
+  //   1. o VALOR guardado muda quando o zoom muda? (seria perda de dado)
+  //   2. o DESENHO deixa de corresponder ao valor? (seria mentira na tela)
+  //   3. o RELOGIO da peca deixa de corresponder ao valor? (seria o som passando
+  //      do ponto, que e exatamente o que ele descreve)
+  //
+  // Roda sozinho e sai, porque ele precisa de zoom alto e o resto do roteiro
+  // pressupoe a vista normal.
+  if (process.env.SO_ZOOM) {
+    const zoomAgora = () => passo(
+      '(() => {' +
+      ' const riscos = [...document.querySelectorAll(".fx-regua .ruler-tick.major")].filter((t) => t.querySelector(".ruler-label"));' +
+      ' const seg = (t) => { const q = t.trim().split(":"); return Number(q[0]) * 60 + Number(q[1]); };' +
+      ' const hora = (r) => seg(r.querySelector(".ruler-label").textContent);' +
+      ' const a = riscos[0], b = riscos[1];' +
+      ' return Math.round(((b.getBoundingClientRect().left - a.getBoundingClientRect().left) / (hora(b) - hora(a))) * 1000) / 1000;' +
+      '})()')
+    // le O QUE ESTA GUARDADO e O QUE ESTA DESENHADO, pra poder comparar os dois
+    const pecaAgora = (i) => passo(
+      '(() => {' +
+      ' const cs = JSON.parse(localStorage.getItem("mptrix.emendas.v1") || "[]");' +
+      ' const ms = (cs[0] && cs[0].musicas) || [];' +
+      ' const m = ms[' + i + '];' +
+      ' if (!m) return null;' +
+      ' const el = document.querySelectorAll(".fx-peca")[' + i + '];' +
+      ' const r = el ? el.getBoundingClientRect() : null;' +
+      ' return {' +
+      '   ini: Number(m.ini) || 0,' +
+      '   fim: Number(m.fim) || 0,' +
+      '   entra: Number(m.entra) || 0,' +
+      '   vel: m.velocidade === undefined ? 1 : Number(m.velocidade),' +
+      '   larguraDesenhada: r ? Math.round(r.width * 100) / 100 : null' +
+      ' };' +
+      '})()')
+    const clicarZoom = async (qual, vezes) => {
+      for (let i = 0; i < vezes; i++) {
+        await passo('document.querySelector(".fx-zoom [title=' + qual + ']").click()')
+        await new Promise((r) => setTimeout(r, 140))
+      }
+    }
+
+    console.log('')
+    console.log('════════ O FIM DA FAIXA SOBREVIVE AO ZOOM? ════════')
+    await clicarZoom('aproximar', 6)
+    const zAprox = await zoomAgora()
+    console.log('aproximei ate ' + zAprox + ' px/s')
+
+    // fixa o fim da peca 0 puxando a lateral direita, com a mesa aproximada --
+    // que e exatamente o gesto que ele descreve.
+    // O arrasto e escrito aqui dentro porque o helper geral so nasce mais
+    // adiante no roteiro, e chamar antes da hora quebra calado.
+    const puxarBordaDireita = (i, dx) => passo(
+      '(() => {' +
+      ' const p = document.querySelectorAll(".fx-peca")[' + i + '];' +
+      ' const q = document.querySelector(".fx-quadro");' +
+      ' const campo = document.querySelector(".fx-campo").getBoundingClientRect();' +
+      ' q.scrollLeft = Math.max(0, p.getBoundingClientRect().right - campo.left - q.clientWidth + 200);' +
+      ' const a = p.querySelector(".fx-alca-d");' +
+      ' const r = a.getBoundingClientRect();' +
+      ' const x = r.left + r.width / 2, y = r.top + r.height / 2;' +
+      ' const ev = (t, cx, alvo) => alvo.dispatchEvent(new PointerEvent(t, {' +
+      '   clientX: cx, clientY: y, bubbles: true, cancelable: true, pointerId: 33, button: 0 }));' +
+      ' ev("pointerdown", x, a);' +
+      ' ev("pointermove", x + (' + dx + ') / 2, window);' +
+      ' ev("pointermove", x + (' + dx + '), window);' +
+      ' ev("pointerup", x + (' + dx + '), window);' +
+      ' return "puxei";' +
+      '})()')
+    await puxarBordaDireita(0, -220)
+    await new Promise((r) => setTimeout(r, 500))
+    const fixado = await pecaAgora(0)
+    console.log('fixei o fim: guardado fim=' + fixado.fim.toFixed(3) + 's, desenhado ' +
+      fixado.larguraDesenhada + 'px')
+
+    await clicarZoom('afastar', 6)
+    await new Promise((r) => setTimeout(r, 500))
+    const zLonge = await zoomAgora()
+    const depois = await pecaAgora(0)
+    console.log('afastei ate ' + zLonge + ' px/s')
+    console.log('agora:       guardado fim=' + depois.fim.toFixed(3) + 's, desenhado ' +
+      depois.larguraDesenhada + 'px')
+
+    // 1. o valor nao pode mudar
+    const valorIntacto = Math.abs(depois.fim - fixado.fim) < 0.002 &&
+      Math.abs(depois.ini - fixado.ini) < 0.002 &&
+      Math.abs(depois.entra - fixado.entra) < 0.002
+    // 2. o desenho tem que corresponder ao valor, NOS DOIS zooms
+    const esperado = (p, z) => ((p.fim - p.ini) / (p.vel || 1)) * z
+    const desenhoPerto = Math.abs(fixado.larguraDesenhada - esperado(fixado, zAprox))
+    const desenhoLonge = Math.abs(depois.larguraDesenhada - esperado(depois, zLonge))
+    console.log('')
+    console.log('confronto desenho x valor:')
+    console.log('   aproximado: desenhado ' + fixado.larguraDesenhada + 'px, devia ser ' +
+      esperado(fixado, zAprox).toFixed(2) + 'px  (erro ' + desenhoPerto.toFixed(2) + 'px)')
+    console.log('   afastado:   desenhado ' + depois.larguraDesenhada + 'px, devia ser ' +
+      esperado(depois, zLonge).toFixed(2) + 'px  (erro ' + desenhoLonge.toFixed(2) + 'px)')
+    console.log('')
+    if (!valorIntacto) {
+      console.log('✘ O VALOR MUDOU COM O ZOOM: fim ' + fixado.fim.toFixed(3) + ' → ' + depois.fim.toFixed(3) +
+        ' | ini ' + fixado.ini.toFixed(3) + ' → ' + depois.ini.toFixed(3) +
+        ' | entra ' + fixado.entra.toFixed(3) + ' → ' + depois.entra.toFixed(3))
+    } else {
+      console.log('✔ o valor guardado NAO muda com o zoom')
+    }
+    if (desenhoPerto > 2 || desenhoLonge > 2) {
+      console.log('✘ O DESENHO NAO CORRESPONDE AO VALOR (erro de ' +
+        Math.max(desenhoPerto, desenhoLonge).toFixed(2) + 'px)')
+    } else {
+      console.log('✔ o desenho corresponde ao valor nos dois zooms')
+    }
+    // ── E O PONTO CRAVADO: ELE ANDA QUANDO SE MEXE NO ZOOM? ──
+    //
+    // Foi ISTO que quebrou pro dono, e o teste de cima nao pegava: ele conferia
+    // o fim da FAIXA, e o defeito estava no PONTO. Cravou 4:51,50, mexeu no
+    // zoom, e o ponto virou 4:51,10.
+    //
+    // A causa: a linha grudava em ponto cravado por distancia de TELA (12px), e
+    // 12px valem 0,3s aproximado e OITO SEGUNDOS afastado. Afastado, clicar
+    // perto de um ponto antigo puxava a linha pra ele -- invisivel, porque na
+    // tela ela ficava a doze pixels do dedo, ou seja, no lugar.
+    //
+    // O teste crava dois pontos de proposito PERTO um do outro (meio segundo),
+    // afasta o zoom, e cobra que continuem dois e nos mesmos lugares.
+    const pontos = () => passo(
+      '(() => {' +
+      ' const cs = JSON.parse(localStorage.getItem("mptrix.emendas.v1") || "[]");' +
+      ' return ((cs[0] && cs[0].marcas) || []).map((x) => Math.round(x * 1000) / 1000);' +
+      '})()')
+    const cravarEm = async (segundos) => {
+      await passo(
+        '(() => {' +
+        ' const el = document.querySelector(".fx-regua");' +
+        ' const campo = document.querySelector(".fx-campo").getBoundingClientRect();' +
+        ' const q = document.querySelector(".fx-quadro");' +
+        ' const zoom = ' + (await zoomAgora()) + ';' +
+        ' const x = campo.left + ' + segundos + ' * zoom;' +
+        ' q.scrollLeft = Math.max(0, ' + segundos + ' * zoom - 300);' +
+        ' const campo2 = document.querySelector(".fx-campo").getBoundingClientRect();' +
+        ' const cx = campo2.left + ' + segundos + ' * zoom;' +
+        ' const r = el.getBoundingClientRect();' +
+        ' el.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx, clientY: r.top + 14, bubbles: true, pointerId: 88 }));' +
+        ' window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 88 }));' +
+        ' return "levei";' +
+        '})()')
+      await new Promise((r) => setTimeout(r, 250))
+      await passo(
+        '(() => {' +
+        ' const h = document.querySelector(".fx-hora");' +
+        ' const r = h.getBoundingClientRect();' +
+        ' const op = { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true, cancelable: true, pointerId: 89, button: 0 };' +
+        ' h.dispatchEvent(new PointerEvent("pointerdown", op));' +
+        ' h.dispatchEvent(new PointerEvent("pointerup", op));' +
+        ' h.dispatchEvent(new MouseEvent("click", op));' +
+        ' return "cravei";' +
+        '})()')
+      await new Promise((r) => setTimeout(r, 300))
+    }
+
+    console.log('')
+    console.log('════════ O PONTO CRAVADO ANDA COM O ZOOM? ════════')
+    await clicarZoom('aproximar', 6)
+    const zPonto = await zoomAgora()
+    console.log('aproximado em ' + zPonto + ' px/s')
+    await cravarEm(60)
+    await cravarEm(60.5)          // meio segundo depois: perto o bastante pra grudar
+    const antes = await pontos()
+    console.log('cravei dois: ' + JSON.stringify(antes))
+
+    await clicarZoom('afastar', 6)
+    await new Promise((r) => setTimeout(r, 400))
+    const zSolto = await zoomAgora()
+    // agora leva a linha pra perto deles com a mesa AFASTADA -- e nao crava
+    // nada: so o gesto de mover ja bastava pra puxar a linha 8s
+    await passo(
+      '(() => {' +
+      ' const el = document.querySelector(".fx-regua");' +
+      ' const campo = document.querySelector(".fx-campo").getBoundingClientRect();' +
+      ' const cx = campo.left + 63 * ' + zSolto + ';' +
+      ' const r = el.getBoundingClientRect();' +
+      ' el.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx, clientY: r.top + 14, bubbles: true, pointerId: 90 }));' +
+      ' window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 90 }));' +
+      '})()')
+    await new Promise((r) => setTimeout(r, 300))
+    const linhaEm = await passo('document.querySelector(".mesa-relogio b").textContent')
+    const depoisDoZoom = await pontos()
+    console.log('afastado em ' + zSolto + ' px/s')
+    console.log('os pontos agora: ' + JSON.stringify(depoisDoZoom))
+    console.log('pedi a linha em 63s e ela foi pra: ' + linhaEm)
+
+    const mesmosPontos = JSON.stringify(antes) === JSON.stringify(depoisDoZoom)
+    const doisPontos = antes.length === 2 && Math.abs(antes[1] - antes[0] - 0.5) < 0.06
+    // 63s esta a 2,5s do ponto de 60,5 — com o teto de 0,25s o grude NAO pode
+    // puxar a linha pra la
+    const seg = (txt) => { const p = String(txt).replace(',', '.').split(':'); return Number(p[0]) * 60 + Number(p[1]) }
+    const linhaFicou = Math.abs(seg(linhaEm) - 63) < 1.5
+
+    console.log('')
+    if (!doisPontos) console.log('✘ os dois pontos nao ficaram a meio segundo: ' + JSON.stringify(antes))
+    else console.log('✔ dois pontos cravados a meio segundo um do outro, com a mesa aproximada')
+    if (!mesmosPontos) console.log('✘ OS PONTOS MUDARAM COM O ZOOM: ' + JSON.stringify(antes) + ' → ' + JSON.stringify(depoisDoZoom))
+    else console.log('✔ os pontos cravados nao mudam com o zoom')
+    if (!linhaFicou) console.log('✘ A LINHA FOI PUXADA: pedi 63s, foi pra ' + linhaEm + ' (o grude do ponto puxou de longe)')
+    else console.log('✔ afastado, o grude nao puxa a linha de longe')
+
+    app.quit()
+    return
+  }
   await fotografar(destino.replace('.png', '-faixas.png'))
 
   // ── A MECANICA DO ARRASTO ──
@@ -957,6 +1176,27 @@ app.whenReady().then(async () => {
   // ── O CASO QUE ESTRAGOU NA MAO DO DONO ──
   // Levar a agulha PERTO (mas nao em cima) de um ponto e clicar na hora
   // empilhava outra marca em vez de tirar. Agora a agulha gruda no ponto.
+  // ── APROXIMA ANTES, e isso e parte da regra ──
+  //
+  // O grude ganhou teto em SEGUNDOS (0,25s) alem do teto em pixels, porque 12px
+  // valem 8 SEGUNDOS com a mesa afastada -- e era esse grude cego que levava a
+  // linha do dono pra um ponto velho sem ele ver. Custou tres dias.
+  //
+  // Consequencia justa: afastado, clicar "quase em cima" NAO tira mais o ponto,
+  // porque afastado "quase em cima" pode ser quatro segundos de distancia. Pra
+  // tirar de longe existe a bandeira, que e clicavel e nunca erra.
+  // Entao o teste aproxima primeiro, que e onde esse gesto faz sentido.
+  for (let i = 0; i < 10; i++) {
+    const z = await passo(
+      '(() => { const rs = [...document.querySelectorAll(".fx-regua .ruler-tick.major")].filter((t) => t.querySelector(".ruler-label"));' +
+      ' const seg = (t) => { const q = t.trim().split(":"); return Number(q[0]) * 60 + Number(q[1]); };' +
+      ' const h = (r) => seg(r.querySelector(".ruler-label").textContent);' +
+      ' return (rs[1].getBoundingClientRect().left - rs[0].getBoundingClientRect().left) / (h(rs[1]) - h(rs[0])); })()')
+    if (z >= 60) break
+    await passo('document.querySelector(".fx-zoom [title=aproximar]").click()')
+    await new Promise((r) => setTimeout(r, 140))
+  }
+  await new Promise((r) => setTimeout(r, 250))
   const antesDoQuase = await estadoDasMarcas()
   await passo(`
     (() => {
@@ -986,6 +1226,10 @@ app.whenReady().then(async () => {
     })()`)
   await new Promise((r) => setTimeout(r, 400))
   const pelaBandeira = await estadoDasMarcas()
+  // devolve a mesa pra vista normal: os testes seguintes medem em pixels e nao
+  // podem herdar a aproximacao que este precisou
+  await passo('document.querySelector(".fx-zoom [title=\'caber na tela\']").click()')
+  await new Promise((r) => setTimeout(r, 350))
 
   console.log('quase em cima + clique na hora: ' + antesDoQuase.bandeiras.length +
     ' → ' + depoisDoQuase.bandeiras.length + ' marcas')
@@ -1227,6 +1471,7 @@ app.whenReady().then(async () => {
   let pontoPosto = null
   let linhaAndando = null
   let linhaDepoisDeParar = null
+  let linhaNoSegundoPlay = null
   if (!PULA_PONTO) {
     if (await passo("!!document.querySelector('.fx-loop.on')")) {
       await passo("document.querySelector('.fx-loop').click()")
@@ -1241,11 +1486,28 @@ app.whenReady().then(async () => {
     await passo("(() => { const b = document.querySelector('.fx-ferramentas .ed-tp-play'); if (b.textContent.trim() === '■') b.click() })()")
     await new Promise((r) => setTimeout(r, 400))
     linhaDepoisDeParar = await ondeALinhaEstaEmSegundos()
+    // e o TOQUE SEGUINTE: e ele que agora leva a linha de volta pro ponto
+    await passo("document.querySelector('.fx-ferramentas .ed-tp-play').click()")
+    await new Promise((r) => setTimeout(r, 350))
+    linhaNoSegundoPlay = await ondeALinhaEstaEmSegundos()
+    await passo("(() => { const b = document.querySelector('.fx-ferramentas .ed-tp-play'); if (b.textContent.trim() === '■') b.click() })()")
+    await new Promise((r) => setTimeout(r, 300))
   }
   const saiuDoPonto = PULA_PONTO || (pontoPosto !== null && linhaAndando !== null &&
     linhaAndando > pontoPosto + 0.3)
-  const voltouProPonto = PULA_PONTO || (pontoPosto !== null && linhaDepoisDeParar !== null &&
-    Math.abs(linhaDepoisDeParar - pontoPosto) <= 0.3)
+  // ── A REGRA MUDOU, POR PEDIDO DO DONO ──
+  //
+  // Antes, parar devolvia a linha pro ponto NA HORA. Ele pediu o contrario:
+  // "as vezes quero pausar num momento exato, mas a lima ja reinicia pro ponto
+  // onde ela tava". Pausado, a linha fica onde o som parou -- da pra ler o
+  // tempo e cravar ali. Quem volta pro ponto e o TOQUE SEGUINTE.
+  //
+  // Entao sao duas cobrancas onde antes havia uma, e a segunda e a que garante
+  // que o ponto nao se perdeu no caminho.
+  const ficouOndeParou = PULA_PONTO || (linhaAndando !== null && linhaDepoisDeParar !== null &&
+    Math.abs(linhaDepoisDeParar - linhaAndando) <= 0.4)
+  const voltouProPonto = PULA_PONTO || (pontoPosto !== null && linhaNoSegundoPlay !== null &&
+    Math.abs(linhaNoSegundoPlay - pontoPosto) <= 0.5)
 
   // ── AS SETAS DO TECLADO ──
   //
@@ -1377,8 +1639,12 @@ app.whenReady().then(async () => {
   const fadeDaPeca = (indice) => passo(
     '(() => {' +
     ' const p = document.querySelectorAll(".fx-peca")[' + indice + '];' +
+    // SEM RAMPA O DESENHO NAO EXISTE MAIS -- ele deixou de ter largura minima,
+    // que virava uma listra clara na beirada de toda faixa. Entao ausente = 0,
+    // e nao erro.
     ' const e = p.querySelector(".fx-ponta-e"), d = p.querySelector(".fx-ponta-d");' +
-    ' return { entrada: Math.round(e.getBoundingClientRect().width), saida: Math.round(d.getBoundingClientRect().width) };' +
+    ' const larg = (x) => (x ? Math.round(x.getBoundingClientRect().width) : 0);' +
+    ' return { entrada: larg(e), saida: larg(d) };' +
     '})()')
   const pontasAntes = await fadeDaPeca(0)
   // QUEM PEGA A RAMPA E A BOLINHA, nao o desenho dela. O desenho virou
@@ -1711,8 +1977,12 @@ app.whenReady().then(async () => {
 
   await puxarLateralDoVao(160)              // encolhe: borda esquerda pra direita
   await new Promise((r) => setTimeout(r, 1200))
-  const encolhida = await passagemAgora()
-  const antesDeEsticar = encolhida
+  // nome proprio: `encolhida` ja existe la em cima, no teste de encolher a
+  // FAIXA, e o segundo `const` com o mesmo nome nao e um aviso -- e erro de
+  // sintaxe, que derruba o arquivo inteiro antes da primeira linha rodar. Ficou
+  // varias rodadas assim e eu culpei a memoria da maquina.
+  const passagemEncolhida = await passagemAgora()
+  const antesDeEsticar = passagemEncolhida
   await puxarLateralDoVao(-160)             // alonga: borda esquerda pra esquerda
   await new Promise((r) => setTimeout(r, 1400))
   const depoisDeEsticar = await passagemAgora()
@@ -2045,10 +2315,12 @@ app.whenReady().then(async () => {
   if (!seguradaAcelera) console.log('✘ segurar a seta NAO acelerou: ' + depoisDoToque + 's → ' + depoisDaSegurada + 's')
   if (!voltaPraTras) console.log('✘ a seta da esquerda nao voltou 10s: ' + depoisDaSegurada + 's → ' + depoisDaVolta + 's')
   if (!saiuDoPonto) console.log('✘ a linha nem andou com o play: ' + pontoPosto + 's → ' + linhaAndando + 's')
-  if (!voltouProPonto) console.log('✘ parar NAO devolveu a linha pro ponto: pus em ' + pontoPosto +
+  if (!ficouOndeParou) console.log('✘ parar MEXEU na linha: tocava em ' + linhaAndando +
+    's e ela foi pra ' + linhaDepoisDeParar + 's (era pra ficar onde o som parou)')
+  if (!voltouProPonto) console.log('✘ o toque seguinte NAO voltou pro ponto: pus em ' + pontoPosto +
     's, tocou ate ' + linhaAndando + 's e parou em ' + linhaDepoisDeParar + 's')
   const ok = oVaoFecha && encaixouNaBatida && rampaCresceu && alcaVenceARampa && naoEmudeceu &&
-    saiuDoPonto && voltouProPonto && andouDez && seguradaAcelera && voltaPraTras && rampaSoa && batiaAntes && bateDepois && umToqueSoAnda && aprofundou && voltouDaRoda && ancorou && cresceu && soAPrimeira &&
+    saiuDoPonto && ficouOndeParou && voltouProPonto && andouDez && seguradaAcelera && voltaPraTras && rampaSoa && batiaAntes && bateDepois && umToqueSoAnda && aprofundou && voltouDaRoda && ancorou && cresceu && soAPrimeira &&
     colunaAcompanha && voltouAoAutomatico && encheATela && naoEmpilhou && bandeiraTira && cravou && dosPontos && descravou && horaAcompanha && horaNaoVaza && temAcoesDaFaixa && apagouAFaixa && barrouONativo &&
     alinhadas && mudoCalou && isolarCalouORestо && isolarGanhaDeMudo && colunaFixa &&
     encolheuPelaDireita && encolheuPelaEsquerda && menuSoDentro && duasOpcoes &&

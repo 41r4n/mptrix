@@ -13472,6 +13472,35 @@ ul.hlib-grid {
 }
 .fx-bpm input[type=number]:disabled { opacity: 0.4; }
 
+/* ── O SINAL DE IGUAL ENTRE VELOCIDADE E BPM ──
+   Eles são o MESMO parâmetro em duas unidades, e a tela mostrava dois quadros
+   separados com dois números diferentes: "99%" ao lado de "124", sem nada
+   dizendo que um é o outro. O dono olhou e não viu relação — e não havia
+   mesmo, na tela. O igual é a menor coisa que conta a verdade. */
+.fx-mesmo {
+  flex: 0 0 auto; margin: 0 -2px;
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--muted-2); opacity: 0.55;
+}
+
+/* ── A MARCA DE "O ÁUDIO ESTÁ SENDO REFEITO" ──
+   Velocidade fora de 100% e tom fora de 0 mandam a faixa por um esticador —
+   ela deixa de ser a gravação e passa a ser uma reconstrução dela. Isso tem um
+   custo em definição, e antes NADA na tela contava. É por isso que 99% era o
+   pior lugar possível: paga o preço todo e não muda nada que se ouça.
+
+   Não é alarme, é etiqueta: o rótulo acende no lima da casa e ganha um ponto.
+   Quem não mexeu não vê nada; quem mexeu sabe por que a faixa mudou de textura. */
+.fx-ctrl.refazendo { color: var(--accent); }
+.fx-ctrl.refazendo b { color: var(--accent); }
+.fx-ctrl.refazendo::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); flex: 0 0 auto;
+  box-shadow: 0 0 6px rgba(182, 255, 59, 0.55);
+}
+/* o botão de voltar ao original nunca some — apaga, e apagado ainda ensina */
+.fx-ferramentas .mesa-icone:disabled { opacity: 0.28; cursor: default; }
+
 .fx-semalvo { font-family: var(--font-ui); font-size: 12px; color: var(--muted-2); }
 
 /* a agulha do play, atravessando o campo */

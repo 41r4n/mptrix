@@ -72,7 +72,11 @@ const relogioNoZoom = (s, zoom) => {
   const m = Math.floor(t / 60)
   const seg = t - m * 60
   if (casas === 0) return m + ':' + String(Math.floor(seg)).padStart(2, '0')
-  return m + ':' + seg.toFixed(casas).padStart(casas + 3, '0')
+  // VÍRGULA, não ponto: o app inteiro fala português, e quem lê "4:51.10" num
+  // programa em português lê dois separadores diferentes na mesma tela. Software
+  // de áudio usa ponto por herança do inglês — mas quem usa este aqui é o pai do
+  // dono, não um engenheiro de som.
+  return m + ':' + seg.toFixed(casas).padStart(casas + 3, '0').replace('.', ',')
 }
 
 const CORES = ['#b4e85a', '#4ecb8c', '#dff9a0', '#27a08d', '#7ed97a', '#8fa57a']
@@ -509,6 +513,19 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
         const tentar = (alvo, marca, naBatida) => {
           if (alvo < 0) return
           const d = Math.abs(px(alvo) - px(t))
+          // ── O MESMO TETO EM SEGUNDOS QUE O GRUDE DA LINHA ──
+          //
+          // 18 pixels é distância de TELA, e tela muda com o zoom: a 40 px/s são
+          // 0,45 segundo, a 1,5 px/s são DOZE SEGUNDOS. Afastado, soltar uma peça
+          // perto de outra a atirava a doze segundos de distância — e, como na
+          // linha, sem dar pra ver: na tela ela pousava a dezoito pixels do dedo.
+          //
+          // Foi este erro, na versão da linha, que custou três dias ao dono.
+          // Meio segundo é o teto aqui e não 0,25 como lá porque a peça também
+          // gruda em BATIDA, e a 78 bpm o pulso tem 0,77s — com teto mais
+          // apertado o encaixe na batida deixaria de acontecer, que é o recurso
+          // que faz a emenda soar inteira.
+          if (Math.abs(alvo - t) > 0.5) return
           // A BATIDA GANHA DA BORDA quando as duas estão por perto: alinhar com
           // o compasso é o que faz a emenda soar inteira; encostar as bordas é
           // só arrumação visual. Sem esse desempate, a borda (que é um alvo só)
@@ -658,6 +675,10 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
     const estavaTocando = tocando
     if (estavaTocando) pararTudo()
     const leva = (ev) => {
+      // MEXER NA LINHA COM A MÃO É ESCOLHER UM PONTO NOVO. Sem isto, quem
+      // pausasse e depois arrastasse a linha veria o play saltar de volta pro
+      // ponto velho, ignorando o gesto que acabou de fazer.
+      voltarNoPlayRef.current = false
       // 6px de folga antes de virar arrasto: sem isso um clique com a mão
       // trêmula marca um trecho de meio segundo que ninguém pediu
       if (Math.abs(ev.clientX - x0) > 6) mexeu = true
@@ -889,17 +910,36 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   }
 
   // tocar é começar de onde a agulha está — e do zero quando ela já está no fim
-  const tocar = () => comecar(agulhaRef.current >= fim - 0.05 ? 0 : agulhaRef.current)
+  // ── PARAR DEIXA A LINHA ONDE ESTÁ; QUEM VOLTA PRO PONTO É O PLAY ──
+  //
+  // "às vezes quero pausar num momento exato, mas a lima já reinicia pro ponto
+  // onde ela tava." Ela voltava na hora do pause, e isso tirava o que pausar
+  // serve pra fazer: VER onde a música estava.
+  //
+  // Agora a volta acontece no toque seguinte. Pausado, linha e som apontam pro
+  // mesmo lugar — dá pra ler o tempo e cravar uma marca ali. Ao tocar de novo,
+  // ela salta pro ponto de onde o play saiu e continua o ensaio daquele trecho.
+  const voltarNoPlayRef = useRef(false)
+  const tocar = () => {
+    // depois de uma parada, o play sai do ponto guardado; num play "fresco"
+    // (linha movida na mão, por exemplo) ele sai de onde a linha está
+    const doPonto = voltarNoPlayRef.current ? partiuDeRef.current : agulhaRef.current
+    voltarNoPlayRef.current = false
+    comecar(doPonto >= fim - 0.05 ? 0 : doPonto)
+  }
 
-  // parar devolve a agulha pra onde o play começou: é de lá que a pessoa vai
-  // querer ouvir de novo, quase sempre
   const parar = (volta) => {
     pararTudo()
     setTocando(false)
     setSoando([])
-    const t = volta === undefined ? partiuDeRef.current : volta
-    escrever(t)
-    setAgulha(t)
+    if (volta !== undefined) {         // fim da música / loop: quem manda é quem chamou
+      escrever(volta)
+      setAgulha(volta)
+      return
+    }
+    // parada a mão: a linha fica onde o som parou, e o próximo play e que volta
+    voltarNoPlayRef.current = true
+    setAgulha(agulhaRef.current)
   }
 
   // ── AS SETAS DO TECLADO, as mesmas do estúdio de separação ──
@@ -932,6 +972,8 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       if (tocava) pararTudo()
       const irPara = (t) => {
         const alvo = Math.max(0, Math.min(fimRef.current || 0, t))
+        // a seta também é a mão escolhendo ponto: o próximo play sai daqui
+        voltarNoPlayRef.current = false
         escrever(alvo)
         setAgulha(alvo)
       }
@@ -1491,7 +1533,27 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   // pontaria que ninguém tem, e a pessoa acabaria com dez marcas empilhadas no
   // mesmo lugar sem entender por quê.
   const marcadas = criacao.marcas || []
-  const marcaPerto = (t) => marcadas.find((x) => Math.abs(x - t) * zoom < 12)
+  // ── O GRUDE TEM TETO EM SEGUNDOS, NÃO SÓ EM PIXELS ──
+  //
+  // Era só `distância * zoom < 12`: doze pixels de tela. Mas pixel de tela vale
+  // tempos diferentes conforme a aproximação — a 40 px/s são 0,3 segundo, e a
+  // 1,5 px/s são OITO SEGUNDOS. Afastado, a linha grudava em qualquer ponto num
+  // raio de oito segundos, e ninguém via acontecer: na tela ela ficava a doze
+  // pixels de onde o dedo clicou, ou seja, no lugar. A tela não conseguia
+  // mostrar a diferença, e o dado tinha ela.
+  //
+  // Foi assim que ele cravou 4:51,50 e o ponto virou 4:51,10.
+  //
+  // Agora são as duas condições juntas: perto NA TELA (pra o gesto ser fácil) e
+  // perto NO TEMPO (pra o grude nunca mover mais do que se percebe). Acima de
+  // uns 48 px/s manda o pixel; abaixo disso manda o relógio, e afastado o grude
+  // simplesmente não acontece — que é o certo, porque afastado ninguém está
+  // mirando ponto exato.
+  const GRUDE_MAX_SEG = 0.25
+  const marcaPerto = (t) => marcadas.find((x) => {
+    const d = Math.abs(x - t)
+    return d * zoom < 12 && d < GRUDE_MAX_SEG
+  })
   // TIRAR PELA PRÓPRIA BANDEIRA.
   //
   // Só dava pra tirar levando a agulha de volta em cima do ponto e clicando na
@@ -1632,13 +1694,19 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             {marcas}
             {/* os pontos cravados, com a hora escrita: é a hora que faz o
                 ponto servir de referência — um risco sem número não diz nada */}
+            {/* MESMA PRECISÃO DA LINHA. Sem os decimais, dois pontos cravados a
+                meio segundo um do outro apareciam os dois como "4:51" —
+                indistinguíveis justamente quando se está mirando fino, que é a
+                única hora em que se cravam dois pontos tão perto. Ponto existe
+                pra ser referência; referência que não se diferencia da vizinha
+                não é referência. */}
             {marcadas.map((t) => (
               <span key={'m' + t} className="fx-marca-bandeira" style={{ left: px(t) + 'px' }}>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); tirarMarca(t) }}
-                  title={`tirar o ponto de ${mmss(t)}`}
-                >{mmss(t)}</button>
+                  title={`tirar o ponto de ${relogioNoZoom(t, zoom)}`}
+                >{relogioNoZoom(t, zoom)}</button>
               </span>
             ))}
 
@@ -1897,7 +1965,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                   }}
                   data-peca={m.id}
                   onPointerDown={pegar(m)}
-                  title={`${m.nome} — entra em ${mmss(entraDe(m))}`}
+                  title={`${m.nome} — entra em ${relogioNoZoom(entraDe(m), zoom)}`}
                 >
                   {o ? (
                     <Onda
@@ -1916,16 +1984,26 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                       A divisão agora é por ALTURA, que é como todo editor de
                       vídeo resolve: a bolinha da rampa manda no alto, a alça de
                       encolher manda no resto — que é a maior parte da faixa. */}
-                  <span
-                    className="fx-ponta fx-ponta-e"
-                    style={{ width: Math.max(9, px(fadeInDe(m))) + 'px' }}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className="fx-ponta fx-ponta-d"
-                    style={{ width: Math.max(9, px(fadeOutDe(m))) + 'px' }}
-                    aria-hidden="true"
-                  />
+                  {/* SEM RAMPA, SEM DESENHO. Antes havia uma largura mínima de
+                      9px mesmo com rampa zero — e isso punha uma listra clara na
+                      beirada de TODA faixa, o tempo todo. O dono olhou e mandou
+                      tirar, com razão: desenho que não representa nada é sujeira,
+                      e ainda por cima parece corte.
+                      Quem convida pro gesto é a bolinha, que aparece no hover. */}
+                  {fadeInDe(m) > 0.02 && (
+                    <span
+                      className="fx-ponta fx-ponta-e"
+                      style={{ width: px(fadeInDe(m)) + 'px' }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {fadeOutDe(m) > 0.02 && (
+                    <span
+                      className="fx-ponta fx-ponta-d"
+                      style={{ width: px(fadeOutDe(m)) + 'px' }}
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="fx-alca fx-alca-e" onPointerDown={pegarBorda(m, 'ini')}
                     title="puxe pra encolher ou esticar pela esquerda" />
                   <span className="fx-alca fx-alca-d" onPointerDown={pegarBorda(m, 'fim')}
@@ -2030,34 +2108,50 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
               </label>
             )}
 
-            <label className="fx-ctrl" title="volume desta faixa">
+            {/* DOIS CLIQUES VOLTAM AO ORIGINAL, nos três. Com passo de 1%,
+                acertar exatamente 100% arrastando é pontaria de pixel — e passar
+                perto (99%) é o pior dos mundos: paga o preço de refazer o áudio
+                e não muda nada que se ouça. */}
+            <label className="fx-ctrl"
+              title="volume desta faixa — dois cliques voltam a 100%. Acima de 100% o play toca tudo mais baixo pra manter a proporção do arquivo">
               volume
               <input type="range" min="0" max="200" step="5"
                 value={Math.round(volDe(sel) * 100)}
+                onDoubleClick={() => mexer('ganho', 1)}
                 onChange={(e) => mexer('ganho', Number(e.target.value) / 100)} />
               <b>{Math.round(volDe(sel) * 100)}%</b>
             </label>
 
-            <label className="fx-ctrl" title="velocidade desta faixa — o tom não desce junto">
+            <label className={`fx-ctrl ${velDe(sel) !== 1 ? 'refazendo' : ''}`}
+              title="velocidade desta faixa — o tom não desce junto. Fora de 100% o áudio é REFEITO por um esticador. Dois cliques voltam a 100%">
               velocidade
               <input type="range" min="50" max="150" step="1"
                 value={Math.round(velDe(sel) * 100)}
+                onDoubleClick={() => mexer('velocidade', 1)}
                 onChange={(e) => mexer('velocidade', Number(e.target.value) / 100)} />
               <b>{Math.round(velDe(sel) * 100)}%</b>
             </label>
 
-            <label className="fx-ctrl" title="sobe ou desce em semitons — a velocidade não muda junto">
+            <label className={`fx-ctrl ${tomDe(sel) !== 0 ? 'refazendo' : ''}`}
+              title="sobe ou desce em semitons — a velocidade não muda junto. Fora de 0 o áudio é REFEITO. Dois cliques voltam a 0">
               tom
               <input type="range" min="-12" max="12" step="1"
                 value={tomDe(sel)}
+                onDoubleClick={() => mexer('tom', 0)}
                 onChange={(e) => mexer('tom', Number(e.target.value))} />
               <b>{tomDe(sel) > 0 ? '+' : ''}{tomDe(sel)}{anSel && anSel.tom ? ' \u00b7 ' + anSel.tom : ''}</b>
             </label>
 
-            {/* BPM NÃO É CONTROLE À PARTE: mudar o andamento É mudar a
-                velocidade. Digitar o BPM é só dizer a mesma coisa no número que
-                o músico usa — e é assim que se põe duas músicas no mesmo passo. */}
-            <label className="fx-ctrl fx-bpm" title="digite o BPM que você quer — vira velocidade">
+            {/* ── O BPM É A VELOCIDADE, DITA NO NÚMERO DO MÚSICO ──
+                O comentário aqui já dizia isso, mas a TELA dizia o contrário:
+                dois quadros separados, com dois números diferentes pro mesmo
+                parâmetro. Mexia num e o outro mudava sozinho, e o dono olhou
+                "99%" ao lado de "124" e não viu relação nenhuma.
+                Agora ele fica colado na velocidade e leva um sinal de igual: é
+                a mesma coisa em outra unidade, e a tela passa a dizer isso. */}
+            <span className="fx-mesmo" aria-hidden="true">=</span>
+            <label className={`fx-ctrl fx-bpm ${velDe(sel) !== 1 ? 'refazendo' : ''}`}
+              title="o mesmo que a velocidade, no número do músico — digite o BPM que você quer">
               bpm
               <input type="number" min="30" max="300"
                 value={anSel && anSel.bpm ? Math.round(anSel.bpm * velDe(sel)) : ''}
@@ -2069,14 +2163,22 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                 }} />
             </label>
 
-            {(volDe(sel) !== 1 || velDe(sel) !== 1 || tomDe(sel) !== 0) && (
-              <button className="mesa-icone" title="voltar esta faixa ao original"
-                onClick={() => onMudar({
-                  ...criacao,
-                  musicas: criacao.musicas.map((x) => (x.id === sel.id
-                    ? { ...x, ganho: 1, velocidade: 1, tom: 0 } : x))
-                })}>{'\u21ba'}</button>
-            )}
+            {/* SEMPRE VIS\u00cdVEL, apagado quando n\u00e3o h\u00e1 o que desfazer. Ele sumia
+                quando a faixa estava no original \u2014 e bot\u00e3o que some \u00e9 bot\u00e3o que
+                a pessoa n\u00e3o sabe que existe: na hora em que ela mais precisa
+                (acabou de mexer sem querer), tem que procurar uma coisa que
+                nunca esteve ali. Presente e apagado ensina; ausente esconde. */}
+            <button
+              className="mesa-icone"
+              disabled={volDe(sel) === 1 && velDe(sel) === 1 && tomDe(sel) === 0}
+              title={volDe(sel) === 1 && velDe(sel) === 1 && tomDe(sel) === 0
+                ? 'esta faixa j\u00e1 est\u00e1 como veio'
+                : 'voltar esta faixa ao original: volume 100%, velocidade 100%, tom 0'}
+              onClick={() => onMudar({
+                ...criacao,
+                musicas: criacao.musicas.map((x) => (x.id === sel.id
+                  ? { ...x, ganho: 1, velocidade: 1, tom: 0 } : x))
+              })}>{'\u21ba'}</button>
           </>
         ) : (
           <span className="fx-semalvo">
@@ -2123,6 +2225,11 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             duplica ou apaga aquele pedaço. <b>Botão direito num buraco</b> entre
             duas faixas preenche o vão com <b>cauda</b>, <b>puxada</b> ou <b>contagem</b> —
             e no botão direito da passagem dá pra trocar uma pela outra e comparar.
+            {' '}<b>Velocidade e tom refazem o áudio</b> da faixa: fora de 100% e 0 ela passa
+            por um esticador e perde um pouco de definição — por isso 99% é o pior lugar,
+            paga o preço e não muda nada que se ouça. O <b>bpm é a mesma coisa</b> que a
+            velocidade, no número do músico. <b>Dois cliques</b> em qualquer controle voltam
+            ao original.
             {preparandoTom > 0 && <> <b>Preparando o tom…</b> alguns segundos, e o play passa a tocar no tom novo.</>}
             {/* AVISAR QUE ESTÁ ATENUANDO. O navegador não passa de 100%, então
                 com alguma faixa reforçada o play toca tudo mais baixo pra manter

@@ -994,13 +994,23 @@ export default function StudioView({ source, onClose }) {
     if (!p) return
     p.pause()
     setPlaying(false)
+    // ── PAUSAR NÃO MEXE NA LINHA ──
+    //
+    // Ela voltava pro ponto na hora do pause, e isso tirava justamente o que
+    // pausar serve pra fazer: VER onde a música estava. Nas palavras do dono:
+    // "às vezes quero pausar num momento exato, mas a lima já reinicia pro ponto
+    // onde ela tava."
+    //
+    // Quem salta é o PLAY. Pausado, a linha fica onde o som parou — dá pra ler o
+    // tempo, cravar uma marca, conferir. No toque seguinte ela vai pro ponto do
+    // ensaio (ou pro começo do trecho, se houver loop) e toca de lá.
+    //
+    // O `p.seek` some daqui de propósito: o tocador continua parado onde estava,
+    // e é o `play` que reposiciona antes de soltar o som. Enquanto está pausado,
+    // linha e som apontam pro mesmo lugar — que é o que faz a leitura ser
+    // confiável.
     pausouRef.current = true
-    // volta o cursor NA HORA, pra pessoa VER de onde vai recomecar — sem isso a
-    // linha ficaria parada num lugar e o som sairia de outro
-    const volta = cabecaDoEnsaio()
-    p.seek(volta)
-    setPos(volta)
-  }, [cabecaDoEnsaio])
+  }, [])
 
   const play = useCallback(async (fromOffset) => {
     const p = playerRef.current
