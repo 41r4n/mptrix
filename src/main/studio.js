@@ -43,6 +43,26 @@ export const MODELS = {
     name: '6 faixas em cascata (guitarra e piano separados)',
     stems: ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other']
   },
+  // ── DUAS FAIXAS: VOZ E O RESTO ──
+  //
+  // Pedido do dono: "eu quero que tenha os instrumentos e a voz, tipo a faixa da
+  // voz e a faixa de todos os instrumentos juntos".
+  //
+  // É o corte que a maioria das pessoas realmente quer: cantar por cima do
+  // playback, ou ouvir só a voz pra tirar a letra. Quebrar em quatro obriga a
+  // pessoa a religar bateria, baixo e "outros" toda vez pra ter o acompanhamento
+  // de volta — trabalho que o programa devia ter poupado.
+  //
+  // Roda o MESMO htdemucs; o `--two-stems` faz o próprio Demucs somar bateria,
+  // baixo e outros numa faixa só. Some o passo de reunir na mão, e some junto a
+  // chance de esquecer uma faixa fora.
+  htdemucs_2s: {
+    id: 'htdemucs_2s',
+    name: '2 faixas (voz e instrumentos juntos)',
+    motor: 'htdemucs',      // o modelo de verdade que o Demucs carrega
+    doisStems: 'vocals',    // e o corte que ele faz
+    stems: ['vocals', 'no_vocals']
+  },
   quick: {
     id: 'quick',
     name: 'Música inteira (sem separar — pronta em ~1 min)',
@@ -94,7 +114,7 @@ export function removeCachesForFile(filePath) {
   } catch {
     return
   }
-  for (const model of ['htdemucs', 'htdemucs_ft', 'htdemucs_6s', 'quick']) {
+  for (const model of ['htdemucs', 'htdemucs_ft', 'htdemucs_6s', 'htdemucs_2s', 'quick']) {
     const modelTag = model === 'htdemucs_6s' ? `${model}|cascade1` : model
     const key = createHash('sha1').update(`${fp}|${modelTag}`).digest('hex').slice(0, 16)
     try { rmSync(join(STEMS_DIR, key), { recursive: true, force: true }) } catch {}
@@ -1632,9 +1652,17 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
         const passes = MODELS[modelName]?.bag || 1
         let passDone = 0
         let lastRaw = 0
+        // O MODELO PEDIDO PODE NÃO SER O MODELO DO DEMUCS. O corte de duas faixas
+        // roda o htdemucs comum e manda o proprio Demucs somar bateria, baixo e
+        // outros — `motor` diz qual IA carregar, `doisStems` diz onde cortar.
+        const cfg = MODELS[modelName] || {}
+        const iaDoDemucs = cfg.motor || modelName
+        const args = ['-m', 'demucs', '-n', iaDoDemucs, '-d', 'cpu', '--segment', '6']
+        if (cfg.doisStems) args.push('--two-stems', cfg.doisStems)
+        args.push('-o', workDir, inputWav)
         return run(
           PYTHON_PATH,
-          ['-m', 'demucs', '-n', modelName, '-d', 'cpu', '--segment', '6', '-o', workDir, inputWav],
+          args,
           state,
           (line) => {
             const isDownload = /[0-9.]+\s*[kMG]?B\/s/i.test(line)
@@ -1739,7 +1767,11 @@ export function startStudioJob({ inputFile, model = 'htdemucs', title, ffmpegPat
         rawPaths.other = mergedOther
       } else {
         await runDemucs(model, srcWav, 0, 100)
-        const p1 = join(workDir, model, key)
+        // A PASTA LEVA O NOME DA IA, NÃO DO MODO. No corte de duas faixas a IA é
+        // o htdemucs comum, então o Demucs grava em `htdemucs/` — procurar em
+        // `htdemucs_2s/` acharia pasta nenhuma e o erro só apareceria no fim,
+        // como "faixa não encontrada", longe da causa.
+        const p1 = join(workDir, MODELS[model].motor || model, key)
         for (const stem of MODELS[model].stems) {
           rawPaths[stem] = join(p1, `${stem}.wav`)
         }

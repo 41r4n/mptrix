@@ -1051,6 +1051,27 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
     musicas: criacao.musicas.map((x) => (x.id === sel.id ? { ...x, [campo]: v } : x))
   })
 
+  // ██████████ A RODA NÃO MEXE EM CONTROLE ██████████
+  //
+  // Este é o defeito que fez o dono perder o dia, e ele é de uma sutileza cruel:
+  // no navegador, a roda do mouse ALTERA o valor de um <input> numérico ou de
+  // range quando o cursor está em cima dele. E a roda, nesta tela, é o gesto de
+  // aproximar — usado o tempo todo.
+  //
+  // Resultado: cada vez que a roda passava por cima do campo de BPM enquanto ele
+  // aproximava a mesa, o BPM mudava. E BPM É VELOCIDADE. A faixa passava a tocar
+  // 7% mais rápida sem ninguém tocar nela — "no mp3 sai o que tá adiantado".
+  // Nas faixas dele: as três em 200% de volume (o máximo do controle) e uma em
+  // 107% de velocidade, nenhum deles pedido.
+  //
+  // Era invisível por três motivos somados: o gesto era outro (zoom), a mudança
+  // era pequena por vez, e o número mudado ficava longe do olho, que estava na
+  // faixa. Nada na tela ligava uma coisa à outra.
+  //
+  // `blur` e não `preventDefault`: tirando o foco, o navegador não tem em quem
+  // aplicar a rolagem, e o zoom da mesa continua funcionando por cima da barra.
+  const rodaNaoMexe = (e) => { try { e.currentTarget.blur() } catch { /* segue */ } }
+
 
   // ── PEGAR NA LATERAL: ENCOLHER OU ESTICAR A FAIXA ──
   //
@@ -1335,6 +1356,20 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
   // por baixo da música que começou — e é essa sobra que dá o peso.
   const SOBRA_DE = { impacto: 1.5 }
 
+  // ── ONDE A PASSAGEM SE ANCORA DENTRO DO VÃO ──
+  //
+  // O motor prende a passagem em 30 segundos. Num buraco maior que isso ela era
+  // plantada no COMEÇO e o resto virava silêncio — sem ninguém avisar. E era pior
+  // do que parece: a subida, o prato, o sopro e o impacto existem pra CAIR NA
+  // ENTRADA da próxima música. Plantados no começo de um vão de dois minutos,
+  // eles anunciavam uma chegada que só aconteceria um minuto e meio depois.
+  //
+  // Quem anuncia a entrada se ancora no FIM do vão; quem despede a música que
+  // saiu se ancora no COMEÇO. E quando sobra buraco, a tela diz quanto sobrou —
+  // meia entrega tem que ser dita, não descoberta.
+  const ANCORA_NO_FIM = ['subida', 'prato', 'sopro', 'puxada', 'contagem', 'impacto']
+  const TETO_DA_PASSAGEM = 30
+
   // ── COMO CADA PASSAGEM NASCE E MORRE ──
   //
   // "quando acaba ou começa o efeito ele entra muito... acaba entrando ou saindo
@@ -1476,12 +1511,17 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       : tipo === 'puxada'
         ? { arquivo: vao.depois.arquivo, de: iniDe(vao.depois) }
         : {}
+    // O BURACO PEDIDO PODE SER MAIOR QUE O TETO. Nesse caso a passagem cobre só
+    // um pedaço dele — e é o pedaço que IMPORTA pra cada tipo que tem que ser
+    // escolhido, não o primeiro que calhar.
+    const pedido = Math.min(vao.dur, TETO_DA_PASSAGEM)
+    const vaoPedido = { ...vao, dur: pedido }
     const r = await window.mptrix.emenda.vao({
       tipo,
-      dur: vao.dur,
+      dur: pedido,
       fonte,
       sobra: SOBRA_DE[tipo] || 0,
-      cliques: tipo === 'contagem' ? contagemDoVao(vao) : []
+      cliques: tipo === 'contagem' ? contagemDoVao(vaoPedido) : []
     }).catch((e) => ({ erro: String(e?.message || e) }))
     setFazendoVao(null)
     if (!r || r.erro || !r.arquivo) {
@@ -1496,16 +1536,22 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
         vao: tipo,                       // é isto que faz a tela desenhar diferente
         // o tamanho de buraco com que ela foi fabricada: é por ele que se sabe,
         // depois de um arrasto de lateral, se o som precisa ser refeito
-        vaoDur: vao.dur,
+        vaoDur: pedido,
         distancia: 0,        // nasce perto; quem quiser longe puxa o controle
         vaoDist: 0,
         nome: NOMES_DE_VAO[tipo],
         arquivo: r.arquivo,
         som: 'stems://s/_vaos/wav/' + r.nome,
-        entra: vao.ini,
+        // ANCORADA ONDE ELA SERVE. Quem anuncia a entrada tem que terminar NA
+        // entrada; quem despede a música que saiu tem que começar onde ela
+        // acabou. Plantar tudo no início do vão fazia a subida anunciar uma
+        // chegada que só viria um minuto e meio depois.
+        entra: ANCORA_NO_FIM.includes(tipo)
+          ? Math.max(0, vao.fim - pedido)
+          : vao.ini,
         lane,
         ini: 0,
-        fim: r.duracao || vao.dur,
+        fim: r.duracao || pedido,
         ganho: 1,
         velocidade: 1,
         tom: 0,
@@ -1514,6 +1560,19 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
       }]
     })
     setEscolhida(id)
+    // ── O QUE NÃO COUBE VAI ESCRITO ──
+    //
+    // Meia entrega tem que ser dita, não descoberta depois de exportar. Se o
+    // buraco era maior que o teto, a pessoa precisa saber quanto de silêncio
+    // sobrou e de que lado — senão ela ouve o vazio e conclui que a passagem
+    // falhou.
+    const sobrou = vao.dur - pedido
+    if (sobrou > 0.4) {
+      setRecadoVao('a passagem cobre ' + pedido.toFixed(0) + 's dos ' +
+        vao.dur.toFixed(0) + 's do buraco — sobra ' + sobrou.toFixed(0) + 's de silêncio ' +
+        (ANCORA_NO_FIM.includes(tipo) ? 'ANTES dela' : 'DEPOIS dela') +
+        '. Encoste as faixas ou ponha outra passagem no resto.')
+    }
   }
   const trocarVao = (m, tipo) => preencher(tipo, vaoDaPeca(m), laneDe(m), m.id)
 
@@ -1948,13 +2007,26 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
               // calado e a onda sai preta)
               const cor = m.vao ? COR_VAO : CORES[i % CORES.length]
               const dur = duracaoNaLinha(m)
+              // ── QUANDO A CAIXA É MAIOR QUE A PEÇA ──
+              //
+              // A caixa tem 28px de largura mínima pra continuar agarrável. Só
+              // que 28px valem 0,3 segundo aproximado e DEZOITO segundos com a
+              // mesa afastada — uma passagem de meio segundo aparecia como um
+              // bloco de vinte, e encolhia ao aproximar. Parece "a faixa mudou
+              // de tamanho com o zoom", e é a mesma família do grude cego.
+              //
+              // A caixa continua grande (senão não dá pra pegar), mas a extensão
+              // VERDADEIRA vai desenhada por dentro. O olho passa a ver as duas
+              // coisas: onde clicar, e quanto a peça realmente ocupa.
+              const larguraReal = px(dur)
+              const curta = larguraReal < 28
               return (
                 <div
                   key={m.id}
                   className={`fx-peca ${m.vao ? 'fx-vao vao-' + m.vao : ''} ${arrastando?.id === m.id ? 'arrastando' : ''} ${escolhida === m.id ? 'sel' : ''} ${!linhaSoa(laneDe(m)) ? 'calada' : ''} ${soando.includes(m.id) ? 'soando' : ''}`}
                   style={{
                     left: px(entraDe(m)) + 'px',
-                    width: Math.max(28, px(dur)) + 'px',
+                    width: Math.max(28, larguraReal) + 'px',
                     top: alturasSalvas
                       ? topoDe(laneDe(m)) + 6 + 'px'
                       : `calc(${laneDe(m) * fatia}% + 6px)`,
@@ -1967,6 +2039,10 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
                   onPointerDown={pegar(m)}
                   title={`${m.nome} — entra em ${relogioNoZoom(entraDe(m), zoom)}`}
                 >
+                  {curta && (
+                    <span className="fx-real" aria-hidden="true"
+                      style={{ width: Math.max(1, larguraReal) + 'px' }} />
+                  )}
                   {o ? (
                     <Onda
                       onda={o.onda}
@@ -2097,7 +2173,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             {sel.vao && (
               <label className="fx-ctrl" title="perto chega na sua cara; longe abaixa, escurece e espalha">
                 distância
-                <input type="range" min="0" max="100" step="5"
+                <input type="range" onWheel={rodaNaoMexe} min="0" max="100" step="5"
                   value={Math.round((Number(sel.distancia) || 0) * 100)}
                   onChange={(e) => mexer('distancia', Number(e.target.value) / 100)}
                   onPointerUp={() => refazerVao(sel.id)}
@@ -2115,7 +2191,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             <label className="fx-ctrl"
               title="volume desta faixa — dois cliques voltam a 100%. Acima de 100% o play toca tudo mais baixo pra manter a proporção do arquivo">
               volume
-              <input type="range" min="0" max="200" step="5"
+              <input type="range" onWheel={rodaNaoMexe} min="0" max="200" step="5"
                 value={Math.round(volDe(sel) * 100)}
                 onDoubleClick={() => mexer('ganho', 1)}
                 onChange={(e) => mexer('ganho', Number(e.target.value) / 100)} />
@@ -2125,7 +2201,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             <label className={`fx-ctrl ${velDe(sel) !== 1 ? 'refazendo' : ''}`}
               title="velocidade desta faixa — o tom não desce junto. Fora de 100% o áudio é REFEITO por um esticador. Dois cliques voltam a 100%">
               velocidade
-              <input type="range" min="50" max="150" step="1"
+              <input type="range" onWheel={rodaNaoMexe} min="50" max="150" step="1"
                 value={Math.round(velDe(sel) * 100)}
                 onDoubleClick={() => mexer('velocidade', 1)}
                 onChange={(e) => mexer('velocidade', Number(e.target.value) / 100)} />
@@ -2135,7 +2211,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             <label className={`fx-ctrl ${tomDe(sel) !== 0 ? 'refazendo' : ''}`}
               title="sobe ou desce em semitons — a velocidade não muda junto. Fora de 0 o áudio é REFEITO. Dois cliques voltam a 0">
               tom
-              <input type="range" min="-12" max="12" step="1"
+              <input type="range" onWheel={rodaNaoMexe} min="-12" max="12" step="1"
                 value={tomDe(sel)}
                 onDoubleClick={() => mexer('tom', 0)}
                 onChange={(e) => mexer('tom', Number(e.target.value))} />
@@ -2153,7 +2229,7 @@ export default function FaixasDaEmenda({ criacao, analises, onMudar, onVoltar, e
             <label className={`fx-ctrl fx-bpm ${velDe(sel) !== 1 ? 'refazendo' : ''}`}
               title="o mesmo que a velocidade, no número do músico — digite o BPM que você quer">
               bpm
-              <input type="number" min="30" max="300"
+              <input type="number" onWheel={rodaNaoMexe} min="30" max="300"
                 value={anSel && anSel.bpm ? Math.round(anSel.bpm * velDe(sel)) : ''}
                 disabled={!(anSel && anSel.bpm)}
                 onChange={(e) => {

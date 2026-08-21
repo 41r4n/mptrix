@@ -1441,7 +1441,7 @@ app.whenReady().then(() => {
     try {
       // procura em qualquer um dos modelos: o que interessa e se ESTE arquivo
       // ja passou pelo estudio alguma vez, nao com qual qualidade
-      for (const modelo of ['htdemucs_ft', 'htdemucs', 'htdemucs_6s', 'quick']) {
+      for (const modelo of ['htdemucs_ft', 'htdemucs', 'htdemucs_6s', 'htdemucs_2s', 'quick']) {
         const achado = findSession(arquivo, modelo)
         if (!achado) continue
         const meta = readSessionMeta(achado.dir)

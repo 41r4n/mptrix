@@ -13501,6 +13501,20 @@ ul.hlib-grid {
 /* o botão de voltar ao original nunca some — apaga, e apagado ainda ensina */
 .fx-ferramentas .mesa-icone:disabled { opacity: 0.28; cursor: default; }
 
+/* ── A EXTENSÃO VERDADEIRA DE UMA PEÇA CURTA ──
+   A caixa tem 28px de mínimo pra continuar agarrável, mas 28px valem dezoito
+   segundos com a mesa afastada: uma passagem de meio segundo aparecia como um
+   bloco de vinte e encolhia ao aproximar. A caixa mente sobre a duração, e a
+   pessoa lê isso como "a faixa mudou de tamanho com o zoom".
+   Este risco é a verdade desenhada por dentro da caixa: onde a peça REALMENTE
+   acaba. A caixa vira o que ela é — uma área de pegar — e o risco informa. */
+.fx-real {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: color-mix(in srgb, var(--cor) 22%, transparent);
+  border-right: 2px solid var(--cor);
+  pointer-events: none; z-index: 2;
+}
+
 .fx-semalvo { font-family: var(--font-ui); font-size: 12px; color: var(--muted-2); }
 
 /* a agulha do play, atravessando o campo */

@@ -13,6 +13,10 @@
 // usa cor por faixa, que é como se acha a guitarra sem ler o nome.
 export const STEM_META = {
   vocals: { label: 'Voz', icon: '🎤' },
+  // o "tudo menos a voz" do corte de duas faixas. Chama-se INSTRUMENTOS e não
+  // "sem voz": o nome tem que dizer o que a faixa TEM, não o que falta nela —
+  // quem liga essa faixa quer os instrumentos, não a ausência de alguém.
+  no_vocals: { label: 'Instrumentos', icon: '🎶' },
   drums: { label: 'Bateria', icon: '🥁' },
   bass: { label: 'Baixo', icon: '🎸' },
   guitar: { label: 'Guitarra', icon: '🎸' },

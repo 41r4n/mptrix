@@ -33,6 +33,10 @@ function stemMeta(stem, sess) {
 const STEM_SCALE = ['#dff9a0', '#b4e85a', '#7ed97a', '#4ecb8c', '#27a08d', '#8fa57a']
 const STEM_COLOR_FIXED = {
   vocals: '#dff9a0',
+  // INSTRUMENTOS (o corte de duas faixas) leva o verde de "Outros" da escala da
+  // casa: é a faixa que carrega todo o resto junto, e "Outros" é exatamente o
+  // lugar da escala reservado pro que não é um instrumento só.
+  no_vocals: '#8fa57a',
   drums: '#b4e85a',
   bass: '#7ed97a',
   guitar: '#4ecb8c',
